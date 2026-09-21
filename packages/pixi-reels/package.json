@@ -1,7 +1,7 @@
 {
   "name": "pixi-reels",
   "version": "3.0.0",
-  "description": "A batteries-included slot machine reel engine for PixiJS v8 — fluent builder, typed events, spin phases, speed modes, win spotlight, and a headless testing harness.",
+  "description": "A batteries-included slot machine reel engine for PixiJS v8 \u2014 fluent builder, typed events, spin phases, speed modes, win spotlight, and a headless testing harness.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -52,7 +52,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome lint src/",
     "prepack": "node ../../scripts/stage-package-files.mjs",
-    "postpack": "node ../../scripts/stage-package-files.mjs --clean"
+    "postpack": "node ../../scripts/stage-package-files.mjs --clean",
+    "typecheck:types": "tsc --noEmit -p tsconfig.types.json"
   },
   "peerDependencies": {
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",

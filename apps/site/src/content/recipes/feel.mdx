@@ -1,7 +1,7 @@
 ---
 title: "Feel: timings & landing FX"
 group: tension
-oneLiner: Six edits to the built-in phases' step lists that change how a spin feels - stagger curves, a wind-up launch, a landing kick with dust, beats and FX that follow the speed profile, a spotlight around the tease, and one extra beat on the last reel - each a few lines against StartPhase, StopPhase or AnticipationPhase, with slam and quicken still working.
+oneLiner: Seven edits to the built-in phases' step lists that change how a spin feels - stagger curves, a wind-up launch, a landing kick with dust, beats and FX that follow the speed profile, a step of your own tuned from a profile section, a spotlight around the tease, and one extra beat on the last reel - each a few lines against StartPhase, StopPhase or AnticipationPhase, with slam and quicken still working.
 order: 62
 tags:
   - phases
@@ -54,6 +54,25 @@ One step after `land`, before `bounce`: the set kicks and a puff spreads under t
 **Gotcha:** a step never asks "is this turbo". Put the decision on the profile and every speed mode you add later comes with its own answer.
 
 <RecipeDemo code="steps-fx-per-profile" />
+
+<a id="steps-profile-sections"></a>
+
+## A step you added, tuned from the profile
+
+The recipe above puts a step's numbers on the profile as flat fields. They work and they are global: every phase sees them, and nothing says which phase they belong to. A **section** says it. Both steps here are inserted into `StopPhase`, and everything that shapes them lives under `stop`, keyed by the step's own name, with a `whenAnticipated` half the engine merges on top for a reel that teased — so reels 4 and 5 land on a deeper bounce and a heavier impact, and the same step draws them amber off `ctx.anticipated`. Nothing branches on the speed name.
+
+```ts
+stop: {
+  steps: { breath: { duration: 140 }, impact: { lift: 8, duration: 420 } },
+  whenAnticipated: { bounceDistance: 30, steps: { impact: { lift: 24 } } },
+}
+```
+
+A step reads its own entry as `ctx.step`, in segment order: one object in the profile arrives as one entry, and a list is for a step written to consume segments. Declare the two names once, by merging into `StopSteps`, and `stop.steps` is checked and autocompleted like any built-in's.
+
+**Gotcha:** `whenAnticipated` applies to a tease that ran to its END. Press skip mid-tease and that reel goes back to the section's own half — blue puff, small lift — because what the press cut is the tease the variant exists to pay off.
+
+<RecipeDemo code="steps-profile-sections" />
 
 <a id="steps-anticipation-spotlight"></a>
 

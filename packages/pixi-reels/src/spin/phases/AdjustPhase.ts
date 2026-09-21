@@ -58,7 +58,7 @@ export interface PinOverlayTween {
  * Plays on top of whatever stop staggering you've configured; duration
  * is independent of `stopDelay`.
  */
-export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
+export class AdjustPhase<TProfile extends SpeedProfile = SpeedProfile> extends ReelPhase<AdjustPhaseConfig, TProfile> {
   readonly name = 'adjust';
   readonly skippable = true;
   override readonly quickenable = true;
@@ -68,11 +68,7 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
   protected _tween: gsap.core.Timeline | null = null;
   protected _settle: (() => void) | null = null;
 
-  constructor(
-    reel: Reel,
-    speed: SpeedProfile,
-    opts: { durationMs: number; ease?: string },
-  ) {
+  constructor(reel: Reel, speed: TProfile, opts: { durationMs: number; ease?: string }) {
     super(reel, speed);
     this._durationMs = opts.durationMs;
     this._ease = opts.ease ?? 'power2.out';

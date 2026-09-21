@@ -13,7 +13,7 @@
     "test": "pnpm check:lint && pnpm --filter pixi-reels test && pnpm --filter pixi-reels-codemod test",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
-    "typecheck": "pnpm --filter pixi-reels typecheck && pnpm typecheck:fixtures",
+    "typecheck": "pnpm --filter pixi-reels typecheck && pnpm typecheck:fixtures && pnpm check:type-probes",
     "lint": "pnpm --filter pixi-reels lint",
     "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
     "check:imports": "biome lint packages/pixi-reels/src",
@@ -44,7 +44,8 @@
     "check:publish-contents": "node scripts/check-publish-contents.mjs",
     "check:migration-coverage": "node scripts/check-migration-coverage.mjs",
     "check:api-surface": "node scripts/check-api-surface.mjs",
-    "typecheck:fixtures": "pnpm --filter @pixi-reels/cheats typecheck && pnpm --filter orientation-matrix typecheck"
+    "typecheck:fixtures": "pnpm --filter @pixi-reels/cheats typecheck && pnpm --filter orientation-matrix typecheck",
+    "check:type-probes": "node scripts/check-type-probes.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [

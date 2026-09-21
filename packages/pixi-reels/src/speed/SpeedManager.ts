@@ -1,4 +1,6 @@
-import type { SpeedProfile } from '../config/types.js';
+import type { PhaseProfiles, SpeedProfile } from '../config/types.js';
+import type { AnyPhaseSection } from '../config/phaseProfile.js';
+import { mergeSection, tuneProfile } from '../config/phaseProfile.js';
 
 /**
  * The tempo of your reels, as named presets.
@@ -19,6 +21,10 @@ export class SpeedManager {
   private _profiles = new Map<string, SpeedProfile>();
   private _activeName: string;
   private _active: SpeedProfile;
+  /** Run-time section overrides, by phase name. See {@link tune}. */
+  private _tunes = new Map<string, AnyPhaseSection>();
+  /** {@link active} with `_tunes` folded in, rebuilt whenever either changes. */
+  private _tuned: SpeedProfile | null = null;
 
   constructor(profiles: Map<string, SpeedProfile>, initialSpeed: string) {
     for (const [name, profile] of profiles) {
@@ -34,9 +40,39 @@ export class SpeedManager {
     this._active = initial;
   }
 
-  /** The currently active speed profile. */
+  /** The currently active speed profile, with any run-time {@link tune} folded in. */
   get active(): Readonly<SpeedProfile> {
-    return this._active;
+    if (this._tunes.size === 0) return this._active;
+    if (!this._tuned) this._tuned = tuneProfile(this._active, this._tunes);
+    return this._tuned;
+  }
+
+  /**
+   * Override part of one phase's section at run time, without editing the
+   * registered profile.
+   *
+   * The override is merged into whatever the active profile already says for
+   * that phase: flat fields replace, per-step config merges segment by
+   * segment, so naming one step's ease leaves the rest of the section
+   * standing. Tunes are a layer on top of whichever profile is active, so
+   * they survive `set('turbo')` until {@link clearTune}.
+   *
+   * Like a speed change, a tune takes effect on the next spin: the controller
+   * captures `active` once per spin and hands that instance to every phase.
+   *
+   * @example
+   * reelSet.speed.tune('stop', { steps: { bounce: { ease: 'back.out(2)' } } });
+   */
+  tune<K extends keyof PhaseProfiles & string>(phase: K, section: PhaseProfiles[K]): void {
+    this._tunes.set(phase, mergeSection(this._tunes.get(phase), section));
+    this._tuned = null;
+  }
+
+  /** Drop the tune for one phase, or every tune when called with no argument. */
+  clearTune(phase?: keyof PhaseProfiles & string): void {
+    if (phase === undefined) this._tunes.clear();
+    else this._tunes.delete(phase);
+    this._tuned = null;
   }
 
   /** Name of the currently active speed profile. */
@@ -55,6 +91,7 @@ export class SpeedManager {
     const previous = this._active;
     this._activeName = name;
     this._active = profile;
+    this._tuned = null;
     return { previous, current: profile };
   }
 

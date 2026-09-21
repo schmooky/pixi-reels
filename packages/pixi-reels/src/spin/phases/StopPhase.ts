@@ -1,4 +1,5 @@
-import type { SkipContext } from '../../config/types.js';
+import type { Reel } from '../../core/Reel.js';
+import type { SkipContext, SpeedProfile } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
 import { step } from './steps.js';
 import type { PhaseStep, StepContext, StepsEditor } from './steps.js';
@@ -20,16 +21,16 @@ export interface StopPhaseConfig {
 }
 
 /** What a game hands `StopPhase` through `f.register('stop', StopPhase, options)`. */
-export interface StopPhaseOptions {
+export interface StopPhaseOptions<TProfile extends SpeedProfile = SpeedProfile> {
   /**
    * Edit the built-in steps (`delay`, `spinOut`, `land`, `bounce`) before
    * they run: insert one, replace one, drop one. Gets the default list,
    * returns the list to run. See `insertAfter` and friends.
    */
-  steps?: StepsEditor<StopStepContext>;
+  steps?: StepsEditor<StopStepContext<TProfile>>;
 }
 
-export type StopStepContext = StepContext<StopPhaseConfig>;
+export type StopStepContext<TProfile extends SpeedProfile = SpeedProfile> = StepContext<StopPhaseConfig, TProfile>;
 
 /**
  * Stops the reel on the target frame.
@@ -45,24 +46,31 @@ export type StopStepContext = StepContext<StopPhaseConfig>;
  * 4. `bounce`: overshoot by `bounceDistance` and settle back over
  *    `bounceDuration`.
  */
-export class StopPhase extends ReelPhase<StopPhaseConfig> {
+export class StopPhase<TProfile extends SpeedProfile = SpeedProfile> extends ReelPhase<StopPhaseConfig, TProfile> {
   readonly name = 'stop';
   readonly skippable = true;
   override readonly quickenable = true;
 
-  protected readonly _options: StopPhaseOptions;
+  protected readonly _options: StopPhaseOptions<TProfile>;
   protected _stage: 'delay' | 'spinning' | 'landed' | 'done' = 'delay';
   protected _baseY = 0;
 
-  constructor(reel: ReelPhase<StopPhaseConfig>['reel'], speed: StopPhase['speed'], options: StopPhaseOptions = {}) {
+  constructor(reel: Reel, speed: TProfile, options: StopPhaseOptions<TProfile> = {}) {
     super(reel, speed);
     this._options = options;
   }
 
   /** The built-in list. A subclass overrides this to change the flow; a game edits it through `options.steps`. */
-  defaultSteps(): PhaseStep<StopStepContext>[] {
+  defaultSteps(): PhaseStep<StopStepContext<TProfile>>[] {
     return [
-      step('delay', (ctx) => ((ctx.config.delay ?? 0) > 0 ? ctx.wait(ctx.config.delay ?? 0) : undefined), { cut: true }),
+      step<StopStepContext<TProfile>>(
+        'delay',
+        (ctx) => {
+          const wait = ctx.step.at(0)?.duration ?? ctx.config.delay ?? 0;
+          return wait > 0 ? ctx.wait(wait) : undefined;
+        },
+        { cut: true },
+      ),
       step('spinOut', (ctx) => {
         this._beginSpinOut();
         // Sequencer consumes one symbol per wrap via Reel._onSymbolWrapped.
@@ -73,7 +81,10 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
         this.land();
         this._stage = 'landed';
       }),
-      step('bounce', () => this.bounce()),
+      step('bounce', (ctx) => {
+        const timing = ctx.step.at(0);
+        return this.bounce({ ease: timing?.ease, duration: timing?.duration });
+      }),
     ];
   }
 
@@ -88,7 +99,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     const config = this._config;
     if (!config) return;
     const reel = this._reel;
-    const speed = this._speed;
+    const speed = this.timing;
 
     reel.setStopFrame(config.targetFrame);
     reel.isStopping = true;

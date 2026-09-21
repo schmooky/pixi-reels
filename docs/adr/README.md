@@ -22,6 +22,7 @@ ADRs for pixi-reels. Each one captures a decision that shapes how the code is wr
 | [016](./016-orientation-axis.md) | Orientation axis and travel direction | Accepted, shipped in 2.0.0 |
 | [017](./017-facing-travel-and-the-reel-stage.md) | Facing vs travel, and a composition layer over ReelSets | Partially accepted, shipped in 2.0.0 |
 | [018](./018-motion-contract.md) | The motion contract | Accepted, shipped in 2.0.0 |
+| [021](./021-phase-sections-on-speed-profiles.md) | A speed profile is sectioned by phase, not flattened | Accepted, implemented on `feat/profile-phase-step-config` |
 
 ## Writing a new ADR
 

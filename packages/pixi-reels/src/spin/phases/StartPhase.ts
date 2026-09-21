@@ -1,4 +1,5 @@
-import type { SkipContext } from '../../config/types.js';
+import type { Reel } from '../../core/Reel.js';
+import type { SkipContext, SpeedProfile } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
 import { step } from './steps.js';
 import type { PhaseStep, StepContext, StepsEditor } from './steps.js';
@@ -12,16 +13,16 @@ export interface StartPhaseConfig {
 }
 
 /** What a game hands `StartPhase` through `f.register('start', StartPhase, options)`. */
-export interface StartPhaseOptions {
+export interface StartPhaseOptions<TProfile extends SpeedProfile = SpeedProfile> {
   /**
    * Edit the built-in steps (`delay`, `launch`, `pull`, `accelerate`,
    * `announce`) before they run: insert one, replace one, drop one. Gets the
    * default list, returns the list to run. See `insertAfter` and friends.
    */
-  steps?: StepsEditor<StartStepContext>;
+  steps?: StepsEditor<StartStepContext<TProfile>>;
 }
 
-export type StartStepContext = StepContext<StartPhaseConfig>;
+export type StartStepContext<TProfile extends SpeedProfile = SpeedProfile> = StepContext<StartPhaseConfig, TProfile>;
 
 /** The step-back pull, px/frame backwards and for how long. */
 const PULL_SPEED = -2;
@@ -40,24 +41,31 @@ const PULL_MS = 50;
  * model they name a `targetSpeed` and wait, letting the drive's bounds shape
  * the ramp.
  */
-export class StartPhase extends ReelPhase<StartPhaseConfig> {
+export class StartPhase<TProfile extends SpeedProfile = SpeedProfile> extends ReelPhase<StartPhaseConfig, TProfile> {
   readonly name = 'start';
   readonly skippable = true;
   override readonly quickenable = true;
 
-  protected readonly _options: StartPhaseOptions;
+  protected readonly _options: StartPhaseOptions<TProfile>;
 
-  constructor(reel: ReelPhase<StartPhaseConfig>['reel'], speed: StartPhase['speed'], options: StartPhaseOptions = {}) {
+  constructor(reel: Reel, speed: TProfile, options: StartPhaseOptions<TProfile> = {}) {
     super(reel, speed);
     this._options = options;
   }
 
   /** The built-in list. A subclass overrides this to change the flow; a game edits it through `options.steps`. */
-  defaultSteps(): PhaseStep<StartStepContext>[] {
+  defaultSteps(): PhaseStep<StartStepContext<TProfile>>[] {
     const reel = this._reel;
-    const speed = this._speed;
-    const steps: PhaseStep<StartStepContext>[] = [
-      step('delay', (ctx) => ((ctx.config.delay ?? 0) > 0 ? ctx.wait(ctx.config.delay ?? 0) : undefined), { cut: true }),
+    const speed = this.timing;
+    const steps: PhaseStep<StartStepContext<TProfile>>[] = [
+      step(
+        'delay',
+        (ctx) => {
+          const wait = ctx.step.at(0)?.duration ?? ctx.config.delay ?? 0;
+          return wait > 0 ? ctx.wait(wait) : undefined;
+        },
+        { cut: true },
+      ),
       // Re-mask any lifted unmask symbols the instant this reel starts to
       // move. notifySpinStart only fires at accel-end, which would leave an
       // unmasked symbol floating above the mask for the whole ramp.
@@ -71,17 +79,24 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
     if (speed.bounceDistance > 0) {
       steps.push(
         step('pull', (ctx) => {
+          const timing = ctx.step.at(0);
+          const duration = timing?.duration ?? PULL_MS;
           if (reel.hasDrive) {
             reel.targetSpeed = PULL_SPEED;
-            return ctx.wait(PULL_MS);
+            return ctx.wait(duration);
           }
-          return ctx.gsap.to(reel, { speed: PULL_SPEED, duration: PULL_MS / 1000, ease: 'power1.out' });
+          return ctx.gsap.to(reel, {
+            speed: PULL_SPEED,
+            duration: duration / 1000,
+            ease: timing?.ease ?? 'power1.out',
+          });
         }),
       );
     }
     steps.push(
       step('accelerate', (ctx) => {
-        const duration = speed.accelerationDuration ?? 300;
+        const timing = ctx.step.at(0);
+        const duration = timing?.duration ?? speed.accelerationDuration ?? 300;
         if (reel.hasDrive) {
           // Under the drive model the ramp shape belongs to the acceleration
           // bounds, not to an ease. The phase only names the destination and
@@ -92,7 +107,7 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
         return ctx.gsap.to(reel, {
           speed: speed.spinSpeed,
           duration: duration / 1000,
-          ease: speed.accelerationEase ?? 'power2.in',
+          ease: timing?.ease ?? speed.accelerationEase ?? 'power2.in',
         });
       }),
       step('announce', () => reel.notifySpinStart()),
@@ -116,7 +131,7 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
    * The pose IS the natural end, so a `'quicken'` completes here as well.
    */
   protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
-    this._reel.forceSpeed(this._speed.spinSpeed);
+    this._reel.forceSpeed(this.timing.spinSpeed);
     // The accel step died before `announce` could run, but the reel keeps
     // spinning through StopPhase. symbols must still learn they're in a spin
     // (blur / static-spin presentations). Safe if it already fired: the hook

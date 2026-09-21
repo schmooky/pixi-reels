@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "tests/types/**/*.ts"
+  ],
+  "exclude": [
+    "tests/types/speedProfileMerge.types.ts"
+  ]
+}

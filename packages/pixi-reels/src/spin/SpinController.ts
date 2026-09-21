@@ -24,7 +24,7 @@ import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents } from '../events/ReelEvents.js';
 import { PhaseFactory } from './phases/PhaseFactory.js';
 import type { SpinPhase, SpinPhaseConfig } from './phases/SpinPhase.js';
-import type { ReelPhase } from './phases/ReelPhase.js';
+import type { PhaseCreateContext, ReelPhase } from './phases/ReelPhase.js';
 import type { StartPhaseConfig } from './phases/StartPhase.js';
 import type { StopPhaseConfig } from './phases/StopPhase.js';
 import type { AnticipationPhaseConfig } from './phases/AnticipationPhase.js';
@@ -251,6 +251,13 @@ export class SpinController implements Disposable {
    * `anticipation:reelEnd` only for reels that teased. Cleared per spin.
    */
   private _teasingReels = new Set<number>();
+  /**
+   * Reels that finished an anticipation tease this spin. Read into every
+   * later `PhaseCreateContext` for that reel, so a phase picks up its
+   * profile's `whenAnticipated` section and a registered factory can build a
+   * different phase for a reel that teased. Cleared per spin.
+   */
+  private _anticipatedReels = new Set<number>();
   /**
    * `'sequential'` anticipation chaining state: one deferred per anticipation
    * reel, resolved when that reel lands (in `_markLanded`). Reel at tease-order
@@ -522,6 +529,7 @@ export class SpinController implements Disposable {
     this._anticipationProtect = false;
     this._protectSpent = false;
     this._teasingReels.clear();
+    this._anticipatedReels.clear();
     this._reelLandedResolvers.clear();
     this._reelLandedPromises.clear();
     this._armReelLandedDeferreds();
@@ -876,7 +884,12 @@ export class SpinController implements Disposable {
     const targetFrame = this._frameFor(reelIndex);
     const stopDelay = this._stopDelayFor(reelIndex, speed);
 
-    const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+    const placePhase = this._phaseFactory.create<any>(
+      'cascade:place',
+      reel,
+      speed,
+      this._phaseContext('cascade:place', reelIndex),
+    );
     this._activePhases.set(reelIndex, placePhase);
     await placePhase.run({
       targetFrame,
@@ -887,7 +900,12 @@ export class SpinController implements Disposable {
     } satisfies CascadePlacePhaseConfig);
     if (this._isStale(reelIndex, generation)) return;
 
-    const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+    const dropInPhase = this._phaseFactory.create<any>(
+      'cascade:dropIn',
+      reel,
+      speed,
+      this._phaseContext('cascade:dropIn', reelIndex),
+    );
     this._activePhases.set(reelIndex, dropInPhase);
     await dropInPhase.run({
       winnerCells,
@@ -922,7 +940,12 @@ export class SpinController implements Disposable {
       const targetFrame = this._frameFor(i);
       const winnerCells = winnersByReel.get(i) ?? [];
 
-      const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+      const placePhase = this._phaseFactory.create<any>(
+        'cascade:place',
+        reel,
+        speed,
+        this._phaseContext('cascade:place', i),
+      );
       this._activePhases.set(i, placePhase);
       await placePhase.run({
         targetFrame,
@@ -933,7 +956,12 @@ export class SpinController implements Disposable {
       } satisfies CascadePlacePhaseConfig);
       if (this._isStale(i, generation)) return;
 
-      const gravityPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+      const gravityPhase = this._phaseFactory.create<any>(
+        'cascade:dropIn',
+        reel,
+        speed,
+        this._phaseContext('cascade:dropIn', i),
+      );
       this._activePhases.set(i, gravityPhase);
       await gravityPhase.run({
         winnerCells,
@@ -1017,7 +1045,12 @@ export class SpinController implements Disposable {
       if (this._isStale(reelIndex, generation)) return;
     }
 
-    const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+    const dropInPhase = this._phaseFactory.create<any>(
+      'cascade:dropIn',
+      reel,
+      speed,
+      this._phaseContext('cascade:dropIn', reelIndex),
+    );
     this._activePhases.set(reelIndex, dropInPhase);
     await dropInPhase.run({
       winnerCells,
@@ -1756,6 +1789,20 @@ export class SpinController implements Disposable {
   }
 
   /**
+   * What a phase about to be built learns about the reel it runs on: which
+   * reel it is, and whether that reel has already teased or been quickened
+   * this spin. See {@link PhaseCreateContext}.
+   */
+  private _phaseContext(phase: string, reelIndex: number): PhaseCreateContext {
+    return {
+      phase,
+      reelIndex,
+      anticipated: this._anticipatedReels.has(reelIndex),
+      quickened: this._quickenedReels.has(reelIndex),
+    };
+  }
+
+  /**
    * The slam path itself: force-complete active phases, place results (or
    * snap to current symbols when no result is set), mark the target reels as
    * landed. Shared by `skip()` (stage 1+), `requestSkip()`'s deferred path,
@@ -2047,7 +2094,12 @@ export class SpinController implements Disposable {
 
     // START or FALL: chain via phase.run() promises (no busy-polling).
     if (isTumble) {
-      const fallPhase = this._phaseFactory.create<any>('cascade:fall', reel, speed);
+      const fallPhase = this._phaseFactory.create<any>(
+        'cascade:fall',
+        reel,
+        speed,
+        this._phaseContext('cascade:fall', reelIndex),
+      );
       this._activePhases.set(reelIndex, fallPhase);
       await fallPhase.run({
         spinningMode: this._spinningMode,
@@ -2055,7 +2107,12 @@ export class SpinController implements Disposable {
         events: this._events,
       } satisfies CascadeFallPhaseConfig);
     } else {
-      const startPhase = this._phaseFactory.create<any>('start', reel, speed);
+      const startPhase = this._phaseFactory.create<any>(
+        'start',
+        reel,
+        speed,
+        this._phaseContext('start', reelIndex),
+      );
       this._activePhases.set(reelIndex, startPhase);
       await startPhase.run({
         spinningMode: this._spinningMode,
@@ -2065,7 +2122,12 @@ export class SpinController implements Disposable {
 
     if (this._isStale(reelIndex, generation)) return;
 
-    const spinPhase = this._phaseFactory.create<SpinPhase>('spin', reel, speed);
+    const spinPhase = this._phaseFactory.create<SpinPhase>(
+      'spin',
+      reel,
+      speed,
+      this._phaseContext('spin', reelIndex),
+    );
     this._activePhases.set(reelIndex, spinPhase);
     // A per-reel `minimumSpinTime` is what lets ONE reel land below the
     // profile's shared floor. without it the only way under the floor is the
@@ -2135,7 +2197,12 @@ export class SpinController implements Disposable {
         total: this._anticipationReels.length,
       });
       this._events.emit('spin:stopping', reelIndex);
-      const anticipationPhase = this._phaseFactory.create<any>('anticipation', reel, speed);
+      const anticipationPhase = this._phaseFactory.create<any>(
+        'anticipation',
+        reel,
+        speed,
+        this._phaseContext('anticipation', reelIndex),
+      );
       this._activePhases.set(reelIndex, anticipationPhase);
       // A tumble reel has already dropped its visible symbols and is sitting
       // at speed zero; scrolling it during the tease would drag buffer
@@ -2163,6 +2230,13 @@ export class SpinController implements Disposable {
       );
       if (this._isStale(reelIndex, generation)) return;
       didAnticipate = true;
+      // Only a tease that PLAYED counts as one. `whenAnticipated` is the
+      // payoff of a tease the player watched, and a press that cut this one
+      // short did not get that tease; a press BEFORE the tease skips it
+      // outright (above), so a cut one is the only case left to exclude.
+      // `quickened` stays in the context either way, so a phase that wants
+      // the other reading can still see the press.
+      if (!anticipationPhase.quickened) this._anticipatedReels.add(reelIndex);
     } else {
       this._events.emit('spin:stopping', reelIndex);
     }
@@ -2182,7 +2256,12 @@ export class SpinController implements Disposable {
       }
       // Tumble stop = place + dropIn. Both phases are user-overridable via
       // the factory; the orchestration here is internal.
-      const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+      const placePhase = this._phaseFactory.create<any>(
+        'cascade:place',
+        reel,
+        speed,
+        this._phaseContext('cascade:place', reelIndex),
+      );
       this._activePhases.set(reelIndex, placePhase);
       await placePhase.run({
         targetFrame,
@@ -2193,7 +2272,12 @@ export class SpinController implements Disposable {
       } satisfies CascadePlacePhaseConfig);
       if (this._isStale(reelIndex, generation)) return;
 
-      const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+      const dropInPhase = this._phaseFactory.create<any>(
+        'cascade:dropIn',
+        reel,
+        speed,
+        this._phaseContext('cascade:dropIn', reelIndex),
+      );
       this._activePhases.set(reelIndex, dropInPhase);
       await dropInPhase.run({
         winnerCells: [],
@@ -2207,7 +2291,12 @@ export class SpinController implements Disposable {
       // the profile the press named, if any.
       const quickened = this._quickenCtx.get(reelIndex) ?? null;
       const stopSpeed = quickened?.speed ?? speed;
-      const stopPhase = this._phaseFactory.create<any>('stop', reel, stopSpeed);
+      const stopPhase = this._phaseFactory.create<any>(
+        'stop',
+        reel,
+        stopSpeed,
+        this._phaseContext('stop', reelIndex),
+      );
       this._activePhases.set(reelIndex, stopPhase);
       // The press came before this phase existed, so it never heard it. Prime
       // it, so a run on steps skips its `cut` waits from the first one on
@@ -2267,7 +2356,12 @@ export class SpinController implements Disposable {
     if (pinOverlays.length === 0) {
       return;
     }
-    const adjust = this._phaseFactory.create<any>('adjust', reel, speed);
+    const adjust = this._phaseFactory.create<any>(
+      'adjust',
+      reel,
+      speed,
+      this._phaseContext('adjust', reelIndex),
+    );
     this._activePhases.set(reelIndex, adjust);
     await adjust.run({ pinOverlays } satisfies AdjustPhaseConfig);
   }

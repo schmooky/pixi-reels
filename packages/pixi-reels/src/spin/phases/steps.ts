@@ -1,7 +1,7 @@
 import type { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
 import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
+import type { SpeedProfile, StepTiming } from '../../config/types.js';
 import type { Gsap } from '../../utils/gsap.js';
 import type { ReelPhase } from './ReelPhase.js';
 
@@ -10,10 +10,27 @@ import type { ReelPhase } from './ReelPhase.js';
  * needs, plus two ways to wait that a slam can cut: `wait` for time, `until`
  * for a condition the reel reaches on some frame.
  */
-export interface StepContext<TConfig = unknown, TProfile extends SpeedProfile = SpeedProfile> {
+export interface StepContext<
+  TConfig = unknown,
+  TProfile extends SpeedProfile = SpeedProfile,
+  TStep = StepTiming,
+> {
   reel: Reel;
-  /** The profile the phase runs on. A `'quicken'` press that named one has swapped it in. */
+  /**
+   * The profile the phase runs on, with the phase's own section folded in
+   * (`phase.timing`). A `'quicken'` press that named one has swapped it in.
+   */
   profile: TProfile;
+  /**
+   * What the profile configured for THIS step, in segment order, from
+   * `profile[phase].steps[name]` and its `whenAnticipated` half. Empty when
+   * the profile says nothing. A single object in the profile arrives as one
+   * entry; the built-in steps read `step[0]` and a list is for a step
+   * written to consume segments.
+   */
+  readonly step: readonly TStep[];
+  /** The reel ran an anticipation tease earlier in this spin. */
+  readonly anticipated: boolean;
   /** What the controller handed the phase in `run(config)`. */
   config: TConfig;
   gsap: Gsap;
@@ -39,6 +56,9 @@ export interface StepContext<TConfig = unknown, TProfile extends SpeedProfile = 
    */
   until(predicate: () => boolean): Promise<void>;
 }
+
+/** What a step whose phase's profile says nothing about it receives. */
+const NO_STEP_TIMING: readonly StepTiming[] = [];
 
 /** Something a step may hand back to be waited on and cancelled. */
 export interface Cancellable {
@@ -151,10 +171,15 @@ const isCancellable = (value: unknown): value is Cancellable =>
  * aborted through `ctx.signal`, and `done` settles either way. Public so a
  * custom phase can run a step of its own the same way. Pass `controller`
  * when `ctx.wait` / `ctx.until` must abort on the same signal.
+ *
+ * `step` and `anticipated` may be left out: a caller that knows nothing
+ * about the profile's sections gets an empty step config and a reel that has
+ * not teased, which is what a hand-rolled step saw before sections existed.
  */
 export function runStep<TCtx extends StepContext<any, any>>(
   run: (ctx: TCtx) => StepResult,
-  ctx: Omit<TCtx, 'signal'>,
+  ctx: Omit<TCtx, 'signal' | 'step' | 'anticipated'> &
+    Partial<Pick<StepContext, 'step' | 'anticipated'>>,
   controller: AbortController = new AbortController(),
 ): RunningStep {
   let settled = false;
@@ -167,7 +192,12 @@ export function runStep<TCtx extends StepContext<any, any>>(
     };
   });
 
-  const result = run({ ...ctx, signal: controller.signal } as TCtx);
+  const result = run({
+    step: NO_STEP_TIMING,
+    anticipated: false,
+    ...ctx,
+    signal: controller.signal,
+  } as TCtx);
   let cancelInner: (() => void) | null = null;
   if (isCancellable(result)) {
     cancelInner = () => result.cancel();

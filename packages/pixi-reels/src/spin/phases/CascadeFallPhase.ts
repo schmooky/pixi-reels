@@ -39,7 +39,7 @@ export interface CascadeFallPhaseConfig {
  * phase at builder time via the factory closure; the run-time config
  * carries only per-spin context (delay, event bus).
  */
-export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
+export class CascadeFallPhase<TProfile extends SpeedProfile = SpeedProfile> extends ReelPhase<CascadeFallPhaseConfig, TProfile> {
   readonly name = 'cascade:fall';
   readonly skippable = true;
   override readonly quickenable = true;
@@ -74,7 +74,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
 
   constructor(
     reel: Reel,
-    speed: SpeedProfile,
+    speed: TProfile,
     fall: Required<TumbleFallConfig>,
     gravity: 'auto' | Direction = 'auto',
   ) {

@@ -15,8 +15,26 @@ export { CURVE_FOCUS_WEIGHT } from './core/ReelCurve.js';
 export { SpeedPresets } from './config/SpeedPresets.js';
 export { DEFAULTS } from './config/defaults.js';
 export { Z_INDEX_BUDGET } from './config/types.js';
+// A speed profile's per-phase sections. `PhaseProfiles` is the registry a
+// game merges its own phases into, which is what gives a custom section a
+// real type; `PhaseSection` builds one entry of it.
+export type {
+  AnticipationSteps,
+  PhaseProfiles,
+  PhaseSection,
+  PhaseSectionBody,
+  PhaseSections,
+  PhaseTiming,
+  StartSteps,
+  StepTiming,
+  StopSteps,
+} from './config/types.js';
+// How a profile's sections resolve, for a phase that does not extend
+// `ReelPhase` and so cannot read `this.timing`.
+export { resolvePhaseProfile, resolveStepTiming } from './config/phaseProfile.js';
 export type {
   SpeedProfile,
+  SpeedProfileBase,
   SpinOptions,
   SymbolData,
   ReelLandingContext,
@@ -146,7 +164,9 @@ export { CascadePlacePhase } from './spin/phases/CascadePlacePhase.js';
 export { CascadeDropInPhase } from './spin/phases/CascadeDropInPhase.js';
 // The two shapes `PhaseFactory.register` / `.registerFactory` accept. Needed
 // to type a helper that registers phases on your behalf.
-export type { PhaseConstructor, PhaseCreatorFn } from './spin/phases/PhaseFactory.js';
+export type { PhaseConstructor, PhaseCreatorFn, PhaseOptionsOf } from './spin/phases/PhaseFactory.js';
+// What a registered factory is told about the reel it is building for.
+export type { PhaseCreateContext } from './spin/phases/ReelPhase.js';
 export type { StartPhaseConfig, StartPhaseOptions, StartStepContext } from './spin/phases/StartPhase.js';
 export type { SpinPhaseConfig } from './spin/phases/SpinPhase.js';
 export type { StopPhaseConfig, StopPhaseOptions, StopStepContext } from './spin/phases/StopPhase.js';

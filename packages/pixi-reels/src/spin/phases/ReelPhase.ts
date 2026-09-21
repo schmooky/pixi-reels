@@ -4,6 +4,12 @@ import type { Container } from 'pixi.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SkipContext, SpeedProfile } from '../../config/types.js';
 import type { Gsap } from '../../utils/gsap.js';
+import {
+  configuredStepNames,
+  resolvePhaseProfile,
+  resolveStepTiming,
+} from '../../config/phaseProfile.js';
+import { noticeWarnOnce } from '../../utils/notify.js';
 import { runStep } from './steps.js';
 import type { Cancellable, PhaseStep, RunningStep, StepContext } from './steps.js';
 
@@ -40,7 +46,7 @@ export interface BounceOptions {
    * profile's `bounceDuration`.
    */
   duration?: number;
-  /** GSAP ease for each leg. Default `'power1.out'`. */
+  /** GSAP ease for each leg. Default: the profile's `bounceEase`, then `'power1.out'`. */
   ease?: string;
   /**
    * The tween itself, for a different shape than out-and-back: an elastic
@@ -65,6 +71,42 @@ export interface ReelBounce extends Cancellable {
    */
   cancel(): void;
 }
+
+/**
+ * What the factory knows about the reel a phase is being built for. A
+ * registered factory branches on it (`'stop'` building a different phase for
+ * a reel that teased), and the phase reads its own profile section through
+ * it.
+ */
+export interface PhaseCreateContext {
+  /** The registered name being created, e.g. `'stop'`. Also the profile section this phase reads. */
+  readonly phase: string;
+  /** Index of the reel in the set, or `-1` when the phase was built outside a spin. */
+  readonly reelIndex: number;
+  /**
+   * The reel ran an anticipation tease TO ITS END earlier in this spin.
+   * `false` for the tease itself and every phase before it, `true` from the
+   * phase after it on. Selects the `whenAnticipated` half of a profile
+   * section, and is what a factory checks to build a different phase for a
+   * reel that teased.
+   *
+   * A tease a `'quicken'` press cut short does not count: the press asked for
+   * the landing, and what it cut is the tease `whenAnticipated` exists to pay
+   * off. {@link quickened} is here too, so a phase that wants the other
+   * reading can take it.
+   */
+  readonly anticipated: boolean;
+  /** A `'quicken'` press has already reached this reel. */
+  readonly quickened: boolean;
+}
+
+/** What a phase built outside `PhaseFactory.create` knows about its reel: nothing. */
+const NO_CONTEXT: PhaseCreateContext = {
+  phase: '',
+  reelIndex: -1,
+  anticipated: false,
+  quickened: false,
+};
 
 /** Ease for a bounce leg that does not name one. */
 const DEFAULT_BOUNCE_EASE = 'power1.out';
@@ -131,6 +173,7 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
   /** The config `run()` was given, for `ctx.config`. */
   protected _config: TConfig | null = null;
   private _stepRun: StepRun | null = null;
+  private _context: PhaseCreateContext = NO_CONTEXT;
 
   constructor(reel: Reel, speed: TProfile) {
     this._reel = reel;
@@ -141,9 +184,50 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     return this._reel;
   }
 
-  /** The profile this phase runs on. A `'quicken'` press that names one swaps it. */
+  /**
+   * The profile this phase runs on, as the game registered it. A `'quicken'`
+   * press that names one swaps it. Read {@link timing} instead to get the
+   * phase's own section folded in.
+   */
   get speed(): TProfile {
     return this._speed;
+  }
+
+  /**
+   * The profile with this phase's own section folded into the flat fields:
+   * the profile first, then `profile[phase]`, then that section's
+   * `whenAnticipated` when the reel teased earlier in this spin.
+   *
+   * Every field keeps its profile-wide name, so a phase reads
+   * `this.timing.spinSpeed` whether the game set `spinSpeed` at the top level
+   * or only inside `start`. A profile with no section for this phase returns
+   * the profile itself, unchanged.
+   */
+  get timing(): TProfile {
+    return resolvePhaseProfile(
+      this._speed,
+      this._context.phase || this.name,
+      this._context.anticipated,
+    );
+  }
+
+  /** How this phase was created: which reel, and what had already happened to it. */
+  get context(): PhaseCreateContext {
+    return this._context;
+  }
+
+  /** The reel ran an anticipation tease earlier in this spin. */
+  get anticipated(): boolean {
+    return this._context.anticipated;
+  }
+
+  /**
+   * The context `PhaseFactory.create` built this phase with. Called once,
+   * before `run()`.
+   * @internal
+   */
+  attachContext(context: PhaseCreateContext): void {
+    this._context = context;
   }
 
   get isActive(): boolean {
@@ -270,6 +354,7 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
    * Call {@link tickSteps} from `update()` so `ctx.until()` can watch the reel.
    */
   protected runSteps(steps: readonly PhaseStep[]): void {
+    this._reportUnknownStepConfig(steps);
     this._cancelSteps();
     const run: StepRun = {
       steps: [...steps],
@@ -281,6 +366,28 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     };
     this._stepRun = run;
     this._nextStep(run);
+  }
+
+  /**
+   * A `steps` key in this phase's profile section that names no step of the
+   * list about to run configures nothing and would do it silently. `insertAfter`
+   * and friends throw on the same mistake; a profile is data rather than code,
+   * so this warns instead of failing the spin.
+   */
+  private _reportUnknownStepConfig(steps: readonly PhaseStep[]): void {
+    const phase = this._context.phase || this.name;
+    const configured = configuredStepNames(this._speed, phase);
+    if (configured.length === 0) return;
+    const have = steps.map((s) => s.name);
+    for (const name of configured) {
+      if (have.includes(name)) continue;
+      noticeWarnOnce(
+        `profile-step-${phase}-${name}`,
+        `speed profile '${this._speed.name}' configures a step '${name}' on phase ` +
+          `'${phase}', which runs no such step (have: ${have.join(', ')}). ` +
+          'Nothing is applied for it.',
+      );
+    }
   }
 
   /**
@@ -314,7 +421,11 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     }
     const controller = new AbortController();
     this._stepEvent(current.name, 'start');
-    const running = runStep(current.run, this._stepContext(run, controller.signal), controller);
+    const running = runStep(
+      current.run,
+      this._stepContext(run, current.name, controller.signal),
+      controller,
+    );
     // An instant step (no result, or a 0 ms wait) chains synchronously, so a
     // reel with no start delay begins to move inside `run()` as it always
     // did, not a microtask later.
@@ -339,11 +450,18 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     this._reel.events.emit('phase:step', { phase: this.name, step, status });
   }
 
-  private _stepContext(run: StepRun, signal: AbortSignal): Omit<StepContext<TConfig, TProfile>, 'signal'> {
+  private _stepContext(
+    run: StepRun,
+    stepName: string,
+    signal: AbortSignal,
+  ): Omit<StepContext<TConfig, TProfile>, 'signal'> {
     const reel = this._reel;
+    const anticipated = this._context.anticipated;
     return {
       reel,
-      profile: this._speed,
+      profile: this.timing,
+      step: resolveStepTiming(this._speed, this._context.phase || this.name, stepName, anticipated),
+      anticipated,
       config: this._config as TConfig,
       gsap: reel.gsap,
       container: reel.container,
@@ -466,7 +584,7 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
    */
   bounce(options: BounceOptions = {}): ReelBounce {
     const reel = this._reel;
-    const distance = options.distance ?? this._speed.bounceDistance;
+    const distance = options.distance ?? this.timing.bounceDistance;
     if (distance <= 0) {
       return { done: Promise.resolve(), cancel: () => {} };
     }
@@ -496,8 +614,8 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
       main: axis.mainProp,
       base,
       distance: axis.polarity * distance,
-      seconds: (options.duration ?? this._speed.bounceDuration) / 1000,
-      ease: options.ease ?? DEFAULT_BOUNCE_EASE,
+      seconds: (options.duration ?? this.timing.bounceDuration) / 1000,
+      ease: options.ease ?? this.timing.bounceEase ?? DEFAULT_BOUNCE_EASE,
     });
 
     let finished = false;
