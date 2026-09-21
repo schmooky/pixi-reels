@@ -11,8 +11,10 @@ type StepEntry = StepTiming | readonly StepTiming[];
 
 const NO_STEPS: readonly StepTiming[] = [];
 
+// An array is an object too, and spreading one into a profile would land
+// its indices there as `'0'`, `'1'`. A section is a plain object or nothing.
 const isSection = (value: unknown): value is AnyPhaseSection =>
-  typeof value === 'object' && value !== null;
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /** `Array.isArray` does not narrow a `readonly` array out of a union on its own. */
 const isSegmentList = (value: StepEntry): value is readonly StepTiming[] => Array.isArray(value);
@@ -157,4 +159,19 @@ export function resolveStepTiming(
   const base = segmentsOf(section.steps?.[stepName]);
   if (!anticipated) return base;
   return mergeSegments(base, segmentsOf(section.whenAnticipated?.steps?.[stepName]));
+}
+
+/**
+ * Every step name the profile configures for `phase`, from both halves of
+ * the section. What a phase checks its own step list against, so a name that
+ * matches nothing is reported rather than silently ignored.
+ */
+export function configuredStepNames(profile: SpeedProfile, phase: string): readonly string[] {
+  const section = sectionOf(profile, phase);
+  if (!section) return [];
+  const names = new Set([
+    ...Object.keys(section.steps ?? {}),
+    ...Object.keys(section.whenAnticipated?.steps ?? {}),
+  ]);
+  return [...names];
 }

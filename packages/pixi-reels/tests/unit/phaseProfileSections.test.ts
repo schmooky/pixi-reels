@@ -22,6 +22,7 @@ import type { BounceContext } from '../../src/spin/phases/ReelPhase.js';
 import { SpeedManager } from '../../src/speed/SpeedManager.js';
 import { step, replaceStep } from '../../src/spin/phases/steps.js';
 import { resolvePhaseProfile, resolveStepTiming } from '../../src/config/phaseProfile.js';
+import { onNotice, resetNoticesForTest } from '../../src/utils/notify.js';
 import type { PhaseCreateContext } from '../../src/spin/phases/ReelPhase.js';
 import type { PhaseFactory } from '../../src/spin/phases/PhaseFactory.js';
 import type { PhaseSection, SpeedProfile, StepTiming } from '../../src/config/types.js';
@@ -448,3 +449,104 @@ describe('a tease a press cut short does not count as one', () => {
     ticker.destroy();
   });
 });
+
+describe('what a section must NOT disturb', () => {
+  it('hands an unsectioned profile to its steps by identity', async () => {
+    const seen: SpeedProfile[] = [];
+    const { reelSet, ticker } = build(
+      (f) =>
+        f.register('stop', StopPhase, {
+          steps: (steps) =>
+            replaceStep(
+              steps,
+              'bounce',
+              step('bounce', (ctx) => {
+                seen.push(ctx.profile);
+              }),
+            ),
+        }),
+      FLAT,
+    );
+    const spin = reelSet.spin();
+    reelSet.setResult(RESULT);
+    await pump(ticker, spin);
+    // Not merely equal: the same object the game registered, as before sections.
+    expect(seen.every((p) => p === reelSet.speed.active)).toBe(true);
+    reelSet.destroy();
+    ticker.destroy();
+  });
+
+  it('reads a sectioned profile as live as an unsectioned one', async () => {
+    /** What one reel sees before and after the profile object is mutated mid-phase. */
+    const beforeAfter = async (profile: SpeedProfile): Promise<number[]> => {
+      const reads: number[] = [];
+      const { reelSet, ticker } = build(
+        (f) =>
+          f.register('stop', StopPhase, {
+            steps: (steps) =>
+              replaceStep(
+                replaceStep(
+                  steps,
+                  'delay',
+                  step('delay', (ctx) => {
+                    if (ctx.reel.reelIndex !== 0) return;
+                    reads.push(ctx.profile.bounceDuration);
+                    (profile as { bounceDuration: number }).bounceDuration = 777;
+                  }),
+                ),
+                'bounce',
+                step('bounce', (ctx) => {
+                  if (ctx.reel.reelIndex === 0) reads.push(ctx.profile.bounceDuration);
+                }),
+              ),
+          }),
+        profile,
+      );
+      const spin = reelSet.spin();
+      reelSet.setResult(RESULT);
+      await pump(ticker, spin);
+      reelSet.destroy();
+      ticker.destroy();
+      return reads;
+    };
+
+    // Mutating a profile mid-spin is not supported either way; what matters
+    // is that adding a section does not quietly change which it does.
+    expect(await beforeAfter({ ...FLAT })).toEqual([200, 777]);
+    expect(await beforeAfter({ ...FLAT, stop: { bounceDistance: 4 } })).toEqual([200, 777]);
+  });
+
+  it("ignores a profile field named after a phase that is not a section", () => {
+    const scalar = { ...FLAT, stop: 5 } as unknown as SpeedProfile;
+    expect(resolvePhaseProfile(scalar, 'stop')).toBe(scalar);
+
+    // An array is an object; spreading one would land its indices on the profile.
+    const list = { ...FLAT, stop: [{ bounceDistance: 1 }] } as unknown as SpeedProfile;
+    const resolved = resolvePhaseProfile(list, 'stop');
+    expect(resolved).toBe(list);
+    expect(resolved.bounceDistance).toBe(12);
+    expect(Object.keys(resolved)).not.toContain('0');
+  });
+
+  it('reports a steps key that names no step of the phase', async () => {
+    resetNoticesForTest();
+    const notices: string[] = [];
+    const off = onNotice((notice) => notices.push(notice.code));
+    const profile: SpeedProfile = {
+      ...FLAT,
+      // `bonce` is a typo; a custom phase's section is not keyed by a closed
+      // set of names, so nothing catches it at compile time.
+      stop: { steps: { bonce: { ease: 'sine.out' } } } as never,
+    };
+    const { reelSet, ticker } = build(() => {}, profile);
+    const spin = reelSet.spin();
+    reelSet.setResult(RESULT);
+    await pump(ticker, spin);
+    off();
+    expect(notices).toContain('profile-step-stop-bonce');
+    reelSet.destroy();
+    ticker.destroy();
+    resetNoticesForTest();
+  });
+});
+

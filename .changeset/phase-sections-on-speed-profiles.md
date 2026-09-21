@@ -75,3 +75,5 @@ declare module 'pixi-reels' { interface SpeedProfileBase { houseEase: string } }
 
 A profile carrying a top-level OBJECT field named after a phase (`start`, `spin`, `anticipation`, `stop`, `adjust`, `cascade:*`) now collides with that phase's section and fails to compile, loudly, at the profile's declaration. Rename the field, or make it the phase's section.
 
+Two things the probes for those breaks turned up, fixed here: a profile field named after a phase whose value is an ARRAY is no longer read as that phase's section (spreading one landed its indices on the resolved profile as `'0'`, `'1'`), and a `steps` key naming no step of the phase now warns once with code `profile-step-<phase>-<name>` instead of configuring nothing in silence — `insertAfter` and friends throw on the same mistake, but a profile is data, so this warns rather than failing the spin.
+

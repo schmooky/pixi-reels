@@ -4,7 +4,12 @@ import type { Container } from 'pixi.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SkipContext, SpeedProfile } from '../../config/types.js';
 import type { Gsap } from '../../utils/gsap.js';
-import { resolvePhaseProfile, resolveStepTiming } from '../../config/phaseProfile.js';
+import {
+  configuredStepNames,
+  resolvePhaseProfile,
+  resolveStepTiming,
+} from '../../config/phaseProfile.js';
+import { noticeWarnOnce } from '../../utils/notify.js';
 import { runStep } from './steps.js';
 import type { Cancellable, PhaseStep, RunningStep, StepContext } from './steps.js';
 
@@ -169,9 +174,6 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
   protected _config: TConfig | null = null;
   private _stepRun: StepRun | null = null;
   private _context: PhaseCreateContext = NO_CONTEXT;
-  /** {@link timing}, memoised against the profile it was resolved from. */
-  private _timing: TProfile | null = null;
-  private _timingFor: TProfile | null = null;
 
   constructor(reel: Reel, speed: TProfile) {
     this._reel = reel;
@@ -202,14 +204,11 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
    * the profile itself, unchanged.
    */
   get timing(): TProfile {
-    if (this._timing && this._timingFor === this._speed) return this._timing;
-    this._timingFor = this._speed;
-    this._timing = resolvePhaseProfile(
+    return resolvePhaseProfile(
       this._speed,
       this._context.phase || this.name,
       this._context.anticipated,
     );
-    return this._timing;
   }
 
   /** How this phase was created: which reel, and what had already happened to it. */
@@ -229,7 +228,6 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
    */
   attachContext(context: PhaseCreateContext): void {
     this._context = context;
-    this._timing = null;
   }
 
   get isActive(): boolean {
@@ -356,6 +354,7 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
    * Call {@link tickSteps} from `update()` so `ctx.until()` can watch the reel.
    */
   protected runSteps(steps: readonly PhaseStep[]): void {
+    this._reportUnknownStepConfig(steps);
     this._cancelSteps();
     const run: StepRun = {
       steps: [...steps],
@@ -367,6 +366,28 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     };
     this._stepRun = run;
     this._nextStep(run);
+  }
+
+  /**
+   * A `steps` key in this phase's profile section that names no step of the
+   * list about to run configures nothing and would do it silently. `insertAfter`
+   * and friends throw on the same mistake; a profile is data rather than code,
+   * so this warns instead of failing the spin.
+   */
+  private _reportUnknownStepConfig(steps: readonly PhaseStep[]): void {
+    const phase = this._context.phase || this.name;
+    const configured = configuredStepNames(this._speed, phase);
+    if (configured.length === 0) return;
+    const have = steps.map((s) => s.name);
+    for (const name of configured) {
+      if (have.includes(name)) continue;
+      noticeWarnOnce(
+        `profile-step-${phase}-${name}`,
+        `speed profile '${this._speed.name}' configures a step '${name}' on phase ` +
+          `'${phase}', which runs no such step (have: ${have.join(', ')}). ` +
+          'Nothing is applied for it.',
+      );
+    }
   }
 
   /**
