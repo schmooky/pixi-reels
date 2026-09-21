@@ -1,6 +1,9 @@
 id: antic-010
 group: antic
 question: How do I make the anticipation reel speed up briefly before slowing?
-answer: Use a profile whose `accelerationEase` / `decelerationEase` ramps up
-  before the anticipation slowdown; tune `accelerationDuration`.
+answer: >-
+  Give the tease a curve whose first segment is a surge above 1: `setAnticipation(reels,
+  { curve: [{ speed: 1.4, duration: 200 }, { speed: 0.2, duration: 600 }] })` speeds the
+  reel up before it slows. A profile's `accelerationEase` and `accelerationDuration` shape
+  the wind-up at the start of the spin, not the tease.
 links: []

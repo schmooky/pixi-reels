@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 2.8.0 is a reel engine for PixiJS v8.
+pixi-reels 3.0.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -147,7 +147,7 @@ Every breaking change in 3.0.0, with a before and after. Skip presses
 
 ## Generated API (TypeDoc)
 
-### AdjustPhase
+### AdjustPhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.AdjustPhase/
 Tween-only phase between SPIN and STOP for MultiWays slots.
 
@@ -155,7 +155,7 @@ Tween-only phase between SPIN and STOP for MultiWays slots.
 URL: https://pixi-reels.schmooky.dev/api/classes/index.AnimatedSpriteSymbol/
 Symbol implementation using PixiJS AnimatedSprite. Swaps frame arrays on activate. Win animation plays the full sequence.
 
-### AnticipationPhase
+### AnticipationPhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.AnticipationPhase/
 Anticipation phase: the tease before a reel stops.
 
@@ -167,11 +167,11 @@ A grid of cells that each spin **independently** - the generic "board of reels" 
 URL: https://pixi-reels.schmooky.dev/api/classes/index.CardSymbol/
 One visible cell on a reel. the thing that actually draws.
 
-### CascadeDropInPhase
+### CascadeDropInPhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadeDropInPhase/
 Drop-in half of the tumble cascade. Animates each visible symbol from its computed origin (above the viewport for new symbols, its old grid cell for survivors) down to its current grid position.
 
-### CascadeFallPhase
+### CascadeFallPhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadeFallPhase/
 Fall-out half of the tumble cascade. Replaces `StartPhase` when the builder was configured with `.tumble(...)`.
 
@@ -179,7 +179,7 @@ Fall-out half of the tumble cascade. Replaces `StartPhase` when the builder was 
 URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadeMode/
 Cascade/tumble spinning mode. Symbols fall from above with gravity-like acceleration, used for tumble/avalanche mechanics.
 
-### CascadePlacePhase
+### CascadePlacePhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadePlacePhase/
 Identity-swap half of the tumble cascade. Runs after `CascadeFallPhase` (Moment A) or right at the start of `refill()` (Moment B).
 
@@ -238,7 +238,7 @@ One vertical column of a slot board.
 URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelCurve/
 The curvature of one reel: a camera looking at a drum.
 
-### Abstract Class: ReelPhase\<TConfig = `void`, TProfile *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+### Abstract Class: ReelPhase\<TConfig = `void`, TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelPhase/
 Abstract base for reel spin phases.
 
@@ -282,7 +282,7 @@ The tempo of your reels, as named presets.
 URL: https://pixi-reels.schmooky.dev/api/classes/index.SpineSymbol/
 Symbol implementation using Spine 2D skeletal animation.
 
-### SpinPhase
+### SpinPhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.SpinPhase/
 Continuous spinning at constant speed.
 
@@ -298,7 +298,7 @@ Symbol implementation using a simple PixiJS Sprite. Swaps texture on activate. W
 URL: https://pixi-reels.schmooky.dev/api/classes/index.StandardMode/
 Standard top-to-bottom reel spinning. Symbols scroll downward at constant speed, wrapping around.
 
-### StartPhase
+### StartPhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.StartPhase/
 Accelerates the reel from rest to full spin speed.
 
@@ -306,7 +306,7 @@ Accelerates the reel from rest to full spin speed.
 URL: https://pixi-reels.schmooky.dev/api/classes/index.StaticSpinSymbol/
 Wraps any `ReelSymbol` and swaps it for a cached snapshot texture while the reel spins. "spin static, not Spine."
 
-### StopPhase
+### StopPhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.StopPhase/
 Stops the reel on the target frame.
 
@@ -404,11 +404,11 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.getTargetSlot/
 
 ### insertAfter()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.insertAfter/
-```ts function insertAfter<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, ...added: PhaseStep<TCtx>[] ): PhaseStep<TCtx>[]; ```
+```ts function insertAfter<TCtx extends StepContext<any, any, StepTiming>>( steps: readonly PhaseStep<TCtx>[], name: string, ...added: PhaseStep<TCtx>[] ): PhaseStep<TCtx>[]; ```
 
 ### insertBefore()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.insertBefore/
-```ts function insertBefore<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, ...added: PhaseStep<TCtx>[] ): PhaseStep<TCtx>[]; ```
+```ts function insertBefore<TCtx extends StepContext<any, any, StepTiming>>( steps: readonly PhaseStep<TCtx>[], name: string, ...added: PhaseStep<TCtx>[] ): PhaseStep<TCtx>[]; ```
 
 ### inset()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.inset/
@@ -436,11 +436,11 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.reelAxis/
 
 ### removeStep()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.removeStep/
-```ts function removeStep<TCtx extends StepContext<any, any>>(steps: readonly PhaseStep<TCtx>[], name: string): PhaseStep<TCtx>[]; ```
+```ts function removeStep<TCtx extends StepContext<any, any, StepTiming>>(steps: readonly PhaseStep<TCtx>[], name: string): PhaseStep<TCtx>[]; ```
 
 ### replaceStep()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.replaceStep/
-```ts function replaceStep<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, replacement: PhaseStep<TCtx> ): PhaseStep<TCtx>[]; ```
+```ts function replaceStep<TCtx extends StepContext<any, any, StepTiming>>( steps: readonly PhaseStep<TCtx>[], name: string, replacement: PhaseStep<TCtx> ): PhaseStep<TCtx>[]; ```
 
 ### resolveCurveConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveCurveConfig/
@@ -450,13 +450,21 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveCurveConfig/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveDriveConfig/
 ```ts function resolveDriveConfig(config: ReelDriveConfig, spinSpeed?: number): ResolvedDriveConfig; ```
 
+### resolvePhaseProfile()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.resolvePhaseProfile/
+```ts function resolvePhaseProfile<TProfile extends SpeedProfile>( profile: TProfile, phase: string, anticipated?: boolean ): TProfile; ```
+
+### resolveStepTiming()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveStepTiming/
+```ts function resolveStepTiming( profile: SpeedProfile, phase: string, stepName: string, anticipated?: boolean ): readonly StepTiming[]; ```
+
 ### resolveTumbleConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveTumbleConfig/
 ```ts function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedTumbleConfig; ```
 
 ### runStep()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.runStep/
-```ts function runStep<TCtx extends StepContext<any, any>>( run: (ctx: TCtx) => StepResult, ctx: Omit<TCtx, "signal">, controller?: AbortController ): RunningStep; ```
+```ts function runStep<TCtx extends StepContext<any, any, StepTiming>>( run: (ctx: TCtx) => StepResult, ctx: Omit<TCtx, "signal" | "step" | "anticipated"> & Partial<Pick<StepContext<unknown, SpeedProf
 
 ### setLogLevel()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.setLogLevel/
@@ -476,7 +484,7 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.startRecording/
 
 ### step()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.step/
-```ts function step<TCtx extends StepContext<any, any> = StepContext<any, any>>( name: string, run: (ctx: TCtx) => StepResult, options?: { cut?: boolean; } ): PhaseStep<TCtx>; ```
+```ts function step<TCtx extends StepContext<any, any, StepTiming> = StepContext<any, any, StepTiming>>( name: string, run: (ctx: TCtx) => StepResult, options?: { cut?: boolean; } ): PhaseStep<TCtx>;
 
 ### stepDrive()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.stepDrive/
@@ -527,7 +535,7 @@ Full anticipation configuration. The object form of `setAnticipation`''s second 
 ### AnticipationPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationPhaseConfig/
 
-### AnticipationPhaseOptions
+### AnticipationPhaseOptions\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationPhaseOptions/
 What a game hands `AnticipationPhase` through `f.register(''anticipation'', AnticipationPhase, options)`.
 
@@ -723,6 +731,14 @@ Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition that shif
 ### PhaseCardSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseCardSymbolOptions/
 
+### PhaseCreateContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseCreateContext/
+What the factory knows about the reel a phase is being built for. A registered factory branches on it (`''stop''` building a different phase for a reel that teased), and the phase reads its own profile
+
+### PhaseProfiles
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseProfiles/
+Every phase that may carry a section on a speed profile, mapped to that section''s shape. The built-ins are listed here; a game declares its own custom phases by merging into this interface, which is w
+
 ### PhaseStep\<TCtx *extends* [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\> = [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\>\>
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseStep/
 One step of a phase: a name to address it by, and what it does.
@@ -838,7 +854,7 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ScatterAnticipationOpt
 ### SilhouetteMaskOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SilhouetteMaskOptions/
 
-### SkipContext\<TProfile *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+### SkipContext\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SkipContext/
 What a phase receives in `onSkip(ctx)`: the mode of the press that reached it, the profile it should finish on (a `''quicken''` that named one), and whatever the game attached. See [SkipOptions](/api/in
 
@@ -858,9 +874,9 @@ Which reels a `slamStop()` call lands. Omit the argument entirely to land every 
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SnapshotRenderer/
 The slice of a PixiJS renderer the cache needs. `Renderer` (WebGL or WebGPU) satisfies it structurally; tests can pass a stub.
 
-### SpeedProfile
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpeedProfile/
-Timing and animation profile for a speed mode.
+### SpeedProfileBase
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpeedProfileBase/
+The flat timing fields every speed profile has carried since v1.
 
 ### SpineSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpineSymbolOptions/
@@ -892,7 +908,7 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpriteSymbolOptions/
 ### StartPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartPhaseConfig/
 
-### StartPhaseOptions
+### StartPhaseOptions\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartPhaseOptions/
 What a game hands `StartPhase` through `f.register(''start'', StartPhase, options)`.
 
@@ -903,14 +919,18 @@ Options for [startRecording](/api/functions/index.startRecording/).
 ### StaticSpinSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StaticSpinSymbolOptions/
 
-### StepContext\<TConfig = `unknown`, TProfile *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+### StepContext\<TConfig = `unknown`, TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/), TStep = [`StepTiming`](/api/interfaces/index.StepTiming/)\>
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StepContext/
 What every step of a phase receives. The reel and the numbers a step needs, plus two ways to wait that a slam can cut: `wait` for time, `until` for a condition the reel reaches on some frame.
+
+### StepTiming
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StepTiming/
+Overrides for one named step of a phase. A step reads whichever of these its own work uses; the built-in steps read `ease` and `duration`.
 
 ### StopPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StopPhaseConfig/
 
-### StopPhaseOptions
+### StopPhaseOptions\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StopPhaseOptions/
 What a game hands `StopPhase` through `f.register(''stop'', StopPhase, options)`.
 
@@ -1000,9 +1020,9 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationProtect/
 URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStagger/
 ```ts type AnticipationStagger = number | number[] | "sequential"; ```
 
-### AnticipationStepContext
+### AnticipationStepContext\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStepContext/
-```ts type AnticipationStepContext = StepContext<AnticipationPhaseConfig>; ```
+```ts type AnticipationStepContext<TProfile extends SpeedProfile = SpeedProfile> = StepContext<AnticipationPhaseConfig, TProfile>; ```
 
 ### BoardCellZIndexResolver
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardCellZIndexResolver/
@@ -1080,17 +1100,37 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.OffsetConfig/
 URL: https://pixi-reels.schmooky.dev/api/types/index.Orientation/
 ```ts type Orientation = "vertical" | "horizontal"; ```
 
-### PhaseConstructor\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/), O = `undefined`\>
+### PhaseConstructor\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/), O = `undefined`\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseConstructor/
 ```ts type PhaseConstructor<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile, O = undefined> = (reel: Reel, speed: P, options?: O) => T; ```
 
-### PhaseCreatorFn\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+### PhaseCreatorFn\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseCreatorFn/
-```ts type PhaseCreatorFn<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile> = (reel: Reel, speed: P) => T; ```
+```ts type PhaseCreatorFn<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile> = (reel: Reel, speed: P, context: PhaseCreateContext) => T; ```
+
+### PhaseOptionsOf\<C\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseOptionsOf/
+```ts type PhaseOptionsOf<C> = C extends (reel: never, speed: never, options?: infer O) => unknown ? O : never; ```
+
+### PhaseSection\<TSteps = `Record`\<`string`, [`StepTiming`](/api/interfaces/index.StepTiming/)\>, TExtra = `unknown`\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseSection/
+```ts type PhaseSection<TSteps = Record<string, StepTiming>, TExtra = unknown> = PhaseSectionBody<TSteps, TExtra> & { whenAnticipated?: PhaseSectionBody<TSteps, TExtra>; }; ```
+
+### PhaseSectionBody\<TSteps, TExtra = `unknown`\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseSectionBody/
+```ts type PhaseSectionBody<TSteps, TExtra = unknown> = PhaseTiming & TExtra & { steps?: { readonly [K in keyof TSteps]?: TSteps[K] | readonly TSteps[K][] }; }; ```
+
+### PhaseSections
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseSections/
+```ts type PhaseSections = { readonly [K in keyof PhaseProfiles]?: PhaseProfiles[K] }; ```
 
 ### PhaseStepStatus
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseStepStatus/
 ```ts type PhaseStepStatus = "start" | "end" | "skipped" | "cut" | "cancelled"; ```
+
+### PhaseTiming
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseTiming/
+```ts type PhaseTiming = Partial<Omit<SpeedProfileBase, "name" | "tumble">>; ```
 
 ### PinExpireReason
 URL: https://pixi-reels.schmooky.dev/api/types/index.PinExpireReason/
@@ -1120,13 +1160,17 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.RunCascadeResult/
 URL: https://pixi-reels.schmooky.dev/api/types/index.SkipMode/
 ```ts type SkipMode = "slam" | "quicken"; ```
 
+### SpeedProfile
+URL: https://pixi-reels.schmooky.dev/api/types/index.SpeedProfile/
+```ts type SpeedProfile = SpeedProfileBase & PhaseSections; ```
+
 ### Stacking
 URL: https://pixi-reels.schmooky.dev/api/types/index.Stacking/
 ```ts type Stacking = "ascending" | "descending"; ```
 
-### StartStepContext
+### StartStepContext\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.StartStepContext/
-```ts type StartStepContext = StepContext<StartPhaseConfig>; ```
+```ts type StartStepContext<TProfile extends SpeedProfile = SpeedProfile> = StepContext<StartPhaseConfig, TProfile>; ```
 
 ### StepResult
 URL: https://pixi-reels.schmooky.dev/api/types/index.StepResult/
@@ -1136,9 +1180,9 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.StepResult/
 URL: https://pixi-reels.schmooky.dev/api/types/index.StepsEditor/
 ```ts type StepsEditor<TCtx extends StepContext<any, any> = StepContext<any, any>> = (steps: PhaseStep<TCtx>[]) => PhaseStep<TCtx>[]; ```
 
-### StopStepContext
+### StopStepContext\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.StopStepContext/
-```ts type StopStepContext = StepContext<StopPhaseConfig>; ```
+```ts type StopStepContext<TProfile extends SpeedProfile = SpeedProfile> = StepContext<StopPhaseConfig, TProfile>; ```
 
 ### SymbolPoolSlots
 URL: https://pixi-reels.schmooky.dev/api/types/index.SymbolPoolSlots/
@@ -1548,7 +1592,7 @@ Q (antic-009): How do I cancel anticipation cleanly if the tease misses?
 A: Anticipation is just the slow stop — if the tease misses, the reel lands normally, so there is nothing to cancel; stop your own glow/sound on `spin:reelLanded`.
 
 Q (antic-010): How do I make the anticipation reel speed up briefly before slowing?
-A: Use a profile whose `accelerationEase` / `decelerationEase` ramps up before the anticipation slowdown; tune `accelerationDuration`.
+A: Give the tease a curve whose first segment is a surge above 1: `setAnticipation(reels, { curve: [{ speed: 1.4, duration: 200 }, { speed: 0.2, duration: 600 }] })` speeds the reel up before it slows. A profile's `accelerationEase` and `accelerationDuration` shape the wind-up at the start of the spin, not the tease.
 
 Q (antic-011): How do I run built-in anticipation on a single cell, the way the engine does it for a whole reel?
 A: Hold & Win cells are independent reels, so the builder's `anticipateWhen(...)` runs anticipation on the still-spinning cells out of the box; for one cell, swap that mini-reel to a tension profile.
@@ -3960,8 +4004,7 @@ const reelSet = new ReelSetBuilder()
   // Big symbols are large (a 2x2 anchor is ~2x cell size);
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
-  // flush on grid. Keeps the decelerationEase intact so the brake-in
-  // is still smooth.
+  // flush on grid.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)

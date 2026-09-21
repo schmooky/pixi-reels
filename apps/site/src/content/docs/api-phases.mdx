@@ -140,6 +140,22 @@ builder
   .phases((f) => f.register('stop', InstantStopPhase));
 ```
 
+The built-in phases take the same parameter, so subclassing one keeps the
+profile type instead of pinning it back to `SpeedProfile`. Name it on the
+class and `defaultSteps()`, `*PhaseOptions` and `ctx.profile` all follow:
+
+```ts
+class TeasedStop extends StopPhase<InstantProfile> {
+  override defaultSteps(): PhaseStep<StopStepContext<InstantProfile>>[] {
+    return replaceStep(super.defaultSteps(), 'bounce',
+      step<StopStepContext<InstantProfile>>('bounce', (ctx) =>
+        ctx.phase.bounce({ duration: ctx.profile.slideMs })));
+  }
+}
+```
+
+`StopPhase` with no argument is `StopPhase<SpeedProfile>`, exactly as before.
+
 <RecipeDemo code="phase-from-scratch-stop" />
 
 <a id="steps"></a>
@@ -170,8 +186,10 @@ gsap tween or timeline (killed when a slam cuts it), a promise (told to stop
 through `ctx.signal`), a cancellable such as what `ctx.phase.bounce()`
 returns, or nothing. `ctx` carries `reel`, `profile`, `config`, `gsap`,
 `container`, `main` (the container property that is the travel axis),
-`phase`, `signal`, `quickened`, and two waits a slam can cut: `wait(ms)` on
-the gsap clock and `until(predicate)`, checked from the phase's `update()`.
+`phase`, `signal`, `quickened`, `anticipated` (the reel teased earlier in
+this spin), `step` (what the speed profile configured for THIS step, see
+below), and two waits a slam can cut: `wait(ms)` on the gsap clock and
+`until(predicate)`, checked from the phase's `update()`.
 
 `insertBefore`, `insertAfter`, `replaceStep` and `removeStep` return a copy
 and throw on a name the list does not have, so a stale edit fails at build.
@@ -201,6 +219,112 @@ The feel work these lists are for, stagger curves, a wind-up launch, a landing
 kick, beats and FX that follow the speed profile, a spotlight around the tease
 and one extra beat on the last reel, is six short recipes on
 [Feel: timings & landing FX](/recipes/feel/).
+
+## Configure a phase from the speed profile
+
+Editing the step list is code. The speed profile is the thing a game swaps at
+run time, and it carries a section per phase, keyed by the phase's registered
+name:
+
+```ts
+const normal = {
+  name: 'normal',
+  spinDelay: 0,
+  spinSpeed: 200,
+  stopDelay: 140,
+  anticipationDelay: 450,
+  bounceDistance: 80,
+  bounceDuration: 600,
+  start: { steps: { accelerate: { ease: 'sine.out', duration: 300 } } },
+  stop: {
+    bounceDistance: 40,
+    steps: { bounce: { ease: 'power1.out' } },
+    whenAnticipated: { steps: { bounce: { ease: 'sine.out' } } },
+  },
+} satisfies SpeedProfile;
+```
+
+The flat fields are unchanged and still the contract: a phase reads
+`spinSpeed` the same way whether the profile set it at the top level or inside
+`start`. A section restates any of them for that phase alone, configures the
+phase's steps by name under `steps`, and carries a `whenAnticipated` half that
+is merged on top for a reel that ran an anticipation tease earlier in the
+spin. Resolution, lowest first:
+
+```
+flat field  →  profile[phase]  →  profile[phase].whenAnticipated  →  speed.tune()
+```
+
+A phase reads the result as `this.timing`, a step as `ctx.profile`, and its
+own entry as `ctx.step` — the segments configured for that step, in order. A
+single object in the profile arrives as one entry; the built-in steps read
+`ctx.step[0]`, and a list is for a step written to consume segments (a
+two-stage acceleration in a phase of your own).
+
+The bounce is three profile fields, not two: `bounceEase` sits beside
+`bounceDistance` and `bounceDuration` and is what `phase.bounce()` eases on
+when the call names no ease of its own. `bounce({ ease })` still wins, and
+with neither it is `'power1.out'`. Like any flat field it is sectionable, so
+a teased landing that differs only in its ease is `stop: { whenAnticipated: {
+bounceEase: 'sine.out' } }` and no phase code at all.
+
+Override part of a section at run time with `speed.tune(phase, section)`; it
+merges rather than replaces, so naming one step's ease leaves the rest
+standing. `speed.clearTune(phase?)` drops it. Like a speed change, a tune
+takes effect on the next spin.
+
+```ts
+reelSet.speed.tune('stop', { steps: { bounce: { ease: 'back.out(2)' } } });
+```
+
+### A custom phase's section is typed too
+
+`PhaseProfiles` is the registry the built-in sections live in. Merge your own
+phase into it and its section is checked and autocompleted everywhere a
+profile is written, instead of being an opaque object:
+
+```ts
+declare module 'pixi-reels' {
+  interface PhaseProfiles {
+    'bigwin:flash': PhaseSection<{ pulse: StepTiming }, { flashes: number }>;
+  }
+}
+
+// checked field by field, and a typo in a step name is a compile error:
+reelSet.speed.addProfile('cinematic', {
+  ...SpeedPresets.NORMAL,
+  'bigwin:flash': { flashes: 3, steps: { pulse: { duration: 120 } } },
+});
+```
+
+`PhaseSection<TSteps, TExtra>` takes the phase's step names mapped to each
+step's config, and any extra fields the phase reads that are not profile
+timings. A phase that does not extend `ReelPhase` reads its section with
+`resolvePhaseProfile(profile, phase, anticipated)` and
+`resolveStepTiming(profile, phase, step, anticipated)`.
+
+### Knowing that a reel teased
+
+`PhaseFactory` passes a `PhaseCreateContext` to a registered factory as its
+third argument — `phase`, `reelIndex`, `anticipated`, `quickened` — so a
+registration can build a different phase per reel:
+
+```ts
+builder.phases((f) =>
+  f.registerFactory('anticipation', (reel, speed, ctx) =>
+    ctx.reelIndex === 4
+      ? new CustomAnticipationPhase(reel, speed)
+      : new AnticipationPhase(reel, speed)),
+);
+```
+
+`anticipated` means the reel ran a tease TO ITS END earlier in this spin:
+false for the tease itself, true for every phase after it, and false again
+when a `'quicken'` press cut the tease short — the press asked for the
+landing, and what it cut is the tease `whenAnticipated` pays off. `quickened`
+is right there in the same context if you want the other reading. The same context reaches the
+phase as `phase.anticipated` and `phase.context`, and every step as
+`ctx.anticipated`.
 
 ## Subclass a built-in
 

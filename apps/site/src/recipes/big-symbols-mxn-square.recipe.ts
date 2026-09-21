@@ -31,8 +31,7 @@ const reelSet = new ReelSetBuilder()
   // Big symbols are large (a 2x2 anchor is ~2x cell size);
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
-  // flush on grid. Keeps the decelerationEase intact so the brake-in
-  // is still smooth.
+  // flush on grid.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
