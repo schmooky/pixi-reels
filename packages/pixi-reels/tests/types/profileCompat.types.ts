@@ -48,7 +48,30 @@ declare module '../../src/config/types.js' {
   interface SpeedProfileBase {
     readonly houseSfx?: string;
   }
+
+  // ── C2. a step INSERTED into a built-in phase is declared the same way,
+  //        and its config is whatever the entry says, not only a StepTiming.
+  interface StopSteps {
+    kick: { lift: number; ease?: string };
+  }
 }
+export const insertedStep: SpeedProfile = {
+  ...FLAT,
+  stop: {
+    steps: { kick: { lift: 14, ease: 'back.out(2)' } },
+    whenAnticipated: { steps: { kick: { lift: 28 } } },
+  },
+};
+export const insertedStepTypo: SpeedProfile = {
+  ...FLAT,
+  // @ts-expect-error `lift` is a number, and the step's own shape is checked.
+  stop: { steps: { kick: { lift: 'high' } } },
+};
+export const unknownStepName: SpeedProfile = {
+  ...FLAT,
+  // @ts-expect-error no step is called `bonce`; the closed set still closes.
+  stop: { steps: { bonce: { ease: 'sine.out' } } },
+};
 export const merged: SpeedProfile = { ...FLAT, houseSfx: 'reel-loop' };
 
 // ── D. an object field named after a phase collides with its section ─────

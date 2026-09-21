@@ -19,12 +19,15 @@ export { Z_INDEX_BUDGET } from './config/types.js';
 // game merges its own phases into, which is what gives a custom section a
 // real type; `PhaseSection` builds one entry of it.
 export type {
+  AnticipationSteps,
   PhaseProfiles,
   PhaseSection,
   PhaseSectionBody,
   PhaseSections,
   PhaseTiming,
+  StartSteps,
   StepTiming,
+  StopSteps,
 } from './config/types.js';
 // How a profile's sections resolve, for a phase that does not extend
 // `ReelPhase` and so cannot read `this.timing`.

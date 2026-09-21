@@ -77,3 +77,15 @@ A profile carrying a top-level OBJECT field named after a phase (`start`, `spin`
 
 Two things the probes for those breaks turned up, fixed here: a profile field named after a phase whose value is an ARRAY is no longer read as that phase's section (spreading one landed its indices on the resolved profile as `'0'`, `'1'`), and a `steps` key naming no step of the phase now warns once with code `profile-step-<phase>-<name>` instead of configuring nothing in silence — `insertAfter` and friends throw on the same mistake, but a profile is data, so this warns rather than failing the spin.
 
+**A step you INSERT into a built-in phase is typed too.** Each built-in's step map is a named interface — `StartSteps`, `AnticipationSteps`, `StopSteps` — so a game merges its own step name into the one it inserted into, and a step's config can carry more than a `StepTiming`:
+
+```ts
+declare module 'pixi-reels' {
+  interface StopSteps { kick: { lift: number; ease?: string } }
+}
+
+const turbo = { ...SpeedPresets.TURBO, stop: { steps: { kick: { lift: 6 } } } };
+```
+
+An unknown step name is still rejected, and the step's own shape is still checked.
+

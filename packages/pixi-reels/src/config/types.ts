@@ -452,23 +452,51 @@ export type PhaseSection<
  *   ...SpeedPresets.NORMAL,
  *   'bigwin:flash': { flashes: 3, steps: { pulse: { duration: 120 } } },
  * });
+ *
+ * A step INSERTED into a built-in phase is declared the same way, by merging
+ * into that phase's step interface ({@link StartSteps},
+ * {@link AnticipationSteps}, {@link StopSteps}) rather than this one. A step's
+ * config is whatever the entry says, so it can carry more than a
+ * {@link StepTiming}:
+ *
+ * @example
+ * declare module 'pixi-reels' {
+ *   interface StopSteps {
+ *     kick: { lift: number; ease?: string; duration?: number };
+ *   }
+ * }
+ *
+ * // `f.register('stop', StopPhase, { steps: (s) => insertAfter(s, 'land', kick) })`
+ * // puts the step in the list; this is what tunes it per speed:
+ * const turbo = { ...SpeedPresets.TURBO, stop: { steps: { kick: { lift: 6 } } } };
  */
+/** The steps {@link PhaseProfiles.start} configures. Merge into it for a step you insert. */
+export interface StartSteps {
+  delay: StepTiming;
+  launch: StepTiming;
+  pull: StepTiming;
+  accelerate: StepTiming;
+  announce: StepTiming;
+}
+
+/** The steps {@link PhaseProfiles.anticipation} configures. Merge into it for a step you insert. */
+export interface AnticipationSteps {
+  tease: StepTiming;
+}
+
+/** The steps {@link PhaseProfiles.stop} configures. Merge into it for a step you insert. */
+export interface StopSteps {
+  delay: StepTiming;
+  spinOut: StepTiming;
+  land: StepTiming;
+  bounce: StepTiming;
+}
+
 export interface PhaseProfiles {
-  start: PhaseSection<{
-    delay: StepTiming;
-    launch: StepTiming;
-    pull: StepTiming;
-    accelerate: StepTiming;
-    announce: StepTiming;
-  }>;
+  start: PhaseSection<StartSteps>;
   spin: PhaseSection<Record<never, StepTiming>>;
-  anticipation: PhaseSection<{ tease: StepTiming }>;
-  stop: PhaseSection<{
-    delay: StepTiming;
-    spinOut: StepTiming;
-    land: StepTiming;
-    bounce: StepTiming;
-  }>;
+  anticipation: PhaseSection<AnticipationSteps>;
+  stop: PhaseSection<StopSteps>;
   adjust: PhaseSection<Record<never, StepTiming>>;
   'cascade:fall': PhaseSection<Record<never, StepTiming>>;
   'cascade:place': PhaseSection<Record<never, StepTiming>>;
