@@ -53,13 +53,13 @@
     ]
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.12",
+    "@biomejs/biome": "^2.5.14",
     "@changesets/changelog-github": "^1.0.1",
-    "@changesets/cli": "^3.0.2",
+    "@changesets/cli": "^3.0.3",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
     "@playwright/test": "^1.62.1",
     "husky": "^9.1.7",
-    "lint-staged": "^17.4.1"
+    "lint-staged": "^17.5.1"
   }
 }
