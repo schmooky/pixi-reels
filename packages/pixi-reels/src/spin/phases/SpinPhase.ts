@@ -1,4 +1,4 @@
-import type { SkipContext } from '../../config/types.js';
+import type { SkipContext, SpeedProfile } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
 
 export interface SpinPhaseConfig {
@@ -13,7 +13,7 @@ export interface SpinPhaseConfig {
  * spin time via ticker accumulation so it behaves consistently when the tab
  * is hidden (no reliance on wall-clock performance.now()).
  */
-export class SpinPhase extends ReelPhase<SpinPhaseConfig> {
+export class SpinPhase<TProfile extends SpeedProfile = SpeedProfile> extends ReelPhase<SpinPhaseConfig, TProfile> {
   readonly name = 'spin';
   readonly skippable = false;
   override readonly quickenable = true;
@@ -24,7 +24,7 @@ export class SpinPhase extends ReelPhase<SpinPhaseConfig> {
 
   protected onEnter(config: SpinPhaseConfig): void {
     this._elapsed = 0;
-    this._minTime = config.minimumSpinTime ?? this._speed.minimumSpinTime ?? 500;
+    this._minTime = config.minimumSpinTime ?? this.timing.minimumSpinTime ?? 500;
     this._readyToStop = false;
   }
 

@@ -65,7 +65,7 @@ interface DropJob {
  * Resolves when every animated tween completes, then calls
  * `reel.notifyLanded()`.
  */
-export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
+export class CascadeDropInPhase<TProfile extends SpeedProfile = SpeedProfile> extends ReelPhase<CascadeDropInPhaseConfig, TProfile> {
   readonly name = 'cascade:dropIn';
   readonly skippable = true;
   override readonly quickenable = true;
@@ -94,7 +94,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
   constructor(
     reel: Reel,
-    speed: SpeedProfile,
+    speed: TProfile,
     drop: Required<TumbleDropInConfig>,
     gravity: 'auto' | Direction = 'auto',
   ) {

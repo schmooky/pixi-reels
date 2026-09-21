@@ -316,8 +316,13 @@ export interface AnticipationOptions {
   cells?: AnticipationCells;
 }
 
-/** Timing and animation profile for a speed mode. */
-export interface SpeedProfile {
+/**
+ * The flat timing fields every speed profile has carried since v1.
+ *
+ * This is the whole of a profile's own shape; {@link SpeedProfile} adds the
+ * optional per-phase sections on top of it.
+ */
+export interface SpeedProfileBase {
   readonly name: string;
   /** Milliseconds between each reel starting to spin. */
   readonly spinDelay: number;
@@ -331,9 +336,22 @@ export interface SpeedProfile {
   readonly bounceDistance: number;
   /** Milliseconds for bounce-back animation. */
   readonly bounceDuration: number;
+  /**
+   * Optional GSAP ease for each leg of the landing bounce. Default
+   * `'power1.out'`. The third of the bounce's three numbers, beside
+   * `bounceDistance` and `bounceDuration`; `bounce({ ease })` still wins over
+   * it, as every {@link BounceOptions} field wins over the profile's.
+   */
+  readonly bounceEase?: string;
   /** Optional GSAP ease string for acceleration. Default: 'power2.in'. */
   readonly accelerationEase?: string;
-  /** Optional GSAP ease string for deceleration. Default: 'power2.out'. */
+  /**
+   * @deprecated Does nothing, and never did: no phase reads it. It names a
+   * deceleration phase the engine does not have — a stop is a spin-out plus a
+   * bounce. If you set it meaning the landing's ease, that is
+   * {@link SpeedProfileBase.bounceEase}, which `phase.bounce()` does read.
+   * Removed in the next major.
+   */
   readonly decelerationEase?: string;
   /** Milliseconds for acceleration phase. Default: 300. */
   readonly accelerationDuration?: number;
@@ -360,6 +378,132 @@ export interface SpeedProfile {
    */
   readonly tumble?: TumbleConfig;
 }
+
+/**
+ * The flat timing fields a phase section may restate for itself.
+ *
+ * Every field keeps the name and the meaning it has at the top level of a
+ * profile, so a step reads `spinSpeed` the same way whether the game set it
+ * profile-wide or only for that phase. `name` and `tumble` describe the
+ * profile as a whole and cannot be sectioned.
+ */
+export type PhaseTiming = Partial<Omit<SpeedProfileBase, 'name' | 'tumble'>>;
+
+/**
+ * Overrides for one named step of a phase. A step reads whichever of these
+ * its own work uses; the built-in steps read `ease` and `duration`.
+ */
+export interface StepTiming {
+  /** GSAP ease for whatever this step tweens. */
+  readonly ease?: string;
+  /** Milliseconds this step takes. For a step that only waits, the wait itself. */
+  readonly duration?: number;
+}
+
+/**
+ * A section's contents, without the anticipated variant. Split out so
+ * {@link PhaseSection} can reuse it for `whenAnticipated` without letting
+ * that variant carry a variant of its own.
+ */
+export type PhaseSectionBody<TSteps, TExtra = unknown> = PhaseTiming &
+  TExtra & {
+    /**
+     * Per-step overrides, keyed by the step's name. A list is for a step
+     * written to run several segments in a row (a two-stage acceleration);
+     * the built-in steps read the first entry only.
+     */
+    readonly steps?: { readonly [K in keyof TSteps]?: TSteps[K] | readonly TSteps[K][] };
+  };
+
+/**
+ * One phase's slice of a speed profile: the flat fields it wants different
+ * from the profile's own, the config of its named steps, and the variant to
+ * merge on top when the reel teased earlier in the spin.
+ *
+ * @typeParam TSteps - The phase's step names mapped to each step's config.
+ * @typeParam TExtra - Extra fields this phase reads that are not profile timings.
+ */
+export type PhaseSection<
+  TSteps = Record<string, StepTiming>,
+  TExtra = unknown,
+> = PhaseSectionBody<TSteps, TExtra> & {
+  /**
+   * Merged over the rest of this section when the reel ran an anticipation
+   * tease earlier in the same spin. Does not nest a variant of its own.
+   */
+  readonly whenAnticipated?: PhaseSectionBody<TSteps, TExtra>;
+};
+
+/**
+ * Every phase that may carry a section on a speed profile, mapped to that
+ * section's shape. The built-ins are listed here; a game declares its own
+ * custom phases by merging into this interface, which is what gives a
+ * custom section a real type instead of an opaque object:
+ *
+ * @example
+ * declare module 'pixi-reels' {
+ *   interface PhaseProfiles {
+ *     'bigwin:flash': PhaseSection<{ pulse: StepTiming }, { flashes: number }>;
+ *   }
+ * }
+ *
+ * // Checked, and autocompleted, like any built-in section:
+ * reelSet.speed.addProfile('cinematic', {
+ *   ...SpeedPresets.NORMAL,
+ *   'bigwin:flash': { flashes: 3, steps: { pulse: { duration: 120 } } },
+ * });
+ */
+export interface PhaseProfiles {
+  start: PhaseSection<{
+    delay: StepTiming;
+    launch: StepTiming;
+    pull: StepTiming;
+    accelerate: StepTiming;
+    announce: StepTiming;
+  }>;
+  spin: PhaseSection<Record<never, StepTiming>>;
+  anticipation: PhaseSection<{ tease: StepTiming }>;
+  stop: PhaseSection<{
+    delay: StepTiming;
+    spinOut: StepTiming;
+    land: StepTiming;
+    bounce: StepTiming;
+  }>;
+  adjust: PhaseSection<Record<never, StepTiming>>;
+  'cascade:fall': PhaseSection<Record<never, StepTiming>>;
+  'cascade:place': PhaseSection<Record<never, StepTiming>>;
+  'cascade:dropIn': PhaseSection<Record<never, StepTiming>>;
+}
+
+/** One optional section per entry in {@link PhaseProfiles}. */
+export type PhaseSections = { readonly [K in keyof PhaseProfiles]?: PhaseProfiles[K] };
+
+/**
+ * Timing and animation profile for a speed mode.
+ *
+ * The flat fields ({@link SpeedProfileBase}) are the profile's contract and
+ * have not moved: a phase that always read `profile.spinSpeed` still does.
+ * On top of them a profile may carry one optional section per phase, which
+ * restates any of those fields for that phase alone, configures the phase's
+ * named steps, and can vary itself for a reel that teased:
+ *
+ * @example
+ * const normal = {
+ *   name: 'normal',
+ *   spinDelay: 0,
+ *   spinSpeed: 200,
+ *   stopDelay: 140,
+ *   anticipationDelay: 450,
+ *   bounceDistance: 80,
+ *   bounceDuration: 600,
+ *   stop: {
+ *     bounceDistance: 40,
+ *     steps: { bounce: { ease: 'power1.out' } },
+ *     whenAnticipated: { steps: { bounce: { ease: 'sine.out' } } },
+ *   },
+ * } satisfies SpeedProfile;
+ */
+export type SpeedProfile = SpeedProfileBase & PhaseSections;
 
 /** Per-symbol configuration data. */
 export interface SymbolData {

@@ -33,7 +33,7 @@ export interface CascadePlacePhaseConfig {
  * BEFORE `CascadeDropInPhase` starts the drop tweens. so anything you
  * attach to a new symbol falls WITH it, not after landing.
  */
-export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
+export class CascadePlacePhase<TProfile extends SpeedProfile = SpeedProfile> extends ReelPhase<CascadePlacePhaseConfig, TProfile> {
   readonly name = 'cascade:place';
   readonly skippable = true;
   override readonly quickenable = true;
@@ -43,7 +43,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
   /** Build-time gravity setting; `'auto'` resolves per reel at place time. */
   protected readonly _gravity: 'auto' | Direction;
 
-  constructor(reel: Reel, speed: SpeedProfile, gravity: 'auto' | Direction = 'auto') {
+  constructor(reel: Reel, speed: TProfile, gravity: 'auto' | Direction = 'auto') {
     super(reel, speed);
     this._gravity = gravity;
   }

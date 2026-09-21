@@ -1,5 +1,6 @@
 import type { gsap } from 'gsap';
-import type { AnticipationSegment, SkipContext } from '../../config/types.js';
+import type { Reel } from '../../core/Reel.js';
+import type { AnticipationSegment, SkipContext, SpeedProfile, StepTiming } from '../../config/types.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import { noticeWarnOnce } from '../../utils/notify.js';
@@ -8,16 +9,16 @@ import { step } from './steps.js';
 import type { PhaseStep, StepContext, StepsEditor } from './steps.js';
 
 /** What a game hands `AnticipationPhase` through `f.register('anticipation', AnticipationPhase, options)`. */
-export interface AnticipationPhaseOptions {
+export interface AnticipationPhaseOptions<TProfile extends SpeedProfile = SpeedProfile> {
   /**
    * Edit the built-in steps before they run. The tease is one step,
    * `tease`, cut by a quicken; insert around it. Gets the default list,
    * returns the list to run.
    */
-  steps?: StepsEditor<AnticipationStepContext>;
+  steps?: StepsEditor<AnticipationStepContext<TProfile>>;
 }
 
-export type AnticipationStepContext = StepContext<AnticipationPhaseConfig>;
+export type AnticipationStepContext<TProfile extends SpeedProfile = SpeedProfile> = StepContext<AnticipationPhaseConfig, TProfile>;
 
 export interface AnticipationPhaseConfig {
   /** Duration override in ms. Uses speed profile anticipationDelay if not set. */
@@ -82,12 +83,12 @@ const DRIVE_ARRIVAL_EPS = 0.5;
  * segment and waits for the reel to arrive, letting the drive's acceleration
  * bounds shape every transition instead of an ease.
  */
-export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
+export class AnticipationPhase<TProfile extends SpeedProfile = SpeedProfile> extends ReelPhase<AnticipationPhaseConfig, TProfile> {
   readonly name = 'anticipation';
   readonly skippable = true;
   override readonly quickenable = true;
 
-  protected readonly _options: AnticipationPhaseOptions;
+  protected readonly _options: AnticipationPhaseOptions<TProfile>;
   protected _tween: gsap.core.Timeline | null = null;
   protected _delayed: gsap.core.Tween | null = null;
   /** Resolves the `tease` step. `null` outside a tease. */
@@ -114,19 +115,15 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
   protected _events: EventEmitter<ReelSetEvents> | null = null;
   protected _reelIndex = -1;
 
-  constructor(
-    reel: ReelPhase<AnticipationPhaseConfig>['reel'],
-    speed: AnticipationPhase['speed'],
-    options: AnticipationPhaseOptions = {},
-  ) {
+  constructor(reel: Reel, speed: TProfile, options: AnticipationPhaseOptions<TProfile> = {}) {
     super(reel, speed);
     this._options = options;
   }
 
   /** The built-in list: the whole tease is one cuttable step. */
-  defaultSteps(): PhaseStep<AnticipationStepContext>[] {
+  defaultSteps(): PhaseStep<AnticipationStepContext<TProfile>>[] {
     return [
-      step(
+      step<AnticipationStepContext<TProfile>>(
         'tease',
         (ctx) => ({
           done: new Promise<void>((resolve) => {
@@ -134,7 +131,7 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
               this._finishTease = null;
               resolve();
             };
-            this._startTease(ctx.config);
+            this._startTease(ctx.config, ctx.step.at(0));
           }),
           cancel: () => {
             this._kill();
@@ -151,11 +148,17 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     this.runSteps(this._options.steps ? this._options.steps(steps) : steps);
   }
 
-  /** Play the tease `config` describes; `_endTease()` when it is over. */
-  protected _startTease(config: AnticipationPhaseConfig): void {
+  /**
+   * Play the tease `config` describes; `_endTease()` when it is over.
+   *
+   * `timing` is what the profile configured for the `tease` step. The
+   * per-spin `config.duration` from `setAnticipation` still wins over it,
+   * which in turn wins over the profile's `anticipationDelay`.
+   */
+  protected _startTease(config: AnticipationPhaseConfig, timing?: StepTiming): void {
     const reel = this._reel;
-    const speed = this._speed;
-    const duration = (config.duration ?? speed.anticipationDelay) / 1000;
+    const speed = this.timing;
+    const duration = (config.duration ?? timing?.duration ?? speed.anticipationDelay) / 1000;
 
     if (duration <= 0) {
       this._endTease();
@@ -213,7 +216,7 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
       return;
     }
     const reel = this._reel;
-    const target = this._speed.spinSpeed * seg.speed;
+    const target = this.timing.spinSpeed * seg.speed;
     const isLast = this._segmentIndex === this._segments.length - 1;
     const hold = seg.hold ?? 0;
 
@@ -326,7 +329,7 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     // full speed. Under a quicken the runner then skips the `tease` step,
     // which is what completes the phase.
     this._kill();
-    this._reel.forceSpeed(this._speed.spinSpeed);
+    this._reel.forceSpeed(this.timing.spinSpeed);
   }
 
   protected _kill(): void {
