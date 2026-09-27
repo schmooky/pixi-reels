@@ -90,6 +90,7 @@ function baseGrid(bonusCells) {
 async function runFeature(triggerCells) {
   base.visible = false;
   board.container.visible = true;
+  labels.visible = true;
   for (const t of labelAt.values()) t.destroy();
   labelAt.clear();
   board.reset();
@@ -107,10 +108,14 @@ async function runFeature(triggerCells) {
   const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
   hud.text = `feature over · won ${fmt(total)} · back to base game`;
   await sleep(700);
-  // feature:end already fired inside respin - swap the display back
-  await new Promise((res) => gsap.to(board.container, { alpha: 0, duration: 0.3, onComplete: res }));
+  // feature:end already fired inside respin - swap the display back. The
+  // value labels sit on the stage, not in the board, so they fade and hide
+  // with it rather than staying on top of the base symbols.
+  await new Promise((res) => gsap.to([board.container, labels], { alpha: 0, duration: 0.3, onComplete: res }));
   board.container.visible = false;
   board.container.alpha = 1;
+  labels.visible = false;
+  labels.alpha = 1;
   base.visible = true;
   hud.text = 'press spin · land 3 BONUS to trigger';
 }
@@ -118,7 +123,7 @@ async function runFeature(triggerCells) {
 let busy = false;
 return {
   board,
-  cleanup: () => { try { gsap.killTweensOf(board.container); } catch {} for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); base.destroy(); },
+  cleanup: () => { try { gsap.killTweensOf([board.container, labels]); } catch {} for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); base.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

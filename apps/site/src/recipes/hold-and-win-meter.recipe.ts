@@ -86,6 +86,10 @@ const barX = board.container.x, barY = meterPos.y + 34;
 const barBg = new PIXI.Graphics().roundRect(barX, barY, BAR_W, BAR_H, 4).fill({ color: 0x000000, alpha: 0.08 });
 app.stage.addChild(barBg);
 const barFill = new PIXI.Graphics();
+// Measured as the bar it fills, even while empty. An empty Graphics reports
+// its bounds at the stage origin, and the runner fits the stage to its
+// bounds, so the empty fill dragged the whole demo off centre.
+barFill.boundsArea = new PIXI.Rectangle(barX, barY, BAR_W, BAR_H);
 app.stage.addChild(barFill);
 const drawBar = (frac) => {
   barFill.clear();
