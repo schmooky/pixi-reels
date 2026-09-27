@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+//                   WILD_CARD, app, DebugPlaque
 
 // SEQUENTIAL nudges. each reel waits for the previous reel's nudge to
 // land before starting. Reads as three deliberate beats; players can
@@ -32,11 +32,33 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
+// Every nudge event under the reels: the reels that fired each one this
+// spin, in order. Here the complete row trails the start row by one reel:
+// each nudge lands before the next one starts.
+const W = reelSet.viewport.maskWidth;
+const H = reelSet.viewport.maskHeight;
+const fired = { start: [], complete: [] };
+const hud = new DebugPlaque({ minWidth: W, maxWidth: W });
+const render = () => {
+  const reels = (list) => (list.length ? `reel=${list.join(',')}` : '-');
+  hud.text = `nudge:start    ${reels(fired.start)}\nnudge:complete ${reels(fired.complete)}`;
+};
+render();
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+reelSet.events.on('spin:start', () => {
+  fired.start = [];
+  fired.complete = [];
+  render();
+});
 reelSet.events.on('nudge:start', (info) => {
-  console.log(`[seq] nudge:start reel=${info.reelIndex}`);
+  fired.start.push(info.reelIndex);
+  render();
 });
 reelSet.events.on('nudge:complete', (info) => {
-  console.log(`[seq] nudge:complete reel=${info.reelIndex}`);
+  fired.complete.push(info.reelIndex);
+  render();
 });
 
 return {

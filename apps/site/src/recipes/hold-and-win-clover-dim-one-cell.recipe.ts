@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, CLOVER_CELL_RADIUS,
-//           CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//           CLOVER_SPEED, cloverCellMask, gsap, app, DebugPlaque
 //
 // DIMMING THE ART IS NOT DIMMING THE CELL. One clover slot, blown up, holding
 // a cherry - non-clover, and drawn small - so the cell's own background shows
@@ -57,8 +57,7 @@ board.container.position.set(
 );
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: CELL.width });
 hud.position.set(app.screen.width / 2, board.container.y + CELL.height + 22);
 app.stage.addChild(hud);
 
@@ -79,7 +78,7 @@ async function hold(which, amount, note) {
 let busy = false;
 return {
   board,
-  cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

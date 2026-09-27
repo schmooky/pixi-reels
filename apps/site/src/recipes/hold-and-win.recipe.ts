@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, PIXI, gsap, app, DebugPlaque
 //
 // Hold & Win starter - the minimal HoldAndWinBuilder board: grid, coin
 // symbol, strip weights, respin count. The coin is the production-style
@@ -71,12 +71,8 @@ const paintLabel = (cell, value) => {
 };
 
 // The HUD never tracks state itself. board events are the single source.
-const hud = new PIXI.Text({
-  text: 'press spin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x8a7d66 },
-});
-hud.anchor.set(0.5, 0);
-hud.x = app.screen.width / 2;
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+hud.x =app.screen.width / 2;
 hud.y = board.container.y + boardH + 12;
 app.stage.addChild(hud);
 
@@ -98,7 +94,7 @@ const rounds = [
 
 return {
   board,
-  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) t.destroy();
     labelAt.clear();

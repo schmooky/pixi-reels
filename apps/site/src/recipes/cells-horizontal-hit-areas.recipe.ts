@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, app, pickWeighted
+//                   WILD_CARD, PIXI, app, pickWeighted, SilkGraphics
 
 // Pointer picks on a horizontal set. Hover to preview, click to toggle, picks
 // survive spins.
@@ -34,7 +34,7 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-const overlayGfx = new PIXI.Graphics();
+const overlayGfx = new SilkGraphics();
 reelSet.addChild(overlayGfx);
 
 const picked = new Set();

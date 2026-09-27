@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+//                   WILD_CARD, app, DebugPlaque
 
 // Nudge demo. After every spin lands, the engine fires two nudges in sequence:
 //   1. Reel 1 down by 1. a wild slides in from the top.
@@ -32,13 +32,33 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// Log every nudge to the recipe console. useful for observing the
-// `nudge:start` / `nudge:complete` pair.
+// Show every nudge under the reels. useful for observing the
+// `nudge:start` / `nudge:complete` pair. One row per event: reel 3 starts in
+// the same frame reel 1 completes, so a single line would never show that
+// completion.
+const W = reelSet.viewport.maskWidth;
+const H = reelSet.viewport.maskHeight;
+const last = { start: '-', complete: '-' };
+const hud = new DebugPlaque({ minWidth: W, maxWidth: W });
+const render = () => {
+  hud.text = `nudge:start    ${last.start}\nnudge:complete ${last.complete}`;
+};
+render();
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+reelSet.events.on('spin:start', () => {
+  last.start = last.complete = '-';
+  render();
+});
 reelSet.events.on('nudge:start', (info) => {
-  console.log('[nudge:start]', info);
+  last.start = `reel=${info.reelIndex} ${info.direction} by ${info.distance}`;
+  render();
 });
 reelSet.events.on('nudge:complete', (info) => {
-  console.log('[nudge:complete]', info);
+  // `symbols` is the new visible column, top-down: where the wild landed.
+  last.complete = `reel=${info.reelIndex} ${info.direction} by ${info.distance} -> [${info.symbols.join(', ')}]`;
+  render();
 });
 
 return {

@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, PhaseCardSymbol,
-//                   step, insertBefore, PIXI, gsap, app
+//                   step, insertBefore, PIXI, gsap, app, DebugPlaque
 //
 // ONE REEL, ONE EXTRA BEAT. A step that only acts on the last reel.
 //
@@ -18,6 +18,7 @@
 const IDS = ['9', '10', 'J', 'Q', 'K'];
 const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 const LAST = REELS - 1;
 const SUSPENSE_MS = 700;
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
@@ -62,10 +63,9 @@ plate.alpha = 0;
 reelSet.addChildAt(plate, 0);
 
 const IDLE = 'spin: reels 1-4 stop on the stagger, reel 5 hangs 700 ms first. press to cut the hang';
-const hud = new PIXI.Text({
-  text: IDLE,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78, wordWrap: true, wordWrapWidth: REELS * (SIZE + GAP) },
-});
+// Created on the prompt, which wraps to two rows at the grid's width: the most
+// this readout ever needs, so the canvas is fitted with room for it.
+const hud = new DebugPlaque({ text: IDLE, minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
 reelSet.events.on('spin:start', () => {
@@ -83,7 +83,7 @@ return {
     unwatch();
     gsap.killTweensOf(plate);
     try { plate.destroy(); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
   onSpin: async () => {

@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   WILD_CARD, gsap, app, pickWeighted, SilkGraphics
 //
 // Sticky-win respin (Dead or Alive II / Razor Shark mechanic).
 //
@@ -37,8 +37,8 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// Overlay that dims non-winning cells while winners are locked.
-const lockLayer = new PIXI.Graphics();
+// Overlay that frames the winning cells while they are locked.
+const lockLayer = new SilkGraphics();
 reelSet.addChild(lockLayer);
 
 function redrawLocks() {

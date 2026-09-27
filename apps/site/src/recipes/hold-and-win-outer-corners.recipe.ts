@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover, CLOVER_SPEED, CLOVER_CELL, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover, CLOVER_SPEED, CLOVER_CELL, PIXI, gsap, app,
+//           SilkGraphics, DebugPlaque
 //
 // One rounded window, one mask per cell. Every Hold & Win cell is its own
 // 1x1 reel set with its own mask, and `cellMask` takes a FUNCTION: it is
@@ -73,27 +74,30 @@ app.stage.addChild(board.container);
 
 // Trace every cell's own mask on top, faintly: fifteen rects, four of them
 // with one rounded corner. This is the shape the engine clips each cell to.
-const seams = new PIXI.Graphics();
+// SilkGraphics takes a radius per corner, so each trace is one roundRect.
+const seams = new SilkGraphics();
 for (let reel = 0; reel < COLS; reel++) {
   for (let cell = 0; cell < ROWS; cell++) {
     const b = board.cellBounds({ reel, cell });
     const r = (on) => (on ? RADIUS : 0);
-    seams.roundShape([
-      { x: b.x, y: b.y, radius: r(reel === 0 && cell === 0) },
-      { x: b.x + b.width, y: b.y, radius: r(reel === COLS - 1 && cell === 0) },
-      { x: b.x + b.width, y: b.y + b.height, radius: r(reel === COLS - 1 && cell === ROWS - 1) },
-      { x: b.x, y: b.y + b.height, radius: r(reel === 0 && cell === ROWS - 1) },
-    ], RADIUS).stroke({ color: 0x9cc8ff, width: 1, alpha: 0.35 });
+    // top-left, top-right, bottom-right, bottom-left
+    seams.roundRect(b.x, b.y, b.width, b.height, [
+      r(reel === 0 && cell === 0),
+      r(reel === COLS - 1 && cell === 0),
+      r(reel === COLS - 1 && cell === ROWS - 1),
+      r(reel === 0 && cell === ROWS - 1),
+    ]).stroke({ color: 0x9cc8ff, width: 1, alpha: 0.35 });
   }
 }
 seams.position.copyFrom(board.container.position);
 app.stage.addChild(seams);
 
-const hud = new PIXI.Text({
+// The opening line is longer than the board: it wraps at the board's width
+// instead of widening the stage the runner fits.
+const hud = new DebugPlaque({
   text: `gap 0 · radius ${RADIUS} · cellMask(({ reel, cell }, { cols, rows }) => strategy for that cell) · press spin`,
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+  fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW, maxWidth: boardW,
 });
-hud.anchor.set(0.5, 0);
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
 
@@ -111,7 +115,7 @@ let busy = false;
 return {
   board,
   cleanup: () => {
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
     try { seams.destroy(); } catch {}
     try { frame.destroy(); } catch {}
     board.destroy();

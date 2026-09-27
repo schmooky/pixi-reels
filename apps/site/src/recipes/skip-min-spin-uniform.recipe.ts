@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // THE OTHER TWO SHAPES OF `setMinimumSpinTime`.
 //
@@ -32,9 +33,13 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const hud = new PIXI.Text({
-  text: 'press spin. alternate spins clear the override',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+// Grid-wide and two rows tall from the start: the result lines take two, and
+// the canvas is fitted to what is here at setup.
+const hud = new DebugPlaque({
+  text: 'press spin.\nalternate spins clear the override',
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
@@ -46,7 +51,7 @@ reelSet.events.on('spin:reelLanded', () => { last = Math.round(performance.now()
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSpin: async () => {
     const cleared = spinNo++ % 2 === 1;
     // One call, both shapes. `null` is not "floor of 0", it is "use the
@@ -61,7 +66,7 @@ return {
     await p;
 
     hud.text = cleared
-      ? `setMinimumSpinTime(null) -> profile floor 200ms, last reel at rest ${last}ms`
-      : `setMinimumSpinTime(${FLOOR}) -> every reel held, last reel at rest ${last}ms`;
+      ? `setMinimumSpinTime(null) -> profile floor 200ms,\nlast reel at rest ${last}ms`
+      : `setMinimumSpinTime(${FLOOR}) -> every reel held,\nlast reel at rest ${last}ms`;
   },
 };

@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
-//                   CardSymbol, CARD_DECK, PIXI, app
+//                   CardSymbol, CARD_DECK, app, SilkGraphics, DebugPlaque
 //
 // EACH REEL AS ITS OWN ROUNDED CARD.
 //
@@ -39,17 +39,19 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const H = ROWS * SIZE;
+const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const outline = new PIXI.Graphics();
+const outline = new SilkGraphics();
 for (let i = 0; i < REELS; i++) {
   outline.roundRect(i * (SIZE + GAP), 0, SIZE, H, RADIUS);
 }
 outline.stroke({ width: 2, color: 0x6ad0ff, alpha: 0.85 });
 reelSet.addChild(outline);
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: `scope: 'reel', radius ${RADIUS}  -  needs symbolGap.x > 0 (here ${GAP})`,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  minWidth: W,
+  maxWidth: W,
 });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
@@ -58,7 +60,7 @@ return {
   reelSet,
   cleanup: () => {
     try { outline.destroy(); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

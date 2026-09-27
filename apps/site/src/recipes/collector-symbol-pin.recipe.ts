@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine, bezierFly, fitText, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine, bezierFly, fitText, PIXI, gsap, app, DebugPlaque
 //
 // Collector coin on a Hold & Win board.
 //
@@ -53,8 +53,8 @@ const paintValue = (cell, value) => {
   return t;
 };
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 14, fontWeight: '700', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0); hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
 const SEED = [
@@ -95,7 +95,7 @@ async function absorb(collectorCell) {
 let phase = 'ready';
 return {
   board,
-  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
     if (phase === 'done') { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); board.reset(); seedBoard(); phase = 'ready'; return; }

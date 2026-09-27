@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app,
+//                   SilkGraphics, DebugPlaque, roundRectPath
 //
 // GROUPS: REELS THAT STOP AND SKIP TOGETHER.
 //
@@ -36,10 +37,11 @@ const reelSet = new ReelSetBuilder()
 reelSet.setReelGroups(GROUPS);
 
 const H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
 // Drawn once at setup: the runner measures bounds then to fit the board, so
 // anything added later would spill outside the frame.
-const bars = new PIXI.Graphics();
+const bars = new SilkGraphics();
 GROUPS.forEach((group, g) => {
   for (const i of group) {
     bars.roundRect(i * (SIZE + GAP), H + 6, SIZE, 5, 2).fill({ color: COLORS[g] });
@@ -52,8 +54,10 @@ reelSet.addChild(bars);
 // which is the thing a group barrier is about - the filler reel keeps spinning
 // with no outline, so "still spinning" and "still teasing" stay distinguishable.
 //
-// PixiJS has no dashed stroke, so each edge is drawn as segments, inset by half
-// the line width to keep the stroke inside the reel's own bounds.
+// SilkGraphics (pixi-silk) dashes a stroke in the shader, round caps on every
+// dash. `roundRectPath` traces the outline as one path so the dashes run on
+// round the corners; it is inset by half the line width to stay inside the
+// reel's own bounds.
 const glowLayer = new PIXI.Container();
 // ON TOP: an outline drawn on the exact bounds would be hidden behind the
 // opaque symbols if it sat underneath them.
@@ -68,19 +72,10 @@ const stopGlow = (i) => {
 };
 const startGlow = (i) => {
   stopGlow(i);
-  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
-  const l = i * (SIZE + GAP) + inset, t = inset;
-  const r = i * (SIZE + GAP) + SIZE - inset, b = H - inset;
-  const g = new PIXI.Graphics();
-  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
-    for (let d = 0; d < len; d += DASH + GAP_) {
-      const e = Math.min(d + DASH, len);
-      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
-    }
-  }
-  g.stroke({ width: W, color: 0xfef08a });
+  const W = 1.5;
+  const g = new SilkGraphics();
+  roundRectPath(g, i * (SIZE + GAP) + W / 2, W / 2, SIZE - W, H - W, 4)
+    .stroke({ width: W, color: 0xfef08a, dash: [7, 5], cap: 'round' });
   glowLayer.addChild(g);
   // `steps(1)` makes it blink rather than breathe.
   gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
@@ -90,10 +85,8 @@ const startGlow = (i) => {
 reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
 reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
 
-const hud = new PIXI.Text({
-  text: 'press spin, then keep pressing',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+// Under the bars, grid-wide from the start.
+const hud = new DebugPlaque({ text: 'press spin, then keep pressing', minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, H + 19);
 reelSet.addChild(hud);
 
@@ -114,7 +107,7 @@ return {
     for (const i of [...glows.keys()]) stopGlow(i);
     try { glowLayer.destroy({ children: true }); } catch {}
     try { bars.destroy(); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {

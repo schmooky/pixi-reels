@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // PROTECTION IS INERT WHEN THERE IS NO TEASE.
 //
@@ -39,9 +40,14 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const hud = new PIXI.Text({
-  text: 'spin, then tap. alternate spins add a duration override',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+// Grid-wide and two rows tall from the start (every press line takes two), so
+// the canvas is fitted to its final size.
+const hud = new DebugPlaque({
+  text: 'spin, then tap.\nalternate spins add a duration override',
+  color: 0xffcc44,
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
@@ -50,13 +56,13 @@ let spinNo = 0;
 let overridden = false;
 reelSet.events.on('skip:requested', ({ reels, partial }) => {
   hud.text = overridden
-    ? `duration: 900 -> tease plays, press landed [${reels.join(', ')}]${partial ? ' only' : ''}`
-    : `hold 0ms -> no tease to protect, press landed [${reels.join(', ')}]`;
+    ? `duration: 900 -> tease plays,\npress landed [${reels.join(', ')}]${partial ? ' only' : ''}`
+    : `hold 0ms -> no tease to protect,\npress landed [${reels.join(', ')}]`;
 });
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {
     overridden = spinNo++ % 2 === 1;

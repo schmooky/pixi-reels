@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, PIXI, gsap, app, DebugPlaque
 //
 // Value upgrade in place. The board opens holding three 5.00 coins. Each
 // press bumps every held coin up the value ladder (5 → 10 → 25 → 50 → 100)
@@ -63,11 +63,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = (app.screen.height - boardH) / 2 - 6;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({
-  text: 'press spin to upgrade every coin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
-});
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin to upgrade every coin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -134,7 +130,7 @@ async function upgradeCoin(coin) {
 let busy = false;
 return {
   board,
-  cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, StartPhase, PhaseCardSymbol,
-//                   step, insertAfter, replaceStep, PIXI, gsap, app
+//                   step, insertAfter, replaceStep, gsap, app, DebugPlaque
 //
 // A WIND-UP LAUNCH. Replace `pull` on StartPhase, insert `hold` after it.
 //
@@ -66,14 +66,12 @@ const reelSet = new ReelSetBuilder()
 
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
 const label = () => (windup
   ? `wind-up ON: pull ${WINDUP.speed} px/frame for ${WINDUP.ms} ms, hold ${HOLD_MS} ms, launch. tap to switch`
   : `wind-up OFF: stock pull ${STOCK.speed} px/frame for ${STOCK.ms} ms, no hold. tap to switch`);
-const hud = new PIXI.Text({
-  text: label(),
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+const hud = new DebugPlaque({ text: label(), minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 hud.eventMode = 'static';
 hud.cursor = 'pointer';
@@ -87,7 +85,7 @@ return {
   reelSet,
   cleanup: () => {
     unwatch();
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {

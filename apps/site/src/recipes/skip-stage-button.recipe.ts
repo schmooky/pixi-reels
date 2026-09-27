@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // DRIVING THE BUTTON FROM `skipStage`.
 //
@@ -36,28 +37,35 @@ const reelSet = new ReelSetBuilder()
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
 // A fake button face, so the stage is visible as a LABEL rather than a number.
-const face = new PIXI.Container();
-face.position.set(0, TOTAL_H + 12);
-const plate = new PIXI.Graphics().roundRect(0, 0, 150, 30, 6).fill({ color: 0x2a2622 });
-const label = new PIXI.Text({
+// 150 wide whatever the label says, so it never resizes between stages.
+const face = new DebugPlaque({
   text: LABELS[0],
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fontWeight: '700', fill: 0xfef08a },
+  color: 0xfef08a,
+  fill: 0x2a2622,
+  fillAlpha: 1,
+  radius: 6,
+  padding: [12, 8],
+  minWidth: 150,
 });
-label.position.set(12, 8);
-face.addChild(plate, label);
-const stageText = new PIXI.Text({
-  text: '',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
-stageText.position.set(162, 8);
-face.addChild(stageText);
+face.position.set(0, TOTAL_H + 12);
 reelSet.addChild(face);
+// The raw number beside it, centred on the face.
+const stageText = new DebugPlaque({ text: 'skipStage = 0', anchor: { x: 0, y: 0.5 } });
+stageText.position.set(face.plateWidth + 12, face.y + face.plateHeight / 2);
+reelSet.addChild(stageText);
 
-// Read the stage every frame. no press counting, no local mirror of it.
+// Read the stage every frame. no press counting, no local mirror of it. The
+// face itself says which stage it shows, so the plaques only lay out again
+// when that goes stale.
 const tick = () => {
   const stage = reelSet.skipStage;
-  label.text = LABELS[stage];
-  plate.tint = stage === 2 ? 0x555049 : 0xffffff;
+  if (face.text === LABELS[stage]) return;
+  // Stage 2 is spent: the face dims, the way a disabled button would.
+  face.update({
+    text: LABELS[stage],
+    fillAlpha: stage === 2 ? 0.35 : 1,
+    color: stage === 2 ? 0xa8a29e : 0xfef08a,
+  });
   stageText.text = `skipStage = ${stage}`;
 };
 app.ticker.add(tick);
@@ -67,6 +75,7 @@ return {
   cleanup: () => {
     app.ticker.remove(tick);
     try { face.destroy({ children: true }); } catch {}
+    try { stageText.destroy({ children: true }); } catch {}
   },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {

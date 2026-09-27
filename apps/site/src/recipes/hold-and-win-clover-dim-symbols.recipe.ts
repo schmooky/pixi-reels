@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, CloverSpineSymbol, cloverGridBackground, loadHwCloverSpines,
-//           CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//           CLOVER_SPEED, cloverCellMask, CLOVER_CELL, gsap, app, DebugPlaque
 //
 // TWO CHANNELS TO PUSH A BOARD BACK. `board.dim()` lays a rectangle over each
 // cell: the clover goes dark AND so does the cell it sits in, gaps and tile
@@ -47,8 +47,7 @@ const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, 
 app.stage.addChild(grid);
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
 
@@ -92,7 +91,7 @@ async function spotlight(which) {
 let busy = false;
 return {
   board,
-  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

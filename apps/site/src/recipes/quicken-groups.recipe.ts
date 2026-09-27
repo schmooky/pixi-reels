@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, CardSymbol, PIXI, gsap, app
+// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, CardSymbol, gsap, app,
+//                   SilkGraphics, DebugPlaque
 //
 // QUICKEN WITH GROUPS. The same barrier, a different mode.
 //
@@ -41,17 +42,21 @@ const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 reelSet.setReelGroups(GROUPS);
 
 const H = ROWS * SIZE + (ROWS - 1) * GAP;
+const W = REELS * SIZE + (REELS - 1) * GAP;
 
 // Group bars under the reels, drawn once at setup.
-const bars = new PIXI.Graphics();
+const bars = new SilkGraphics();
 GROUPS.forEach((group, g) => {
   for (const i of group) bars.roundRect(i * (SIZE + GAP), H + 6, SIZE, 5, 2).fill({ color: COLORS[g] });
 });
 reelSet.addChild(bars);
 
-const hud = new PIXI.Text({
-  text: 'press spin, then keep pressing: each press quickens the next group',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+// Grid-wide and two rows tall from the start: the press on top, the landing
+// order under it. The canvas is fitted to this size once, at setup.
+const hud = new DebugPlaque({
+  text: 'press spin, then keep pressing:\neach press quickens the next group',
+  minWidth: W,
+  maxWidth: W,
 });
 hud.position.set(0, H + 19);
 reelSet.addChild(hud);
@@ -61,7 +66,7 @@ let order = [];
 reelSet.events.on('spin:start', () => {
   press = 0;
   order = [];
-  hud.text = 'press spin, then keep pressing: each press quickens the next group';
+  hud.text = 'press spin, then keep pressing:\neach press quickens the next group';
 });
 reelSet.events.on('skip:requested', ({ reels, mode }) => {
   press += 1;
@@ -77,7 +82,7 @@ return {
   cleanup: () => {
     unwatch();
     try { bars.destroy(); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   // Every press goes through the same call. The engine decides which group
   // this one frees; the group lands through its stop.

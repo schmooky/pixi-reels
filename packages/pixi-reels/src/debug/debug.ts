@@ -1,9 +1,7 @@
-import { Graphics } from 'pixi.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { Reel } from '../core/Reel.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
-import { debugOverlay } from './debugOverlay.js';
-import type { DebugOverlayOptions, DebugOverlayHandle } from './debugOverlay.js';
+import { SpinMetrics } from './SpinMetrics.js';
 
 /**
  * Debug snapshot. plain JSON representation of the entire reel state.
@@ -273,10 +271,14 @@ export function clearFrames(): void {
  * __PIXI_REELS_DEBUG.snapshot()  // full state JSON
  * __PIXI_REELS_DEBUG.grid()      // ASCII grid
  * __PIXI_REELS_DEBUG.log()       // console.log the grid
+ * __PIXI_REELS_DEBUG.metrics()   // per-round timings: phases, stops, landings, teases, skips
  * __PIXI_REELS_DEBUG.startRecording('myTag')
  * __PIXI_REELS_DEBUG.stopRecording()
  * __PIXI_REELS_DEBUG.getFrames('myTag')
  * ```
+ *
+ * Everything on it is data. Drawing the same state on the canvas is
+ * `debugOverlay` from `pixi-reels/debug`, which needs `pixi-silk`.
  *
  * For a single reel set, leave `key` unset. With multiple reel sets, pass a
  * distinct `key` per call so they don't clobber each other on `window`: each is
@@ -290,7 +292,10 @@ export function clearFrames(): void {
 export function enableDebug(reelSet: ReelSet, key?: string): void {
   if (typeof window === 'undefined') return;
 
-  let maskOverlay: Graphics | null = null;
+  // Recording from now on, so `metrics()` can answer for the spins that
+  // happen before anyone thinks to ask. Event listeners only: nothing runs
+  // between spins, and it lets go of the set when the set is destroyed.
+  const metrics = new SpinMetrics(reelSet);
 
   const debug = {
     reelSet,
@@ -323,35 +328,12 @@ export function enableDebug(reelSet: ReelSet, key?: string): void {
     /** Empty the global recording log. */
     clearFrames: () => clearFrames(),
     /**
-     * Toggle a debug overlay on the unmasked container that visualizes the
-     * mask shape and per-reel boxes. Useful for spotting pyramid peek and
-     * confirming MultiWays box geometry.
+     * Every round recorded since `enableDebug`, as plain JSON: when each reel
+     * entered and left each phase, was asked to stop, landed and settled, its
+     * tease window, every skip press, the landing order, how many symbols the
+     * pool built. Times are ms since the round's `spin:start`.
      */
-    showMask: (enabled: boolean) => {
-      if (enabled) {
-        if (maskOverlay) return;
-        const g = new Graphics();
-        g.rect(0, 0, reelSet.viewport.maskWidth, reelSet.viewport.maskHeight)
-          .fill({ color: 0xff0000, alpha: 0.15 });
-        for (const rect of reelSet.viewport.maskRects) {
-          g.rect(rect.x, rect.y, rect.width, rect.height)
-            .stroke({ color: 0x00ff00, width: 2 });
-        }
-        reelSet.viewport.unmaskedContainer.addChild(g);
-        maskOverlay = g;
-      } else if (maskOverlay) {
-        reelSet.viewport.unmaskedContainer.removeChild(maskOverlay);
-        maskOverlay.destroy();
-        maskOverlay = null;
-      }
-    },
-    /**
-     * Create a layered visual debug overlay on this reel set (mask, cells,
-     * buffers, symbol bounds, big-symbol blocks, pins, hud). Returns a handle;
-     * call `.setLayers(...)` / `.redraw()` / `.destroy()` on it. Unlike
-     * `showMask`, this renders above the viewport (incl. the spotlight).
-     */
-    overlay: (opts?: DebugOverlayOptions): DebugOverlayHandle => debugOverlay(reelSet, opts),
+    metrics: () => metrics.snapshot(),
   };
 
   const w = window as unknown as {

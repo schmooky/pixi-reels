@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine, settleMoneyFace, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine, settleMoneyFace, PIXI, gsap, app, DebugPlaque
 //
 // Swap a symbol in place - coin → MINI → MAJOR - without breaking the grid.
 //
@@ -54,8 +54,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = (app.screen.height - boardH) / 2 - 6;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({ text: 'press spin to upgrade the marked coin in place', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin to upgrade the marked coin in place', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -99,7 +98,7 @@ seedBoard();
 let tier = 0, busy = false;
 return {
   board,
-  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy({ children: false }); } catch {} board.destroy(); },
+  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy({ children: false }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

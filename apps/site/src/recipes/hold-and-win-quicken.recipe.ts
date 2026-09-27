@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, PhaseCardSymbol, SpeedPresets, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, PhaseCardSymbol, SpeedPresets, gsap, app, DebugPlaque
 //
 // QUICKEN ON THE BOARD. `board.skip({ mode: 'quicken' })`.
 //
@@ -44,11 +44,13 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = 40;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'press spin, then tap again mid-wave to QUICKEN it',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+  fontSize: 12,
+  align: 'center',
+  anchor: { x: 0.5, y: 0 },
+  minWidth: boardW,
 });
-hud.anchor.set(0.5, 0);
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -75,7 +77,7 @@ return {
   board,
   cleanup: () => {
     unwatch();
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
     board.destroy();
   },
   onSkip: () => {

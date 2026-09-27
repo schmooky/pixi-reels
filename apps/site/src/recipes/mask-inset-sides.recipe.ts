@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
-//                   inset, CardSymbol, CARD_DECK, PIXI, app
+//                   inset, CardSymbol, CARD_DECK, PIXI, app,
+//                   SilkGraphics, DebugPlaque
 //
 // `inset(strategy, { top, right, bottom, left })`: a different trim per
 // SCREEN side. Frame art rarely has four equal lips - here the bottom lip
@@ -41,22 +42,30 @@ const W = REELS * SIZE, H = ROWS * SIZE;
 // outlined in gold. The bottom lip is thick enough to hold a label.
 const frame = new PIXI.Graphics();
 frame.roundRect(-10, -10, W + 20, H + 20, RADIUS + 10).fill({ color: 0x2b2136 });
-frame
+reelSet.addChildAt(frame, 0);
+// The outline is its own SilkGraphics so the rounded window stays exact at any
+// fitted scale. Index 1: over the plate, still under the reels.
+const trace = new SilkGraphics();
+trace
   .roundRect(LIP.left, LIP.top, W - LIP.left - LIP.right, H - LIP.top - LIP.bottom, RADIUS)
   .stroke({ color: 0xf0d98a, width: 2, alpha: 0.9 });
-reelSet.addChildAt(frame, 0);
+reelSet.addChildAt(trace, 1);
 
-const lipText = new PIXI.Text({
+// Slim vertical padding, so the plaque sits inside the lip clear of the outline.
+const lipText = new DebugPlaque({
   text: `bottom lip ${LIP.bottom}px  ·  top ${LIP.top}px`,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xf0d98a },
+  color: 0xf0d98a,
+  padding: [8, 3],
+  align: 'center',
+  anchor: 0.5,
 });
-lipText.anchor.set(0.5);
 lipText.position.set(W / 2, H - LIP.bottom / 2);
 reelSet.addChild(lipText);
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: `inset(rounded, { top: ${LIP.top}, right: ${LIP.right}, bottom: ${LIP.bottom}, left: ${LIP.left} })`,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  minWidth: W,
+  maxWidth: W,
 });
 hud.position.set(0, H + 16);
 reelSet.addChild(hud);
@@ -64,7 +73,7 @@ reelSet.addChild(hud);
 return {
   reelSet,
   cleanup: () => {
-    try { frame.destroy(); lipText.destroy(); hud.destroy(); } catch {}
+    try { frame.destroy(); trace.destroy(); lipText.destroy({ children: true }); hud.destroy({ children: true }); } catch {}
   },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

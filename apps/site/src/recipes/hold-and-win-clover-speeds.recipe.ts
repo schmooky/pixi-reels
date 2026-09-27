@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines,
-//           CLOVER_SPEEDS, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//           CLOVER_SPEEDS, cloverCellMask, CLOVER_CELL, gsap, app, DebugPlaque
 //
 // One speed switch for the whole board. Every cell is its own 1x1 reel set
 // with its own SpeedManager, so speeds are registered board-wide with
@@ -46,13 +46,12 @@ board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height
 const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
 app.stage.addChild(grid, board.container);
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
-const badge = new PIXI.Text({ text: 'normal', style: { fontFamily: 'system-ui, sans-serif', fontSize: 12, fontWeight: '700', fill: 0xf5b400 } });
-badge.anchor.set(1, 0);
-badge.position.set(board.container.x + boardW, board.container.y - 26);
+// Placed by its own height, so the pill sits clear of the frame's 8px margin.
+const badge = new DebugPlaque({ text: 'normal', fontSize: 12, color: 0xf5b400, radius: 'pill', anchor: { x: 1, y: 0 } });
+badge.position.set(board.container.x + boardW, board.container.y - 14 - badge.plateHeight);
 app.stage.addChild(badge);
 board.events.on('speed:changed', ({ name, previous }) => {
   badge.text = name;
@@ -67,7 +66,7 @@ const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }].map(gold);
 let busy = false;
 return {
   board,
-  cleanup: () => { try { hud.destroy(); badge.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); },
+  cleanup: () => { try { hud.destroy({ children: true }); badge.destroy({ children: true }); grid.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

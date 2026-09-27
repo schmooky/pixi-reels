@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, app, pickWeighted
+//                   WILD_CARD, PIXI, app, pickWeighted, DebugPlaque
 
 // The same board twice: four reels of three cells, vertical on the left and
 // horizontal on the right, landing the SAME grid on every spin.
@@ -50,22 +50,20 @@ const horizontal = common(
 const V_W = REELS * CELL_W + (REELS - 1) * GAP;
 const V_H = CELLS * CELL_H + (CELLS - 1) * GAP;
 const H_H = REELS * CELL_W + (REELS - 1) * GAP;
-const LABEL_H = 20;
 
 const stage = new PIXI.Container();
 const label = (text, x) => {
-  const t = new PIXI.Text({
-    text,
-    style: { fontFamily: 'monospace', fontSize: 12, fill: 0xff6b35 },
-  });
+  const t = new DebugPlaque({ text, fontSize: 12, color: 0xff6b35, accent: 0xff6b35 });
   t.position.set(x, 0);
   return t;
 };
+const labels = [label('vertical', 0), label('horizontal', V_W + 40)];
+// The boards start under the plates, from `plateHeight` rather than a guess.
+const LABEL_H = labels[0].plateHeight + 8;
 vertical.position.set(0, LABEL_H + (H_H - V_H) / 2);
 horizontal.position.set(V_W + 40, LABEL_H);
 stage.addChild(
-  label('vertical', 0),
-  label('horizontal', V_W + 40),
+  ...labels,
   vertical,
   horizontal,
 );

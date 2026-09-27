@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, app
+//                   WILD_CARD, PIXI, app, DebugPlaque
 //
 // Give one reel its own draw table.
 //
@@ -48,51 +48,53 @@ const reelSet = new ReelSetBuilder()
 // One composition root with headroom for the title, returned as `stage`: the
 // runner scales and centres that instead of clipping what sits above y = 0.
 const CAPTIONS = ['low cards only', 'base table', 'WILD x400', 'base table', 'no WILD'];
-const PAD_TOP = 30;
+const gridW = COLS * (SIZE + GAP) - GAP;
+
+// The engine only reports what it will draw; assert your own config with it.
+// The second row is reel 2's table as the engine resolved it: the base mix
+// with the pool's wild weight on top.
+const reel2 = reelSet.randomSymbols.weights({ reel: 2 });
+const title = new DebugPlaque({
+  rows: [
+    'one weights() table, three per-reel pools on top',
+    {
+      text: `reel 2 draws: ${Object.entries(reel2).map(([id, w]) => `${id}:${w}`).join(' ')}`,
+      color: 0x94a3b8,
+    },
+  ],
+  minWidth: gridW,
+});
+title.y = 0;
+
+// Headroom for the title, so the grid starts under it.
+const PAD_TOP = title.plateHeight + 8;
 const gridBottom = PAD_TOP + ROWS * (SIZE + GAP) - GAP;
 
 const stage = new PIXI.Container();
 reelSet.y = PAD_TOP;
 stage.addChild(reelSet);
-
-const title = new PIXI.Text({
-  text: 'one weights() table, three per-reel pools on top',
-  style: { fontFamily: 'ui-monospace, monospace', fontSize: 13, fontWeight: '700', fill: 0x475569 },
-});
-title.y = 0;
 stage.addChild(title);
 
 for (let i = 0; i < COLS; i++) {
   const scoped = CAPTIONS[i] !== 'base table';
   // The index goes on the demo, not just in the source: reel indices are
-  // 0-based, so `{ reel: 2 }` is the THIRD reel, not the second.
-  const index = new PIXI.Text({
-    text: `reel ${i}`,
-    style: { fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: '700', fill: 0x94a3b8 },
+  // 0-based, so `{ reel: 2 }` is the THIRD reel, not the second. One plaque
+  // per reel, the index as its heading and the rule under it, green where a
+  // pool changes the draw. Tight side padding so 'low cards only' still fits
+  // its own column.
+  const caption = new DebugPlaque({
+    title: `reel ${i}`,
+    rows: [{ text: CAPTIONS[i], color: scoped ? 0x16a34a : 0x94a3b8 }],
+    fontSize: 9,
+    padding: [4, 3],
+    align: 'center',
+    anchor: { x: 0.5, y: 0 },
+    minWidth: SIZE,
   });
-  index.anchor.set(0.5, 0);
-  index.x = i * (SIZE + GAP) + SIZE / 2;
-  index.y = gridBottom + 8;
-  stage.addChild(index);
-
-  const caption = new PIXI.Text({
-    text: CAPTIONS[i],
-    style: {
-      fontFamily: 'ui-monospace, monospace',
-      fontSize: 10,
-      fontWeight: scoped ? '700' : '500',
-      fill: scoped ? 0x16a34a : 0x94a3b8,
-    },
-  });
-  caption.anchor.set(0.5, 0);
-  caption.x = index.x;
-  caption.y = gridBottom + 22;
+  caption.x = i * (SIZE + GAP) + SIZE / 2;
+  caption.y = gridBottom + 8;
   stage.addChild(caption);
 }
-
-// The engine only reports what it will draw; assert your own config with it.
-// eslint-disable-next-line no-console -- the point of the line is to be read
-console.log('reel 2 draw table:', reelSet.randomSymbols.weights({ reel: 2 }));
 
 return {
   reelSet,

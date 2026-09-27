@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app
+// Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app, DebugPlaque
 //
 // BEGINNER LESSON - carry a numeric value on a coin by building your own
 // symbol class.
@@ -88,11 +88,7 @@ app.stage.addChild(reelSet);
 reelSet.x = (app.screen.width - (REELS * CELL + (REELS - 1) * GAP)) / 2;
 reelSet.y = (app.screen.height - CELL) / 2 - 14;
 
-const hud = new PIXI.Text({
-  text: 'press spin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 16, fontWeight: '700', fill: 0xfef08a, stroke: { color: 0x000000, width: 3 } },
-});
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 13, color: 0xfef08a, align: 'center', anchor: { x: 0.5, y: 0 } });
 hud.position.set(app.screen.width / 2, reelSet.y + CELL + 16);
 app.stage.addChild(hud);
 
@@ -106,6 +102,6 @@ reelSet.events.on('spin:allLanded', () => {
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   nextResult: () => Array.from({ length: REELS }, () => [idFor(VALUES[Math.floor(Math.random() * VALUES.length)])]),
 };
