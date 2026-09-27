@@ -288,3 +288,47 @@ for (const path of SCROLL_PAGES) {
     expect(errors, `${path} logged console errors across mount + unmount`).toEqual([]);
   });
 }
+
+/**
+ * The Debug button on a live demo: the silk overlay, every layer group, a
+ * spin recorded into the metrics plaque and the timeline, and the teardown.
+ * The overlay only exists once the button is pressed, so nothing above ever
+ * builds one - a throw inside a layer's draw would go unseen until a reader
+ * reached for the button.
+ *
+ * `anticipate-a-reel` because a tease exercises the most of it: an extra
+ * phase per teasing reel, a tease window on the timeline, the tease row in
+ * the metrics.
+ */
+test('the debug overlay draws a spin without throwing', async ({ page }) => {
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+  page.on('pageerror', (err) => errors.push(String(err)));
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`${BASE}/recipes/anticipation/`, { waitUntil: 'networkidle' });
+  // The page's first demo.
+  const frame = page.locator('[data-recipe-frame]').first();
+  await frame.scrollIntoViewIfNeeded();
+  await expect(frame.locator('canvas')).toHaveCount(1, { timeout: 30_000 });
+
+  await frame.getByRole('button', { name: 'Show debug' }).click();
+  // Turn on the two groups that are off by default, so every layer draws.
+  for (const group of ['motion', 'bounds']) {
+    await frame.getByRole('button', { name: group, exact: true }).click();
+  }
+  await frame.getByRole('button', { name: 'Spin' }).click();
+  await page.waitForTimeout(8_000);
+  for (const group of ['info', 'grid', 'motion', 'bounds']) {
+    await frame.getByRole('button', { name: group, exact: true }).click();
+  }
+  await frame.getByRole('button', { name: 'Hide debug' }).click();
+  await page.waitForTimeout(500);
+
+  const shown = await frame.locator('.text-destructive').allInnerTexts();
+  expect(shown.map((t) => t.trim()).filter(Boolean), 'the demo threw').toEqual([]);
+  expect(errors, 'the debug overlay logged console errors').toEqual([]);
+});

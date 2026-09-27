@@ -111,6 +111,7 @@ export default defineConfig({
         // against the local library, never against a published npm version.
         { find: /^pixi-reels\/spine$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/spine/index.ts') },
         { find: /^pixi-reels\/testing$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/testing/index.ts') },
+        { find: /^pixi-reels\/debug$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/debug/index.ts') },
         { find: /^pixi-reels$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/index.ts') },
         { find: '@', replacement: resolve(here, 'src') },
         // gsap is a peer dep pulled in by src/runtime (BlurSpriteSymbol);
