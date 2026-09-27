@@ -133,6 +133,15 @@ In the browser console (or via Playwright / agent eval):
 __PIXI_REELS_DEBUG.log()       // ASCII grid + state snapshot
 __PIXI_REELS_DEBUG.snapshot()  // Full JSON state
 __PIXI_REELS_DEBUG.trace()     // Log spin, skip, speed, spotlight, shape, pin events
+__PIXI_REELS_DEBUG.metrics()   // Per-spin timings: phases, stops, landings, teases, skips
+```
+
+To see it on the canvas, draw the overlay from the `pixi-reels/debug` subpath. It needs [pixi-silk](https://pixi-silk.schmooky.dev) (`pnpm add -D pixi-silk`), and only where you import it:
+
+```ts
+import { debugOverlay } from 'pixi-reels/debug';
+debugOverlay(reelSet, { layers: 'all', live: true, ticker: app.ticker });
+// cell geometry, travel axis, a per-reel hud, a metrics plaque and a phase timeline per spin
 ```
 
 ## Examples
