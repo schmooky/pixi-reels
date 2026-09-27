@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, StartPhase, StopPhase, PhaseCardSymbol,
-//                   step, replaceStep, PIXI, gsap, app
+//                   step, replaceStep, gsap, app, DebugPlaque
 //
 // STAGGER CURVES. Replace the `delay` step on both built-in phases.
 //
@@ -61,16 +61,17 @@ const reelSet = new ReelSetBuilder()
 
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
 // The schedule, from the same functions the steps run.
 const schedule = (fn) => Array.from({ length: REELS }, (_, i) =>
   Math.round(fn({ reel: { reelIndex: i }, profile: PROFILE }))).join(' ');
 const SCHEDULE = `start ${schedule(startDelay)} ms, stop ${schedule(stopDelay)} ms`;
+// Both rows from the start, the measured one a placeholder until the first
+// landing, so the plate is fitted at the size it ends up.
+const IDLE = `${SCHEDULE}\nlanded at -`;
 
-const hud = new PIXI.Text({
-  text: SCHEDULE,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+const hud = new DebugPlaque({ text: IDLE, minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
 
@@ -79,7 +80,7 @@ const landed = [];
 reelSet.events.on('spin:start', () => {
   first = 0;
   landed.length = 0;
-  hud.text = SCHEDULE;
+  hud.text = IDLE;
 });
 reelSet.events.on('spin:reelLanded', (reelIndex) => {
   const now = performance.now();
@@ -92,7 +93,7 @@ return {
   reelSet,
   cleanup: () => {
     unwatch();
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
   onSpin: async () => {

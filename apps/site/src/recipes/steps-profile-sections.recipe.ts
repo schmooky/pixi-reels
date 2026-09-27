@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, PhaseCardSymbol,
-//                   step, insertBefore, insertAfter, PIXI, gsap, app
+//                   step, insertBefore, insertAfter, PIXI, gsap, app, DebugPlaque
 //
 // A STEP YOU ADDED, TUNED FROM THE SPEED PROFILE.
 //
@@ -38,6 +38,7 @@
 const IDS = ['9', '10', 'J', 'Q', 'K'];
 const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 const TEASING = [3, 4];
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
@@ -151,10 +152,7 @@ const label = () => {
     `impact lift ${plain.lift} px, on a teased reel ${teased.lift} px. tap to switch`
   );
 };
-const hud = new PIXI.Text({
-  text: label(),
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+const hud = new DebugPlaque({ text: label(), minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 hud.eventMode = 'static';
 hud.cursor = 'pointer';
@@ -171,7 +169,7 @@ return {
     unwatch();
     gsap.killTweensOf(reelSet.pivot);
     try { fxLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   // A quicken that reaches a reel mid-tease cuts it, and that reel lands on
   // the section's own half: no `whenAnticipated`, blue puff, small lift.

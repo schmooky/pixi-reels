@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, SpeedPresets, CoinSymbol, coinValue,
-//           PIXI, app, pickWeighted
+//           app, pickWeighted, SilkGraphics, DebugPlaque
 //
 // A Hold & Win round whose free cells roll UPWARD.
 //
@@ -57,26 +57,31 @@ board.container.y = (app.screen.height - boardH) / 2 - 14;
 app.stage.addChild(board.container);
 
 // A gold frame on every locked cell, painted from `cellBounds` - board-local
-// coordinates, so it rides along inside the board container.
-const locks = new PIXI.Graphics();
+// coordinates, so it rides along inside the board container. The stroke is
+// aligned inside the cell's own rect, so it hugs the chrome's rounded
+// corners and never spills into the gap.
+const locks = new SilkGraphics();
 board.container.addChild(locks);
 const redrawLocks = () => {
   locks.clear();
   for (const c of board.lockedCoins) {
     const b = board.cellBounds(c.cell);
-    locks.roundRect(b.x + 1, b.y + 1, b.width - 2, b.height - 2, 8)
-      .stroke({ width: 3, color: 0xffd43b, alpha: 0.9 });
+    locks.roundRect(b.x, b.y, b.width, b.height, 8)
+      .stroke({ width: 3, color: 0xffd43b, alpha: 0.9, alignment: 'inside' });
   }
 };
 board.events.on('coin:locked', redrawLocks);
 board.events.on('feature:enter', redrawLocks);
 board.events.on('feature:reset', redrawLocks);
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'press spin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: 0xf5d066 },
+  fontSize: 13,
+  color: 0xf5d066,
+  align: 'center',
+  anchor: { x: 0.5, y: 0 },
+  minWidth: boardW,
 });
-hud.anchor.set(0.5, 0);
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 14);
 app.stage.addChild(hud);
 
@@ -115,7 +120,7 @@ let busy = false;
 return {
   board,
   cleanup: () => {
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
     try { locks.destroy(); } catch {}
     board.destroy();
   },

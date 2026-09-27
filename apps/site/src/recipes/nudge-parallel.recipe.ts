@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+//                   WILD_CARD, app, DebugPlaque
 
 // PARALLEL nudges. every reel's tween fires at the same frame via
 // `Promise.all([...])`. Reads as one synchronised beat; the whole cell
@@ -33,11 +33,33 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
+// Every nudge event under the reels: the reels that fired each one this
+// spin, in order. Here each row fills in one beat: all three reels fire the
+// same event in the same frame.
+const W = reelSet.viewport.maskWidth;
+const H = reelSet.viewport.maskHeight;
+const fired = { start: [], complete: [] };
+const hud = new DebugPlaque({ minWidth: W, maxWidth: W });
+const render = () => {
+  const reels = (list) => (list.length ? `reel=${list.join(',')}` : '-');
+  hud.text = `nudge:start    ${reels(fired.start)}\nnudge:complete ${reels(fired.complete)}`;
+};
+render();
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+reelSet.events.on('spin:start', () => {
+  fired.start = [];
+  fired.complete = [];
+  render();
+});
 reelSet.events.on('nudge:start', (info) => {
-  console.log(`[par] nudge:start reel=${info.reelIndex}`);
+  fired.start.push(info.reelIndex);
+  render();
 });
 reelSet.events.on('nudge:complete', (info) => {
-  console.log(`[par] nudge:complete reel=${info.reelIndex}`);
+  fired.complete.push(info.reelIndex);
+  render();
 });
 
 return {

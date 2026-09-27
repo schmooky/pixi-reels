@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: BoardGrid, BlurSpriteSymbol, SpeedPresets, loadHoldAndWinSprites, PIXI, gsap, app
+// Injected: BoardGrid, BlurSpriteSymbol, SpeedPresets, loadHoldAndWinSprites, PIXI, gsap, app, DebugPlaque
 //
 // A board built DIRECTLY on the generic BoardGrid primitive - no HoldAndWinBuilder
 // in sight. BoardGrid is the "board of reels" mechanism: a grid of cells that each
@@ -51,14 +51,13 @@ const ring = new PIXI.Graphics();
 grid.container.addChild(ring);
 ring.visible = false;
 
-const hud = new PIXI.Text({ text: 'press spin to reveal', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin to reveal', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, grid.container.y + boardH + 12);
 app.stage.addChild(hud);
 
 let busy = false;
 return {
-  cleanup: () => { try { gsap.killTweensOf(ring); } catch {} try { hud.destroy(); } catch {} grid.destroy(); },
+  cleanup: () => { try { gsap.killTweensOf(ring); } catch {} try { hud.destroy({ children: true }); } catch {} grid.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

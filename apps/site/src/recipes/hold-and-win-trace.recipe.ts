@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, BlurSpriteSymbol,
-//           loadHoldAndWinSprites, PIXI, gsap, app
+//           loadHoldAndWinSprites, app, DebugPlaque
 //
 // The lifecycle, made visible. A small board runs a full feature while every
 // `board.events` beat prints to a live log on the right - feature:enter, respin:start,
@@ -42,14 +42,10 @@ board.container.y = (app.screen.height - boardH) / 2;
 app.stage.addChild(board.container);
 
 // ── the live event log ────────────────────────────────────────────────
-const panel = new PIXI.Container();
-panel.x = board.container.x + boardW + 30;
-panel.y = 14;
-app.stage.addChild(panel);
-const title = new PIXI.Text({ text: 'board.events →', style: { fontFamily: 'ui-monospace, monospace', fontSize: 13, fontWeight: '700', fill: 0xb9aee8 } });
-panel.addChild(title);
-
-const MONO = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 };
+// One plaque, one colored row per event, newest at the bottom. The runner
+// fits the stage once, at setup, so the log starts at its final size: MAX
+// rows reserved, and wide enough for the longest line (feature:end after ten
+// or more rounds, 40 characters).
 const COLORS = {
   'feature:enter': 0x8be9fd, 'respin:start': 0x9c8f78, 'cell:landed': 0x726a8c,
   'coin:locked': 0x50fa7b, 'respins:changed': 0xf1fa8c, 'respin:end': 0x9c8f78,
@@ -57,14 +53,17 @@ const COLORS = {
   'feature:reset': 0x6272a4, 'feature:skip': 0xff5555,
 };
 const MAX = 16;
+const log = new DebugPlaque({ title: 'board.events →', accent: 0xb9aee8, fontSize: 12, rows: [' '.repeat(40)], reserveRows: MAX });
+log.update({ minWidth: log.plateWidth }); // a 40-character row, measured once
+log.position.set(board.container.x + boardW + 30, 14);
+app.stage.addChild(log);
 const lines = [];
+const render = () => log.setRows(lines);
+render();
 function push(evt, detail) {
-  const t = new PIXI.Text({ text: `${evt}  ${detail}`, style: { ...MONO, fill: COLORS[evt] ?? 0xcccccc } });
-  lines.push(t);
-  panel.addChild(t);
-  if (lines.length > MAX) lines.shift().destroy();
-  lines.forEach((l, i) => { l.y = 24 + i * 17; });
-  gsap.fromTo(t, { alpha: 0, x: -6 }, { alpha: 1, x: 0, duration: 0.22 });
+  lines.push({ text: `${evt}  ${detail}`, color: COLORS[evt] ?? 0xcccccc });
+  if (lines.length > MAX) lines.shift();
+  render();
 }
 const cc = (c) => `(${c.reel},${c.cell})`;
 
@@ -80,8 +79,7 @@ board.events.on('coin:released', ({ remaining }) => push('coin:released', `${rem
 board.events.on('feature:reset', ({ clearedCoins }) => push('feature:reset', `cleared ${clearedCoins}`));
 board.events.on('feature:skip', ({ inFlight }) => push('feature:skip', `${inFlight} slammed`));
 
-const hud = new PIXI.Text({ text: 'press spin to run a feature', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0, 1);
+const hud = new DebugPlaque({ text: 'press spin to run a feature', fontSize: 12, anchor: { x: 0, y: 1 }, minWidth: boardW });
 hud.position.set(board.container.x, app.screen.height - 6);
 app.stage.addChild(hud);
 
@@ -97,11 +95,11 @@ function pickHits() {
 let running = false;
 return {
   board,
-  cleanup: () => { for (const l of lines) { try { gsap.killTweensOf(l); l.destroy(); } catch {} } lines.length = 0; try { panel.destroy({ children: true }); hud.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { lines.length = 0; try { log.destroy({ children: true }); hud.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (running) return;
     running = true;
-    for (const l of lines.splice(0)) { try { gsap.killTweensOf(l); l.destroy(); } catch {} }
+    lines.length = 0; render();
     board.reset(); // → feature:reset, the first line of every run
     await sleep(150);
     board.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin', data: { value: 5 } }]);

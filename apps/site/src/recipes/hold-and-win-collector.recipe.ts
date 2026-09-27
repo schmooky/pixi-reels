@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine,
-//           coinWaves, bezierFly, PIXI, gsap, app
+//           coinWaves, bezierFly, PIXI, gsap, app, DebugPlaque
 //
 // Collector demo. The board starts holding three 5.00 coins. Spin one:
 // every free cell respins and a 10.00 lands. Spin again: a collector orb
@@ -94,11 +94,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = 64;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({
-  text: 'press spin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
-});
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 14);
 app.stage.addChild(hud);
 
@@ -246,7 +242,7 @@ return {
     if (sumText) { try { gsap.killTweensOf(sumText.scale); sumText.destroy(); } catch {} }
     pendingFx.length = 0;
     try { gsap.killTweensOf(board.container); } catch {}
-    try { hud.destroy(); labels.destroy(); } catch {}
+    try { hud.destroy({ children: true }); labels.destroy(); } catch {}
     board.destroy();
   },
   onSpin: async () => {

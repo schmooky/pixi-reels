@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, gsap, app
+//                   PIXI, gsap, app, DebugPlaque
 //
 // TWO LANDING EVENTS, ONE BOUNCE APART.
 //
@@ -54,11 +54,10 @@ for (const reel of COPY) {
   plates.set(reel, g);
 }
 
+// One row per reel from the start (`reel N: -` until it has news) and the
+// grid's width, so the plate is fitted at its final size and never grows.
 const lines = Array.from({ length: REELS }, (_, i) => `reel ${i}: -`);
-const hud = new PIXI.Text({
-  text: '',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78, lineHeight: 15 },
-});
+const hud = new DebugPlaque({ minWidth: W, maxWidth: W });
 hud.position.set(0, H + 12);
 reelSet.addChild(hud);
 const redraw = () => { hud.text = lines.join('\n'); };
@@ -86,7 +85,7 @@ return {
     reelSet.events.off('spin:reelLanding', onLanding);
     reelSet.events.off('spin:reelLanded', onLanded);
     for (const g of plates.values()) { gsap.killTweensOf(g.scale); try { g.destroy(); } catch {} }
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSpin: async () => {
     for (const g of plates.values()) gsap.to(g.scale, { y: 0, duration: 0.15 });

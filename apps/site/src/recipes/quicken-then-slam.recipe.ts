@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, PIXI, gsap, app
+// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, gsap, app,
+//                   DebugPlaque
 //
 // ONE BUTTON, TWO PRESSES. Quicken first, slam second.
 //
@@ -39,11 +40,12 @@ const reelSet = new ReelSetBuilder()
 
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
-const hud = new PIXI.Text({
-  text: 'spin, press once to quicken, press again to slam',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
-});
+const idle = 'spin, press once to quicken, press again to slam';
+// Grid-wide, two rows reserved from the start: the end-of-round line wraps
+// to two, and the canvas is fitted to what is here at setup.
+const hud = new DebugPlaque({ text: idle, reserveRows: 2, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
 
@@ -53,7 +55,7 @@ reelSet.addChild(hud);
 let quickened = false;
 reelSet.events.on('spin:start', () => {
   quickened = false;
-  hud.text = 'spin, press once to quicken, press again to slam';
+  hud.text = idle;
 });
 reelSet.events.on('skip:requested', ({ reels, mode, speed, payload }) => {
   if (mode === 'quicken') {
@@ -71,7 +73,7 @@ return {
   reelSet,
   cleanup: () => {
     unwatch();
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => {
     reelSet.requestSkip(quickened

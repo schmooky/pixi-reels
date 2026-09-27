@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // PARTIAL SLAM. A skip press that lands SOME reels and lets the others keep
 // playing. `slamStop({ except: [3, 4] })` places reels 0-2 on the result this
@@ -32,11 +33,9 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
-const hud = new PIXI.Text({
-  text: 'spin, then tap again to slam reels 0-2 only',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fontWeight: '600', fill: 0x9c8f78 },
-});
+const hud = new DebugPlaque({ text: 'spin, then tap again to slam reels 0-2 only', minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
 
@@ -53,7 +52,7 @@ reelSet.events.on('spin:complete', () => { hud.text = 'every reel landed. reels 
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   // The demo runner calls this on a second tap while spinning. A bare
   // `slamStop()` would land all five; the options object is what makes it
   // per-reel. `skipStage` is untouched, because a partial slam is not the

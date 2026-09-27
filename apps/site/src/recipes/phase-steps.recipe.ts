@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, StartPhase, PhaseCardSymbol,
-//                   step, insertAfter, replaceStep, removeStep, PIXI, gsap, app
+//                   step, insertAfter, replaceStep, removeStep, PIXI, gsap, app,
+//                   DebugPlaque
 //
 // EDIT A BUILT-IN PHASE'S STEPS. `f.register('stop', StopPhase, { steps })`.
 //
@@ -65,6 +66,7 @@ const reelSet = new ReelSetBuilder()
 
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
 // One backlight plate per reel, drawn under the symbols, lit by the `flash` step.
 const plateLayer = new PIXI.Container();
@@ -76,9 +78,10 @@ for (let i = 0; i < REELS; i++) {
   plates.push(g);
 }
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'spin: no pull on launch, a flash after land, an elastic settle',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
@@ -89,7 +92,7 @@ return {
     unwatch();
     for (const g of plates) gsap.killTweensOf(g);
     try { plateLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {

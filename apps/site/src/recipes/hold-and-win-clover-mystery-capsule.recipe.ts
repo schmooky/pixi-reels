@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app, DebugPlaque
 //
 // The capsule: a sealed jackpot. It spins past like any other symbol and
 // locks like a coin, then between waves the seal breaks - the four jackpot
@@ -74,8 +74,7 @@ const lightPlaque = (tier) => {
   gsap.fromTo(plaques[tier].scale, { x: 1.35, y: 1.35 }, { x: 1, y: 1, duration: 0.45, ease: 'back.out(2)' });
 };
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
 
@@ -116,7 +115,7 @@ const ROUNDS = [
 let busy = false;
 return {
   board,
-  cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy({ children: true }); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

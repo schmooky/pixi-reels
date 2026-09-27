@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app,
+//                   SilkGraphics, DebugPlaque, roundRectPath
 //
 // A PRESS THAT LANDS, NOT CUTS. `requestSkip({ mode: 'quicken' })`.
 //
@@ -46,6 +47,7 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
 // Tease outline: a thin dashed border on the reel's own bounds, blinking.
 const glowLayer = new PIXI.Container();
@@ -60,32 +62,16 @@ const stopGlow = (i) => {
 };
 const startGlow = (i) => {
   stopGlow(i);
-  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
-  const l = i * (SIZE + GAP) + inset, t = inset;
-  const r = i * (SIZE + GAP) + SIZE - inset, b = TOTAL_H - inset;
-  const g = new PIXI.Graphics();
-  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
-    for (let d = 0; d < len; d += DASH + GAP_) {
-      const e = Math.min(d + DASH, len);
-      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
-    }
-  }
-  g.stroke({ width: W, color: 0xfef08a });
+  const W = 1.5;
+  const g = new SilkGraphics();
+  roundRectPath(g, i * (SIZE + GAP) + W / 2, W / 2, SIZE - W, TOTAL_H - W, 4)
+    .stroke({ width: W, color: 0xfef08a, dash: [7, 5], cap: 'round' });
   glowLayer.addChild(g);
   gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
   glows.set(i, g);
 };
 reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
 reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
-
-const hud = new PIXI.Text({
-  text: '',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
-});
-hud.position.set(0, TOTAL_H + 10);
-reelSet.addChild(hud);
 
 // The numeric definition of "landed, not placed": the landing frame and the
 // settle are a whole bounce apart on a quickened reel, and the same tick on a
@@ -94,8 +80,12 @@ const landingAt = new Map();
 reelSet.events.on('spin:reelLanding', (i) => landingAt.set(i, performance.now()));
 
 let press = 0;
-const idle = 'spin, then press to walk the board: quickened reels spin out and bounce';
-hud.text = idle;
+const idle = 'spin, then press to walk the board:\nquickened reels spin out and bounce';
+// Grid-wide and two rows tall from the start: the press on top, the settle
+// under it. The canvas is fitted to this size once, at setup.
+const hud = new DebugPlaque({ text: idle, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
 reelSet.events.on('spin:start', () => { press = 0; landingAt.clear(); hud.text = idle; });
 // One event for both modes; `mode` says which press it was.
 reelSet.events.on('skip:requested', ({ reels, mode }) => {
@@ -120,7 +110,7 @@ return {
   cleanup: () => {
     for (const i of [...glows.keys()]) stopGlow(i);
     try { glowLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   // Every press goes through the same call. The engine decides which reels
   // this one frees, from `protect`; the mode decides how they land.

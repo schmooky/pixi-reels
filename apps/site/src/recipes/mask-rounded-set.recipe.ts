@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
-//                   RectMaskStrategy, CardSymbol, CARD_DECK, PIXI, app
+//                   RectMaskStrategy, CardSymbol, CARD_DECK, app,
+//                   SilkGraphics, DebugPlaque
 //
 // ROUNDED WINDOW AROUND THE WHOLE GRID.
 //
@@ -13,8 +14,8 @@
 // gap - which is exactly why it is the default.
 //
 // Press spin to watch symbols get clipped by the rounded corners on the way
-// past. The dashed outline is drawn on the SAME geometry the mask uses, so you
-// can see where the clip actually is.
+// past. The outline is drawn on the SAME geometry the mask uses, so you can
+// see where the clip actually is.
 
 const IDS = ['9', '10', 'J', 'Q', 'K'];
 const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
@@ -38,13 +39,17 @@ const W = REELS * SIZE + (REELS - 1) * GAP;
 const H = ROWS * SIZE + (ROWS - 1) * GAP;
 
 // Trace the mask boundary so the clip is legible without a screenshot diff.
-const outline = new PIXI.Graphics();
+// SilkGraphics rounds with true circular corners, the same curve the mask
+// cuts, and keeps the line smooth at whatever scale the demo is fitted to.
+const outline = new SilkGraphics();
 outline.roundRect(0, 0, W, H, RADIUS).stroke({ width: 2, color: 0x6ad0ff, alpha: 0.9 });
 reelSet.addChild(outline);
 
-const hud = new PIXI.Text({
-  text: `RoundedRectMaskStrategy({ radius: ${RADIUS} })  -  scope 'set' (default)`,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+// Grid-wide, one row per part, so it never wraps mid-expression.
+const hud = new DebugPlaque({
+  text: `RoundedRectMaskStrategy({ radius: ${RADIUS} })\nscope 'set' (default)`,
+  minWidth: W,
+  maxWidth: W,
 });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
@@ -53,7 +58,7 @@ return {
   reelSet,
   cleanup: () => {
     try { outline.destroy(); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

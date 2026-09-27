@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   SharedRectMaskStrategy, PIXI, app
+//                   SharedRectMaskStrategy, app, SilkGraphics
 
 // A big symbol on a set that runs sideways.
 //
@@ -48,7 +48,7 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-const outline = new PIXI.Graphics();
+const outline = new SilkGraphics();
 reelSet.addChild(outline);
 
 let planted = null;

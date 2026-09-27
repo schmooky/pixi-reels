@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, app
+//                   WILD_CARD, app, SilkGraphics, DebugPlaque
 
 // `getCellBounds(reel, cell)` on a set that spins sideways.
 //
@@ -42,18 +42,14 @@ const tags = [];
 for (let reel = 0; reel < REELS; reel++) {
   for (let cell = 0; cell < CELLS; cell++) {
     const b = reelSet.getCellBounds(reel, cell);
-    const tag = new PIXI.Text({
-      text: `${reel},${cell}`,
-      style: { fontFamily: 'monospace', fontSize: 11, fill: 0xffffff, stroke: { color: 0x000000, width: 3 } },
-    });
+    const tag = new DebugPlaque({ text: `${reel},${cell}`, fontSize: 10, radius: 'pill', padding: [5, 2] });
     tag.position.set(b.x + 5, b.y + 4);
-    tag.alpha = 0.85;
     reelSet.addChild(tag);
     tags.push(tag);
   }
 }
 
-const overlayGfx = new PIXI.Graphics();
+const overlayGfx = new SilkGraphics();
 reelSet.addChild(overlayGfx);
 
 // Cell WIN_CELL of every reel pays. On this axis those three rects stack
@@ -83,12 +79,10 @@ return {
         .stroke({ color: 0xff6b35, width: 3 });
       pts.push({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
     }
-    overlayGfx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) overlayGfx.lineTo(pts[i].x, pts[i].y);
-    overlayGfx.stroke({ color: 0xff6b35, width: 3, alpha: 0.85 });
+    overlayGfx.polyline(pts).stroke({ color: 0xff6b35, width: 3, alpha: 0.85, cap: 'round' });
   },
   cleanup: () => {
-    for (const t of tags) t.destroy();
+    for (const t of tags) t.destroy({ children: true });
     overlayGfx.destroy();
   },
 };

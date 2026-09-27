@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // TEASE FOR N SYMBOLS, NOT FOR N MILLISECONDS.
 //
@@ -42,9 +43,13 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const H = ROWS * SIZE + (ROWS - 1) * GAP;
-const hud = new PIXI.Text({
-  text: `press spin - each tease runs exactly ${CELLS} symbols`,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+const W = REELS * SIZE + (REELS - 1) * GAP;
+// Grid-wide and two rows tall from the start: the per-reel readout wraps to
+// two, and the canvas is fitted to what is here at setup.
+const hud = new DebugPlaque({
+  text: `press spin\neach tease runs exactly ${CELLS} symbols`,
+  minWidth: W,
+  maxWidth: W,
 });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
@@ -68,7 +73,7 @@ const SPEEDS = { 2: 0.55, 3: 0.3, 4: 0.14 };
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
     grid[0].visible[1] = SCAT;

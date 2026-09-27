@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, BlurSpriteSymbol,
-//           loadHoldAndWinSprites, bezierFly, coinWaves, PIXI, gsap, app
+//           loadHoldAndWinSprites, bezierFly, coinWaves, PIXI, gsap, app, DebugPlaque
 //
 // Collector cell with particle streams. The board opens holding value coins;
 // a collector lands, and each coin's value flies into it on a bezier arc
@@ -44,8 +44,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = (app.screen.height - boardH) / 2 - 4;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -132,7 +131,7 @@ async function collect() {
 let phase = 'ready';
 return {
   board,
-  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); gsap.killTweensOf(sumText); sumText.destroy(); } catch {} sumText = null; } try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); gsap.killTweensOf(sumText); sumText.destroy(); } catch {} sumText = null; } try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
     if (phase === 'done') { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); sumText.destroy(); } catch {} sumText = null; } total = 0; SEED.forEach((c, i) => (c.data.value = [10, 5, 25, 15][i])); board.reset(); seedBoard(); phase = 'ready'; return; }

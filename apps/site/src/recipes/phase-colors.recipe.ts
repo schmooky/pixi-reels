@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, PHASE_CARD_COLORS, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, PHASE_CARD_COLORS, PIXI, app,
+//                   DebugPlaque
 //
 // SEE THE PHASE. `PhaseCardSymbol`.
 //
@@ -38,21 +39,23 @@ const reelSet = new ReelSetBuilder()
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
-// Legend: a swatch per phase, in lifecycle order, two rows so the long
-// names do not run into each other.
+// Legend: a swatch per phase, in lifecycle order, read left to right. Three
+// plaques of two rows each, so it stays two rows tall under the board.
 const legend = new PIXI.Container();
 const ORDER = ['rest', 'start', 'spin', 'anticipation', 'stop', 'landed'];
-ORDER.forEach((phase, i) => {
-  const x = (i % 3) * 130, y = TOTAL_H + 10 + Math.floor(i / 3) * 16;
-  const swatch = new PIXI.Graphics().roundRect(x, y, 10, 10, 2).fill({ color: PHASE_CARD_COLORS[phase] });
-  const label = new PIXI.Text({
-    text: phase,
-    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 10, fill: 0x9c8f78 },
+const COL_GAP = 6;
+const COL_W = (TOTAL_W - COL_GAP * 2) / 3;
+for (let col = 0; col < 3; col++) {
+  const plaque = new DebugPlaque({
+    rows: [ORDER[col], ORDER[col + 3]].map((phase) => ({ text: phase, swatch: PHASE_CARD_COLORS[phase] })),
+    fontSize: 10,
+    minWidth: COL_W,
   });
-  label.position.set(x + 14, y - 2);
-  legend.addChild(swatch, label);
-});
+  plaque.position.set(col * (COL_W + COL_GAP), TOTAL_H + 10);
+  legend.addChild(plaque);
+}
 reelSet.addChild(legend);
 
 return {

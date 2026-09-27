@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, AnticipationPhase, CardSymbol, PhaseCardSymbol,
-//                   step, PIXI, gsap, app
+//                   step, PIXI, gsap, app, DebugPlaque
 //
 // A SPOTLIGHT AROUND THE TEASE. Wrap AnticipationPhase's one step.
 //
@@ -22,6 +22,7 @@ const IDS = ['9', '10', 'J', 'Q', 'K'];
 const SCAT = 'SCAT';
 const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 const TEASE = REELS - 1;
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
@@ -66,9 +67,10 @@ reelSet.events.on('spin:complete', () => {
   for (const g of shades) g.alpha = 0;
 });
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'two scatters land, reel 5 teases under a spotlight. press to quicken: the tease is cut, the shades still lift',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78, wordWrap: true, wordWrapWidth: REELS * (SIZE + GAP) },
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
@@ -79,7 +81,7 @@ return {
     unwatch();
     gsap.killTweensOf(shades);
     try { shadeLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
   onSpin: async () => {

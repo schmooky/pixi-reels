@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, coinWaves, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, coinWaves, PIXI, gsap, app, DebugPlaque
 //
 // Count-up coins. Each coin's amount ticks up from 0.00 to its value as it
 // settles, in a left-to-right wave, instead of snapping straight to the
@@ -63,11 +63,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = (app.screen.height - boardH) / 2 - 6;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({
-  text: 'press spin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
-});
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -121,7 +117,7 @@ return {
   cleanup: () => {
     for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
     labelAt.clear();
-    try { hud.destroy(); labels.destroy(); } catch {}
+    try { hud.destroy({ children: true }); labels.destroy(); } catch {}
     board.destroy();
   },
   onSpin: async () => {

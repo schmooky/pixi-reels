@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted, SilkGraphics
 
 const A = '7', B = '8', C = '9';
 const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
@@ -18,8 +18,8 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker).build();
 
-// Overlay for hover / picked outlines. One Graphics, redrawn on change.
-const overlayGfx = new PIXI.Graphics();
+// Overlay for hover / picked outlines. One SilkGraphics, redrawn on change.
+const overlayGfx = new SilkGraphics();
 reelSet.addChild(overlayGfx);
 
 const picked = new Set();
@@ -51,7 +51,7 @@ function redraw() {
 // Pulse the winning outline when a pick happens.
 function pulse(reel, cell) {
   const b = reelSet.getCellBounds(reel, cell);
-  const pulseGfx = new PIXI.Graphics();
+  const pulseGfx = new SilkGraphics();
   pulseGfx
     .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 10)
     .stroke({ color: 0xff6b35, width: 3 });

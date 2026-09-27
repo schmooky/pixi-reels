@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // NO SKIP TELL. The reason to protect a tease rather than slow the skip down.
 //
@@ -41,15 +42,19 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
 let spinNo = 0;
 let pressAt = 0;
 let scattersThisSpin = false;
 const times = { plain: null, tease: null };
 
-const hud = new PIXI.Text({
+// Grid-wide. `render()` below fills in the three-row table before the recipe
+// returns, so the canvas is fitted to it; monospace keeps the columns aligned.
+const hud = new DebugPlaque({
   text: 'press spin. every spin auto-skips once the board is at speed',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
@@ -74,7 +79,7 @@ reelSet.events.on('spin:reelLanded', (i) => {
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {
     scattersThisSpin = spinNo++ % 2 === 1;

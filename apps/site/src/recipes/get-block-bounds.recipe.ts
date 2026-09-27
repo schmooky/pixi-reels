@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
-//                   blurTextures, SYMBOL_IDS, pickWeighted
+//                   SharedRectMaskStrategy, gsap, app, textures,
+//                   blurTextures, SYMBOL_IDS, pickWeighted, SilkGraphics
 //
 // getBlockBounds. drawing a single overlay rectangle that hugs an entire
 // big-symbol block. Plants a 2×2 (or 1×3. randomly chosen each spin) and
@@ -39,8 +39,8 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// One Graphics overlay redrawn on every spin land.
-const overlay = new PIXI.Graphics();
+// One SilkGraphics overlay redrawn on every spin land.
+const overlay = new SilkGraphics();
 reelSet.addChild(overlay);
 
 let plantedAt = null;

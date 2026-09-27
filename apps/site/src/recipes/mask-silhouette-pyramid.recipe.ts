@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SilhouetteMaskStrategy,
-//                   CardSymbol, CARD_DECK, PIXI, app
+//                   CardSymbol, CARD_DECK, app, DebugPlaque
 //
 // ROUNDING A JAGGED BOARD.
 //
@@ -45,17 +45,19 @@ const reelSet = new ReelSetBuilder()
 
 const TALLEST = Math.max(...SHAPE);
 const H = TALLEST * SIZE;
+const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const hud = new PIXI.Text({
-  text: `SilhouetteMaskStrategy({ radius: ${RADIUS}, concaveRadius: ${CONCAVE} }) on ${SHAPE.join('-')}`,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+// Grid-wide, and split so the constructor call stays on one row.
+const hud = new DebugPlaque({
+  text: `SilhouetteMaskStrategy({ radius: ${RADIUS}, concaveRadius: ${CONCAVE} })\non ${SHAPE.join('-')}`,
+  minWidth: W,
 });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSpin: async () => {
     const grid = SHAPE.map((cells) => ({
       visible: Array.from({ length: cells }, rv),

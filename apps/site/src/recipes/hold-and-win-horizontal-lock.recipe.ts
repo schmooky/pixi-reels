@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, SpeedPresets, CoinSymbol, coinValue,
-//           PIXI, app, pickWeighted
+//           app, pickWeighted, DebugPlaque
 //
 // A Hold & Win round whose cells spin SIDEWAYS.
 //
@@ -56,11 +56,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = (app.screen.height - boardH) / 2 - 14;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({
-  text: 'press spin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: 0xf5d066 },
-});
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 13, color: 0xf5d066, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 14);
 app.stage.addChild(hud);
 
@@ -95,7 +91,7 @@ let busy = false;
 return {
   board,
   cleanup: () => {
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
     board.destroy();
   },
   onSpin: async () => {
