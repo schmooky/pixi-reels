@@ -18,6 +18,9 @@ export default defineConfig({
         // Subpath export: `import { createTestReelSet } from 'pixi-reels/testing'`
         //. keeps the headless harness out of production bundles.
         testing: resolve(__dirname, 'src/testing/index.ts'),
+        // Subpath export: `import { debugOverlay } from 'pixi-reels/debug'`
+        //. the only entry that imports pixi-silk, an optional peer.
+        debug: resolve(__dirname, 'src/debug/index.ts'),
       },
       formats: ['es', 'cjs'],
     },
@@ -26,6 +29,7 @@ export default defineConfig({
         'pixi.js',
         'gsap',
         '@esotericsoftware/spine-pixi-v8',
+        'pixi-silk',
       ],
     },
     sourcemap: true,

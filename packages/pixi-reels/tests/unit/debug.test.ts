@@ -35,6 +35,34 @@ describe('enableDebug per-instance registry', () => {
   });
 });
 
+describe('enableDebug metrics()', () => {
+  const g = globalThis as unknown as { window?: Record<string, unknown> };
+  const hadWindow = 'window' in g;
+
+  afterEach(() => {
+    if (!hadWindow) delete g.window;
+  });
+
+  it('answers for the spins since it was enabled, as plain data', async () => {
+    g.window = g.window ?? {};
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    try {
+      enableDebug(h.reelSet, 'metrics');
+      await h.spinAndLand(Array.from({ length: 3 }, () => ({ visible: ['a', 'b', 'c'] })));
+      const debug = (g.window as Record<string, any>).__PIXI_REELS_DEBUG_INSTANCES.metrics;
+      const snap = debug.metrics();
+      expect(snap.rounds).toHaveLength(1);
+      expect(snap.rounds[0].landOrder).toHaveLength(3);
+      expect(() => JSON.stringify(snap)).not.toThrow();
+      // Drawing moved to `pixi-reels/debug`; the window hook is data only.
+      expect(debug.showMask).toBeUndefined();
+      expect(debug.overlay).toBeUndefined();
+    } finally {
+      h.destroy();
+    }
+  });
+});
+
 describe('debugSnapshot reports the travel axis', () => {
   // `allSymbols[].y` was hard-coded, so on a horizontal set - the one
   // orientation v2 exists to add - every symbol reported a constant 0 and the

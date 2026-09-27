@@ -8,7 +8,8 @@
  * these tests read the drawn geometry's bounds back.
  */
 import { describe, it, expect } from 'vitest';
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Text } from 'pixi.js';
+import type { SilkGraphics } from 'pixi-silk';
 import { createTestReelSet } from '../../src/testing/index.js';
 import { debugOverlay, OVERLAY_LABEL } from '../../src/debug/debugOverlay.js';
 import type { DebugOverlayLayer } from '../../src/debug/debugOverlay.js';
@@ -23,19 +24,25 @@ function overlayRoot(reelSet: ReelSet): Container {
   return root as Container;
 }
 
-function layerGraphics(reelSet: ReelSet, layer: DebugOverlayLayer): Graphics {
+function layerGraphics(reelSet: ReelSet, layer: DebugOverlayLayer): SilkGraphics {
   const g = overlayRoot(reelSet).children.find(
     (c) => c.label === `${OVERLAY_LABEL}:${layer}`,
   );
   if (!g) throw new Error(`layer '${layer}' drew nothing`);
-  return g as Graphics;
+  return g as SilkGraphics;
+}
+
+/** The hud's row texts, in row order. They live inside the hud plaque. */
+function hudTexts(reelSet: ReelSet): Text[] {
+  const hud = overlayRoot(reelSet).children.find((c) => c.label === `${OVERLAY_LABEL}:hud`);
+  if (!hud) throw new Error('hud drew nothing');
+  return hud.children
+    .filter((c): c is Text => c instanceof Text && c.visible)
+    .filter((t) => t.text.startsWith('r'));
 }
 
 function hudLines(reelSet: ReelSet): string[] {
-  return overlayRoot(reelSet)
-    .children.filter((c): c is Text => c instanceof Text && c.visible)
-    .map((t) => t.text)
-    .filter((t) => t.startsWith('r'));
+  return hudTexts(reelSet).map((t) => t.text);
 }
 
 const build = (orientation: 'vertical' | 'horizontal', direction: 'forward' | 'reverse') =>
@@ -262,9 +269,9 @@ describe('hud layer', () => {
     });
     try {
       debugOverlay(harness.reelSet, { layers: ['hud'] });
-      const texts = overlayRoot(harness.reelSet)
-        .children.filter((c): c is Text => c instanceof Text && c.visible)
-        .filter((t) => t.text.startsWith('r'));
+      // Positions in overlay space: the rows sit inside the hud plaque.
+      const root = overlayRoot(harness.reelSet);
+      const texts = hudTexts(harness.reelSet).map((t) => root.toLocal(t.getGlobalPosition()));
       expect(texts).toHaveLength(6);
 
       // One column: every line shares an x, and y strictly increases.

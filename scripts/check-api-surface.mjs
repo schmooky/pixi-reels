@@ -32,7 +32,7 @@ const ts = require('typescript');
 
 
 const ROOT = presolve(dirname(fileURLToPath(import.meta.url)), '../packages/pixi-reels');
-const ENTRIES = ['src/index.ts', 'src/spine/index.ts', 'src/testing/index.ts'];
+const ENTRIES = ['src/index.ts', 'src/spine/index.ts', 'src/testing/index.ts', 'src/debug/index.ts'];
 const program = ts.createProgram(ENTRIES.map(e => `${ROOT}/${e}`), {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
   moduleResolution: ts.ModuleResolutionKind.Bundler, strict: true, skipLibCheck: true,
