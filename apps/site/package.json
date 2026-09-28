@@ -17,7 +17,7 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/mdx": "^8.0.0",
+    "@astrojs/mdx": "^8.0.2",
     "@astrojs/react": "^6.0.5",
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",
     "@keystatic/astro": "^6.0.0",
@@ -30,21 +30,21 @@
     "@radix-ui/react-tabs": "^1.1.21",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.3.1",
+    "astro": "^7.3.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
-    "lucide-react": "^1.43.0",
+    "lucide-react": "^1.48.0",
     "mermaid": "^11.17.2",
     "pixi-reels": "workspace:*",
     "pixi.js": "^8.20.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "sucrase": "^3.35.1",
-    "tailwind-merge": "^3.6.0",
+    "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
-    "yaml": "^2.9.0",
+    "yaml": "^2.9.1",
     "@pixi-reels/cheats": "workspace:*"
   },
   "devDependencies": {
@@ -53,10 +53,10 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "pagefind": "^1.5.2",
-    "satori": "^0.33.4",
+    "satori": "^0.33.5",
     "sharp": "^0.35.4",
     "typedoc": "^0.28.20",
-    "typedoc-plugin-markdown": "^4.13.0",
+    "typedoc-plugin-markdown": "^4.13.1",
     "typescript": "^6.0.3"
   }
 }
