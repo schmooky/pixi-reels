@@ -47,7 +47,7 @@ describe('SpinTextureCache', () => {
     cache.destroy();
   });
 
-  it('captureStatic regenerates when the cell size changes and destroys the stale capture', () => {
+  it('captureStatic keeps one capture per cell size and never destroys a live one', () => {
     const { renderer, spy } = makeRenderer();
     const cache = new SpinTextureCache({ renderer });
     const source = new Container();
@@ -55,9 +55,34 @@ describe('SpinTextureCache', () => {
     const a = cache.captureStatic('cherry', source, 100, 100);
     const b = cache.captureStatic('cherry', source, 150, 150);
 
+    // MultiWays: both sizes are on screen at once, on different reels.
     expect(b).not.toBe(a);
-    expect(a.destroyed).toBe(true);
+    expect(a.destroyed).toBe(false);
+    expect(cache.captureStatic('cherry', source, 100, 100)).toBe(a);
+    expect(cache.getStatic('cherry', 150, 150)).toBe(b);
     expect(spy).toHaveBeenCalledTimes(2);
+
+    cache.destroy();
+    expect(a.destroyed).toBe(true);
+    expect(b.destroyed).toBe(true);
+  });
+
+  it('a capture at a new size does not destroy the blurred texture another reel is drawing', () => {
+    const { renderer, calls } = makeRenderer();
+    const cache = new SpinTextureCache({ renderer });
+    const source = new Container();
+
+    // Reel 0 lands 7 cells (short cells), reel 1 lands 2 (tall cells).
+    cache.captureStatic('cherry', source, 92, 80);
+    const short = cache.captureBlurred('cherry', 92, 80);
+    cache.captureStatic('cherry', source, 92, 280);
+    const tall = cache.captureBlurred('cherry', 92, 280);
+
+    expect(tall).not.toBe(short);
+    expect(short.destroyed).toBe(false);
+    expect(cache.getBlurred('cherry', 92, 80)).toBe(short);
+    // The tall blur is baked from the tall static, not a stretched short one.
+    expect(calls[3].frame?.height).toBe(280 + 2 * Math.ceil(280 * 0.2));
     cache.destroy();
   });
 
@@ -104,7 +129,7 @@ describe('SpinTextureCache', () => {
     cache.destroy();
   });
 
-  it("captureBlurred with axis 'x' pads horizontally and regenerates when the axis flips", () => {
+  it("captureBlurred with axis 'x' pads horizontally and keeps a separate entry per axis", () => {
     const { renderer, calls } = makeRenderer();
     const cache = new SpinTextureCache({ renderer });
     cache.captureStatic('cherry', new Container(), 100, 80);
@@ -114,10 +139,12 @@ describe('SpinTextureCache', () => {
     expect(xFrame?.width).toBe(100 + 2 * 24);
     expect(xFrame?.height).toBe(80);
 
-    // Same id re-baked for a vertical reel: the x-axis entry is stale.
+    // Same id baked for a vertical reel sharing the cache: a new entry, and
+    // the horizontal one stays alive for the reel still drawing it.
     const vertical = cache.captureBlurred('cherry', 100, 80, { axis: 'y', strength: 24 });
     expect(vertical).not.toBe(horizontal);
-    expect(horizontal.destroyed).toBe(true);
+    expect(horizontal.destroyed).toBe(false);
+    expect(cache.getBlurred('cherry', 100, 80, 'x')).toBe(horizontal);
     const yFrame = calls[2].frame;
     expect(yFrame?.width).toBe(100);
     expect(yFrame?.height).toBe(80 + 2 * 24);

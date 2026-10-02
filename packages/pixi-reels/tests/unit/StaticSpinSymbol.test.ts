@@ -179,6 +179,37 @@ describe('StaticSpinSymbol', () => {
     cache.destroy();
   });
 
+  it('MultiWays: reels at different cell sizes spin on their own captures without destroying each other', () => {
+    const { cache, spy } = makeCache();
+    const { symbol: short } = makeSymbol(cache);
+    short.resize(92, 80);
+    const { symbol: tall } = makeSymbol(cache);
+    tall.resize(92, 280);
+
+    short.onReelSpinStart();
+    tall.onReelSpinStart();
+
+    const sprites = (s: StaticSpinSymbol) =>
+      s.view.children.filter((c) => c !== s.inner.view) as unknown as { texture: Texture }[];
+    const [shortStatic, shortBlur] = sprites(short);
+    const [tallStatic, tallBlur] = sprites(tall);
+    expect(shortBlur.texture).not.toBe(tallBlur.texture);
+    expect(shortStatic.texture.destroyed).toBe(false);
+    expect(shortBlur.texture.destroyed).toBe(false);
+    expect(tallStatic.texture.height).toBe(280);
+    // Two sizes x (static + blurred).
+    expect(spy).toHaveBeenCalledTimes(4);
+
+    // A reshape mid-spin re-points the snapshot at the new size's capture.
+    short.resize(92, 280);
+    expect(shortBlur.texture).toBe(tallBlur.texture);
+    expect(spy).toHaveBeenCalledTimes(4);
+
+    short.destroy();
+    tall.destroy();
+    cache.destroy();
+  });
+
   it('destroys the inner symbol exactly once on destroy', () => {
     const { cache } = makeCache();
     const { symbol, inner } = makeSymbol(cache);
