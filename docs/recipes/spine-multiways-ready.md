@@ -59,6 +59,20 @@ resize(w: number, h: number): void {
 - The `Spine` instance self-updates through spine-pixi's own `autoUpdate`; the library installs no ticker for it. Do not add a second update loop. Don't install a second update loop. Don't call `skeleton.updateWorldTransform` manually inside animations.
 - Examples already do `gsap.ticker.remove(gsap.updateRoot)` and drive GSAP from `app.ticker` so animations don't freeze in hidden tabs. Don't add a second GSAP driver.
 
+## Spinning on snapshots (`StaticSpinSymbol`)
+
+Wrap the skeleton in `StaticSpinSymbol` and the reels spin on baked textures instead of live Spine. On MultiWays, share ONE `SpinTextureCache` across the set: it keeps a capture per symbol id AND cell size, side by side, because every reel sizes the same id differently at the same time. To keep the first spins free of capture hitches, prewarm once per cell size a reel can land on:
+
+```ts
+const cache = new SpinTextureCache({ renderer: app.renderer });
+for (let cells = minCells; cells <= maxCells; cells++) {
+  const height = (reelExtent - (cells - 1) * gapY) / cells; // the cell a `cells`-high reel lands on
+  prewarmSpinTextures({ cache, ids, createSymbol, width: cellW, height });
+}
+```
+
+Before 4.0 the cache kept one capture per id, and a capture at a new size destroyed the one another reel was spinning on: a crash on the next render. If a build works around that by spinning MultiWays reels on plain symbols, the workaround can go.
+
 ## Skins
 
 Use Spine skins for palette/variant swaps. Pass `skin` per symbol in `spineMap` (`{ wild: { skeleton, atlas, skin: 'gold' } }`), or `defaultSkin` on `SpineSymbol`. No subclass needed. (The string form of the raw API is `setSkinByName`; `setSkin` takes a `Skin` object.)

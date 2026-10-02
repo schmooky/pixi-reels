@@ -32,8 +32,8 @@ self-contained (usually a recipe + MDX page).
 | MultiWays (variable `visibleCells` per reel) | [done] | **major** | p1 | Shipped via `.multiways()` + AdjustPhase (ADR 012). |
 | Cluster grid (WxH, no reel concept) | [todo] | **major** | p1 | New non-reel mode + viewport. Out of scope (ADR 007). |
 | Colossal / big symbols (2x2, 3x3 overlay) | [done] | **major** | p1 | Shipped via registration + OCCUPIED coordinator (ADR 013). |
-| Infinity Reels (dynamic column count) | [todo] | **major** | p3 | Columns added on each win. |
-| Horizontal-expand (add columns mid-spin) | [todo] | **major** | p3 | Related to Infinity Reels. |
+| Infinity Reels (dynamic column count) | [done] | minor | p3 | Shipped as `addReels()` / `removeReels()` / `expand({ columns, step })` (ADR 023). Steps are one round; MultiWays shapes come from the result; a big symbol widens its step. Recipes: `/recipes/infinity-reels/`. |
+| Horizontal-expand (add columns mid-spin) | [partial] | minor | p3 | Columns are added between spins, a step at a time (`expand()`, ADR 023), not while the base spin is still moving. |
 
 ## Layer 2 - Symbol mechanics (mostly recipes)
 
@@ -63,8 +63,8 @@ self-contained (usually a recipe + MDX page).
 |---|---|---|---|---|
 | Symbol spotlight (win highlight) | [done] | - | - | `SymbolSpotlight`. |
 | Near-miss / anticipation visual | [done] | - | - | Via `AnticipationPhase`. |
-| Payline visualization | [todo] | recipe | p0 | Draw line across winning cells. |
-| Ways-to-win highlighting | [todo] | recipe | p1 | Per-column fade for winning cells. |
+| Payline visualization | [done] | minor | p0 | `WinLines.line(cells)` in `pixi-reels/debug`, drawn with pixi-silk. Recipe: `win-lines`. |
+| Ways-to-win highlighting | [done] | minor | p1 | `WinLines.ways(perReel)` draws the winning lattice; the `@pixi-reels/cheats/ways` evaluator stands in for the server. Recipes: `win-lines`, `infinity-reels*`. |
 | Cluster connection lines | [todo] | recipe | p1 | Connected cluster -> animated links. |
 | Big-win celebration (zoom + scale) | [todo] | recipe | p1 | Tiered reveal (win / mega / super). |
 | Coin collect / aggregated value | [todo] | recipe | p2 | Collect bonus coins into a counter. |
