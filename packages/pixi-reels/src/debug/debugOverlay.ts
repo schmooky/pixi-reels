@@ -298,6 +298,19 @@ class DebugOverlay implements DebugOverlayHandle {
    * overlay left behind would tick on into reels that no longer exist.
    */
   private _onDestroyed = (): void => this.destroy();
+  /** The board grew: follow the new reels' phases and redraw the static layers over them. */
+  private _onReelsAdded = (info: { from: number; count: number }): void => {
+    for (let i = info.from; i < info.from + info.count; i++) {
+      this._phase[i] = 'idle';
+      this._trackPhase(this._reelSet.reels[i], i);
+    }
+    this._redrawStatic();
+  };
+  /** The board shrank: the removed reels' listeners died with them. */
+  private _onReelsRemoved = (info: { from: number }): void => {
+    this._phase.length = info.from;
+    this._redrawStatic();
+  };
 
   constructor(
     private _reelSet: ReelSet,
@@ -313,26 +326,13 @@ class DebugOverlay implements DebugOverlayHandle {
     this._root.sortableChildren = true;
     _reelSet.addChild(this._root);
 
-    // Track per-reel phase for the hud layer via the reel bus. There is no
-    // `reel.phase` accessor. phases are only observable as events.
-    _reelSet.reels.forEach((reel: Reel, i: number) => {
-      const onEnter = (name: string): void => {
-        this._phase[i] = name;
-      };
-      const onExit = (name: string): void => {
-        if (this._phase[i] === name) this._phase[i] = 'idle';
-      };
-      reel.events.on('phase:enter', onEnter);
-      reel.events.on('phase:exit', onExit);
-      this._reelDetach.push(() => {
-        reel.events.off('phase:enter', onEnter);
-        reel.events.off('phase:exit', onExit);
-      });
-    });
+    _reelSet.reels.forEach((reel: Reel, i: number) => this._trackPhase(reel, i));
 
     // Static layers redraw only on reshape, not per tick.
     _reelSet.events.on('shape:changed', this._onStatic);
     _reelSet.events.on('adjust:complete', this._onStatic);
+    _reelSet.events.on('reels:added', this._onReelsAdded);
+    _reelSet.events.on('reels:removed', this._onReelsRemoved);
     _reelSet.events.on('destroyed', this._onDestroyed);
 
     if (options.live) {
@@ -353,6 +353,25 @@ class DebugOverlay implements DebugOverlayHandle {
 
   get isDestroyed(): boolean {
     return this._isDestroyed;
+  }
+
+  /**
+   * Track one reel's phase for the hud layer via the reel bus. There is no
+   * `reel.phase` accessor. phases are only observable as events.
+   */
+  private _trackPhase(reel: Reel, i: number): void {
+    const onEnter = (name: string): void => {
+      this._phase[i] = name;
+    };
+    const onExit = (name: string): void => {
+      if (this._phase[i] === name) this._phase[i] = 'idle';
+    };
+    reel.events.on('phase:enter', onEnter);
+    reel.events.on('phase:exit', onExit);
+    this._reelDetach.push(() => {
+      reel.events.off('phase:enter', onEnter);
+      reel.events.off('phase:exit', onExit);
+    });
   }
 
   get metrics(): SpinMetrics {
@@ -421,6 +440,8 @@ class DebugOverlay implements DebugOverlayHandle {
 
     this._reelSet.events.off('shape:changed', this._onStatic);
     this._reelSet.events.off('adjust:complete', this._onStatic);
+    this._reelSet.events.off('reels:added', this._onReelsAdded);
+    this._reelSet.events.off('reels:removed', this._onReelsRemoved);
     this._reelSet.events.off('destroyed', this._onDestroyed);
     this._reelSet.events.offAny(this._onSetEvent);
     for (const detach of this._reelDetach) detach();

@@ -21,6 +21,15 @@ import { Reel, } from './Reel.js';
 import type { NudgeOptions } from './Reel.js';
 import type { ReelCurveInput } from './ReelCurve.js';
 import { ReelViewport } from './ReelViewport.js';
+import type { ReelMaskRect } from './ReelViewport.js';
+import type {
+  AddReelsOptions,
+  ExpandOptions,
+  ExpandResult,
+  ExpandStep,
+  ExpandStepLanded,
+} from './expand.js';
+import { planExpandSteps } from './expand.js';
 import { SpinController } from '../spin/SpinController.js';
 import { SpeedManager } from '../speed/SpeedManager.js';
 import { SymbolSpotlight, } from '../spotlight/SymbolSpotlight.js';
@@ -40,9 +49,36 @@ import { V1_OPTION_KEYS, assertNoV1Keys } from '../config/v1Renames.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 import { noticeError, noticeWarn } from '../utils/notify.js';
 
+/**
+ * How a `ReelSet` builds a reel after construction, exactly the way the
+ * builder built the first ones. Made by `ReelSetBuilder.build()`.
+ *
+ * @internal
+ */
+export interface ReelFactory {
+  /** Visible cells of a reel added without a count. */
+  defaultCells(): number;
+  /** Main-axis extent of an added reel with `cells` visible cells. */
+  extentFor(cells: number): number;
+  /** The tallest strip, which the viewport's main extent is sized to. */
+  readonly tallestExtent: number;
+  create(
+    reelIndex: number,
+    cells: number,
+    extent: number,
+    reelCount: number,
+    seed: ColumnTarget | undefined,
+  ): Reel;
+  maskRect(reelIndex: number, extent: number): ReelMaskRect;
+  viewportSize(reelCount: number): { width: number; height: number };
+  /** Pool capacity per symbol id for these reels, the builder's explicit one if set. */
+  poolCapacity(reels: readonly Reel[]): number;
+}
+
 export interface ReelSetParams {
   config: ReelSetInternalConfig;
   reels: Reel[];
+  reelFactory: ReelFactory;
   viewport: ReelViewport;
   symbolFactory: SymbolFactory;
   frameBuilder: FrameBuilder;
@@ -563,12 +599,18 @@ export class ReelSet extends Container implements Disposable {
   /** Resolved per-symbol metadata (size, zIndex, etc). */
   private _symbolsData: Record<string, SymbolData>;
 
+  /** Builds reels after construction. See `addReels()`. */
+  private _reelFactory: ReelFactory;
+  /** True while `expand()` runs: the board is mid-chain, so nothing else may resize it. */
+  private _expanding = false;
+
   /** Horizontal symbol gap (px). Used by `getBlockBounds` for big symbols. */
 
   constructor(params: ReelSetParams) {
     super();
 
     this._reels = params.reels;
+    this._reelFactory = params.reelFactory;
     this._viewport = params.viewport;
     this._symbolFactory = params.symbolFactory;
     this._frameBuilder = params.frameBuilder;
@@ -580,20 +622,7 @@ export class ReelSet extends Container implements Disposable {
       this._multiwaysReelExtent = params.config.grid.multiways.reelExtent;
     }
 
-    // Wire each reel's cross-reel resolver so `Reel.getVisibleSymbols()`
-    // returns the anchor's id even when the OCCUPIED cell's anchor lives
-    // on a different reel. Without this, per-reel surface returns the
-    // sentinel for cross-reel cells. making it inconsistent with
-    // `ReelSet.getVisibleGrid()`.
-    for (const reel of this._reels) {
-      reel.setCrossReelResolver((reel, cell) => {
-        const fp = this.getSymbolFootprint(reel, cell);
-        const anchorReel = this._reels[fp.anchor.reel];
-        // Anchor cell is on its OWN reel. read its symbolId directly to
-        // avoid recursing back through this resolver.
-        return anchorReel.symbols[anchorReel.bufferStart + fp.anchor.cell].symbolId;
-      });
-    }
+    for (const reel of this._reels) this._wireCrossReelResolver(reel);
 
     const fb = this._frameBuilder;
     this._frameAPI = {
@@ -685,6 +714,7 @@ export class ReelSet extends Container implements Disposable {
    */
   async spin(options?: SpinOptions): Promise<SpinResult> {
     this._assertNoNudgeInFlight('spin');
+    this._assertNotExpanding('spin');
     return this._spinController.spin(options);
   }
 
@@ -1720,6 +1750,39 @@ export class ReelSet extends Container implements Disposable {
     );
   }
 
+  private _assertNotExpanding(method: string): void {
+    if (this._expanding) {
+      throw new Error(
+        `ReelSet.${method}: cannot be called while expand() is running. ` +
+          `Await the expand() promise first; its onAdded / onLanded hooks run mid-chain.`,
+      );
+    }
+  }
+
+  private _assertCanResize(method: string): void {
+    if (this._spinController.isSpinning) {
+      throw new Error(`ReelSet.${method}: cannot change the reel count while the reels spin. Await the spin first.`);
+    }
+    this._assertNoNudgeInFlight(method);
+    this._assertNotExpanding(method);
+  }
+
+  /**
+   * Wire a reel's cross-reel resolver so `Reel.getVisibleSymbols()` returns
+   * the anchor's id even when the OCCUPIED cell's anchor lives on a
+   * different reel. Without this, per-reel surface returns the sentinel for
+   * cross-reel cells. making it inconsistent with `ReelSet.getVisibleGrid()`.
+   */
+  private _wireCrossReelResolver(reel: Reel): void {
+    reel.setCrossReelResolver((reelIndex, cell) => {
+      const fp = this.getSymbolFootprint(reelIndex, cell);
+      const anchorReel = this._reels[fp.anchor.reel];
+      // Anchor cell is on its OWN reel. read its symbolId directly to
+      // avoid recursing back through this resolver.
+      return anchorReel.symbols[anchorReel.bufferStart + fp.anchor.cell].symbolId;
+    });
+  }
+
   private _assertNoNudgeInFlight(method: string): void {
     if (this._nudgesInFlight > 0) {
       throw new Error(
@@ -1826,6 +1889,313 @@ export class ReelSet extends Container implements Disposable {
   /** Whether this slot was built with `.multiways(...)`. */
   get isMultiWaysSlot(): boolean {
     return this._isMultiWaysSlot;
+  }
+
+  // ─── Growing the board ─────────────────────────────────────
+
+  /**
+   * Add `count` reels after the last one. They are laid out where the next
+   * reel would have been (one cell pitch further along the cross axis:
+   * rightward on a vertical set, downward on a horizontal one), masked like
+   * the others and ready to spin, and `reelSet.reels` grows in place. The
+   * viewport grows with them, so the set's bounds grow too: frame them with
+   * your own camera.
+   *
+   * Every reel-indexed API covers the new reels from here on (`setResult`
+   * takes one more column per reel, `getVisibleGrid()` returns them, and so
+   * on). The reels added by one call join a `setReelGroups()` layout as one
+   * trailing group. A per-reel builder array (`directionPerReel`,
+   * `curvePerReel`) extends with its last entry; `curveFocus('set')` keeps
+   * converging on the board's centre at build time.
+   *
+   * For a chain of "add, spin, land, repeat" driven by one server result,
+   * use {@link ReelSet.expand}; this is the primitive under it. Shrink back
+   * with {@link ReelSet.removeReels}.
+   *
+   * Throws while the reels spin, a nudge runs, or `expand()` runs.
+   *
+   * @example
+   * reelSet.addReels(2);                      // two reels at the set's cell count
+   * reelSet.addReels(1, { visibleCells: 3 }); // a short reel on a jagged set
+   * await reelSet.spin({ holdReels: [0, 1, 2, 3, 4] }); // spin only the new ones
+   */
+  addReels(count: number, options: AddReelsOptions = {}): readonly Reel[] {
+    this._assertCanResize('addReels');
+    return this._addReels(count, options);
+  }
+
+  /**
+   * Remove the last `count` reels and destroy them. Pins on them are removed
+   * (`pin:expired` with reason `'explicit'`), a spotlight is hidden, the
+   * group layout drops them, and the viewport, mask and symbol pool shrink
+   * back, so a board that grew for one round costs nothing in the next.
+   * At least one reel always stays.
+   *
+   * A big symbol anchored on a kept reel and reaching into a removed one is
+   * cut at the new edge. Remove whole expansions at a time and that cannot
+   * happen: `expand()` never anchors a block across its own boundary.
+   *
+   * Throws while the reels spin, a nudge runs, or `expand()` runs.
+   *
+   * @example
+   * // End of an Infinity Reels round: back to the base five.
+   * reelSet.removeReels(reelSet.reels.length - 5);
+   */
+  removeReels(count: number): void {
+    this._assertCanResize('removeReels');
+    const total = this._reels.length;
+    if (!Number.isInteger(count) || count < 1 || count >= total) {
+      throw new RangeError(
+        `removeReels: count must be a whole number from 1 to ${total - 1} (the set has ${total} reels ` +
+          `and keeps at least one), got ${String(count)}.`,
+      );
+    }
+    const from = total - count;
+    for (const pin of [...this._pins.values()]) {
+      if (pin.reel >= from) this.unpin(pin.reel, pin.cell);
+    }
+    if (this._spotlight.isActive) this._spotlight.hide();
+
+    const removed = this._reels.splice(from, count);
+    for (const reel of removed) reel.destroy();
+    this._afterReelCountChange(this._viewport.maskRects.slice(0, from));
+    this._spinController.onReelsRemoved();
+    this._events.emit('reels:removed', { from, count });
+  }
+
+  /**
+   * Grow the board by a server-decided number of reels, a step at a time:
+   * add the step's reels, spin only them, land them on their columns, then
+   * the next step. The "infinity reels" mechanic: the base spin lands, the
+   * result says the board grows to N reels, and they reveal one (or two)
+   * at a time sideways.
+   *
+   * ```ts
+   * const spin = reelSet.spin();
+   * const res = await server.spin();          // { columns: ColumnTarget[] } of any length
+   * reelSet.setResult(res.columns.slice(0, 5));
+   * await spin;
+   * await reelSet.expand({
+   *   columns: res.columns.slice(5),          // one per reel to add
+   *   step: 1,                                // reels per step
+   *   onAdded: (step) => camera.panTo(step.reelCount),
+   *   onLanded: (step) => showWays(step.result.symbols),
+   * });
+   * // ...next round
+   * reelSet.removeReels(reelSet.reels.length - 5);
+   * ```
+   *
+   * Each step is a spin of the new reels with every earlier reel held, so it
+   * fires the usual `spin:*` events, plus `reels:added` and
+   * `expand:step` / `expand:stepLanded`. The steps are one round, not one
+   * round each: a skip press during a step slams that step and boosts the
+   * rest exactly as `skipSpin()` boosts the rest of a round, and pin turns
+   * and `'eval'` pins are not spent per step. Start and stop delays stagger
+   * by a reel's place in its step, not by its index, so reel 40 does not
+   * wait forty delays.
+   *
+   * On a MultiWays set each column's `visible.length` is that reel's shape
+   * (validated against `minCells`..`maxCells`), applied with `setShape()` as
+   * in a normal spin. Ways counts multiply as the board grows: seven reels
+   * of seven cells is 823,543 ways, eight is 5,764,801. On a jagged set it
+   * is the reel's height, which may not exceed the tallest reel.
+   *
+   * Big symbols anchor in the columns as in `setResult()`. A step that a
+   * block would straddle is widened to take the block whole, so a 2-wide
+   * block arriving in a one-reel step makes that step add two reels. All of
+   * this is validated before the first reel is added: a throw leaves the
+   * board untouched.
+   *
+   * Resolves with the final board. Throws while the reels spin, a nudge runs
+   * or another `expand()` runs, and `spin()`, `addReels()`, `removeReels()`
+   * throw while it runs.
+   */
+  async expand(options: ExpandOptions): Promise<ExpandResult> {
+    this._assertCanResize('expand');
+    const columns = options.columns as ColumnTarget[];
+    assertColumnTargets(columns, 'expand() columns');
+    const columnKeys = V1_OPTION_KEYS['initialFrame() / setResult() column'];
+    for (let i = 0; i < columns.length; i++) {
+      assertNoV1Keys(columns[i], columnKeys, `expand() column ${i}`);
+    }
+    const bufferStart = this._reels[0].bufferStart;
+    const bufferEnd = this._reels[0].bufferEnd;
+    assertBufferCountsInRange(
+      columns,
+      columns.map(() => bufferStart),
+      columns.map(() => bufferEnd),
+      'expand() columns',
+    );
+    const shapes = columns.map((c) => c.visible.length);
+    shapes.forEach((cells, i) => this._assertAddableCells(cells, `expand() column ${i}`));
+    const start = this._reels.length;
+    const plan = planExpandSteps(columns, options.step, this._symbolsData, bufferStart, bufferEnd, start);
+
+    const result: ExpandResult = {
+      from: start,
+      reelCount: start,
+      steps: 0,
+      symbols: this.getVisibleGrid(),
+      wasSkipped: false,
+    };
+    if (columns.length === 0) return result;
+
+    const signal = options.signal;
+    this._expanding = true;
+    this._events.emit('expand:start', { from: start, to: start + columns.length, steps: plan.length });
+    try {
+      for (let k = 0, index = 0; k < columns.length; index++) {
+        const fastForward = signal?.aborted === true;
+        const count = fastForward ? columns.length - k : plan[index];
+        const from = this._reels.length;
+        // Reels are added at the spin-time geometry; a MultiWays reel takes
+        // its landed shape from the step's setShape() like any other reel.
+        this._addReels(count, this._isMultiWaysSlot ? {} : { visibleCells: shapes.slice(k, k + count) });
+        const step: ExpandStep = { index, from, count, reelCount: from + count, fastForward };
+        this._events.emit('expand:step', step);
+        await options.onAdded?.(step);
+
+        const held = Array.from({ length: from }, (_, i) => i);
+        // Everything below was validated up front, so nothing should throw
+        // between starting the spin and handing it its result. If something
+        // does, abort the spin rather than leave the new reels spinning.
+        const failsafe = new AbortController();
+        const spinDone = this._spinController.spin(
+          { holdReels: held, mode: options.mode, signal: failsafe.signal },
+          { continueRound: true, stagger: 'spinning' },
+        );
+        try {
+          if (this._isMultiWaysSlot) {
+            this.setShape(this._reels.map((r, i) => (i < from ? r.visibleCells : shapes[k + i - from])));
+          }
+          const teases = typeof options.anticipation === 'function'
+            ? options.anticipation(step)
+            : options.anticipation === true;
+          if (teases && !fastForward) {
+            this.setAnticipation(Array.from({ length: count }, (_, i) => from + i));
+          }
+          // Held columns are never read; the board's own targets keep the grid
+          // valid for the big-symbol coordinator and the pin overlay.
+          this.setResult([...this.getTargets().slice(0, from), ...columns.slice(k, k + count)]);
+        } catch (err) {
+          failsafe.abort(err);
+          await spinDone.catch(() => undefined);
+          throw err;
+        }
+
+        const slam = (): void => {
+          if (this._spinController.isSpinning) this.slamStop();
+        };
+        // Checked again here: the signal may have aborted while `onAdded` ran.
+        if (fastForward || signal?.aborted) slam();
+        else signal?.addEventListener('abort', slam, { once: true });
+        const spun = await spinDone;
+        signal?.removeEventListener('abort', slam);
+
+        if (spun.wasSkipped || fastForward || signal?.aborted) result.wasSkipped = true;
+        const landed: ExpandStepLanded = { ...step, result: spun };
+        this._events.emit('expand:stepLanded', landed);
+        await options.onLanded?.(landed);
+        result.steps++;
+        k += count;
+      }
+    } finally {
+      this._expanding = false;
+    }
+    result.reelCount = this._reels.length;
+    result.symbols = this.getVisibleGrid();
+    this._events.emit('expand:complete', result);
+    return result;
+  }
+
+  /** `addReels()` without the idle guard, for `expand()`. */
+  private _addReels(count: number, options: AddReelsOptions): Reel[] {
+    if (!Number.isInteger(count) || count < 1) {
+      throw new RangeError(`addReels: count must be a whole number of reels, at least 1 (got ${String(count)}).`);
+    }
+    const cellsOption = options.visibleCells;
+    if (Array.isArray(cellsOption) && cellsOption.length !== count) {
+      throw new RangeError(
+        `addReels: visibleCells has ${cellsOption.length} entries for ${count} new reel${count > 1 ? 's' : ''}.`,
+      );
+    }
+    const cellsFor = (k: number): number =>
+      cellsOption === undefined
+        ? this._reelFactory.defaultCells()
+        : typeof cellsOption === 'number'
+          ? cellsOption
+          : (cellsOption as readonly number[])[k];
+    for (let k = 0; k < count; k++) this._assertAddableCells(cellsFor(k), `addReels: reel ${k}`);
+    const seeds = options.initialFrame as ColumnTarget[] | undefined;
+    if (seeds) {
+      assertColumnTargets(seeds, 'addReels initialFrame');
+      if (seeds.length !== count) {
+        throw new RangeError(`addReels: initialFrame has ${seeds.length} columns for ${count} new reels.`);
+      }
+      const b = this._reels[0];
+      assertBufferCountsInRange(
+        seeds,
+        seeds.map(() => b.bufferStart),
+        seeds.map(() => b.bufferEnd),
+        'addReels initialFrame',
+      );
+    }
+
+    const from = this._reels.length;
+    const total = from + count;
+    const rects = [...this._viewport.maskRects];
+    const added: Reel[] = [];
+    for (let k = 0; k < count; k++) {
+      const reelIndex = from + k;
+      // MultiWays reels share one spin-time geometry and reshape at land.
+      const cells = this._isMultiWaysSlot ? this._multiwaysMaxCells : cellsFor(k);
+      const extent = this._reelFactory.extentFor(cells);
+      const reel = this._reelFactory.create(reelIndex, cells, extent, total, seeds?.[k]);
+      this._wireCrossReelResolver(reel);
+      this._spinController.attachReel(reel);
+      this._reels.push(reel);
+      rects.push(this._reelFactory.maskRect(reelIndex, extent));
+      added.push(reel);
+    }
+    this._afterReelCountChange(rects);
+    this._spinController.onReelsAdded(from);
+    if (this._isMultiWaysSlot && cellsOption !== undefined) {
+      for (let k = 0; k < count; k++) this._spinController.reshapeReel(from + k, cellsFor(k));
+    }
+    this._events.emit('reels:added', { from, count });
+    return added;
+  }
+
+  /** Validate the visible-cell count of a reel about to be added. */
+  private _assertAddableCells(cells: number, context: string): void {
+    if (!Number.isInteger(cells) || cells < 1) {
+      throw new RangeError(`${context}: a reel needs a whole number of visible cells, at least 1 (got ${String(cells)}).`);
+    }
+    if (this._isMultiWaysSlot) {
+      if (cells < this._multiwaysMinCells || cells > this._multiwaysMaxCells) {
+        throw new RangeError(
+          `${context}: ${cells} cells is outside multiways [${this._multiwaysMinCells}, ${this._multiwaysMaxCells}].`,
+        );
+      }
+      return;
+    }
+    const extent = this._reelFactory.extentFor(cells);
+    // A float tolerance: extents are sums of cell sizes and gaps.
+    if (extent > this._reelFactory.tallestExtent + 1e-6) {
+      throw new RangeError(
+        `${context}: ${cells} cells (${extent}px) is taller than the set's tallest reel ` +
+          `(${this._reelFactory.tallestExtent}px). Growing the board's height would move every reel on it.`,
+      );
+    }
+  }
+
+  /** Re-sync everything sized from the reel count: reels, viewport, mask, pool. */
+  private _afterReelCountChange(rects: ReelMaskRect[]): void {
+    const total = this._reels.length;
+    for (const reel of this._reels) reel.setReelCount(total);
+    const size = this._reelFactory.viewportSize(total);
+    this._viewport.updateMaskSize(size.width, size.height, rects);
+    this._symbolFactory.setCapacityPerKey(this._reelFactory.poolCapacity(this._reels));
   }
 
   // ─── MultiWays API ─────────────────────────────────────────
@@ -2846,7 +3216,9 @@ export class ReelSet extends Container implements Disposable {
     // Overlays are only needed during spin motion. destroy them all.
     this._destroyAllPinOverlays();
 
-    if (this._pins.size === 0) return;
+    // An expansion step is part of the round its first spin started, not a
+    // round of its own: a 3-turn sticky wild must not lose a turn per step.
+    if (this._pins.size === 0 || this._expanding) return;
 
     const expired: CellPin[] = [];
     for (const pin of this._pins.values()) {
@@ -2874,7 +3246,8 @@ export class ReelSet extends Container implements Disposable {
     // allowed again until setResult() flips this back.
     this._resultSetForCurrentSpin = false;
 
-    if (this._pins.size > 0) {
+    // 'eval' pins last until the next ROUND; an expansion step continues one.
+    if (this._pins.size > 0 && !this._expanding) {
       const expired: CellPin[] = [];
       for (const pin of this._pins.values()) {
         if (pin.turns === 'eval') expired.push(pin);

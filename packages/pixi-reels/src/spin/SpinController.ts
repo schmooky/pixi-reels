@@ -268,6 +268,11 @@ export class SpinController implements Disposable {
   private _reelLandedPromises: Map<number, Promise<void>> = new Map();
   private _stopDelayOverride: number[] | null = null;
   /**
+   * Per-spin stagger position of each spinning reel, or `null` to stagger by
+   * reel index (the default). See `spin()`'s `round.stagger`.
+   */
+  private _staggerRank: Map<number, number> | null = null;
+  /**
    * Reel groups, or `null` when every reel is on its own. See
    * {@link setReelGroups}. Like `_stopDelayOverride` this PERSISTS across
    * spins: a group layout describes the board, not one round.
@@ -416,18 +421,11 @@ export class SpinController implements Disposable {
     hooks?: SpinControllerHooks,
   ) {
     this._reels = reels;
-    // The landing-frame signal is raised by `Reel.notifyLanded()`, where every
-    // landing path converges (animated stop, slam, cascade refill); this is
-    // the one place it gets a reel index. Listeners die with the reel.
-    for (const reel of reels) {
-      reel.events.on('landing', (symbols) => {
-        this._events.emit('spin:reelLanding', reel.reelIndex, symbols);
-      });
-    }
     this._speedManager = speedManager;
     this._frameBuilder = frameBuilder;
     this._phaseFactory = phaseFactory;
     this._events = events;
+    for (const reel of reels) this.attachReel(reel);
     this._tickerRef = new TickerRef(ticker);
     this._spinningMode = spinningMode ?? new StandardMode();
     this._defaultSpinMode = defaultSpinMode;
@@ -455,6 +453,40 @@ export class SpinController implements Disposable {
   }
 
   /**
+   * Wire a reel into the set bus. Called for every reel the set is built with
+   * and every one `ReelSet.addReels()` adds later.
+   *
+   * The landing-frame signal is raised by `Reel.notifyLanded()`, where every
+   * landing path converges (animated stop, slam, cascade refill); this is
+   * the one place it gets a reel index. Listeners die with the reel.
+   */
+  attachReel(reel: Reel): void {
+    reel.events.on('landing', (symbols) => {
+      this._events.emit('spin:reelLanding', reel.reelIndex, symbols);
+    });
+  }
+
+  /**
+   * The board grew to `this._reels.length`. A group layout has to name every
+   * reel, so the reels added by one call join the layout as one trailing
+   * group: they land after everything before them, together.
+   */
+  onReelsAdded(from: number): void {
+    if (!this._reelGroups) return;
+    const added = Array.from({ length: this._reels.length - from }, (_, k) => from + k);
+    this.setReelGroups([...this._reelGroups, added]);
+  }
+
+  /** The board shrank to `this._reels.length`: drop removed reels from the group layout. */
+  onReelsRemoved(): void {
+    if (!this._reelGroups) return;
+    const kept = this._reelGroups
+      .map((group) => group.filter((i) => i < this._reels.length))
+      .filter((group) => group.length > 0);
+    this.setReelGroups(kept.length > 0 ? kept : null);
+  }
+
+  /**
    * Current `skip()` position within the active round. `0` until the
    * player presses the slam button, `2` after. Use to drive UI button
    * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
@@ -464,7 +496,18 @@ export class SpinController implements Disposable {
     return this._skipStage;
   }
 
-  async spin(options?: SpinOptions): Promise<SpinResult> {
+  /**
+   * @param round How this spin relates to the round. `continueRound` keeps
+   *   the round's skip state (stage, boosted speed) instead of starting a new
+   *   round: `ReelSet.expand()` spins each step this way, so a press in one
+   *   step carries into the next. `stagger: 'spinning'` staggers start and
+   *   stop delays by a reel's place among the reels that spin, not by its
+   *   index, so a step that spins reels 12 and 13 does not wait 12 delays.
+   */
+  async spin(
+    options?: SpinOptions,
+    round?: { continueRound?: boolean; stagger?: 'index' | 'spinning' },
+  ): Promise<SpinResult> {
     if (this._isSpinning) {
       throw new Error('Cannot start a new spin while one is in progress.');
     }
@@ -494,18 +537,21 @@ export class SpinController implements Disposable {
     // `setSpeed()` between rounds, restore the pre-boost speed. The
     // manual-flag check is what distinguishes "user untouched, restore"
     // from "user explicitly chose the boosted name, leave alone". the
-    // activeName comparison alone can't tell those apart.
-    if (this._skipPreviousSpeedName !== null) {
-      const prev = this._skipPreviousSpeedName;
-      this._skipPreviousSpeedName = null;
-      this._skipBoostedToName = null;
-      if (!this._manualSpeedSinceBoost && this._speedManager.activeName !== prev) {
-        this._speedManager.set(prev);
+    // activeName comparison alone can't tell those apart. A continuation
+    // spin is not a boundary: the round's press and boost carry on.
+    if (!round?.continueRound) {
+      if (this._skipPreviousSpeedName !== null) {
+        const prev = this._skipPreviousSpeedName;
+        this._skipPreviousSpeedName = null;
+        this._skipBoostedToName = null;
+        if (!this._manualSpeedSinceBoost && this._speedManager.activeName !== prev) {
+          this._speedManager.set(prev);
+        }
       }
+      this._manualSpeedSinceBoost = false;
+      this._skipStage = 0;
+      this._autoSlamRefills = false;
     }
-    this._manualSpeedSinceBoost = false;
-    this._skipStage = 0;
-    this._autoSlamRefills = false;
 
     this._isSpinning = true;
     this._wasSkipped = false;
@@ -544,6 +590,13 @@ export class SpinController implements Disposable {
     this._allStartedEmitted = false;
     this._activePhases.clear();
     this._heldReels = this._normalizeHoldReels(options?.holdReels);
+    this._staggerRank = null;
+    if (round?.stagger === 'spinning') {
+      this._staggerRank = new Map();
+      for (let i = 0; i < this._reels.length; i++) {
+        if (!this._heldReels.has(i)) this._staggerRank.set(i, this._staggerRank.size);
+      }
+    }
     this._spinGeneration++;
 
     const generation = this._spinGeneration;
@@ -772,6 +825,8 @@ export class SpinController implements Disposable {
     this._allStartedEmitted = false;
     this._activePhases.clear();
     this._heldReels = new Set();
+    // A refill drops every reel; a step spin's stagger ranks do not apply.
+    this._staggerRank = null;
     this._spinGeneration++;
     this._currentSpinMode = 'cascade';
 
@@ -2061,6 +2116,14 @@ export class SpinController implements Disposable {
     return true;
   }
 
+  /**
+   * Reshape one reel at rest to `cells` visible cells, through the same
+   * path an AdjustPhase uses. For `ReelSet.addReels()` on a MultiWays set.
+   */
+  reshapeReel(reelIndex: number, cells: number): void {
+    this._applyReshape(reelIndex, cells);
+  }
+
   // ── Internal ──────────────────────────────────────────
 
   private async _startReel(reelIndex: number, speed: SpeedProfile, generation: number): Promise<void> {
@@ -2103,7 +2166,7 @@ export class SpinController implements Disposable {
       this._activePhases.set(reelIndex, fallPhase);
       await fallPhase.run({
         spinningMode: this._spinningMode,
-        delay: reelIndex * speed.spinDelay,
+        delay: this._staggerIndex(reelIndex) * speed.spinDelay,
         events: this._events,
       } satisfies CascadeFallPhaseConfig);
     } else {
@@ -2116,7 +2179,7 @@ export class SpinController implements Disposable {
       this._activePhases.set(reelIndex, startPhase);
       await startPhase.run({
         spinningMode: this._spinningMode,
-        delay: reelIndex * speed.spinDelay,
+        delay: this._staggerIndex(reelIndex) * speed.spinDelay,
       } satisfies StartPhaseConfig);
     }
 
@@ -2533,7 +2596,12 @@ export class SpinController implements Disposable {
       const within = (this._reelGroups as number[][])[group].indexOf(reelIndex);
       return Math.max(within, 0) * speed.stopDelay;
     }
-    return reelIndex * speed.stopDelay;
+    return this._staggerIndex(reelIndex) * speed.stopDelay;
+  }
+
+  /** A reel's place in this spin's start / stop stagger. */
+  private _staggerIndex(reelIndex: number): number {
+    return this._staggerRank?.get(reelIndex) ?? reelIndex;
   }
 
   private _cachedFrames: string[][] | null = null;

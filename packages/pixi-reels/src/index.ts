@@ -304,6 +304,15 @@ export type {
   RunCascadeResult,
 } from './core/ReelSet.js';
 
+// Growing the board: addReels() / removeReels() / expand().
+export type {
+  AddReelsOptions,
+  ExpandOptions,
+  ExpandResult,
+  ExpandStep,
+  ExpandStepLanded,
+} from './core/expand.js';
+
 // Events
 export { EventEmitter } from './events/EventEmitter.js';
 export type {

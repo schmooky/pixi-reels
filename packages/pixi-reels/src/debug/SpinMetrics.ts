@@ -168,11 +168,7 @@ export class SpinMetrics implements Disposable {
     _reelSet.events.onAny(onSet);
     this._detach.push(() => _reelSet.events.offAny(onSet));
 
-    _reelSet.reels.forEach((reel, i) => {
-      const onReel = (event: string, ...args: unknown[]): void => this._onReelEvent(i, event, args);
-      reel.events.onAny(onReel);
-      this._detach.push(() => reel.events.offAny(onReel));
-    });
+    _reelSet.reels.forEach((reel, i) => this._attachReel(reel, i));
 
     if (options.ticker) {
       this._tickerRef = new TickerRef(options.ticker);
@@ -302,9 +298,23 @@ export class SpinMetrics implements Disposable {
     return t;
   }
 
+  /** Listen on one reel's bus. Reels a growing set adds later come through here too. */
+  private _attachReel(reel: ReelSet['reels'][number], index: number): void {
+    const onReel = (event: string, ...args: unknown[]): void => this._onReelEvent(index, event, args);
+    reel.events.onAny(onReel);
+    this._detach.push(() => reel.events.offAny(onReel));
+  }
+
   private _onSetEvent(event: string, args: unknown[]): void {
     if (event === 'destroyed') {
       this.destroy();
+      return;
+    }
+    if (event === 'reels:added') {
+      // The next round's `spin:start` sizes its per-reel record to the new
+      // board; the reels' own buses need listening to from now on.
+      const { from, count } = args[0] as { from: number; count: number };
+      for (let i = from; i < from + count; i++) this._attachReel(this._reelSet.reels[i], i);
       return;
     }
     const round = event === 'spin:start' ? this._open(true) : this._round();

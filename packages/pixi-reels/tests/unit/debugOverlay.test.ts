@@ -149,6 +149,31 @@ describe('debugOverlay info panels', () => {
     }
   });
 
+  it('follows a board that grows and shrinks', async () => {
+    const harness = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    try {
+      const overlay = debugOverlay(harness.reelSet, { layers: ['metrics', 'timeline', 'hud'] });
+      harness.reelSet.addReels(2);
+      expect(overlay.describe().reels.map((r) => r.phase)).toEqual(['idle', 'idle', 'idle', 'idle', 'idle']);
+
+      await harness.spinAndLand(grid(5));
+      const round = overlay.describe().round!;
+      expect(round.reels).toHaveLength(5);
+      // The added reels' own buses are recorded: they ran phases.
+      expect(round.reels[4].phases.length).toBeGreaterThan(0);
+      const lanes = panelTexts(panel(harness.reelSet, 'timeline')).filter((t) => /^r\d$/.test(t));
+      expect(lanes).toEqual(['r0', 'r1', 'r2', 'r3', 'r4']);
+
+      harness.reelSet.removeReels(2);
+      expect(overlay.describe().reels).toHaveLength(3);
+      await harness.spinAndLand(grid(3));
+      expect(overlay.describe().round!.reels).toHaveLength(3);
+      overlay.destroy();
+    } finally {
+      harness.destroy();
+    }
+  });
+
   it('reads a recorder it was handed and leaves it running on destroy', async () => {
     const harness = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     const metrics = new SpinMetrics(harness.reelSet);

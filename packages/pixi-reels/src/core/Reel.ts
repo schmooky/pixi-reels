@@ -249,8 +249,7 @@ export class Reel implements Disposable {
   public readonly container: Container;
   public readonly events: EventEmitter<ReelEvents>;
   public readonly reelIndex: number;
-  /** Reels in the owning set. */
-  public readonly reelCount: number;
+  private _reelCount: number;
   private readonly _symbolZIndex: SymbolZIndexResolver | null;
 
   /** Current symbols in order (top buffer → visible → bottom buffer). */
@@ -407,7 +406,7 @@ export class Reel implements Disposable {
     viewport: ReelViewport,
   ) {
     this.reelIndex = config.reelIndex;
-    this.reelCount = config.reelCount ?? 1;
+    this._reelCount = config.reelCount ?? 1;
     this._symbolZIndex = config.symbolZIndex ?? null;
     this._symbolFactory = symbolFactory;
     this._randomProvider = randomProvider;
@@ -532,6 +531,19 @@ export class Reel implements Disposable {
 
   get isDestroyed(): boolean {
     return this._isDestroyed;
+  }
+
+  /** Reels in the owning set. Follows `ReelSet.addReels()` / `removeReels()`. */
+  get reelCount(): number {
+    return this._reelCount;
+  }
+
+  /**
+   * @internal Called by `ReelSet` when the set grows or shrinks, so the
+   * landing context and the z-index resolver see the live count.
+   */
+  setReelCount(count: number): void {
+    this._reelCount = count;
   }
 
   get isStopping(): boolean {
@@ -1839,6 +1851,12 @@ export class Reel implements Disposable {
     this._occupiedStubs = [];
     this.symbols = [];
     this._warp?.destroy();
+    // What is left in the container are views of symbols this reel released
+    // to the shared pool: a release hides a view but leaves it parented. On a
+    // whole-set teardown the pool dies next anyway, but `removeReels()` keeps
+    // the pool, and destroying those views here would hand the next acquire a
+    // symbol with a dead view. Detach them; the pool owns them now.
+    this.container.removeChildren();
     this.container.destroy({ children: true });
     this._isDestroyed = true;
     // Emit 'destroyed' while listeners are still attached, THEN remove them —

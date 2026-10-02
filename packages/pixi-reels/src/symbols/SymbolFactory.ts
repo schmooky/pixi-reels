@@ -41,6 +41,16 @@ export class SymbolFactory {
     return this._capacityPerKey;
   }
 
+  /**
+   * @internal Resize the pool with the board. `ReelSet.addReels()` raises it
+   * so a bigger strip does not churn; `removeReels()` lowers it, destroying
+   * what the smaller board can no longer use.
+   */
+  setCapacityPerKey(capacity: number): void {
+    this._capacityPerKey = capacity;
+    this._pool.setMaxPerKey(capacity);
+  }
+
   /** Get a symbol (from pool or newly created), activated with symbolId. */
   acquire(symbolId: string): ReelSymbol {
     const symbol = this._pool.acquire(symbolId);

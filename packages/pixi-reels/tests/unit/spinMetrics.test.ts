@@ -172,3 +172,22 @@ describe('SpinMetrics', () => {
     expect(() => h.advance(32)).not.toThrow();
   });
 });
+
+describe('SpinMetrics on a growing board', () => {
+  it('records the phases of reels added after it was created', async () => {
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    const metrics = new SpinMetrics(h.reelSet);
+    try {
+      h.reelSet.addReels(2);
+      const result = await h.reelSet.expand({ columns: [{ visible: ['a', 'a', 'a'] }], signal: AbortSignal.abort() });
+      expect(result.reelCount).toBe(6);
+      const round = metrics.current!;
+      expect(round.reels).toHaveLength(6);
+      expect(round.reels[5].phases.length).toBeGreaterThan(0);
+      expect(round.landOrder).toEqual([5]);
+    } finally {
+      metrics.destroy();
+      h.destroy();
+    }
+  });
+});
