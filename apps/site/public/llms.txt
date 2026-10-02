@@ -159,6 +159,10 @@ A small readable card: rows of monospace text on a smooth rounded plate, with op
 URL: https://pixi-reels.schmooky.dev/api/classes/debug.SpinMetrics/
 Records what each spin did, per reel, on a clock: when every phase started and ended, when the reel was asked to stop, landed and settled, the tease window, every skip press, and how many symbols the
 
+### WinLines
+URL: https://pixi-reels.schmooky.dev/api/classes/debug.WinLines/
+Win lines drawn over a reel set with pixi-silk: a payline through one cell per reel, or a payway as every winning cell joined to every winning cell on the next reel.
+
 ### AdjustPhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.AdjustPhase/
 Tween-only phase between SPIN and STOP for MultiWays slots.
@@ -480,7 +484,7 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveTumbleConfig/
 
 ### runStep()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.runStep/
-```ts function runStep<TCtx extends StepContext<any, any, StepTiming>>( run: (ctx: TCtx) => StepResult, ctx: Omit<TCtx, "signal" | "step" | "anticipated"> & Partial<Pick<StepContext<unknown, SpeedProf
+```ts function runStep<TCtx extends StepContext<any, any, StepTiming>>( run: (ctx: TCtx) => StepResult, ctx: Omit<TCtx, "step" | "signal" | "anticipated"> & Partial<Pick<StepContext<unknown, SpeedProf
 
 ### setLogLevel()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.setLogLevel/
@@ -586,6 +590,18 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/debug.SpinMetricsOptions/
 ### SpinMetricsSnapshot
 URL: https://pixi-reels.schmooky.dev/api/interfaces/debug.SpinMetricsSnapshot/
 Plain-JSON view of a [SpinMetrics](/api/classes/debug.SpinMetrics/). Safe to `JSON.stringify`.
+
+### WinLinesOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/debug.WinLinesOptions/
+Options for a [WinLines](/api/classes/debug.WinLines/) layer.
+
+### WinLineStyle
+URL: https://pixi-reels.schmooky.dev/api/interfaces/debug.WinLineStyle/
+How one line is drawn. Every field is optional.
+
+### AddReelsOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AddReelsOptions/
+Options for [ReelSet.addReels](/api/classes/index.ReelSet/#addreels).
 
 ### AdjustPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AdjustPhaseConfig/
@@ -706,6 +722,22 @@ A [MaskStrategy](/api/interfaces/index.MaskStrategy/) that can draw into a Graph
 
 ### DropOffset
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DropOffset/
+
+### ExpandOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ExpandOptions/
+Options for [ReelSet.expand](/api/classes/index.ReelSet/#expand).
+
+### ExpandResult
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ExpandResult/
+What [ReelSet.expand](/api/classes/index.ReelSet/#expand) resolves with.
+
+### ExpandStep
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ExpandStep/
+One step of an [ReelSet.expand](/api/classes/index.ReelSet/#expand) chain: the reels it added.
+
+### ExpandStepLanded
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ExpandStepLanded/
+An [ExpandStep](/api/interfaces/index.ExpandStep/) after its reels landed.
 
 ### FrameAPI
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.FrameAPI/
@@ -1373,6 +1405,10 @@ Tags: phases, steps, timing, fx, anticipation, speed, skip
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation, rectangular, clovers
+
+### Infinity reels: growing the board
+URL: https://pixi-reels.schmooky.dev/recipes/infinity-reels/
+Tags: expand, addReels, removeReels, multiways, ways, big-symbols, skip, win-lines
 
 ### Masks & board shapes
 URL: https://pixi-reels.schmooky.dev/recipes/masks/
@@ -14667,6 +14703,417 @@ return {
 };
 ```
 
+### infinity-reels-big-symbol
+URL: https://pixi-reels.schmooky.dev/recipes/infinity-reels-big-symbol/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted, DebugPlaque,
+//                   WinLines, evaluateWays
+//
+// A big symbol arriving in an expansion: +2 for a big one. The steps add one
+// reel each, but one of the new columns anchors a 2x2 wild. A one-reel step
+// cannot land half a block, so `expand()` widens that step to two reels and
+// the block arrives whole. Nothing to configure: the step plan reads the
+// symbol's `size` from `symbolData`, and validates every block (it fits the
+// strip, it does not run past the last new reel) before the first reel is
+// added.
+//
+// `getVisibleGrid()` reports the block's id in all four cells it covers, so
+// the ways math counts it as a wild on both reels.
+
+const BASE = 5;
+const ROWS = 3;
+const CELL = 80;
+const GAP = 6;
+const WINDOW = 9;
+const PAY = 'K';
+const BIG = { id: 'bigwild', color: 0xffe066, label: 'WILD 2x2', textColor: 0x5a4300 };
+const W = { '7': 14, '8': 14, '9': 12, '10': 12, J: 10, Q: 9, K: 8, A: 7, wild: 0, bigwild: 0 };
+
+const reelSet = new ReelSetBuilder()
+  .reels(BASE)
+  .visibleCells(ROWS)
+  .symbolSize(CELL, CELL)
+  .symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const s of [...CARD_DECK, WILD_CARD, BIG]) {
+      r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+    }
+  })
+  .weights(W)
+  .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { reels: 2, cells: 2 } } })
+  // A 2x2 anchor overshoots into its neighbours with a landing bounce.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+// --- Camera window --------------------------------------------------------
+const PITCH = CELL + GAP;
+const VIEW_W = WINDOW * PITCH - GAP;
+const BOARD_H = ROWS * CELL + (ROWS - 1) * GAP;
+const READOUT_H = 64;
+const stage = new PIXI.Container();
+stage.addChild(new PIXI.Graphics().rect(0, 0, VIEW_W, BOARD_H + READOUT_H).fill({ color: 0, alpha: 0 }));
+const camera = new PIXI.Container();
+const windowMask = new PIXI.Graphics().rect(-4, -4, VIEW_W + 8, BOARD_H + 8).fill(0xffffff);
+camera.mask = windowMask;
+camera.addChild(reelSet);
+stage.addChild(camera, windowMask);
+const boardWidth = (reels) => reels * PITCH - GAP;
+const cameraX = (reels) =>
+  boardWidth(reels) <= VIEW_W ? (VIEW_W - boardWidth(reels)) / 2 : VIEW_W - boardWidth(reels);
+camera.x = cameraX(BASE);
+const panTo = (reels) =>
+  new Promise((resolve) => gsap.to(camera, { x: cameraX(reels), duration: 0.35, ease: 'power2.out', onComplete: resolve }));
+
+const lines = new WinLines(reelSet, { width: 4 });
+const hud = new DebugPlaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+hud.position.set(0, BOARD_H + 12);
+stage.addChild(hud);
+
+function show(first) {
+  const win = evaluateWays(reelSet.getVisibleGrid(), { wilds: ['wild', BIG.id] }).find((w) => w.symbol === PAY);
+  lines.clear();
+  if (win) lines.ways(win.perReel, { color: 0xff5c8a });
+  hud.setRows([
+    first,
+    win ? { text: `${PAY} on ${win.reels} reels: ${win.ways} ways`, color: 0xff5c8a } : `no ${PAY} win`,
+  ]);
+}
+
+const filler = () => Array.from({ length: ROWS }, () => pickWeighted(W));
+const withPay = () => {
+  const cells = filler();
+  cells[Math.floor(Math.random() * ROWS)] = PAY;
+  return cells;
+};
+
+async function onSpin() {
+  lines.clear();
+  if (reelSet.reels.length > BASE) {
+    await panTo(BASE);
+    reelSet.removeReels(reelSet.reels.length - BASE);
+  }
+  const spin = reelSet.spin();
+  await new Promise((r) => setTimeout(r, 150));
+  reelSet.setResult(Array.from({ length: BASE }, () => ({ visible: withPay() })));
+  await spin;
+  show('base: one reel per step from here');
+
+  // Four new reels; the second column anchors the 2x2 wild, which covers the
+  // second and third columns. The block's other three cells are filled by
+  // the engine; whatever the server sends there is ignored.
+  const row = Math.floor(Math.random() * (ROWS - 1));
+  const block = withPay();
+  block[row] = BIG.id;
+  const columns = [withPay(), block, filler(), withPay()].map((visible) => ({ visible }));
+  await reelSet.expand({
+    columns,
+    step: 1,
+    onAdded: (step) => panTo(step.reelCount),
+    onLanded: (step) =>
+      show(
+        step.count > 1
+          ? `step ${step.index + 1} added ${step.count} reels: the 2x2 needs both`
+          : `step ${step.index + 1} added 1 reel`,
+      ),
+  });
+}
+
+return { reelSet, stage, onSpin };
+```
+
+### infinity-reels-multiways
+URL: https://pixi-reels.schmooky.dev/recipes/infinity-reels-multiways/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, DebugPlaque, WinLines,
+//                   evaluateWays, countWays
+//
+// Infinity reels on MultiWays: millions of ways. Every reel lands on its own
+// cell count, 2 to 7, so the board's ways are the product of the counts, and
+// every reel the expansion adds multiplies them again. Six base reels of
+// seven are 117,649 ways; two more steps of two reels each reach 5,764,801
+// and then 282,475,249.
+//
+// Each column's `visible.length` IS that reel's shape: `expand()` applies it
+// with `setShape()` for the step, the way a MultiWays spin does. Steps add
+// two reels here (`step: 2`). The ways lattice `WinLines` draws stays a few
+// dozen segments however many ways it stands for.
+
+const BASE = 6;
+const MIN = 2;
+const MAX = 7;
+const CELL_W = 64;
+const EXTENT = 7 * 46;
+const GAP = 4;
+const WINDOW = 11;
+const PAY = 'A';
+const IDS = CARD_DECK.map((c) => c.id);
+
+const reelSet = new ReelSetBuilder()
+  .reels(BASE)
+  .multiways({ minCells: MIN, maxCells: MAX, reelExtent: EXTENT })
+  .symbolSize(CELL_W, EXTENT / MAX)
+  .symbolGap(GAP, 0)
+  .symbols((r) => {
+    for (const s of [...CARD_DECK, WILD_CARD]) {
+      r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+    }
+  })
+  .weights(Object.fromEntries([...IDS.map((id) => [id, 10]), ['wild', 2]]))
+  // Cells change height every spin; a bounce would overshoot the short ones.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+// --- Camera window --------------------------------------------------------
+const PITCH = CELL_W + GAP;
+const VIEW_W = WINDOW * PITCH - GAP;
+const READOUT_H = 64;
+const stage = new PIXI.Container();
+stage.addChild(new PIXI.Graphics().rect(0, 0, VIEW_W, EXTENT + READOUT_H).fill({ color: 0, alpha: 0 }));
+const camera = new PIXI.Container();
+const windowMask = new PIXI.Graphics().rect(-4, -4, VIEW_W + 8, EXTENT + 8).fill(0xffffff);
+camera.mask = windowMask;
+camera.addChild(reelSet);
+stage.addChild(camera, windowMask);
+const boardWidth = (reels) => reels * PITCH - GAP;
+const cameraX = (reels) =>
+  boardWidth(reels) <= VIEW_W ? (VIEW_W - boardWidth(reels)) / 2 : VIEW_W - boardWidth(reels);
+camera.x = cameraX(BASE);
+const panTo = (reels) =>
+  new Promise((resolve) => gsap.to(camera, { x: cameraX(reels), duration: 0.35, ease: 'power2.out', onComplete: resolve }));
+
+// Thin and see-through: a 7 x 7 pair of reels is 49 segments.
+const lines = new WinLines(reelSet, { width: 1.5, dot: 3, glow: 0, alpha: 0.75 });
+const hud = new DebugPlaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+hud.position.set(0, EXTENT + 12);
+stage.addChild(hud);
+
+function show(label) {
+  const shape = reelSet.reels.map((r) => r.visibleCells);
+  const win = evaluateWays(reelSet.getVisibleGrid(), { wilds: ['wild'] }).find((w) => w.symbol === PAY);
+  lines.clear();
+  if (win) lines.ways(win.perReel, { color: 0x4ad8ff });
+  hud.setRows([
+    `${label}   shape ${shape.join('-')}   board ${countWays(shape).toLocaleString()} ways`,
+    win
+      ? { text: `${PAY} on ${win.reels} reels: ${win.ways.toLocaleString()} ways`, color: 0x4ad8ff }
+      : `no ${PAY} win`,
+  ]);
+}
+
+// --- Server stand-in --------------------------------------------------------
+// Tall reels, an A on most of their cells: the point is the ways count, and
+// a full board of A makes every way a winning one.
+const tall = () => (Math.random() < 0.75 ? MAX : MIN + Math.floor(Math.random() * (MAX - MIN + 1)));
+const column = (cells) =>
+  Array.from({ length: cells }, () => (Math.random() < 0.8 ? PAY : IDS[Math.floor(Math.random() * IDS.length)]));
+
+async function onSpin() {
+  lines.clear();
+  if (reelSet.reels.length > BASE) {
+    await panTo(BASE);
+    reelSet.removeReels(reelSet.reels.length - BASE);
+  }
+  const shape = Array.from({ length: BASE }, tall);
+  const spin = reelSet.spin();
+  reelSet.setShape(shape);
+  reelSet.setResult(shape.map((n) => ({ visible: column(n) })));
+  await spin;
+  show('base');
+
+  // Two steps of two reels: the server decided the board grows to ten.
+  const extra = Array.from({ length: 4 }, () => ({ visible: column(tall()) }));
+  await reelSet.expand({
+    columns: extra,
+    step: 2,
+    onAdded: (step) => panTo(step.reelCount),
+    onLanded: (step) => show(`step ${step.index + 1}`),
+  });
+}
+
+return { reelSet, stage, onSpin };
+```
+
+### infinity-reels
+URL: https://pixi-reels.schmooky.dev/recipes/infinity-reels/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted, DebugPlaque,
+//                   WinLines, evaluateWays, countWays
+//
+// Infinity reels. The base 5x3 spin lands; while the win still runs into the
+// last reel, the server adds another reel to its result, and the board grows
+// sideways one reel at a time: add it, pan to it, spin it, land it, count the
+// ways, repeat. How many reels the round ends with is the server's call.
+//
+// `reelSet.expand({ columns, step })` is the whole chain. Every earlier reel
+// is held while a step spins, so only the new reel moves. The steps are one
+// round: the first skip press slams the step in flight and turbos the rest
+// (the same boost `skipSpin()` gives the rest of any round), and a second
+// press aborts the expansion's signal, which lands every reel still to come
+// in one step. The next spin removes the extra reels again.
+//
+// The ways math (`evaluateWays`, `countWays`) is a stand-in for the server:
+// the library never computes wins. `WinLines` draws the winning ways as a
+// lattice: every winning cell joined to every winning cell on the next reel.
+
+const BASE = 5;
+const ROWS = 3;
+const CELL = 84;
+const GAP = 6;
+// How many reels the camera window shows. The board starts centred in it and
+// scrolls once it outgrows it.
+const WINDOW = 8;
+const MAX_EXTRA = 14;
+const PAYING = ['A', 'K', 'Q', 'J'];
+const W = { '7': 14, '8': 14, '9': 12, '10': 12, J: 10, Q: 9, K: 8, A: 7, wild: 3 };
+
+const reelSet = new ReelSetBuilder()
+  .reels(BASE)
+  .visibleCells(ROWS)
+  .symbolSize(CELL, CELL)
+  .symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const s of [...CARD_DECK, WILD_CARD]) {
+      r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+    }
+  })
+  .weights(W)
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// --- Camera: a fixed window the board scrolls inside ---------------------
+const PITCH = CELL + GAP;
+const VIEW_W = WINDOW * PITCH - GAP;
+const BOARD_H = ROWS * CELL + (ROWS - 1) * GAP;
+const READOUT_H = 64;
+
+const stage = new PIXI.Container();
+// Fixed bounds, so the runner fits the window once and the board can grow.
+stage.addChild(new PIXI.Graphics().rect(0, 0, VIEW_W, BOARD_H + READOUT_H).fill({ color: 0, alpha: 0 }));
+const camera = new PIXI.Container();
+const windowMask = new PIXI.Graphics().rect(-4, -4, VIEW_W + 8, BOARD_H + 8).fill(0xffffff);
+camera.mask = windowMask;
+camera.addChild(reelSet);
+stage.addChild(camera, windowMask);
+
+const boardWidth = (reels) => reels * PITCH - GAP;
+const cameraX = (reels) =>
+  boardWidth(reels) <= VIEW_W ? (VIEW_W - boardWidth(reels)) / 2 : VIEW_W - boardWidth(reels);
+camera.x = cameraX(BASE);
+
+function panTo(reels) {
+  return new Promise((resolve) => {
+    gsap.to(camera, { x: cameraX(reels), duration: 0.35, ease: 'power2.out', onComplete: resolve });
+  });
+}
+
+// --- Readout -----------------------------------------------------------
+const lines = new WinLines(reelSet, { width: 4 });
+const hud = new DebugPlaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+hud.position.set(0, BOARD_H + 12);
+stage.addChild(hud);
+
+function showWays(pay, label) {
+  const grid = reelSet.getVisibleGrid();
+  const total = countWays(reelSet.reels.map((r) => r.visibleCells));
+  const win = evaluateWays(grid, { wilds: ['wild'] }).find((w) => w.symbol === pay);
+  lines.clear();
+  if (win) lines.ways(win.perReel, { color: 0xffc94a });
+  hud.setRows([
+    `${label}   reels ${reelSet.reels.length}   board ${total.toLocaleString()} ways`,
+    win
+      ? { text: `${pay} on ${win.reels} reels: ${win.ways.toLocaleString()} ways`, color: 0xffc94a }
+      : `no ${pay} win`,
+  ]);
+}
+
+// --- Server stand-in ----------------------------------------------------
+// The base win is forced onto reels 0-2 so the chain is worth watching. The
+// rule that grows the board is the server's: a new reel is added while the
+// last one still continues the win; the reel that breaks it is still shown.
+const column = (pay, chance) => {
+  const cells = Array.from({ length: ROWS }, () => pickWeighted(W));
+  if (Math.random() < chance) cells[Math.floor(Math.random() * ROWS)] = pay;
+  return cells;
+};
+const continues = (cells, pay) => cells.some((id) => id === pay || id === 'wild');
+
+function serverSpin() {
+  const pay = PAYING[Math.floor(Math.random() * PAYING.length)];
+  const base = Array.from({ length: BASE }, (_, r) => column(pay, r < 3 ? 1 : 0.85));
+  const extra = [];
+  if (base.every((cells) => continues(cells, pay))) {
+    while (extra.length < MAX_EXTRA) {
+      const cells = column(pay, 0.75);
+      extra.push(cells);
+      if (!continues(cells, pay)) break;
+    }
+  }
+  return { pay, base, extra };
+}
+
+// --- The round ------------------------------------------------------------
+let expanding = null;
+
+async function onSpin() {
+  lines.clear();
+  if (reelSet.reels.length > BASE) {
+    hud.setRows(['back to five reels', '']);
+    await panTo(BASE);
+    reelSet.removeReels(reelSet.reels.length - BASE);
+  }
+
+  const res = serverSpin();
+  const spin = reelSet.spin();
+  await new Promise((r) => setTimeout(r, 150));
+  reelSet.setResult(res.base.map((visible) => ({ visible })));
+  await spin;
+  showWays(res.pay, 'base');
+  if (res.extra.length === 0) return;
+
+  expanding = new AbortController();
+  try {
+    await reelSet.expand({
+      columns: res.extra.map((visible) => ({ visible })),
+      step: 1,
+      signal: expanding.signal,
+      onAdded: (step) => panTo(step.reelCount),
+      onLanded: (step) => showWays(res.pay, step.fastForward ? 'fast-forward' : `step ${step.index + 1}`),
+    });
+  } finally {
+    expanding = null;
+  }
+}
+
+function onSkip() {
+  // During the chain: the first press slams the step and turbos the rest,
+  // the next one fast-forwards to the final board.
+  if (expanding) {
+    if (reelSet.isSpinning && reelSet.skipStage < 2) reelSet.skipSpin();
+    else expanding.abort();
+    return;
+  }
+  try {
+    reelSet.skipSpin();
+  } catch {
+    reelSet.requestSkip();
+  }
+}
+
+return { reelSet, stage, onSpin, onSkip };
+```
+
 ### landing-signal
 URL: https://pixi-reels.schmooky.dev/recipes/landing-signal/
 ```ts
@@ -26254,4 +26701,131 @@ return {
     }
   },
 };
+```
+
+### win-lines
+URL: https://pixi-reels.schmooky.dev/recipes/win-lines/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted,
+//                   DebugPlaque, WinLines, evaluateWays
+//
+// `WinLines` (from `pixi-reels/debug`) draws wins with pixi-silk: a payline
+// is one stroke through one cell per reel, a payway is every winning cell
+// joined to every winning cell on the next reel. It only draws the cells it
+// is handed; the wins here come from a few lines of recipe code (paylines)
+// and from `evaluateWays` (ways), both stand-ins for the server.
+//
+// Spins alternate: odd spins pay ten fixed lines and the presenter walks
+// them one at a time, each drawn as it is shown; even spins pay ways and draw
+// every winning symbol's lattice at once.
+
+const COLS = 5;
+const ROWS = 3;
+const SIZE = 86;
+const GAP = 6;
+const W = { '7': 14, '8': 14, '9': 12, '10': 12, J: 10, Q: 9, K: 8, A: 7, wild: 4 };
+
+// Row per reel, the classic first ten.
+const PAYLINES = [
+  [1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [2, 2, 2, 2, 2], [0, 1, 2, 1, 0], [2, 1, 0, 1, 2],
+  [0, 0, 1, 2, 2], [2, 2, 1, 0, 0], [1, 0, 0, 0, 1], [1, 2, 2, 2, 1], [0, 1, 1, 1, 0],
+];
+
+const reelSet = new ReelSetBuilder()
+  .reels(COLS)
+  .visibleCells(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const s of [...CARD_DECK, WILD_CARD]) {
+      r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+    }
+  })
+  .weights(W)
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+const BOARD_W = COLS * (SIZE + GAP) - GAP;
+const BOARD_H = ROWS * (SIZE + GAP) - GAP;
+const stage = new PIXI.Container();
+stage.addChild(reelSet);
+const hud = new DebugPlaque({ rows: ['press spin'], minWidth: BOARD_W, maxWidth: BOARD_W, reserveRows: 2 });
+hud.position.set(0, BOARD_H + 12);
+stage.addChild(hud);
+
+const lines = new WinLines(reelSet);
+const presenter = new WinPresenter(reelSet, { stagger: 60, cycleGap: 350 });
+reelSet.events.on('spin:start', () => {
+  presenter.abort();
+  lines.clear();
+});
+
+// Payline mode: draw each line as the presenter reaches it.
+let drawLines = false;
+reelSet.events.on('win:group', (win) => {
+  if (!drawLines) return;
+  lines.clear();
+  const g = lines.line(win.cells, { color: [0xffc94a, 0x4ad8ff, 0xff5c8a, 0x8cff6b][win.id % 4] });
+  gsap.fromTo(g, { alpha: 0 }, { alpha: 1, duration: 0.15 });
+});
+
+// --- Win math, standing in for the server --------------------------------
+function lineWins(grid) {
+  const wins = [];
+  PAYLINES.forEach((rows, id) => {
+    const ids = rows.map((row, reel) => grid[reel][row]);
+    const symbol = ids.find((s) => s !== 'wild') ?? 'wild';
+    let n = 0;
+    while (n < COLS && (ids[n] === symbol || ids[n] === 'wild')) n++;
+    if (n >= 3) {
+      const cells = rows.slice(0, n).map((cellIndex, reelIndex) => ({ reelIndex, cellIndex }));
+      wins.push({ id, cells, value: n * 10, kind: 'line', label: `line ${id + 1}: ${symbol} x${n}` });
+    }
+  });
+  return wins;
+}
+
+// A board with something to show: one symbol planted on two random lines.
+function plantedGrid() {
+  const grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => pickWeighted(W)));
+  const symbol = ['A', 'K', 'Q'][Math.floor(Math.random() * 3)];
+  for (const rows of [PAYLINES[Math.floor(Math.random() * 5)], PAYLINES[5 + Math.floor(Math.random() * 5)]]) {
+    const n = 3 + Math.floor(Math.random() * 3);
+    for (let reel = 0; reel < n; reel++) grid[reel][rows[reel]] = symbol;
+  }
+  return grid;
+}
+
+let spins = 0;
+async function onSpin() {
+  const ways = spins++ % 2 === 1;
+  const spin = reelSet.spin();
+  await new Promise((r) => setTimeout(r, 150));
+  reelSet.setResult(plantedGrid().map((visible) => ({ visible })));
+  await spin;
+  const grid = reelSet.getVisibleGrid();
+
+  if (ways) {
+    const wins = evaluateWays(grid, { wilds: ['wild'] });
+    drawLines = false;
+    wins.forEach((win) => lines.ways(win.perReel));
+    hud.setRows([
+      `ways: ${wins.length} winning symbol${wins.length === 1 ? '' : 's'}`,
+      wins.map((w) => `${w.symbol} x${w.reels} = ${w.ways} ways`).join('   ') || 'no win',
+    ]);
+    await presenter.show(wins);
+    return;
+  }
+
+  const wins = lineWins(grid);
+  drawLines = true;
+  hud.setRows([`paylines: ${wins.length} of 10 pay`, wins.map((w) => w.label).join('   ') || 'no win']);
+  await presenter.show(wins);
+}
+
+return { reelSet, stage, onSpin, cleanup: () => presenter.destroy() };
 ```

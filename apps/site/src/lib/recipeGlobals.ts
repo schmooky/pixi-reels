@@ -20,7 +20,8 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { DebugPlaque, DEBUG_FONT, roundRectPath } from 'pixi-reels/debug';
+import { DebugPlaque, DEBUG_FONT, roundRectPath, WinLines } from 'pixi-reels/debug';
+import { countWays, evaluateWays } from '@pixi-reels/cheats/ways';
 import {
   AdjustPhase,
   AnimatedSpriteSymbol,
@@ -270,6 +271,13 @@ export function buildRecipeGlobals(
     DebugPlaque,
     DEBUG_FONT,
     roundRectPath,
+    // Win lines (paylines and payways) drawn with the same library.
+    WinLines,
+
+    // Pay-ways math, a stand-in for the server: the library never computes
+    // wins (ADR 007). `evaluateWays(grid, { wilds })` and `countWays(shape)`.
+    evaluateWays,
+    countWays,
 
     // Example symbol kits
     BlurSpriteSymbol,

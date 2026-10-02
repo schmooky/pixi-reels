@@ -1,0 +1,52 @@
+---
+title: "Infinity reels: growing the board"
+group: mechanics
+oneLiner: Add reels sideways after the base spin lands, one or two at a time, as many as the server's result says. MultiWays reaches millions of ways; a big symbol widens its step.
+order: 52
+tags:
+  - expand
+  - addReels
+  - removeReels
+  - multiways
+  - ways
+  - big-symbols
+  - skip
+  - win-lines
+---
+
+The base spin lands, then the board grows: `reelSet.expand({ columns })` adds the reels the server's result has beyond the base board, a step at a time, spinning only the new ones while everything before them holds. `addReels()` and `removeReels()` are the primitives under it; the next round shrinks back with `removeReels()`.
+
+<a id="infinity-reels"></a>
+
+## One reel at a time
+
+While the win still runs into the last reel, the server adds another reel to its result. Each step pans the camera to the new reel (`onAdded`), spins and lands it, then counts the ways and draws them with `WinLines` (`onLanded`).
+
+**Skip:** the steps are one round. The first press slams the step in flight and turbos the rest, the same boost `skipSpin()` gives the rest of any round; the second aborts the expansion's `signal`, which lands every reel still to come in one step.
+
+<RecipeDemo code="infinity-reels" height={420} />
+
+<a id="infinity-reels-multiways"></a>
+
+## MultiWays: millions of ways
+
+Each column's `visible.length` is that reel's shape, applied with `setShape()` for its step, so every reel the expansion adds multiplies the ways: eight reels of seven cells is 5,764,801 ways, ten is 282,475,249. Steps add two reels (`step: 2`).
+
+<RecipeDemo code="infinity-reels-multiways" height={460} />
+
+<a id="infinity-reels-big-symbol"></a>
+
+## A big symbol widens its step
+
+The steps add one reel each, but a 2x2 wild arrives in one of the columns. A one-reel step cannot land half a block, so that step adds two reels and the block lands whole. The plan is read from `symbolData` sizes and every block is validated before the first reel is added.
+
+**Gotcha:** a block may not reach back into the reels already on the board, nor past the last reel the expansion adds; both throw before anything moves.
+
+<RecipeDemo code="infinity-reels-big-symbol" height={420} />
+
+## What carries across steps
+
+- **Events.** Each step fires the usual `spin:*` events for its own reels, plus `reels:added`, `expand:step` and `expand:stepLanded`; the chain opens with `expand:start` and closes with `expand:complete`.
+- **Stagger.** Start and stop delays count a reel's place in its step, not its index, so reel 40 does not wait forty delays.
+- **Pins.** A sticky pin's turns and an `'eval'` pin belong to the round, so they are not spent per step.
+- **Memory.** Reels are real reels while they are on the board; `removeReels()` destroys them and shrinks the viewport, mask and symbol pool back.
