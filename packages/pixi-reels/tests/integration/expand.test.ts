@@ -579,6 +579,64 @@ describe('expand()', () => {
     });
   });
 
+  describe('across orientations, directions and modes', () => {
+    it('a horizontal set grows downward, a row per reel', async () => {
+      const h = makeHarness({ orientation: 'horizontal' });
+      await landBase(h);
+      await h.reelSet.expand({ columns: [col('wild', 'a', 'b'), col('c', 'c', 'c')] });
+      expect(h.reelSet.reels[6].container.y).toBe(6 * 100);
+      expect(h.reelSet.getVisibleGrid().slice(5)).toEqual([['wild', 'a', 'b'], ['c', 'c', 'c']]);
+    });
+
+    it('a reverse set lands its new reels through the natural stop', async () => {
+      const h = makeHarness({ direction: 'reverse' });
+      await landBase(h);
+      const result = await h.reelSet.expand({ columns: [col('a', 'b', 'c'), col('c', 'b', 'a')], step: 2 });
+      expect(result.wasSkipped).toBe(false);
+      expect(h.reelSet.getVisibleGrid().slice(5)).toEqual([['a', 'b', 'c'], ['c', 'b', 'a']]);
+    });
+
+    it('a per-reel direction array extends with its last entry', () => {
+      const h = makeHarness({ directionPerReel: ['forward', 'forward', 'forward', 'forward', 'reverse'] });
+      const [added] = h.reelSet.addReels(1);
+      expect(added.axis.direction).toBe('reverse');
+    });
+
+    it('cascade mode drops the new reels in', async () => {
+      const h = makeHarness({ tumble: {} });
+      const spin = h.reelSet.spin();
+      h.reelSet.setResult(base());
+      await spin;
+      const result = await h.reelSet.expand({ columns: [col('wild', 'wild', 'wild')], mode: 'cascade' });
+      expect(result.reelCount).toBe(6);
+      expect(h.reelSet.getVisibleGrid()[5]).toEqual(['wild', 'wild', 'wild']);
+    });
+
+    it('a group layout gains the step reels as one trailing group, and they land', async () => {
+      const h = makeHarness();
+      h.reelSet.setReelGroups([[0, 1, 2], [3, 4]]);
+      await landBase(h);
+      await h.reelSet.expand({ columns: [col('a', 'a', 'a'), col('b', 'b', 'b')], step: 2 });
+      expect(h.reelSet.reelGroups).toEqual([[0, 1, 2], [3, 4], [5, 6]]);
+      expect(h.reelSet.getVisibleGrid().slice(5)).toEqual([['a', 'a', 'a'], ['b', 'b', 'b']]);
+    });
+
+    it('a queued requestSkip() lands the step the moment its result is set', async () => {
+      const h = makeHarness();
+      await landBase(h);
+      // Pressed as the step's spin starts, before expand() hands it its
+      // result: the press queues and fires on setResult().
+      const press = (): void => {
+        h.reelSet.events.off('spin:start', press);
+        h.reelSet.requestSkip();
+      };
+      h.reelSet.events.on('expand:step', () => h.reelSet.events.on('spin:start', press));
+      const result = await h.reelSet.expand({ columns: [col('a', 'a', 'a')] });
+      expect(result.wasSkipped).toBe(true);
+      expect(h.reelSet.getVisibleGrid()[5]).toEqual(['a', 'a', 'a']);
+    });
+  });
+
   it('a long chain: 60 reels one at a time, then back to five', async () => {
     const h = makeHarness();
     await landBase(h);
