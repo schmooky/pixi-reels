@@ -603,6 +603,8 @@ export class ReelSet extends Container implements Disposable {
   private _reelFactory: ReelFactory;
   /** True while `expand()` runs: the board is mid-chain, so nothing else may resize it. */
   private _expanding = false;
+  /** Reels the builder made. `removeReels()` with no count goes back to it. */
+  private _builtReelCount: number;
 
   /** Horizontal symbol gap (px). Used by `getBlockBounds` for big symbols. */
 
@@ -610,6 +612,7 @@ export class ReelSet extends Container implements Disposable {
     super();
 
     this._reels = params.reels;
+    this._builtReelCount = params.reels.length;
     this._reelFactory = params.reelFactory;
     this._viewport = params.viewport;
     this._symbolFactory = params.symbolFactory;
@@ -1769,7 +1772,7 @@ export class ReelSet extends Container implements Disposable {
     if (this._expanding) {
       throw new Error(
         `ReelSet.${method}: cannot be called while expand() is running. ` +
-          `Await the expand() promise first; its onAdded / onLanded hooks run mid-chain.`,
+          `Await the expand() promise first; its onStepAdded / onStepLanded hooks run mid-chain.`,
       );
     }
   }
@@ -1923,16 +1926,19 @@ export class ReelSet extends Container implements Disposable {
    * `curvePerReel`) extends with its last entry; `curveFocus('set')` keeps
    * converging on the board's centre at build time.
    *
-   * For a chain of "add, spin, land, repeat" driven by one server result,
-   * use {@link ReelSet.expand}; this is the primitive under it. Shrink back
-   * with {@link ReelSet.removeReels}.
+   * For a chain of "add, spin, land, repeat" driven by a server result, use
+   * {@link ReelSet.expand}; this is the primitive under it. Spinning added
+   * reels yourself with `spin({ holdReels })` works, but every such spin is
+   * a round of its own: it spends pin turns, resets the skip stage, and
+   * staggers by reel index, so reel 40 waits forty delays. `expand()` spins
+   * its steps as one round, staggered by each reel's place in its step.
+   * Shrink back with {@link ReelSet.removeReels}.
    *
    * Throws while the reels spin, a nudge runs, or `expand()` runs.
    *
    * @example
    * reelSet.addReels(2);                      // two reels at the set's cell count
    * reelSet.addReels(1, { visibleCells: 3 }); // a short reel on a jagged set
-   * await reelSet.spin({ holdReels: [0, 1, 2, 3, 4] }); // spin only the new ones
    */
   addReels(count: number, options: AddReelsOptions = {}): readonly Reel[] {
     this._assertCanResize('addReels');
@@ -1940,7 +1946,10 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Remove the last `count` reels and destroy them. Pins on them are removed
+   * Remove the last `count` reels and destroy them. Without `count`, remove
+   * every reel added since `build()`: the board is back to the one the
+   * builder made, and a call with nothing to remove does nothing, so it is
+   * safe at the start of every round. Pins on removed reels are removed
    * (`pin:expired` with reason `'explicit'`), a spotlight is hidden, the
    * group layout drops them, and the viewport, mask and symbol pool shrink
    * back, so a board that grew for one round costs nothing in the next.
@@ -1953,12 +1962,18 @@ export class ReelSet extends Container implements Disposable {
    * Throws while the reels spin, a nudge runs, or `expand()` runs.
    *
    * @example
-   * // End of an Infinity Reels round: back to the base five.
-   * reelSet.removeReels(reelSet.reels.length - 5);
+   * // Start of a round on an Infinity Reels board: back to the built five.
+   * reelSet.removeReels();
+   * // Or drop just the last two.
+   * reelSet.removeReels(2);
    */
-  removeReels(count: number): void {
+  removeReels(count?: number): void {
     this._assertCanResize('removeReels');
     const total = this._reels.length;
+    if (count === undefined) {
+      count = total - this._builtReelCount;
+      if (count <= 0) return;
+    }
     if (!Number.isInteger(count) || count < 1 || count >= total) {
       throw new RangeError(
         `removeReels: count must be a whole number from 1 to ${total - 1} (the set has ${total} reels ` +
@@ -1993,16 +2008,16 @@ export class ReelSet extends Container implements Disposable {
    * await reelSet.expand({
    *   columns: res.columns.slice(5),          // one per reel to add
    *   step: 1,                                // reels per step
-   *   onAdded: (step) => camera.panTo(step.reelCount),
-   *   onLanded: (step) => showWays(step.result.symbols),
+   *   onStepAdded: () => camera.panTo(reelSet.viewport.maskWidth), // the board's new width
+   *   onStepLanded: (step) => showWays(step.result.symbols),
    * });
-   * // ...next round
-   * reelSet.removeReels(reelSet.reels.length - 5);
+   * // ...next round: back to the board the builder made
+   * reelSet.removeReels();
    * ```
    *
    * Each step is a spin of the new reels with every earlier reel held, so it
    * fires the usual `spin:*` events, plus `reels:added` and
-   * `expand:step` / `expand:stepLanded`. The steps are one round, not one
+   * `expand:stepAdded` / `expand:stepLanded`. The steps are one round, not one
    * round each, and pin turns and `'eval'` pins are not spent per step.
    * Start and stop delays stagger by a reel's place in its step, not by its
    * index, so reel 40 does not wait forty delays.
@@ -2016,7 +2031,7 @@ export class ReelSet extends Container implements Disposable {
    *     which it frees the moment its result is set (`skip:queued` fires).
    *   - Reel groups: the reels one step adds join `setReelGroups()` as one
    *     trailing group, so a press frees the step whole. Set groups in
-   *     `onAdded` to free a wide step a group per press.
+   *     `onStepAdded` to free a wide step a group per press.
    *   - Tease protection: `anticipation: { protect: 'once' }` keeps a
    *     step's tease through the first press.
    *   - `slamStop()` and `slamStop({ reels })` land the step in flight, all
@@ -2075,6 +2090,14 @@ export class ReelSet extends Container implements Disposable {
     this._events.emit('expand:start', { from: start, to: start + columns.length, steps: plan.length });
     try {
       for (let k = 0, index = 0; k < columns.length; index++) {
+        // A hook may have started a nudge and not awaited it. Say so here,
+        // not from inside the setResult() this step makes on its behalf.
+        if (this._nudgesInFlight > 0) {
+          throw new Error(
+            'expand(): a nudge() is still running as the next step starts. Await the ' +
+              'nudge() promise inside the onStepAdded / onStepLanded hook that started it.',
+          );
+        }
         const fastForward = signal?.aborted === true;
         const count = fastForward ? columns.length - k : plan[index];
         const from = this._reels.length;
@@ -2082,8 +2105,8 @@ export class ReelSet extends Container implements Disposable {
         // its landed shape from the step's setShape() like any other reel.
         this._addReels(count, this._isMultiWaysSlot ? {} : { visibleCells: shapes.slice(k, k + count) });
         const step: ExpandStep = { index, from, count, reelCount: from + count, fastForward };
-        this._events.emit('expand:step', step);
-        await options.onAdded?.(step);
+        this._events.emit('expand:stepAdded', step);
+        await options.onStepAdded?.(step);
 
         const held = Array.from({ length: from }, (_, i) => i);
         // Everything below was validated up front, so nothing should throw
@@ -2116,7 +2139,7 @@ export class ReelSet extends Container implements Disposable {
         const slam = (): void => {
           if (this._spinController.isSpinning) this.slamStop();
         };
-        // Checked again here: the signal may have aborted while `onAdded` ran.
+        // Checked again here: the signal may have aborted while `onStepAdded` ran.
         if (fastForward || signal?.aborted) slam();
         else signal?.addEventListener('abort', slam, { once: true });
         const spun = await spinDone;
@@ -2125,13 +2148,13 @@ export class ReelSet extends Container implements Disposable {
         if (spun.wasSkipped || fastForward || signal?.aborted) result.wasSkipped = true;
         const landed: ExpandStepLanded = { ...step, result: spun };
         this._events.emit('expand:stepLanded', landed);
-        await options.onLanded?.(landed);
+        await options.onStepLanded?.(landed);
         result.steps++;
         k += count;
       }
     } finally {
       this._expanding = false;
-      // A press during the last step's `onLanded` has no step left to land.
+      // A press during the last step's `onStepLanded` has no step left to land.
       this._spinController.clearCarriedSkip();
     }
     result.reelCount = this._reels.length;

@@ -258,9 +258,9 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'reels:removed': [info: { from: number; count: number }];
   /** `expand()` started: the board grows from `from` reels to `to`, in `steps` steps. */
   'expand:start': [info: { from: number; to: number; steps: number }];
-  /** An `expand()` step added its reels; they spin next. Fires before the step's `onAdded`. */
-  'expand:step': [step: ExpandStep];
-  /** An `expand()` step's reels landed. Fires before the step's `onLanded`. */
+  /** An `expand()` step added its reels; they spin next. Fires before the step's `onStepAdded`. */
+  'expand:stepAdded': [step: ExpandStep];
+  /** An `expand()` step's reels landed. Fires before the step's `onStepLanded`. */
   'expand:stepLanded': [step: ExpandStepLanded];
   /** `expand()` finished: every step landed (or was fast-forwarded). */
   'expand:complete': [result: ExpandResult];

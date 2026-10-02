@@ -234,6 +234,22 @@ describe('removeReels()', () => {
     expect(h.reelSet.getVisibleGrid()).toEqual(base().map((c) => c.visible));
   });
 
+  it('without a count, removes every reel added since build, and is a no-op when there are none', () => {
+    const h = makeHarness();
+    const log = captureEvents(h.reelSet, ['reels:removed']);
+    h.reelSet.removeReels();
+    expect(log).toEqual([]);
+    h.reelSet.addReels(2);
+    h.reelSet.addReels(3);
+    h.reelSet.removeReels();
+    expect(h.reelSet.reels).toHaveLength(5);
+    expect(log).toEqual([{ event: 'reels:removed', args: [{ from: 5, count: 5 }] }]);
+    // Shrunk below the built board: nothing to put back, nothing to remove.
+    h.reelSet.removeReels(2);
+    h.reelSet.removeReels();
+    expect(h.reelSet.reels).toHaveLength(3);
+  });
+
   it('keeps at least one reel and refuses bad counts', () => {
     const h = makeHarness();
     expect(() => h.reelSet.removeReels(5)).toThrow(/from 1 to 4/);
@@ -251,7 +267,7 @@ describe('expand()', () => {
     const log = captureEvents(h.reelSet, [
       'expand:start',
       'reels:added',
-      'expand:step',
+      'expand:stepAdded',
       'spin:reelLanded',
       'expand:stepLanded',
       'expand:complete',
@@ -268,9 +284,9 @@ describe('expand()', () => {
     expect(landed).toEqual([5, 6, 7]);
     expect(log.map((e) => e.event)).toEqual([
       'expand:start',
-      ...['reels:added', 'expand:step', 'spin:reelLanded', 'expand:stepLanded'],
-      ...['reels:added', 'expand:step', 'spin:reelLanded', 'expand:stepLanded'],
-      ...['reels:added', 'expand:step', 'spin:reelLanded', 'expand:stepLanded'],
+      ...['reels:added', 'expand:stepAdded', 'spin:reelLanded', 'expand:stepLanded'],
+      ...['reels:added', 'expand:stepAdded', 'spin:reelLanded', 'expand:stepLanded'],
+      ...['reels:added', 'expand:stepAdded', 'spin:reelLanded', 'expand:stepLanded'],
       'expand:complete',
     ]);
     expect(log[0].args[0]).toEqual({ from: 5, to: 8, steps: 3 });
@@ -281,7 +297,7 @@ describe('expand()', () => {
     await landBase(h);
     const columns = Array.from({ length: 5 }, () => col('a', 'b', 'c'));
     const sizes: number[] = [];
-    h.reelSet.events.on('expand:step', (s) => sizes.push(s.count));
+    h.reelSet.events.on('expand:stepAdded', (s) => sizes.push(s.count));
     await h.reelSet.expand({ columns, step: 2 });
     expect(sizes).toEqual([2, 2, 1]);
 
@@ -300,19 +316,19 @@ describe('expand()', () => {
     expect(h.reelSet.reels).toHaveLength(15);
   });
 
-  it('awaits onAdded before the step spins and onLanded before the next step', async () => {
+  it('awaits onStepAdded before the step spins and onStepLanded before the next step', async () => {
     const h = makeHarness();
     await landBase(h);
     const trace: string[] = [];
     h.reelSet.events.on('spin:start', () => trace.push('spin'));
     await h.reelSet.expand({
       columns: [col('a', 'a', 'a'), col('b', 'b', 'b')],
-      onAdded: async (step: ExpandStep) => {
+      onStepAdded: async (step: ExpandStep) => {
         trace.push(`added ${step.from}`);
         await new Promise((r) => setTimeout(r, 30));
         trace.push(`panned ${step.from}`);
       },
-      onLanded: async (step: ExpandStepLanded) => {
+      onStepLanded: async (step: ExpandStepLanded) => {
         trace.push(`landed ${step.from} ${step.result.symbols[step.from].join('')}`);
         await new Promise((r) => setTimeout(r, 30));
       },
@@ -405,7 +421,7 @@ describe('expand()', () => {
       const h = makeHarness({ symbolIds: [...IDS, 'bonus'], ...BIG });
       await landBase(h);
       const sizes: number[] = [];
-      h.reelSet.events.on('expand:step', (s) => sizes.push(s.count));
+      h.reelSet.events.on('expand:stepAdded', (s) => sizes.push(s.count));
       // Column 1 anchors a 2x2 that reaches column 2.
       await h.reelSet.expand({
         columns: [col('a', 'b', 'c'), col('bonus', 'a', 'a'), col('b', 'b', 'b'), col('c', 'c', 'c')],
@@ -422,7 +438,7 @@ describe('expand()', () => {
       const h = makeHarness({ symbolIds: [...IDS, 'bonus'], ...BIG });
       await landBase(h);
       const sizes: number[] = [];
-      h.reelSet.events.on('expand:step', (s) => sizes.push(s.count));
+      h.reelSet.events.on('expand:stepAdded', (s) => sizes.push(s.count));
       await h.reelSet.expand({
         columns: [col('bonus', 'bonus', 'a'), col('bonus', 'bonus', 'b'), col('c', 'c', 'c')],
         step: 1,
@@ -481,10 +497,10 @@ describe('expand()', () => {
       });
       const result = await h.reelSet.expand({
         columns: [col('a', 'a', 'a'), col('b', 'b', 'b'), col('c', 'c', 'c')],
-        onAdded: () => {
+        onStepAdded: () => {
           speeds.push(h.reelSet.speed.activeName);
         },
-        onLanded: (step) => {
+        onStepLanded: (step) => {
           stepSkipped.push(step.result.wasSkipped);
         },
       });
@@ -510,7 +526,7 @@ describe('expand()', () => {
       const result = await h.reelSet.expand({
         columns,
         signal: controller.signal,
-        onAdded: (step) => {
+        onStepAdded: (step) => {
           steps.push(step);
           if (step.index === 1) controller.abort();
         },
@@ -547,7 +563,7 @@ describe('expand()', () => {
       let nested: Promise<unknown> = Promise.resolve(null);
       await h.reelSet.expand({
         columns: [col('a', 'a', 'a')],
-        onAdded: () => {
+        onStepAdded: () => {
           // Settled into a value at once, so the rejection is never unhandled.
           nested = h.reelSet.expand({ columns: [col('b', 'b', 'b')] }).then(
             () => null,
@@ -556,11 +572,28 @@ describe('expand()', () => {
           expect(() => h.reelSet.addReels(1)).toThrow(/while expand\(\) is running/);
           expect(() => h.reelSet.removeReels(1)).toThrow(/while expand\(\) is running/);
         },
-        onLanded: async () => {
+        onStepLanded: async () => {
           await expect(h.reelSet.spin()).rejects.toThrow(/while expand\(\) is running/);
         },
       });
       expect(await nested).toMatch(/while expand\(\) is running/);
+    });
+
+    it('a nudge left running by a hook fails the next step loudly, by name', async () => {
+      const h = makeHarness();
+      await landBase(h);
+      let nudge: Promise<unknown> = Promise.resolve();
+      await expect(
+        h.reelSet.expand({
+          columns: [col('a', 'a', 'a'), col('b', 'b', 'b')],
+          onStepLanded: (step) => {
+            if (step.index === 0) {
+              nudge = h.reelSet.nudge(5, { distance: 1, direction: 'forward', incoming: ['wild'] }).catch(() => undefined);
+            }
+          },
+        }),
+      ).rejects.toThrow(/a nudge\(\) is still running as the next step starts/);
+      await nudge;
     });
 
     it('validates the columns before adding anything', async () => {
@@ -631,7 +664,7 @@ describe('expand()', () => {
         h.reelSet.events.off('spin:start', press);
         h.reelSet.requestSkip();
       };
-      h.reelSet.events.on('expand:step', () => h.reelSet.events.on('spin:start', press));
+      h.reelSet.events.on('expand:stepAdded', () => h.reelSet.events.on('spin:start', press));
       const result = await h.reelSet.expand({ columns: [col('a', 'a', 'a')] });
       expect(result.wasSkipped).toBe(true);
       expect(h.reelSet.getVisibleGrid()[5]).toEqual(['a', 'a', 'a']);
@@ -648,7 +681,7 @@ describe('expand()', () => {
     const result = await h.reelSet.expand({
       columns,
       signal: controller.signal,
-      onLanded: (step) => {
+      onStepLanded: (step) => {
         if (step.index === 3) controller.abort();
       },
     });

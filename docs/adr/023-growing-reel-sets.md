@@ -72,7 +72,7 @@ only draws: `WinLines` in `pixi-reels/debug` strokes the cells it is handed.
 ## Consequences
 
 - New public API: `addReels()`, `removeReels()`, `expand()`, and the events
-  `reels:added`, `reels:removed`, `expand:start`, `expand:step`,
+  `reels:added`, `reels:removed`, `expand:start`, `expand:stepAdded`,
   `expand:stepLanded`, `expand:complete`. Additive.
 - `Reel.reelCount` became a getter that follows the board.
 - Destroying one reel of a live set used to destroy the views of symbols it had

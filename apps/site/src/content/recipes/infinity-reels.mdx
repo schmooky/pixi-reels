@@ -20,7 +20,7 @@ The base spin lands, then the board grows: `reelSet.expand({ columns })` adds th
 
 ## One reel at a time
 
-While the win still runs into the last reel, the server adds another reel to its result. Each step pans the camera to the new reel (`onAdded`), spins and lands it, then counts the ways and draws them with `WinLines` (`onLanded`).
+While the win still runs into the last reel, the server adds another reel to its result. Each step pans the camera to the new reel (`onStepAdded`), spins and lands it, then counts the ways and draws them with `WinLines` (`onStepLanded`).
 
 **Skip:** the steps are one round. The first press slams the step in flight and turbos the rest, the same boost `skipSpin()` gives the rest of any round; the second aborts the expansion's `signal`, which lands every reel still to come in one step.
 
@@ -40,7 +40,7 @@ Each column's `visible.length` is that reel's shape, applied with `setShape()` f
 
 The steps add one reel each, but a 2x2 wild arrives in one of the columns. A one-reel step cannot land half a block, so that step adds two reels and the block lands whole. The plan is read from `symbolData` sizes and every block is validated before the first reel is added.
 
-**Gotcha:** a block may not reach back into the reels already on the board, nor past the last reel the expansion adds; both throw before anything moves.
+**Gotcha:** a block has to end on a reel the expansion adds. One that would run past the last of them, or past the bottom of a strip, throws before a reel is added.
 
 <RecipeDemo code="infinity-reels-big-symbol" height={420} />
 
@@ -55,17 +55,17 @@ Press as often as you like and read the log. The base board is grouped (dashed b
 ### Picking a skip policy
 
 - **Turbo the rest** (the default). The first `skipSpin()` frees the step in flight and boosts every later step to the fastest profile; the next round starts at normal speed again.
-- **Slam each step.** Every press frees the step in flight. Presses during `onAdded` / `onLanded` (a camera pan, a win readout) are not lost: they free the next step as soon as it has its result.
+- **Slam each step.** Every press frees the step in flight. Presses during `onStepAdded` / `onStepLanded` (a camera pan, a win readout) are not lost: they free the next step as soon as it has its result.
 - **Fast-forward.** Abort the expansion's `signal` and every reel still to come lands in one step. A quick-spin or autoplay mode can pass an aborted signal from the start: the whole expansion lands at once, with the same events and hooks.
 - **Quicken instead of slam.** With `.skipMode('quicken')` (or `requestSkip({ mode: 'quicken', speed: 'turbo' })`) a press shortens the step's spin but keeps its spin-out and bounce, so a long chain never looks cut.
-- **Wide steps, one reel per press.** A step's reels arrive as one group. Call `setReelGroups()` in `onAdded` to split them, and each press frees one; or `slamStop({ reels: [...] })` lands part of a step and lets the rest play.
+- **Wide steps, one reel per press.** A step's reels arrive as one group. Call `setReelGroups()` in `onStepAdded` to split them, and each press frees one; or `slamStop({ reels: [...] })` lands part of a step and lets the rest play.
 - **Keep the deciding tease.** `anticipation: (step) => stillWinning ? { protect: 'once', duration: 900 } : false` keeps the "will it continue?" tease through the first press, only on the steps where it matters.
 
 **Gotcha:** `slamStop()` between steps has nothing to land, and a press after the last step has no step left: both are no-ops. A sticky `setStopDelays()` array covers the reels it was given; reels past its end stop with no delay.
 
 ## What carries across steps
 
-- **Events.** Each step fires the usual `spin:*` events for its own reels, plus `reels:added`, `expand:step` and `expand:stepLanded`; the chain opens with `expand:start` and closes with `expand:complete`.
+- **Events.** Each step fires the usual `spin:*` events for its own reels, plus `reels:added`, `expand:stepAdded` and `expand:stepLanded`; the chain opens with `expand:start` and closes with `expand:complete`.
 - **Stagger.** Start and stop delays count a reel's place in its step, not its index, so reel 40 does not wait forty delays.
 - **Pins.** A sticky pin's turns and an `'eval'` pin belong to the round, so they are not spent per step.
 - **Memory.** Reels are real reels while they are on the board; `removeReels()` destroys them and shrinks the viewport, mask and symbol pool back.

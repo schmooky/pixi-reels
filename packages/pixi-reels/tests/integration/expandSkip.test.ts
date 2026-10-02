@@ -77,7 +77,7 @@ const skips = (h: ReturnType<typeof makeHarness>) => {
 /** Press once, the moment the step's reels are all spinning. */
 function pressOnStep(h: ReturnType<typeof makeHarness>, press: () => void, onStep = 0): void {
   let step = -1;
-  h.reelSet.events.on('expand:step', (s) => {
+  h.reelSet.events.on('expand:stepAdded', (s) => {
     step = s.index;
   });
   const onStarted = (): void => {
@@ -115,7 +115,7 @@ describe('skip in an expansion', () => {
     expect(log).toEqual([{ reels: [5, 6], partial: false, mode: 'slam' }]);
   });
 
-  it('a step split into groups in onAdded lands a group per press', async () => {
+  it('a step split into groups in onStepAdded lands a group per press', async () => {
     const h = makeHarness();
     await landBase(h);
     const log = skips(h);
@@ -132,7 +132,7 @@ describe('skip in an expansion', () => {
       columns: [col('a', 'a', 'a'), col('b', 'b', 'b')],
       step: 2,
       // The step's reels arrive as one group; reveal them one by one instead.
-      onAdded: () => h.reelSet.setReelGroups([[0, 1, 2, 3, 4], [5], [6]]),
+      onStepAdded: () => h.reelSet.setReelGroups([[0, 1, 2, 3, 4], [5], [6]]),
     });
     expect(log.map((e) => e.reels)).toEqual([[5], [6]]);
     expect(h.reelSet.getVisibleGrid().slice(5)).toEqual([['a', 'a', 'a'], ['b', 'b', 'b']]);
@@ -147,10 +147,10 @@ describe('skip in an expansion', () => {
     await h.reelSet.expand({
       columns: [col('a', 'a', 'a'), col('b', 'b', 'b')],
       // Pressed while the camera would be panning: nothing is spinning yet.
-      onAdded: (step) => {
+      onStepAdded: (step) => {
         if (step.index === 1) h.reelSet.skipSpin();
       },
-      onLanded: (step) => {
+      onStepLanded: (step) => {
         stepSkipped.push(step.result.wasSkipped);
       },
     });
@@ -168,8 +168,8 @@ describe('skip in an expansion', () => {
     const stepSkipped: boolean[] = [];
     await h.reelSet.expand({
       columns: [col('a', 'a', 'a')],
-      onAdded: () => h.reelSet.requestSkip(),
-      onLanded: (step) => {
+      onStepAdded: () => h.reelSet.requestSkip(),
+      onStepLanded: (step) => {
         stepSkipped.push(step.result.wasSkipped);
       },
     });
@@ -183,7 +183,7 @@ describe('skip in an expansion', () => {
     await h.reelSet.expand({
       columns: [col('a', 'a', 'a')],
       signal: AbortSignal.abort(),
-      onLanded: () => h.reelSet.skipSpin(),
+      onStepLanded: () => h.reelSet.skipSpin(),
     });
     const log = skips(h);
     const spin = h.reelSet.spin();

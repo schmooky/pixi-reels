@@ -52,12 +52,15 @@ const windowMask = new PIXI.Graphics().rect(-4, -4, VIEW_W + 8, EXTENT + 8).fill
 camera.mask = windowMask;
 camera.addChild(reelSet);
 stage.addChild(camera, windowMask);
-const boardWidth = (reels) => reels * PITCH - GAP;
-const cameraX = (reels) =>
-  boardWidth(reels) <= VIEW_W ? (VIEW_W - boardWidth(reels)) / 2 : VIEW_W - boardWidth(reels);
-camera.x = cameraX(BASE);
-const panTo = (reels) =>
-  new Promise((resolve) => gsap.to(camera, { x: cameraX(reels), duration: 0.35, ease: 'power2.out', onComplete: resolve }));
+// The board's size comes from the engine: `viewport.maskWidth` grows with
+// every reel `expand()` adds and shrinks back with `removeReels()`.
+const BUILT_W = reelSet.viewport.maskWidth;
+// Centred while the board fits the window, then scrolled so the newest
+// reel sits at the right edge.
+const cameraX = (width) => (width <= VIEW_W ? (VIEW_W - width) / 2 : VIEW_W - width);
+camera.x = cameraX(BUILT_W);
+const panTo = (width) =>
+  new Promise((resolve) => gsap.to(camera, { x: cameraX(width), duration: 0.35, ease: 'power2.out', onComplete: resolve }));
 
 // Thin and see-through: a 7 x 7 pair of reels is 49 segments.
 const lines = new WinLines(reelSet, { width: 1.5, dot: 3, glow: 0, alpha: 0.75 });
@@ -87,9 +90,9 @@ const column = (cells) =>
 
 async function onSpin() {
   lines.clear();
-  if (reelSet.reels.length > BASE) {
-    await panTo(BASE);
-    reelSet.removeReels(reelSet.reels.length - BASE);
+  if (reelSet.viewport.maskWidth > BUILT_W) {
+    await panTo(BUILT_W);
+    reelSet.removeReels(); // back to the board the builder made
   }
   const shape = Array.from({ length: BASE }, tall);
   const spin = reelSet.spin();
@@ -103,8 +106,8 @@ async function onSpin() {
   await reelSet.expand({
     columns: extra,
     step: 2,
-    onAdded: (step) => panTo(step.reelCount),
-    onLanded: (step) => show(`step ${step.index + 1}`),
+    onStepAdded: () => panTo(reelSet.viewport.maskWidth),
+    onStepLanded: (step) => show(`step ${step.index + 1}`),
   });
 }
 

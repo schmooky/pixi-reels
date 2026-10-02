@@ -61,14 +61,17 @@ camera.mask = windowMask;
 camera.addChild(reelSet);
 stage.addChild(camera, windowMask);
 
-const boardWidth = (reels) => reels * PITCH - GAP;
-const cameraX = (reels) =>
-  boardWidth(reels) <= VIEW_W ? (VIEW_W - boardWidth(reels)) / 2 : VIEW_W - boardWidth(reels);
-camera.x = cameraX(BASE);
+// The board's size comes from the engine: `viewport.maskWidth` grows with
+// every reel `expand()` adds and shrinks back with `removeReels()`.
+const BUILT_W = reelSet.viewport.maskWidth;
+// Centred while the board fits the window, then scrolled so the newest
+// reel sits at the right edge.
+const cameraX = (width) => (width <= VIEW_W ? (VIEW_W - width) / 2 : VIEW_W - width);
+camera.x = cameraX(BUILT_W);
 
-function panTo(reels) {
+function panTo(width) {
   return new Promise((resolve) => {
-    gsap.to(camera, { x: cameraX(reels), duration: 0.35, ease: 'power2.out', onComplete: resolve });
+    gsap.to(camera, { x: cameraX(width), duration: 0.35, ease: 'power2.out', onComplete: resolve });
   });
 }
 
@@ -122,10 +125,10 @@ let expanding = null;
 
 async function onSpin() {
   lines.clear();
-  if (reelSet.reels.length > BASE) {
+  if (reelSet.viewport.maskWidth > BUILT_W) {
     hud.setRows(['back to five reels', '']);
-    await panTo(BASE);
-    reelSet.removeReels(reelSet.reels.length - BASE);
+    await panTo(BUILT_W);
+    reelSet.removeReels(); // back to the board the builder made
   }
 
   const res = serverSpin();
@@ -142,8 +145,8 @@ async function onSpin() {
       columns: res.extra.map((visible) => ({ visible })),
       step: 1,
       signal: expanding.signal,
-      onAdded: (step) => panTo(step.reelCount),
-      onLanded: (step) => showWays(res.pay, step.fastForward ? 'fast-forward' : `step ${step.index + 1}`),
+      onStepAdded: () => panTo(reelSet.viewport.maskWidth),
+      onStepLanded: (step) => showWays(res.pay, step.fastForward ? 'fast-forward' : `step ${step.index + 1}`),
     });
   } finally {
     expanding = null;

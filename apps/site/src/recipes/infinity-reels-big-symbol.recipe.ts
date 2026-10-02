@@ -53,12 +53,15 @@ const windowMask = new PIXI.Graphics().rect(-4, -4, VIEW_W + 8, BOARD_H + 8).fil
 camera.mask = windowMask;
 camera.addChild(reelSet);
 stage.addChild(camera, windowMask);
-const boardWidth = (reels) => reels * PITCH - GAP;
-const cameraX = (reels) =>
-  boardWidth(reels) <= VIEW_W ? (VIEW_W - boardWidth(reels)) / 2 : VIEW_W - boardWidth(reels);
-camera.x = cameraX(BASE);
-const panTo = (reels) =>
-  new Promise((resolve) => gsap.to(camera, { x: cameraX(reels), duration: 0.35, ease: 'power2.out', onComplete: resolve }));
+// The board's size comes from the engine: `viewport.maskWidth` grows with
+// every reel `expand()` adds and shrinks back with `removeReels()`.
+const BUILT_W = reelSet.viewport.maskWidth;
+// Centred while the board fits the window, then scrolled so the newest
+// reel sits at the right edge.
+const cameraX = (width) => (width <= VIEW_W ? (VIEW_W - width) / 2 : VIEW_W - width);
+camera.x = cameraX(BUILT_W);
+const panTo = (width) =>
+  new Promise((resolve) => gsap.to(camera, { x: cameraX(width), duration: 0.35, ease: 'power2.out', onComplete: resolve }));
 
 const lines = new WinLines(reelSet, { width: 4 });
 const hud = new DebugPlaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
@@ -84,9 +87,9 @@ const withPay = () => {
 
 async function onSpin() {
   lines.clear();
-  if (reelSet.reels.length > BASE) {
-    await panTo(BASE);
-    reelSet.removeReels(reelSet.reels.length - BASE);
+  if (reelSet.viewport.maskWidth > BUILT_W) {
+    await panTo(BUILT_W);
+    reelSet.removeReels(); // back to the board the builder made
   }
   const spin = reelSet.spin();
   await new Promise((r) => setTimeout(r, 150));
@@ -104,8 +107,8 @@ async function onSpin() {
   await reelSet.expand({
     columns,
     step: 1,
-    onAdded: (step) => panTo(step.reelCount),
-    onLanded: (step) =>
+    onStepAdded: () => panTo(reelSet.viewport.maskWidth),
+    onStepLanded: (step) =>
       show(
         step.count > 1
           ? `step ${step.index + 1} added ${step.count} reels: the 2x2 needs both`

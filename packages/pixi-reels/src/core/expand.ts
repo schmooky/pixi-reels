@@ -52,8 +52,8 @@ export interface ExpandOptions {
    * Its length is how many reels the board grows by; the server decides it.
    * Each column's `visible.length` is that reel's cell count, so a MultiWays
    * set takes its per-reel shape from here and a jagged set its height.
-   * Big symbols anchor in these columns like they do in `setResult()`; a
-   * block may not reach back into the reels already on the board.
+   * Big symbols anchor in these columns like they do in `setResult()`, and
+   * a block has to end on a reel this expansion adds.
    */
   columns: readonly ColumnTarget[];
   /**
@@ -66,13 +66,15 @@ export interface ExpandOptions {
   /**
    * Called once a step's reels are on the board and before they spin, and
    * awaited: pan the camera to them here so the player sees them arrive.
+   * Return the pan's promise to spin after it, or nothing to spin during it.
+   * `reelSet.viewport.maskWidth` is the board's new width.
    */
-  onAdded?: (step: ExpandStep) => void | Promise<void>;
+  onStepAdded?: (step: ExpandStep) => void | Promise<void>;
   /**
    * Called once a step's reels land, and awaited before the next step adds
    * any: count the ways, draw the win, decide what the next step shows.
    */
-  onLanded?: (step: ExpandStepLanded) => void | Promise<void>;
+  onStepLanded?: (step: ExpandStepLanded) => void | Promise<void>;
   /**
    * Tease a step's reels before they land, with `setAnticipation()` on every
    * reel the step adds. `true` teases with the defaults (the speed profile's
@@ -88,10 +90,13 @@ export interface ExpandOptions {
   /** Spin mode of every step. Defaults to the set's default, as in `spin()`. */
   mode?: 'standard' | 'cascade';
   /**
-   * Fast-forward. Aborting slams the step in flight, then adds every reel
-   * still to come in one last step that lands in the same tick. The result
-   * is the same board, just without the wait. `onAdded` / `onLanded` still
-   * run for that step, with `fastForward: true`.
+   * Fast-forward, not cancel: the columns are the server's result, so every
+   * one of them still lands. Aborting slams the step in flight, then adds
+   * every reel still to come in one last step that lands in the same tick,
+   * and `expand()` resolves with `wasSkipped: true`. `onStepAdded` /
+   * `onStepLanded` still run for that step, with `fastForward: true`.
+   * Pass `AbortSignal.abort()` to land a whole expansion at once (quick spin,
+   * autoplay, tests).
    */
   signal?: AbortSignal;
 }

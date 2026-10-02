@@ -5,6 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { countWays, evaluateWays } from '@pixi-reels/cheats/ways';
+import type { Win } from '../../src/config/types.js';
 
 describe('countWays', () => {
   it('multiplies the cells per reel', () => {
@@ -78,6 +79,11 @@ describe('evaluateWays', () => {
       ['b', 30],
       ['a', 3],
     ]);
+  });
+
+  it('a ways win is a library Win: WinPresenter takes them without a cast', () => {
+    const wins: readonly Win[] = evaluateWays([['a'], ['a'], ['a']]);
+    expect(wins[0].cells).toHaveLength(3);
   });
 
   it('scales to a long MultiWays board without enumerating ways', () => {

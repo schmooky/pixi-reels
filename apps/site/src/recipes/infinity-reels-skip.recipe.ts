@@ -61,12 +61,15 @@ const windowMask = new PIXI.Graphics().rect(-6, -6, VIEW_W + 12, BOARD_H + 12).f
 camera.mask = windowMask;
 camera.addChild(reelSet);
 stage.addChild(camera, windowMask);
-const boardWidth = (reels) => reels * PITCH - GAP;
-const cameraX = (reels) =>
-  boardWidth(reels) <= VIEW_W ? (VIEW_W - boardWidth(reels)) / 2 : VIEW_W - boardWidth(reels);
-camera.x = cameraX(BASE);
-const panTo = (reels) =>
-  new Promise((resolve) => gsap.to(camera, { x: cameraX(reels), duration: 0.45, ease: 'power2.out', onComplete: resolve }));
+// The board's size comes from the engine: `viewport.maskWidth` grows with
+// every reel `expand()` adds and shrinks back with `removeReels()`.
+const BUILT_W = reelSet.viewport.maskWidth;
+// Centred while the board fits the window, then scrolled so the newest
+// reel sits at the right edge.
+const cameraX = (width) => (width <= VIEW_W ? (VIEW_W - width) / 2 : VIEW_W - width);
+camera.x = cameraX(BUILT_W);
+const panTo = (width) =>
+  new Promise((resolve) => gsap.to(camera, { x: cameraX(width), duration: 0.45, ease: 'power2.out', onComplete: resolve }));
 
 // --- Reel groups, drawn ------------------------------------------------------
 const BASE_GROUPS = [[0, 1, 2], [3, 4]];
@@ -139,9 +142,9 @@ const column = (chance) => {
 async function onSpin() {
   presses = 0;
   log.length = 0;
-  if (reelSet.reels.length > BASE) {
-    await panTo(BASE);
-    reelSet.removeReels(reelSet.reels.length - BASE);
+  if (reelSet.viewport.maskWidth > BUILT_W) {
+    await panTo(BUILT_W);
+    reelSet.removeReels(); // back to the board the builder made
   }
   // A step's reel arrives as its own group; the base layout stays as built.
   reelSet.setReelGroups(BASE_GROUPS);
@@ -157,7 +160,7 @@ async function onSpin() {
     columns: Array.from({ length: 6 }, () => ({ visible: column(0.8) })),
     step: 1,
     anticipation: { protect: 'once', duration: 900 },
-    onAdded: (step) => panTo(step.reelCount),
+    onStepAdded: () => panTo(reelSet.viewport.maskWidth),
   });
   note('round over', 0x8cff6b);
 }
