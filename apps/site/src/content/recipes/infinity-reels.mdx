@@ -44,6 +44,25 @@ The steps add one reel each, but a 2x2 wild arrives in one of the columns. A one
 
 <RecipeDemo code="infinity-reels-big-symbol" height={420} />
 
+<a id="infinity-reels-skip"></a>
+
+## Skip, reel groups and a protected tease
+
+Press as often as you like and read the log. The base board is grouped (dashed boxes), so a press lands one group; each step's reel teases "will the win continue?" with `anticipation: { protect: 'once' }`, so the first press during a tease is spent and the next lands the reel; a press while the camera pans queues for the next step. The button calls `skipSpin()` and nothing else.
+
+<RecipeDemo code="infinity-reels-skip" height={460} />
+
+### Picking a skip policy
+
+- **Turbo the rest** (the default). The first `skipSpin()` frees the step in flight and boosts every later step to the fastest profile; the next round starts at normal speed again.
+- **Slam each step.** Every press frees the step in flight. Presses during `onAdded` / `onLanded` (a camera pan, a win readout) are not lost: they free the next step as soon as it has its result.
+- **Fast-forward.** Abort the expansion's `signal` and every reel still to come lands in one step. A quick-spin or autoplay mode can pass an aborted signal from the start: the whole expansion lands at once, with the same events and hooks.
+- **Quicken instead of slam.** With `.skipMode('quicken')` (or `requestSkip({ mode: 'quicken', speed: 'turbo' })`) a press shortens the step's spin but keeps its spin-out and bounce, so a long chain never looks cut.
+- **Wide steps, one reel per press.** A step's reels arrive as one group. Call `setReelGroups()` in `onAdded` to split them, and each press frees one; or `slamStop({ reels: [...] })` lands part of a step and lets the rest play.
+- **Keep the deciding tease.** `anticipation: (step) => stillWinning ? { protect: 'once', duration: 900 } : false` keeps the "will it continue?" tease through the first press, only on the steps where it matters.
+
+**Gotcha:** `slamStop()` between steps has nothing to land, and a press after the last step has no step left: both are no-ops. A sticky `setStopDelays()` array covers the reels it was given; reels past its end stop with no delay.
+
 ## What carries across steps
 
 - **Events.** Each step fires the usual `spin:*` events for its own reels, plus `reels:added`, `expand:step` and `expand:stepLanded`; the chain opens with `expand:start` and closes with `expand:complete`.

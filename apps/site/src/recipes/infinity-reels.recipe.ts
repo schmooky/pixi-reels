@@ -151,10 +151,11 @@ async function onSpin() {
 }
 
 function onSkip() {
-  // During the chain: the first press slams the step and turbos the rest,
-  // the next one fast-forwards to the final board.
+  // During the chain: the first press frees the step and turbos the rest,
+  // even pressed mid-pan (the press carries to the next step). Once the round
+  // is skipped, the next press fast-forwards to the final board.
   if (expanding) {
-    if (reelSet.isSpinning && reelSet.skipStage < 2) reelSet.skipSpin();
+    if (reelSet.skipStage < 2) reelSet.skipSpin();
     else expanding.abort();
     return;
   }
