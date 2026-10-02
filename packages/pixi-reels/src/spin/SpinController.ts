@@ -319,8 +319,19 @@ export class SpinController implements Disposable {
   private _skipMode: SkipMode | null = null;
   /** The press behind `_skipMode`, for `SpinResult.skipContext`. */
   private _skipCtx: SkipContext | null = null;
-  /** A `requestSkip()` that arrived before the result; fired by `setResult()`. */
-  private _skipPending: ResolvedSkip | null = null;
+  /**
+   * A press that arrived before the result; fired by `setResult()`. A
+   * `requestSkip()` queues a bare press; a press carried in from between two
+   * steps of one round keeps whether it was a `skip()` (see `carrySkip`).
+   */
+  private _skipPending: { req: ResolvedSkip; withSideEffects: boolean } | null = null;
+  /**
+   * A press that arrived between two spins of one round: an `expand()` step
+   * landed and the next has not started, so nothing was spinning to hear it.
+   * The next continuation spin takes it as its queued press; a spin that
+   * starts a round drops it.
+   */
+  private _carriedSkip: { req: ResolvedSkip; withSideEffects: boolean } | null = null;
   /**
    * What a skip press does to the reels it frees when the call does not say.
    * Set from the builder's `skipMode()`; `'slam'` unless set.
@@ -567,7 +578,10 @@ export class SpinController implements Disposable {
     this._wasSkipped = false;
     this._skipMode = null;
     this._skipCtx = null;
-    this._skipPending = null;
+    // A press carried in from between two steps is this spin's queued press;
+    // a spin that starts a new round drops it.
+    this._skipPending = round?.continueRound ? this._carriedSkip : null;
+    this._carriedSkip = null;
     this._quickenedReels.clear();
     this._quickenCtx.clear();
     this._quickenBatches.length = 0;
@@ -702,9 +716,9 @@ export class SpinController implements Disposable {
       // `setAnticipation()` to have been called by now. call it BEFORE
       // `setResult()` (every recipe does) or the queued press sees no tease
       // to protect.
-      const req = this._skipPending;
+      const { req, withSideEffects } = this._skipPending;
       this._skipPending = null;
-      this._pressSkip(false, req);
+      this._pressSkip(withSideEffects, req);
     }
   }
 
@@ -1443,8 +1457,26 @@ export class SpinController implements Disposable {
       this._pressSkip(false, req);
       return;
     }
-    this._skipPending = req;
+    this._skipPending = { req, withSideEffects: false };
     this._events.emit('skip:queued', skipContextOf({ mode: req.mode, speed: req.speed ?? undefined, payload: req.payload }));
+  }
+
+  /**
+   * Hold a press that arrived while nothing spins but the round is not over
+   * (between two `expand()` steps) for the next continuation spin, which
+   * fires it the moment its result is set. `withSideEffects` is `true` for a
+   * `skip()` press, so a round's first press still boosts. Options are
+   * resolved now, so an unknown speed profile throws at the call site.
+   */
+  carrySkip(options: SkipOptions | undefined, withSideEffects: boolean): void {
+    const req = this._resolveSkip(options);
+    this._carriedSkip = { req, withSideEffects };
+    this._events.emit('skip:queued', skipContextOf({ mode: req.mode, speed: req.speed ?? undefined, payload: req.payload }));
+  }
+
+  /** Drop a carried press: the round it belonged to is over. */
+  clearCarriedSkip(): void {
+    this._carriedSkip = null;
   }
 
   /** Decide the mode and look the profile up; an unknown profile name throws at the call site. */

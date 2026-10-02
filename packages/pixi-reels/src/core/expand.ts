@@ -1,4 +1,4 @@
-import type { SymbolData } from '../config/types.js';
+import type { AnticipationOptions, SymbolData } from '../config/types.js';
 import type { SpinResult } from '../events/ReelEvents.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
 import { getTargetSlot } from '../frame/ColumnTarget.js';
@@ -74,11 +74,17 @@ export interface ExpandOptions {
    */
   onLanded?: (step: ExpandStepLanded) => void | Promise<void>;
   /**
-   * Tease a step's reels before they land. `true` teases every step; a
-   * function decides per step. Applied with `setAnticipation()` and its
-   * defaults; the speed profile's `anticipationDelay` sets the hold.
+   * Tease a step's reels before they land, with `setAnticipation()` on every
+   * reel the step adds. `true` teases with the defaults (the speed profile's
+   * `anticipationDelay` is the hold); an `AnticipationOptions` object is
+   * passed through, so a step's tease can be staggered, curved or protected
+   * from the first skip press (`{ protect: 'once' }`); a function decides
+   * per step. The fast-forward step never teases.
    */
-  anticipation?: boolean | ((step: ExpandStep) => boolean);
+  anticipation?:
+    | boolean
+    | AnticipationOptions
+    | ((step: ExpandStep) => boolean | AnticipationOptions);
   /** Spin mode of every step. Defaults to the set's default, as in `spin()`. */
   mode?: 'standard' | 'cascade';
   /**

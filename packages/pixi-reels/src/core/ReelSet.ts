@@ -1467,8 +1467,17 @@ export class ReelSet extends Container implements Disposable {
    *   - `skipNudge()` fast-forwards an in-flight `nudge()` to its landed
    *     position. Spin state is unrelated.
    *   - `slamStop()` lands every un-landed reel unconditionally. No boost.
+   *
+   * Between two `expand()` steps the round is still running but nothing
+   * spins: the press is carried to the next step instead of being dropped.
    */
   skipSpin(options?: SkipOptions): void {
+    // Between two `expand()` steps nothing spins, but the round is not over:
+    // the press carries to the next step instead of being dropped.
+    if (this._expanding && !this._spinController.isSpinning) {
+      this._spinController.carrySkip(options, true);
+      return;
+    }
     this._spinController.skip(options);
   }
 
@@ -1500,10 +1509,16 @@ export class ReelSet extends Container implements Disposable {
    * the queued intent is in flight; the queued state is not exposed as
    * its own stage on purpose (kept the `0 | 1 | 2` shape stable).
    *
+   * Between two `expand()` steps it queues for the next step the same way.
+   *
    * @example
    * reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' });
    */
   requestSkip(options?: SkipOptions): void {
+    if (this._expanding && !this._spinController.isSpinning) {
+      this._spinController.carrySkip(options, false);
+      return;
+    }
     this._spinController.requestSkip(options);
   }
 
@@ -1988,11 +2003,25 @@ export class ReelSet extends Container implements Disposable {
    * Each step is a spin of the new reels with every earlier reel held, so it
    * fires the usual `spin:*` events, plus `reels:added` and
    * `expand:step` / `expand:stepLanded`. The steps are one round, not one
-   * round each: a skip press during a step slams that step and boosts the
-   * rest exactly as `skipSpin()` boosts the rest of a round, and pin turns
-   * and `'eval'` pins are not spent per step. Start and stop delays stagger
-   * by a reel's place in its step, not by its index, so reel 40 does not
-   * wait forty delays.
+   * round each, and pin turns and `'eval'` pins are not spent per step.
+   * Start and stop delays stagger by a reel's place in its step, not by its
+   * index, so reel 40 does not wait forty delays.
+   *
+   * Skip works as it does in any round, a step at a time:
+   *
+   *   - `skipSpin()` during a step frees that step's reels (`skipMode()`
+   *     decides slam or quicken) and boosts the rest of the round, once.
+   *   - A press between steps, while a hook runs and nothing spins, is not
+   *     dropped: `skipSpin()` and `requestSkip()` carry it to the next step,
+   *     which it frees the moment its result is set (`skip:queued` fires).
+   *   - Reel groups: the reels one step adds join `setReelGroups()` as one
+   *     trailing group, so a press frees the step whole. Set groups in
+   *     `onAdded` to free a wide step a group per press.
+   *   - Tease protection: `anticipation: { protect: 'once' }` keeps a
+   *     step's tease through the first press.
+   *   - `slamStop()` and `slamStop({ reels })` land the step in flight, all
+   *     or part of it; between steps there is nothing for them to land.
+   *   - To land everything still to come at once, abort `signal`.
    *
    * On a MultiWays set each column's `visible.length` is that reel's shape
    * (validated against `minCells`..`maxCells`), applied with `setShape()` as
@@ -2069,11 +2098,11 @@ export class ReelSet extends Container implements Disposable {
           if (this._isMultiWaysSlot) {
             this.setShape(this._reels.map((r, i) => (i < from ? r.visibleCells : shapes[k + i - from])));
           }
-          const teases = typeof options.anticipation === 'function'
+          const tease = typeof options.anticipation === 'function'
             ? options.anticipation(step)
-            : options.anticipation === true;
-          if (teases && !fastForward) {
-            this.setAnticipation(Array.from({ length: count }, (_, i) => from + i));
+            : options.anticipation;
+          if (tease && !fastForward) {
+            this.setAnticipation(Array.from({ length: count }, (_, i) => from + i), tease === true ? 0 : tease);
           }
           // Held columns are never read; the board's own targets keep the grid
           // valid for the big-symbol coordinator and the pin overlay.
@@ -2102,6 +2131,8 @@ export class ReelSet extends Container implements Disposable {
       }
     } finally {
       this._expanding = false;
+      // A press during the last step's `onLanded` has no step left to land.
+      this._spinController.clearCarriedSkip();
     }
     result.reelCount = this._reels.length;
     result.symbols = this.getVisibleGrid();
