@@ -453,6 +453,28 @@ export class SpinController implements Disposable {
   }
 
   /**
+   * The mode a spin would run in, validated against the set: `'cascade'`
+   * needs `.tumble(...)`, `'standard'` needs a buffer to scroll through.
+   * Throws otherwise. `ReelSet.expand()` calls it before adding any reel.
+   */
+  resolveSpinMode(requested: 'standard' | 'cascade' | undefined): 'standard' | 'cascade' {
+    const mode = requested ?? this._defaultSpinMode;
+    if (mode === 'cascade' && !this._phaseFactory.has('cascade:fall')) {
+      throw new Error(
+        "spin({ mode: 'cascade' }) requires .tumble(...) on the builder.",
+      );
+    }
+    if (mode === 'standard' && this._reels.some((r) => r.bufferEnd === 0)) {
+      throw new Error(
+        "spin({ mode: 'standard' }) requires bufferEnd >= 1: strip scrolling " +
+          'wraps symbols through the below-window buffer. This reel set was ' +
+          'built with bufferSymbols({ end: 0 }) for tumble-only use.',
+      );
+    }
+    return mode;
+  }
+
+  /**
    * Wire a reel into the set bus. Called for every reel the set is built with
    * and every one `ReelSet.addReels()` adds later.
    *
@@ -517,19 +539,7 @@ export class SpinController implements Disposable {
       return Promise.reject(this._abortError(options.signal));
     }
 
-    const mode = options?.mode ?? this._defaultSpinMode;
-    if (mode === 'cascade' && !this._phaseFactory.has('cascade:fall')) {
-      throw new Error(
-        "spin({ mode: 'cascade' }) requires .tumble(...) on the builder.",
-      );
-    }
-    if (mode === 'standard' && this._reels.some((r) => r.bufferEnd === 0)) {
-      throw new Error(
-        "spin({ mode: 'standard' }) requires bufferEnd >= 1: strip scrolling " +
-          'wraps symbols through the below-window buffer. This reel set was ' +
-          'built with bufferSymbols({ end: 0 }) for tumble-only use.',
-      );
-    }
+    const mode = this.resolveSpinMode(options?.mode);
     this._currentSpinMode = mode;
 
     // Round boundary: a new `spin()` ends the previous round. If the

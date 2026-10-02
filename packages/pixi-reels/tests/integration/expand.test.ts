@@ -575,6 +575,7 @@ describe('expand()', () => {
         /taller than the set's tallest reel/,
       );
       await expect(h.reelSet.expand({ columns: [col('a')], step: 0 })).rejects.toThrow(/at least 1/);
+      await expect(h.reelSet.expand({ columns: [col('a')], mode: 'cascade' })).rejects.toThrow(/requires \.tumble/);
       expect(h.reelSet.reels).toHaveLength(5);
     });
   });

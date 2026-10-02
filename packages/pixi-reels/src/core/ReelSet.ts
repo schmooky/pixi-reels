@@ -2030,6 +2030,7 @@ export class ReelSet extends Container implements Disposable {
     shapes.forEach((cells, i) => this._assertAddableCells(cells, `expand() column ${i}`));
     const start = this._reels.length;
     const plan = planExpandSteps(columns, options.step, this._symbolsData, bufferStart, bufferEnd, start);
+    this._spinController.resolveSpinMode(options.mode);
 
     const result: ExpandResult = {
       from: start,
