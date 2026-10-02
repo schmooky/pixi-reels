@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover,
-//           CLOVER_FRUITS, CLOVER_CELL, CLOVER_CELL_RADIUS, CLOVER_SPEED, PIXI, gsap, app
+//           CLOVER_FRUITS, CLOVER_CELL, CLOVER_CELL_RADIUS, CLOVER_SPEED, gsap, app, DebugPlaque
 //
 // PROMOTE, WITHOUT THE SPOTLIGHT. `spotlight.show()` is a whole presentation:
 // it dims, reparents the winners, plays their win animation and only resolves
@@ -38,8 +38,7 @@ const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
 reels.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
 app.stage.addChild(reels);
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, reels.y + boardH + 24);
 app.stage.addChild(hud);
 
@@ -69,7 +68,7 @@ async function showLine(promote) {
 
 let busy = false;
 return {
-  cleanup: () => { try { hud.destroy(); } catch {} reels.destroy(); },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} reels.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

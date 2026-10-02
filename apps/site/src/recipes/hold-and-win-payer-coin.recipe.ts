@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine,
-//           coinWaves, bezierFly, PIXI, gsap, app
+//           coinWaves, bezierFly, PIXI, gsap, app, DebugPlaque
 //
 // Payer coin. The board opens holding four value coins. Spin once and a
 // special payer orb lands; on lock it pumps its value into every other coin
@@ -82,12 +82,10 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = (app.screen.height - boardH) / 2 - 6;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({
-  text: 'press spin · payer incoming',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
-});
-hud.anchor.set(0.5, 0);
-hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
+const hud = new DebugPlaque({ text: 'press spin · payer incoming', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+// Clear of the payer orb: its art hangs about 20px under its cell and the
+// glow further, so a plate at +12 dimmed it through the whole payout.
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 40);
 app.stage.addChild(hud);
 
 const labels = new PIXI.Container();
@@ -178,7 +176,7 @@ return {
     flyers.clear();
     for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
     labelAt.clear();
-    try { hud.destroy(); labels.destroy(); } catch {}
+    try { hud.destroy({ children: true }); labels.destroy(); } catch {}
     board.destroy();
   },
   onSpin: async () => {

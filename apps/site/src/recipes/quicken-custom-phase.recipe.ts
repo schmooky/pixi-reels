@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, PhaseCardSymbol, PIXI, gsap, app
+// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, PhaseCardSymbol, gsap, app,
+//                   DebugPlaque
 //
 // A CUSTOM PHASE THAT CAN BE QUICKENED. `onSkip(ctx)` and `ctx.mode`.
 //
@@ -101,11 +102,12 @@ const reelSet = new ReelSetBuilder()
 
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
-const hud = new PIXI.Text({
-  text: 'spin, then press while the cards are violet: the 900 ms hold is cut',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+// Three rows reserved (the last three notes), so the plate keeps the size
+// the canvas was fitted to.
+const idle = 'spin, then press while the cards are violet:\nthe 900 ms hold is cut';
+const hud = new DebugPlaque({ text: idle, reserveRows: 3, minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
 const lines = [];
@@ -115,14 +117,14 @@ note = (line) => {
 };
 reelSet.events.on('spin:start', () => {
   lines.length = 0;
-  hud.text = 'spin, then press while the cards are violet: the 900 ms hold is cut';
+  hud.text = idle;
 });
 
 return {
   reelSet,
   cleanup: () => {
     unwatch();
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
   onSpin: async () => {

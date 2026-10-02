@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, PathMaskStrategy,
-//                   CardSymbol, CARD_DECK, PIXI, app
+//                   CardSymbol, CARD_DECK, app, DebugPlaque
 //
 // ANY SHAPE, WITHOUT WRITING A CLASS.
 //
@@ -46,16 +46,17 @@ const reelSet = new ReelSetBuilder()
 
 const W = REELS * SIZE, H = ROWS * SIZE;
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'PathMaskStrategy: roundRect().fill() then roundRect().cut() = a frame mask',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  minWidth: W,
+  maxWidth: W,
 });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({
       visible: Array.from({ length: ROWS }, rv),

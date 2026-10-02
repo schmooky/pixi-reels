@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, coinWaves, bezierFly,
-//           PIXI, gsap, app
+//           PIXI, gsap, app, DebugPlaque
 //
 // Row-complete jackpot. Whenever a coin locks, the game layer checks whether
 // it just completed a full cell. If it did, that cell flashes coin by coin, the
@@ -79,11 +79,7 @@ const awardText = goldText('0.00', 18);
 awardText.position.set(plaquePos.x, plaquePos.y + pb.height * pScale * 0.18);
 app.stage.addChild(awardText);
 
-const hud = new PIXI.Text({
-  text: 'press spin · complete a cell for MINI',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
-});
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin · complete a cell for MINI', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -186,7 +182,7 @@ return {
     labelAt.clear();
     gsap.killTweensOf(awardText.scale);
     pendingFx.length = 0;
-    try { hud.destroy(); awardText.destroy(); labels.destroy(); } catch {}
+    try { hud.destroy({ children: true }); awardText.destroy(); labels.destroy(); } catch {}
     board.destroy();
     plaque.destroy();
   },

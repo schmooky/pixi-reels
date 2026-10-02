@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   WILD_CARD, gsap, app, pickWeighted, DebugPlaque
 //
 // Feature mode entry via runtime frame middleware.
 //
@@ -70,66 +70,36 @@ function exitFeature() {
 }
 
 // ── Mode banner ──────────────────────────────
-const bannerHeight = 42;
-const banner = new PIXI.Container();
+// One plaque, grid-wide: the title names the mode, the row under it counts
+// the spins, and the accent (title and frame) follows the mode. The tight
+// vertical padding keeps it 42px tall, so the grid keeps most of the frame.
+const banner = new DebugPlaque({
+  title: 'BASE MODE',
+  text: 'Feature opens in 3 spin(s)',
+  accent: 0x94a3b8,
+  color: 0xfef08a,
+  fontSize: 13,
+  padding: [10, 2],
+  align: 'center',
+  minWidth: COLS * (SIZE + 4) - 4,
+});
+banner.y = -banner.plateHeight - 10;
 reelSet.addChild(banner);
-banner.y = -bannerHeight - 10;
-
-const bannerBg = new PIXI.Graphics();
-banner.addChild(bannerBg);
-
-const bannerText = new PIXI.Text({
-  text: '',
-  style: {
-    fontFamily: 'system-ui, sans-serif',
-    fontSize: 22,
-    fontWeight: '900',
-    fill: 0xffffff,
-    stroke: { color: 0x000000, width: 4 },
-    letterSpacing: 2,
-  },
-});
-bannerText.anchor.set(0.5);
-bannerText.y = bannerHeight / 2;
-banner.addChild(bannerText);
-
-const subText = new PIXI.Text({
-  text: '',
-  style: {
-    fontFamily: 'system-ui, sans-serif',
-    fontSize: 13,
-    fontWeight: '600',
-    fill: 0xfef08a,
-  },
-});
-subText.anchor.set(0.5);
-subText.y = bannerHeight + 14;
-banner.addChild(subText);
 
 function redrawBanner(spinsUntilSwitch) {
-  const width = COLS * (SIZE + 4) - 4;
-  bannerBg.clear();
-
   if (inFeature) {
-    bannerBg
-      .roundRect(0, 0, width, bannerHeight, 10)
-      .fill({ color: 0x9b59b6 })
-      .stroke({ width: 3, color: 0xfef08a });
-    bannerText.text = 'FEATURE MODE';
-    bannerText.style.fill = 0xfef08a;
-    subText.text = `More wilds for the next ${spinsUntilSwitch} spin(s)`;
+    banner.update({
+      title: 'FEATURE MODE',
+      text: `More wilds for the next ${spinsUntilSwitch} spin(s)`,
+      accent: 0xfef08a,
+    });
   } else {
-    bannerBg
-      .roundRect(0, 0, width, bannerHeight, 10)
-      .fill({ color: 0x1e293b })
-      .stroke({ width: 2, color: 0x94a3b8 });
-    bannerText.text = 'BASE MODE';
-    bannerText.style.fill = 0xe5e7eb;
-    subText.text = `Feature opens in ${spinsUntilSwitch} spin(s)`;
+    banner.update({
+      title: 'BASE MODE',
+      text: `Feature opens in ${spinsUntilSwitch} spin(s)`,
+      accent: 0x94a3b8,
+    });
   }
-
-  bannerText.x = width / 2;
-  subText.x = width / 2;
 }
 
 // Cycle: 3 base spins, then 3 feature spins, then repeat

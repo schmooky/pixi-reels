@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, app
+//                   PIXI, app, DebugPlaque
 //
 // Keep a symbol out of the buffer cells -- everywhere, or on one reel.
 //
@@ -73,92 +73,94 @@ function applyPool() {
 // Everything lives in one composition root with room above the grid for the
 // banner, returned as `stage` so the runner scales and centres the whole
 // thing rather than clipping the parts that sit above the reels.
-const PAD_TOP = 94;
 const stage = new PIXI.Container();
-reelSet.y = PAD_TOP;
 stage.addChild(reelSet);
 
-const text = (size, weight) =>
-  new PIXI.Text({
-    text: '',
-    style: {
-      fontFamily: 'ui-monospace, monospace',
-      fontSize: size,
-      fontWeight: weight,
-      fill: 0x475569,
-    },
-  });
+const CALLS = {
+  off: 'no buffer pool',
+  'reel 1 only': "set({ exclude: ['COIN'] }, { reel: 1, slots: 'buffer' })",
+  'above only': "set({ exclude: ['COIN'] }, { slots: 'bufferStart' })",
+  'every reel': "set({ exclude: ['COIN'] }, { slots: 'buffer' })",
+};
+const MEANINGS = {
+  off: 'COIN parks in every hidden cell',
+  'reel 1 only': 'only reel 1 stays clean -- indices are 0-based, so that is the SECOND reel',
+  'above only': 'the cells ABOVE the grid are clean, the ones below are untouched',
+  'every reel': 'no COIN parks off-window on any reel, either end',
+};
+const HINT = 'the labels above and below each reel ARE its hidden cells';
 
-const banner = text(14, '700');
-banner.y = 0;
+// The banner: the call in force as the title, what it means under it. Laid
+// out once with the longest caption of each kind and pinned to that width:
+// the runner fits the composition at setup, so the banner must not grow when
+// a later mode prints something longer.
+const longest = (texts) => texts.reduce((a, b) => (b.length > a.length ? b : a));
+const banner = new DebugPlaque({
+  title: longest(Object.values(CALLS)),
+  rows: [longest(Object.values(MEANINGS)), HINT],
+});
+banner.update({ minWidth: banner.plateWidth });
 stage.addChild(banner);
-
-const meaning = text(11, '600');
-meaning.y = 20;
-stage.addChild(meaning);
-
-const hint = text(10, '500');
-hint.style.fill = 0x94a3b8;
-hint.y = 40;
-hint.text = 'the labels above and below each reel ARE its hidden cells';
-stage.addChild(hint);
 
 // One label per hidden cell, sitting where that cell sits: above the grid
 // for bufferStart, below it for bufferEnd. Each column also carries its own
 // index, because reel indices are 0-based: `{ reel: 1 }` is the SECOND reel.
+// The cell labels are reel-wide, so a longer symbol id never resizes them.
+const indexLabels = [];
 const startLabels = [];
 const endLabels = [];
 for (let i = 0; i < COLS; i++) {
-  const index = text(10, '500');
-  index.style.fill = 0x94a3b8;
-  index.anchor.set(0.5, 1);
-  index.x = i * (SIZE + GAP) + SIZE / 2;
-  index.y = PAD_TOP - 22;
-  index.text = `reel ${i}`;
+  const index = new DebugPlaque({
+    text: `reel ${i}`, fontSize: 9, color: 0x94a3b8, align: 'center', anchor: { x: 0.5, y: 0 },
+  });
   stage.addChild(index);
+  indexLabels.push(index);
 
-  const top = text(11, '700');
-  top.anchor.set(0.5, 1);
-  top.x = i * (SIZE + GAP) + SIZE / 2;
-  top.y = PAD_TOP - 4;
+  const top = new DebugPlaque({ text: '', align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: SIZE });
   stage.addChild(top);
   startLabels.push(top);
 
-  const bottom = text(11, '700');
-  bottom.anchor.set(0.5, 0);
-  bottom.x = top.x;
-  bottom.y = PAD_TOP + ROWS * (SIZE + GAP) - GAP + 6;
+  const bottom = new DebugPlaque({ text: '', align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: SIZE });
   stage.addChild(bottom);
   endLabels.push(bottom);
 }
 
+// Stacked from the banner down, so the room above the grid is whatever the
+// plaques turned out to need.
+const INDEX_Y = banner.plateHeight + 6;
+const START_Y = INDEX_Y + indexLabels[0].plateHeight + 3;
+const PAD_TOP = START_Y + startLabels[0].plateHeight + 4;
+reelSet.y = PAD_TOP;
+for (let i = 0; i < COLS; i++) {
+  const x = i * (SIZE + GAP) + SIZE / 2;
+  indexLabels[i].position.set(x, INDEX_Y);
+  startLabels[i].position.set(x, START_Y);
+  endLabels[i].position.set(x, PAD_TOP + ROWS * (SIZE + GAP) - GAP + 6);
+}
+
+// refreshLabels runs every tick, and a plaque lays itself out again on every
+// update, so each one is only touched when what it shows has changed.
+function showSymbol(plaque, id) {
+  if (plaque.text === id) return;
+  plaque.update({ text: id, color: id === COIN ? 0xd97706 : 0x16a34a });
+}
+let shownMode = -1;
+
 function refreshLabels() {
   for (let i = 0; i < COLS; i++) {
     const strip = reelSet.reels[i].symbols;
-    const first = strip[0].symbolId;
-    const last = strip[strip.length - 1].symbolId;
-    startLabels[i].text = first;
-    startLabels[i].style.fill = first === COIN ? 0xd97706 : 0x16a34a;
-    endLabels[i].text = last;
-    endLabels[i].style.fill = last === COIN ? 0xd97706 : 0x16a34a;
+    showSymbol(startLabels[i], strip[0].symbolId);
+    showSymbol(endLabels[i], strip[strip.length - 1].symbolId);
   }
+  if (mode === shownMode) return;
+  shownMode = mode;
   const state = MODES[mode];
-  const CALLS = {
-    off: 'no buffer pool',
-    'reel 1 only': "set({ exclude: ['COIN'] }, { reel: 1, slots: 'buffer' })",
-    'above only': "set({ exclude: ['COIN'] }, { slots: 'bufferStart' })",
-    'every reel': "set({ exclude: ['COIN'] }, { slots: 'buffer' })",
-  };
-  const MEANINGS = {
-    off: 'COIN parks in every hidden cell',
-    'reel 1 only': 'only reel 1 stays clean -- indices are 0-based, so that is the SECOND reel',
-    'above only': 'the cells ABOVE the grid are clean, the ones below are untouched',
-    'every reel': 'no COIN parks off-window on any reel, either end',
-  };
-  banner.text = CALLS[state];
-  meaning.text = MEANINGS[state];
-  banner.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
-  meaning.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
+  const color = state === 'off' ? 0xd97706 : 0x16a34a;
+  banner.update({
+    title: CALLS[state],
+    accent: color,
+    rows: [{ text: MEANINGS[state], color }, { text: HINT, color: 0x94a3b8 }],
+  });
 }
 
 const tick = () => refreshLabels();

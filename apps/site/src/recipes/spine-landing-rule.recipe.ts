@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadSpineSet, PIXI, app, pickWeighted
+//                   loadSpineSet, app, pickWeighted, DebugPlaque
 //
 // WHAT PLAYS ON LANDING, AND WHERE - decided by the symbol.
 //
@@ -66,12 +66,11 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// What the rule chose, per reel, printed the frame the reel lands.
+// What the rule chose, per reel, printed the frame the reel lands. All six
+// rows from the start and the grid's width, so the plate never grows mid-spin.
 const lines = Array.from({ length: 6 }, (_, i) => `reel ${i}: -`);
-const hud = new PIXI.Text({
-  text: '',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78, lineHeight: 15 },
-});
+const GRID_W = 6 * CELL_W;
+const hud = new DebugPlaque({ minWidth: GRID_W, maxWidth: GRID_W });
 hud.position.set(0, 4 * CELL_H + 6);
 reelSet.addChild(hud);
 const redraw = () => { hud.text = lines.join('\n'); };
@@ -90,7 +89,7 @@ return {
   reelSet,
   cleanup: () => {
     reelSet.events.off('spin:reelLanding', onLanding);
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   nextResult: () => {
     for (let i = 0; i < 6; i++) lines[i] = `reel ${i}: spinning`;

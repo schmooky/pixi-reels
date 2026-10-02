@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, AnticipationPhase, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, AnticipationPhase, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // SUBCLASS `AnticipationPhase`, and use `update()`.
 //
@@ -69,14 +70,18 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 for (const i of TEASE) {
-  const t = new PIXI.Text({
-    text: '',
-    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fontWeight: '700', fill: 0xfef08a },
+  const t = new DebugPlaque({
+    text: `${(HOLD / 1000).toFixed(1)}s`,
+    fontSize: 10,
+    color: 0xfef08a,
+    align: 'center',
+    anchor: { x: 0.5, y: 0 },
+    minWidth: SIZE,
   });
   // BELOW the board, not above it. A demo frame is sized to the reels, so
   // anything hung off the top edge is clipped by the frame rather than drawn.
-  t.anchor.set(0.5, 0);
   t.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 8);
   t.visible = false;
   reelSet.addChild(t);
@@ -90,19 +95,23 @@ reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => {
   if (c) c.visible = false;
 });
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'each teasing reel counts its own hold down, from inside the phase',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fontWeight: '600', fill: 0x9c8f78 },
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
-hud.position.set(0, TOTAL_H + 26);
+// Under the countdown row, from a counter's real plate height, so a live
+// counter never sits on top of the caption.
+const counter = counters.get(TEASE[0]);
+hud.position.set(0, counter.y + counter.plateHeight + 6);
 reelSet.addChild(hud);
 
 return {
   reelSet,
   cleanup: () => {
-    for (const c of counters.values()) { try { c.destroy(); } catch {} }
+    for (const c of counters.values()) { try { c.destroy({ children: true }); } catch {} }
     counters.clear();
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   // Tap mid-tease: the slam routes through the subclass's `onSkip`, so the
   // counters come off with the tease rather than freezing on screen.

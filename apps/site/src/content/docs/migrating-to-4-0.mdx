@@ -1,0 +1,77 @@
+---
+title: Migrating to 4.0.0
+order: 7
+description: The visual debug tools moved to the pixi-reels/debug subpath and draw
+  with pixi-silk. Two imports change, two console helpers are gone, and nothing
+  a game ships is affected.
+---
+
+4.0.0 only touches debugging. A game that never imported `debugOverlay` and
+never called `__PIXI_REELS_DEBUG.showMask()` or `.overlay()` has nothing to do.
+
+## Why
+
+The debug overlay drew with PixiJS `Graphics`, which tessellates: thin outlines
+crawled and rounded corners faceted as soon as a reel set was fitted to a
+canvas at anything but 1x, which is always. It now draws with
+[pixi-silk](https://pixi-silk.schmooky.dev), which renders every shape as an
+exact signed distance field. That is a dependency a production build should
+never pay for, so the drawing half of debugging moved behind its own subpath,
+the same way Spine support lives behind `pixi-reels/spine`: `pixi-silk` is an
+optional peer, and only `pixi-reels/debug` imports it.
+
+## Install pixi-silk for the overlay
+
+```bash
+pnpm add -D pixi-silk
+```
+
+It is only needed where you import `pixi-reels/debug`. A dev dependency is
+enough when the overlay is dev-only, which it should be.
+
+## `debugOverlay` and `OVERLAY_LABEL` moved
+
+```ts
+// before
+import { debugOverlay, OVERLAY_LABEL } from 'pixi-reels';
+import type { DebugOverlayHandle, DebugOverlayLayer } from 'pixi-reels';
+
+// after
+import { debugOverlay, OVERLAY_LABEL } from 'pixi-reels/debug';
+import type { DebugOverlayHandle, DebugOverlayLayer } from 'pixi-reels/debug';
+```
+
+The options, the layer names and `describe()` are the same. Each layer is now a
+`SilkGraphics` rather than a `Graphics`, still labelled
+`pixi-reels:debugOverlay:<layer>`; code that read a layer's bounds keeps
+working. Three layers are new (`hud` became a plaque, `metrics` and `timeline`
+were added), so `layers: 'all'` draws more than it did, and the two new panels
+sit under the mask: fit your camera after enabling them, or list the layers you
+want.
+
+## `showMask()` and `overlay()` left the window hook
+
+`enableDebug()` still attaches `window.__PIXI_REELS_DEBUG` with `snapshot()`,
+`grid()`, `log()`, `trace()` and the recorder, and gained `metrics()`. The two
+helpers that drew are gone, because the main entry no longer draws:
+
+```ts
+// before, in the console
+__PIXI_REELS_DEBUG.showMask(true);
+__PIXI_REELS_DEBUG.overlay({ layers: ['cells'] });
+
+// after, in your debug build
+import { debugOverlay } from 'pixi-reels/debug';
+debugOverlay(reelSet, { layers: ['mask'] });   // what showMask drew, above the spotlight
+debugOverlay(reelSet, { layers: ['cells'] });
+```
+
+`showMask` drew into the masked container, under the spotlight; the `mask`
+layer draws the same box and per-reel rects above everything.
+
+## New, if you want it
+
+- `SpinMetrics`: the per-round recorder behind the `metrics` and `timeline`
+  layers, usable on its own. See [Debugging](/guides/debugging/).
+- `DebugPlaque`: the readout plate every panel and every recipe label uses.
+- `__PIXI_REELS_DEBUG.metrics()`: the same rounds as plain JSON for an agent.

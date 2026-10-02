@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // PER-REEL SPIN FLOOR. No slam here at all - this is the other half of skip
 // granularity, the part that decides how early a reel is ALLOWED to stop.
@@ -33,20 +34,18 @@ const reelSet = new ReelSetBuilder()
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
-// The face loads async from Google Fonts, and PIXI.Text bakes its metrics
-// at construction. Without this the first paint measures the fallback and
-// only corrects itself on the next label update.
-await document.fonts.load('9px "Fira Code"');
-
 // Per-reel floor labels, so it is clear which number holds which column.
+const floorColor = (i) => (FLOORS[i] > 0 ? 0xfef08a : 0x9ca3af);
 const labels = [];
 for (let i = 0; i < REELS; i++) {
-  const t = new PIXI.Text({
+  const t = new DebugPlaque({
     text: `${FLOORS[i]}ms\nfloor`,
-    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill: FLOORS[i] > 0 ? 0xfef08a : 0x6b7280 },
+    fontSize: 9,
+    color: floorColor(i),
+    align: 'center',
+    anchor: { x: 0.5, y: 0 },
+    minWidth: SIZE,
   });
-  t.anchor.set(0.5, 0);
-  t.style.align = 'center';
   t.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 8);
   reelSet.addChild(t);
   labels.push(t);
@@ -74,15 +73,14 @@ reelSet.events.on('spin:reelLanded', (i) => {
 
 return {
   reelSet,
-  cleanup: () => { for (const t of labels) { try { t.destroy(); } catch {} } },
+  cleanup: () => { for (const t of labels) { try { t.destroy({ children: true }); } catch {} } },
   onSpin: async () => {
     // Persists across spin() and refill() until cleared with null, exactly
     // like setStopDelays(). Set once at boot in a real game.
     reelSet.setMinimumSpinTime(FLOORS);
 
     for (let i = 0; i < REELS; i++) {
-      labels[i].text = `${FLOORS[i]}ms\nfloor`;
-      labels[i].style.fill = FLOORS[i] > 0 ? 0xfef08a : 0x6b7280;
+      labels[i].update({ text: `${FLOORS[i]}ms\nfloor`, color: floorColor(i) });
     }
 
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

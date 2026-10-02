@@ -340,14 +340,9 @@ export type {
   RecordedFrame,
   StartRecordingOptions,
 } from './debug/debug.js';
-export { debugOverlay, OVERLAY_LABEL } from './debug/debugOverlay.js';
-export type {
-  DebugOverlayLayer,
-  DebugOverlayOptions,
-  DebugOverlayHandle,
-  DebugOverlaySnapshot,
-  DebugOverlayReelInfo,
-} from './debug/debugOverlay.js';
+// The visual half (`debugOverlay`, `DebugPlaque`, `SpinMetrics`) draws with
+// `pixi-silk` and ships at the `pixi-reels/debug` subpath, so a build that
+// never imports it never needs that dependency.
 
 // Testing utilities ship at the `pixi-reels/testing` subpath. Importing
 // from there keeps the headless harness out of production bundles even

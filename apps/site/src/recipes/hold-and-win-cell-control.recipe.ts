@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, loadHoldAndWinSprites, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, loadHoldAndWinSprites, gsap, app, DebugPlaque
 //
 // Driving each cell on its own.
 //
@@ -29,8 +29,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = (app.screen.height - CELL) / 2 - 8;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 14, fontWeight: '700', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + CELL + 16);
 app.stage.addChild(hud);
 
@@ -49,7 +48,7 @@ function spinCell(cell, id) {
 let busy = false;
 return {
   board,
-  cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

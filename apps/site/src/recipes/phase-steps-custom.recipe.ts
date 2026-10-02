@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, PhaseCardSymbol,
-//                   step, insertBefore, PIXI, gsap, app
+//                   step, insertBefore, gsap, app, DebugPlaque
 //
 // A CUSTOM PHASE ON THE STEP RUNNER. Same door the built-ins use.
 //
@@ -102,10 +102,16 @@ const reelSet = new ReelSetBuilder()
 
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
-const hud = new PIXI.Text({
+// Two rows reserved: the prompt wraps to two at the grid's width and the log
+// shows the last two notes, so the plate keeps the height the canvas was
+// fitted to.
+const hud = new DebugPlaque({
   text: 'spin, then press while the cards are violet: the hold step is cut',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  reserveRows: 2,
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
@@ -128,7 +134,7 @@ return {
   reelSet,
   cleanup: () => {
     unwatch();
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
   onSpin: async () => {

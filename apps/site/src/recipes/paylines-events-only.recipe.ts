@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
+//                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted,
+//                   SilkGraphics
 //
 // The "events + getCellBounds" path: WinPresenter only
 // animates symbols; you draw every per-win visual (lines, outlines,
@@ -38,18 +39,17 @@ const lineLayer = new PIXI.Container();
 reelSet.addChild(lineLayer);
 
 // Draw a line from win:group using getCellBounds. Pulse in, fade out after
-// the per-win cycle (cycleGap) so the next win gets the stage.
+// the per-win cycle (cycleGap) so the next win gets the stage. SilkGraphics
+// draws the polyline as one stroke with round ends, smooth at any scale.
 reelSet.events.on('win:group', (win, cells) => {
-  const gfx = new PIXI.Graphics();
+  const gfx = new SilkGraphics();
   gfx.zIndex = win.id ?? 0;
   const color = LINE_COLORS[(win.id ?? 0) % LINE_COLORS.length];
   const pts = cells.map(c => {
     const b = reelSet.getCellBounds(c.reelIndex, c.cellIndex);
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   });
-  gfx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) gfx.lineTo(pts[i].x, pts[i].y);
-  gfx.stroke({ color, width: 6, alpha: 0.95 });
+  gfx.polyline(pts).stroke({ color, width: 6, alpha: 0.95, cap: 'round' });
   lineLayer.addChild(gfx);
   gsap.fromTo(gfx, { alpha: 0 }, { alpha: 1, duration: 0.18, ease: 'power1.out' });
   gsap.to(gfx, { alpha: 0, duration: 0.3, delay: 1.0, onComplete: () => gfx.destroy() });

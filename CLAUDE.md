@@ -248,11 +248,27 @@ Example `debugSnapshot()` fields:
 
 `visibleCells` is `number[]` (one entry per reel) so jagged shapes (pyramids, MultiWays) are representable. For uniform slots every entry is the same value.
 
+`__PIXI_REELS_DEBUG.metrics()` returns every spin since `enableDebug` as plain JSON: per reel, each phase's start/end, the stop request, the landing and the tease window; per round, skip presses, landing order and how many symbols the pool built (ms since the round's `spin:start`).
+
 **When debugging reel issues as an AI agent:**
 1. Call `__PIXI_REELS_DEBUG.log()` via eval to understand current state
 2. Call `__PIXI_REELS_DEBUG.trace()` to watch events fire in real time
 3. Check `isSpinning`, `speed`, and per-reel `isStopping` to diagnose stuck spins
 4. Compare `grid` output to expected server result
+5. Call `__PIXI_REELS_DEBUG.metrics()` for timing questions (which reel landed late, how long a tease held, what a skip cut)
+
+### The visual half: `pixi-reels/debug`
+
+Drawing lives at a subpath so `pixi-silk` (an optional peer, dev dependency) is only needed where it is imported ([ADR 022](docs/adr/022-debug-subpath-on-pixi-silk.md)):
+
+```typescript
+import { debugOverlay, DebugPlaque, SpinMetrics } from 'pixi-reels/debug';
+
+debugOverlay(reelSet, { layers: 'all', live: true, ticker: app.ticker });
+// layers: mask, cells, buffers, thresholds, axis, feed, bounds, blocks, pins, hud, metrics, timeline
+```
+
+`overlay.describe()` is the overlay as JSON (axis arrows, feed edges, the round the panels show). Recipes on the docs site draw every readout with `DebugPlaque` (text on a smooth plate) and `SilkGraphics` (outlines, paylines, charts); `roundRectPath` traces a dashed box, since pixi-silk 0.1 strokes `roundRect` solid. Never add a bare `PIXI.Text` / `PIXI.Graphics` readout to a recipe.
 
 ## File Map
 
@@ -272,7 +288,7 @@ Example `debugSnapshot()` fields:
 | `spotlight/` | SymbolSpotlight (win animations) |
 | `events/` | EventEmitter\<T\>, ReelEvents (event type definitions) |
 | `utils/` | Disposable (interface), TickerRef (safe ticker wrapper) |
-| `debug/` | debugSnapshot, debugGrid, enableDebug |
+| `debug/` | debugSnapshot, debugGrid, enableDebug; the `pixi-reels/debug` subpath: debugOverlay, DebugPlaque, SpinMetrics, roundRectPath |
 
 ### Recipe runtime (`apps/site/src/runtime/`)
 | Directory | Purpose |

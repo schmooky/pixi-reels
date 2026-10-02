@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // NAME THE REELS THAT LAND. `slamStop({ reels })` is the complement of
 // `{ except }`: pass the reels to land instead of the reels to spare.
@@ -31,16 +32,14 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const hud = new PIXI.Text({
-  text: '',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
-hud.position.set(0, TOTAL_H + 10);
-reelSet.addChild(hud);
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
 let queue = [];
 const idle = 'spin, then keep tapping: edges -> inner pair -> middle';
-hud.text = idle;
+// Grid-wide from the start, so the canvas is fitted to its final size.
+const hud = new DebugPlaque({ text: idle, minWidth: TOTAL_W, maxWidth: TOTAL_W });
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
 
 reelSet.events.on('spin:start', () => { queue = PLAN.map((g) => [...g]); hud.text = idle; });
 reelSet.events.on('skip:requested', ({ reels, partial }) => {
@@ -49,7 +48,7 @@ reelSet.events.on('skip:requested', ({ reels, partial }) => {
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   // No protection involved and no tease: this is the raw per-reel lever
   // driving a plan that lives entirely in game code.
   onSkip: () => {

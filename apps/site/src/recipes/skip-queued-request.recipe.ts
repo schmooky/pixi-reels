@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // PRESSING BEFORE THE SERVER ANSWERS. `requestSkip()`.
 //
@@ -35,15 +36,14 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const hud = new PIXI.Text({
-  text: '',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
-});
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+
+const idle = 'spin, then tap IMMEDIATELY - before the result lands';
+// Grid-wide from the start, so the canvas is fitted to its final size.
+const hud = new DebugPlaque({ text: idle, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
 
-const idle = 'spin, then tap IMMEDIATELY - before the result lands';
-hud.text = idle;
 reelSet.events.on('spin:start', () => { hud.text = idle; });
 reelSet.events.on('skip:requested', ({ reels, partial }) => {
   hud.text = `queued slam fired: landed [${reels.join(', ')}]${partial ? ' - tease protected' : ''}`;
@@ -51,7 +51,7 @@ reelSet.events.on('skip:requested', ({ reels, partial }) => {
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   // The canonical universal-button pattern: try the round-aware press, fall
   // back to the queue when it throws. One handler covers both windows.
   onSkip: () => {

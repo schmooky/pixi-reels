@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+//                   WILD_CARD, app, DebugPlaque
 
 // ABORT NUDGE pattern.
 //
@@ -10,7 +10,7 @@
 // position (the contract is "incoming lands at these positions"), and
 // the `nudge()` promise REJECTS with an `AbortError`.
 //
-// The handler catches the AbortError, logs it, and moves on. `nudge:cancelled`
+// The handler catches the AbortError, notes it, and moves on. `nudge:cancelled`
 // fires on the bus carrying the reason. Use abort for "tear it all down"
 // semantics. error path runs, follow-up steps are skipped. Use skipNudge
 // for "land it now" semantics (see /recipes/nudge-skip/) where the
@@ -39,8 +39,22 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
+// The abort, step by step, under the reels: the timer that aborts, the bus
+// event, then the handler's catch. Three rows from the start, so the plate
+// the runner fits is the size it keeps.
+const W = reelSet.viewport.maskWidth;
+const H = reelSet.viewport.maskHeight;
+const steps = ['press spin', '', ''];
+const hud = new DebugPlaque({ text: steps.join('\n'), minWidth: W, maxWidth: W });
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+const say = (row, text) => {
+  steps[row] = text;
+  hud.text = steps.join('\n');
+};
+
 reelSet.events.on('nudge:cancelled', (info) => {
-  console.log('[nudge:cancelled]', info);
+  say(1, `nudge:cancelled reel=${info.reelIndex} reason='${info.reason}'`);
 });
 
 return {
@@ -53,9 +67,11 @@ return {
     await new Promise((resolve) => setTimeout(resolve, 320));
 
     const controller = new AbortController();
+    steps.fill('');
+    say(0, 'nudging reel 2 over 2000ms');
     // Abort the nudge ~700ms in. the tween will be killed mid-flight.
     setTimeout(() => {
-      console.log('aborting nudge after 700ms');
+      say(0, 'aborting nudge after 700ms');
       controller.abort();
     }, 700);
 
@@ -68,12 +84,12 @@ return {
         signal: controller.signal,
       });
       // Not reached on abort.
-      console.log('nudge completed normally');
+      say(2, 'nudge completed normally');
     } catch (err) {
       if (err && err.name === 'AbortError') {
         // Expected. clean up here. Strip is at its post-nudge landing
         // position regardless, so subsequent reads are deterministic.
-        console.log('caught AbortError; strip still snapped to landed:', err.message);
+        say(2, 'caught AbortError; strip still snapped to landed');
       } else {
         throw err;
       }

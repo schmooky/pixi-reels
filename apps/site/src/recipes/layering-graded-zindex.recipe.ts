@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadSpineSet, PIXI, app, pickWeighted
+//                   loadSpineSet, app, pickWeighted, DebugPlaque
 //
 // SYMBOL GRADING: the consumer owns the draw order.
 //
@@ -71,17 +71,18 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'at rest: lower row in front, then the reel to the right, high above every mid',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  align: 'center',
+  anchor: { x: 0.5, y: 0 },
+  minWidth: 6 * CELL_W,
 });
-hud.anchor.set(0.5, 0);
 hud.position.set(3 * CELL_W, 4 * CELL_H + 6);
 reelSet.addChild(hud);
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   nextResult: () =>
     ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights))),
 };

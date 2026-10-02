@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, BlurSpriteSymbol,
-//           loadHoldAndWinSprites, PIXI, gsap, app
+//           loadHoldAndWinSprites, PIXI, gsap, app, DebugPlaque
 //
 // Bonus cells. A few cells are marked as bonus cells from the start. When a
 // coin lands ON one, the cell flashes active and doubles that coin's value.
@@ -41,8 +41,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = (app.screen.height - boardH) / 2 - 4;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({ text: 'press spin · coins on a bonus cell double', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin · coins on a bonus cell double', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -117,7 +116,7 @@ placeMarkers();
 
 return {
   board,
-  cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

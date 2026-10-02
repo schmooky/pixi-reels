@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, coinWaves, bezierFly,
-//           PIXI, gsap, app
+//           PIXI, gsap, app, DebugPlaque
 //
 // Collect to a feature meter. The board opens holding value coins; on the
 // collect press each coin's amount flies UP out of its cell, shrinks into a
@@ -86,6 +86,10 @@ const barX = board.container.x, barY = meterPos.y + 34;
 const barBg = new PIXI.Graphics().roundRect(barX, barY, BAR_W, BAR_H, 4).fill({ color: 0x000000, alpha: 0.08 });
 app.stage.addChild(barBg);
 const barFill = new PIXI.Graphics();
+// Measured as the bar it fills, even while empty. An empty Graphics reports
+// its bounds at the stage origin, and the runner fits the stage to its
+// bounds, so the empty fill dragged the whole demo off centre.
+barFill.boundsArea = new PIXI.Rectangle(barX, barY, BAR_W, BAR_H);
 app.stage.addChild(barFill);
 const drawBar = (frac) => {
   barFill.clear();
@@ -97,11 +101,7 @@ const totalText = goldText('0.00', 24);
 totalText.position.set(meterPos.x, meterPos.y);
 app.stage.addChild(totalText);
 
-const hud = new PIXI.Text({
-  text: 'press spin to collect into the meter',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
-});
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin to collect into the meter', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -185,7 +185,7 @@ return {
     gsap.killTweensOf(totalText.scale);
     for (const t of labelAt.values()) { try { t.destroy(); } catch {} }
     labelAt.clear();
-    try { barBg.destroy(); barFill.destroy(); totalText.destroy(); hud.destroy(); labels.destroy(); } catch {}
+    try { barBg.destroy(); barFill.destroy(); totalText.destroy(); hud.destroy({ children: true }); labels.destroy(); } catch {}
     board.destroy();
     counter.destroy();
   },

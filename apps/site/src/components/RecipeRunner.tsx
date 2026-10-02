@@ -29,8 +29,11 @@ import {
   EmptySymbol, HoldAndWinBuilder, BoardGrid,
   anticipationForScatters,
   SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
-  debugOverlay, type DebugOverlayHandle,
 } from 'pixi-reels';
+import {
+  debugOverlay, SpinMetrics,
+  type DebugOverlayHandle, type DebugOverlayLayer,
+} from 'pixi-reels/debug';
 import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
 import {
@@ -178,6 +181,26 @@ function collectReelSets(stage: PIXI.Container, primary: ReelSet | null): ReelSe
   return found;
 }
 
+/**
+ * The overlay's layers in the groups the debug bar toggles. Everything at once
+ * buries the reels, so each group answers one question: `info` is what the
+ * engine is doing and how long it took, `grid` is where the cells are, `motion`
+ * is which way the strips travel and where they wrap, `bounds` is what each
+ * symbol actually covers.
+ */
+const LAYER_GROUPS = {
+  info: ['hud', 'metrics', 'timeline'],
+  grid: ['mask', 'cells', 'blocks', 'pins'],
+  motion: ['axis', 'feed', 'buffers', 'thresholds'],
+  bounds: ['bounds'],
+} as const satisfies Record<string, readonly DebugOverlayLayer[]>;
+type LayerGroup = keyof typeof LAYER_GROUPS;
+const DEFAULT_GROUPS: readonly LayerGroup[] = ['info', 'grid'];
+
+function layersFor(groups: readonly LayerGroup[]): DebugOverlayLayer[] {
+  return groups.flatMap((g) => [...LAYER_GROUPS[g]]);
+}
+
 interface RunResult {
   reelSet?: ReelSet;
   /**
@@ -241,6 +264,12 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   // build several (a banner strip above the grid, a transposed pair), and an
   // overlay on only the one it happened to return explains half the picture.
   const overlayRef = useRef<DebugOverlayHandle[]>([]);
+  // One recorder per reel set, running from mount: the timeline and metrics
+  // panels can then show the spin that made you reach for the Debug button.
+  const metricsRef = useRef<Map<ReelSet, SpinMetrics>>(new Map());
+  // Re-fit after the overlay grows the set's bounds (panels under the mask).
+  const fitRef = useRef<(() => void) | null>(null);
+  const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
   const [spinning, setSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -357,6 +386,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         unsubscribeRef.current.push(() => bus.offAny(fn));
       };
       const sets = collectReelSets(app.stage, result.reelSet ?? null);
+      for (const rs of sets) metricsRef.current.set(rs, new SpinMetrics(rs, { ticker: app.ticker }));
       sets.forEach((rs, k) => {
         const setLabel = sets.length === 1 ? 'set' : `set${k}`;
         listen(rs.events as unknown as AnyBus, setLabel);
@@ -370,17 +400,21 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         // Fit the composition root when there is one, so a banner set moves,
         // scales and centres with the grid it sits above.
         const fitted = result.stage ?? rs;
+        // Fit the local bounds, offset included: the debug overlay draws the
+        // buffers and feed markers above the mask and its panels under it, so
+        // the content does not start at (0, 0) once it is on.
         const fit = () => {
-          const rawW = fitted.width / (fitted.scale.x || 1);
-          const rawH = fitted.height / (fitted.scale.y || 1);
+          const b = fitted.getLocalBounds();
+          if (!(b.width > 0) || !(b.height > 0)) return;
           const pad = 16;
-          const scale = Math.min(1, (app.screen.width - pad * 2) / rawW, (app.screen.height - pad * 2) / rawH);
+          const scale = Math.min(1, (app.screen.width - pad * 2) / b.width, (app.screen.height - pad * 2) / b.height);
           fitted.scale.set(scale);
-          fitted.x = (app.screen.width - rawW * scale) / 2;
-          fitted.y = (app.screen.height - rawH * scale) / 2;
+          fitted.x = (app.screen.width - b.width * scale) / 2 - b.x * scale;
+          fitted.y = (app.screen.height - b.height * scale) / 2 - b.y * scale;
         };
         app.stage.addChild(fitted);
         fit();
+        fitRef.current = fit;
         app.renderer.on('resize', fit);
         enableDebug(rs);
         setCanDebug(true);
@@ -442,6 +476,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         try { o.destroy(); } catch { /* ignore */ }
       }
       overlayRef.current = [];
+      for (const m of metricsRef.current.values()) m.destroy();
+      metricsRef.current.clear();
+      fitRef.current = null;
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
       if (app) {
@@ -510,6 +547,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       overlayRef.current = [];
       debugOnRef.current = false;
       setDebugOn(false);
+      fitRef.current?.();
       return;
     }
     debugOnRef.current = true;
@@ -520,12 +558,25 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     if (!reelSet || !app) return;
     // Built on first press, not at mount: a umbrella page mounts several
     // recipes at once and none of them should pay for an overlay nobody asked
-    // to see. `live` drives the bounds / blocks / pins / hud layers off the
+    // to see. `live` drives the bounds / blocks / pins / info layers off the
     // recipe's own app.ticker, so they track a spin instead of freezing on the
     // frame the overlay happened to be built in.
     overlayRef.current = collectReelSets(app.stage, reelSet).map((rs) =>
-      debugOverlay(rs, { layers: 'all', live: true, ticker: app.ticker }),
+      debugOverlay(rs, {
+        layers: layersFor(groups),
+        live: true,
+        ticker: app.ticker,
+        metrics: metricsRef.current.get(rs),
+      }),
     );
+    fitRef.current?.();
+  }
+
+  function toggleGroup(group: LayerGroup) {
+    const next = groups.includes(group) ? groups.filter((g) => g !== group) : [...groups, group];
+    setGroups(next);
+    for (const o of overlayRef.current) o.setLayers(layersFor(next));
+    fitRef.current?.();
   }
 
   function clearEvents() {
@@ -599,6 +650,27 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
             <Bug size={10} />
             Debug
           </button>
+        )}
+        {debugOn && canDebug && (
+          <div className="absolute left-2 top-9 flex flex-col gap-1" role="group" aria-label="Overlay layers">
+            {(Object.keys(LAYER_GROUPS) as LayerGroup[]).map((group) => (
+              <button
+                key={group}
+                type="button"
+                onClick={() => toggleGroup(group)}
+                aria-pressed={groups.includes(group)}
+                title={`Overlay: ${LAYER_GROUPS[group].join(', ')}`}
+                className={cn(
+                  'rounded-md border px-2 py-0.5 text-left font-mono text-[10px] backdrop-blur transition-colors',
+                  groups.includes(group)
+                    ? 'border-primary/70 bg-primary/20 text-foreground'
+                    : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {group}
+              </button>
+            ))}
+          </div>
         )}
         <button
           type="button"

@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, gsap, app, DebugPlaque
 //
 // Blur strips on rectangular cells. Every skeleton has a `blur` animation
 // that swaps its body attachment to the motion-blur frame; SpineReelSymbol
@@ -52,20 +52,20 @@ const makeRow = (opts, y) => {
 const top = makeRow({ scale: SCALE }, 40);
 const bottom = makeRow(CRISP, 40 + CELL.height + 56);
 
+// Plated captions: one above the top frame, one centred in the gap between the two.
 const caption = (text, y) => {
-  const t = new PIXI.Text({ text, style: { fontFamily: 'system-ui, sans-serif', fontSize: 12, fontWeight: '600', fill: 0x9c8f78 } });
-  t.anchor.set(0.5, 0);
+  const t = new DebugPlaque({ text, align: 'center', anchor: { x: 0.5, y: 0 } });
   t.position.set(app.screen.width / 2, y);
   app.stage.addChild(t);
   return t;
 };
-const c1 = caption('with the blur track (the skeleton swaps to its blur frame while the reel moves)', 8);
-const c2 = caption('without: the crisp frame at reel speed', top.container.y + CELL.height + 22);
+const c1 = caption('with the blur track (the skeleton swaps to its blur frame while the reel moves)', 0);
+const c2 = caption('without: the crisp frame at reel speed', top.container.y + CELL.height + 16);
 
 const gold = (cell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 5, 10]) } });
 let busy = false;
 return {
-  cleanup: () => { try { c1.destroy(); c2.destroy(); for (const g of grids) g.destroy({ children: true }); } catch {} top.destroy(); bottom.destroy(); },
+  cleanup: () => { try { c1.destroy({ children: true }); c2.destroy({ children: true }); for (const g of grids) g.destroy({ children: true }); } catch {} top.destroy(); bottom.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

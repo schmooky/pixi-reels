@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, PhaseCardSymbol,
-//                   step, insertAfter, PIXI, gsap, app
+//                   step, insertAfter, PIXI, gsap, app, DebugPlaque
 //
 // LANDING IMPACT. One step after `land`: a camera kick and a dust puff.
 //
@@ -22,6 +22,7 @@
 const IDS = ['9', '10', 'J', 'Q', 'K'];
 const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
 let reelSet;
@@ -66,9 +67,10 @@ reelSet = new ReelSetBuilder()
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 reelSet.addChild(fxLayer);
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'spin: each landing kicks the set and puffs dust, the last reel harder',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 14);
 reelSet.addChild(hud);
@@ -81,7 +83,7 @@ return {
     reelSet.pivot.set(0, 0);
     for (const puff of [...fxLayer.children]) gsap.killTweensOf(puff.scale);
     try { fxLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
   onSpin: async () => {
