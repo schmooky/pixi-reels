@@ -15,6 +15,8 @@ export type {
 } from './debugOverlay.js';
 
 export { DebugPlaque, DEBUG_FONT } from './DebugPlaque.js';
+export { WinLines } from './WinLines.js';
+export type { WinLineStyle, WinLinesOptions } from './WinLines.js';
 export { roundRectPath } from './roundRectPath.js';
 export type { DebugPlaqueOptions, DebugPlaqueRow } from './DebugPlaque.js';
 
