@@ -11,5 +11,7 @@ export type {
   SpineSymbolSource,
   SymbolAnimOverrides,
   LandingDecision,
+  OneShotEnd,
+  OneShotOptions,
 } from './SpineReelSymbol.js';
 export type { ReelLandingContext } from '../config/types.js';

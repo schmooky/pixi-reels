@@ -19,24 +19,50 @@ import { Container } from 'pixi.js';
 // symbol's `view.addChild(spine)` accepts it without complaint.
 interface MockTrackEntry {
   animation: { name: string };
+  track?: number;
 }
 
 interface MockListener {
   complete?: (entry: MockTrackEntry) => void;
+  interrupt?: (entry: MockTrackEntry) => void;
+  end?: (entry: MockTrackEntry) => void;
 }
 
+/**
+ * Per-track like the real AnimationState: setting a track replaces its entry
+ * and fires `interrupt` for the one it replaced; clearing fires `end`.
+ */
 class MockAnimationState {
   listeners: MockListener[] = [];
+  /** The entry set last, on any track. */
   current: MockTrackEntry | null = null;
+  tracks = new Map<number, MockTrackEntry>();
+  data = { defaultMix: 0.2 };
+  emptied: Array<{ track: number; mix: number }> = [];
 
-  setAnimation(_track: number, name: string, _loop: boolean): MockTrackEntry {
-    const entry: MockTrackEntry = { animation: { name } };
+  private _replace(track: number, entry: MockTrackEntry | null): void {
+    const previous = this.tracks.get(track);
+    if (entry) this.tracks.set(track, entry);
+    else this.tracks.delete(track);
+    if (previous) for (const l of [...this.listeners]) l.interrupt?.(previous);
+  }
+
+  setAnimation(track: number, name: string, _loop: boolean): MockTrackEntry {
+    const entry: MockTrackEntry = { animation: { name }, track };
+    this._replace(track, entry);
     this.current = entry;
     return entry;
   }
 
-  getCurrent(_track: number): MockTrackEntry | null {
-    return this.current;
+  setEmptyAnimation(track: number, mix: number): MockTrackEntry {
+    this.emptied.push({ track, mix });
+    const entry: MockTrackEntry = { animation: { name: '<empty>' }, track };
+    this._replace(track, entry);
+    return entry;
+  }
+
+  getCurrent(track: number): MockTrackEntry | null {
+    return this.tracks.get(track) ?? null;
   }
 
   addListener(listener: MockListener): void {
@@ -52,7 +78,10 @@ class MockAnimationState {
   }
 
   clearTracks(): void {
+    const ended = [...this.tracks.values()];
+    this.tracks.clear();
     this.current = null;
+    for (const entry of ended) for (const l of [...this.listeners]) l.end?.(entry);
   }
 
   /** Test helper: simulate the spine engine completing an entry. */
@@ -69,7 +98,7 @@ class MockSpine extends Container {
   skeleton = {
     data: {
       findAnimation: (name: string) =>
-        ['idle', 'win', 'landing', 'disintegration', 'blur', 'spin'].includes(name)
+        ['idle', 'win', 'landing', 'disintegration', 'blur', 'spin', 'react_u', 'glow'].includes(name)
           ? { name }
           : null,
     },
@@ -223,6 +252,122 @@ describe('SpineReelSymbol one-shot promise settle', () => {
 
     // After the second one settles, the listener is detached too.
     expect(spine.state.listeners.length).toBe(0);
+  });
+});
+
+describe('SpineReelSymbol.playOneShot', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('plays once on track 0, resolves on completion, then returns to idle', async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+
+    const p = sym.playOneShot('react_u');
+    const entry = spine.state.getCurrent(0)!;
+    expect(entry.animation.name).toBe('react_u');
+    spine.state.fireComplete(entry);
+    await expect(p).resolves.toBeUndefined();
+    expect(spine.state.getCurrent(0)?.animation.name).toBe('idle');
+    expect(spine.state.listeners).toHaveLength(0);
+  });
+
+  it("then: 'hold' leaves the last frame; then: 'clear' empties the track", async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+
+    const held = sym.playOneShot('react_u', { then: 'hold' });
+    spine.state.fireComplete(spine.state.getCurrent(0)!);
+    await held;
+    expect(spine.state.getCurrent(0)?.animation.name).toBe('react_u');
+
+    const cleared = sym.playOneShot('react_u', { then: 'clear' });
+    spine.state.fireComplete(spine.state.getCurrent(0)!);
+    await cleared;
+    expect(spine.state.getCurrent(0)?.animation.name).toBe('<empty>');
+    // Mixed out over the state's default mix, not snapped.
+    expect(spine.state.emptied).toEqual([{ track: 0, mix: 0.2 }]);
+  });
+
+  it('defaults to clearing an overlay track, where idle does not live', async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+
+    const p = sym.playOneShot('glow', { track: 1 });
+    spine.state.fireComplete(spine.state.getCurrent(1)!);
+    await p;
+    expect(spine.state.getCurrent(1)?.animation.name).toBe('<empty>');
+    expect(spine.state.getCurrent(0)?.animation.name).toBe('idle');
+  });
+
+  it('one-shots on different tracks run side by side and resolve on their own', async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+
+    const win = sym.playWin();
+    const glow = sym.playOneShot('glow', { track: 1 });
+    let winDone = false;
+    void win.then(() => {
+      winDone = true;
+    });
+
+    spine.state.fireComplete(spine.state.getCurrent(1)!);
+    await glow;
+    await Promise.resolve();
+    // The overlay finishing must not settle (or cut short) the win on track 0.
+    expect(winDone).toBe(false);
+    expect(spine.state.getCurrent(0)?.animation.name).toBe('win');
+
+    spine.state.fireComplete(spine.state.getCurrent(0)!);
+    await win;
+    expect(spine.state.getCurrent(0)?.animation.name).toBe('idle');
+  });
+
+  it('resolves early when something else takes its track', async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+
+    const p = sym.playOneShot('react_u');
+    // A raw setAnimation on the same track (game code, playOnTrack).
+    sym.playOnTrack(0, 'spin', true);
+    await expect(p).resolves.toBeUndefined();
+    expect(getLastSpine().state.listeners).toHaveLength(0);
+  });
+
+  it('stopAnimation settles every track and clears overlays', async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+
+    const win = sym.playWin();
+    const glow = sym.playOneShot('glow', { track: 1 });
+    sym.stopAnimation();
+    await expect(Promise.all([win, glow])).resolves.toEqual([undefined, undefined]);
+    expect(spine.state.getCurrent(0)?.animation.name).toBe('idle');
+    expect(spine.state.getCurrent(1)?.animation.name).toBe('<empty>');
+    expect(spine.state.listeners).toHaveLength(0);
+  });
+
+  it('resolves at once, playing nothing, for an animation the skeleton lacks', async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+    await expect(sym.playOneShot('nope')).resolves.toBeUndefined();
+    expect(spine.state.getCurrent(0)?.animation.name).toBe('idle');
+  });
+
+  it('settles every track when the symbol is recycled', async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const a = sym.playOneShot('react_u');
+    const b = sym.playOneShot('glow', { track: 2 });
+    sym.deactivate();
+    await expect(Promise.all([a, b])).resolves.toEqual([undefined, undefined]);
   });
 });
 

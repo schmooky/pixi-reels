@@ -1,8 +1,11 @@
 id: anim-008
 group: anim
 question: How do I play an arbitrary named Spine animation on a symbol?
-answer: Reach the skeleton via `SpineReelSymbol`'s `.spine` getter and call
-  `spine.state.setAnimation(0, name, loop)`.
+answer: "`await symbol.playOneShot(name)` plays it once on `SpineReelSymbol` and
+  resolves when it ends, then returns the track to idle; pass `{ track: 1 }` for
+  an overlay (cleared after) or `{ then: 'hold' }` to keep the last frame. For a
+  loop, `symbol.playOnTrack(track, name, true)`, or reach the skeleton via the
+  `.spine` getter."
 links:
   - label: "Recipe: Hold & Win — Spine coins"
     href: /recipes/hold-and-win-spine/
