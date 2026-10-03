@@ -3,7 +3,7 @@
  * reducer ({@link HoldAndWinState}), the driver ({@link HoldAndWinBoard}) and
  * the builder can share them without import cycles.
  */
-import type { SkipMode } from '../config/types.js';
+import type { SkipMode, SpeedProfile } from '../config/types.js';
 
 /** Grid coordinate of a board cell. */
 export interface HwCell {
@@ -121,6 +121,15 @@ export type HwLockAnimation = 'win' | 'landing' | 'none';
 export type HwLockAnimationRule<TData = unknown> =
   | HwLockAnimation
   | ((coin: HwCoin<TData>) => HwLockAnimation);
+
+/**
+ * Extra milliseconds a cell spins on top of the active profile's
+ * `minimumSpinTime`: the landing wave of a Hold & Win board. Called per cell
+ * for every registered speed, with that speed's name and profile, so a wave
+ * can scale with the profile (`profile.stopDelay`) or branch on its name.
+ * See `HoldAndWinBuilder.stagger`.
+ */
+export type HwStagger = (reel: number, cell: number, speed: string, profile: SpeedProfile) => number;
 
 /** `reel,cell` string key for the board's cell-indexed maps. */
 export const cellKey = (c: HwCell): string => `${c.reel},${c.cell}`;

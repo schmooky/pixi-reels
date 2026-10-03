@@ -2089,10 +2089,10 @@ Q (anim-007): How do I freeze a Spine animation on its final frame and hold it?
 A: Park the one-shot just before its end with `timeScale = 0` so it never completes and holds the last frame — the shared `freezeAtEnd` helper does exactly this.
 
 Q (anim-008): How do I play an arbitrary named Spine animation on a symbol?
-A: Reach the skeleton via `SpineReelSymbol`'s `.spine` getter and call `spine.state.setAnimation(0, name, loop)`.
+A: `await symbol.playOneShot(name)` plays it once on `SpineReelSymbol` and resolves when it ends, then returns the track to idle; pass `{ track: 1 }` for an overlay (cleared after) or `{ then: 'hold' }` to keep the last frame. For a loop, `symbol.playOnTrack(track, name, true)`, or reach the skeleton via the `.spine` getter.
 
 Q (anim-009): How do I await a one-shot animation and continue when it finishes?
-A: `await symbol.playWin()` resolves when the win one-shot finishes; on `SpineReelSymbol`, `playLanding()` / `playOut()` do the same for the landing / exit one-shots.
+A: `await symbol.playWin()` resolves when the win one-shot finishes; on `SpineReelSymbol`, `playLanding()` / `playOut()` do the same for the landing / exit one-shots, and `playOneShot(name, { track, then })` for any other animation. Each resolves early if something else takes its track.
 
 Q (anim-010): How do I play a different destroy animation per symbol art (shatter vs disintegrate)?
 A: Override `playDestroy(opts)` per symbol class -- Spine plays a `disintegration` track, a sprite swaps to a shatter. The default is a scale-and-fade implode, no rotation.
@@ -11018,10 +11018,10 @@ const board = new HoldAndWinBuilder()
   .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
-  // every name lands in every cell's SpeedManager; 'normal' is active at build
+  // every name lands in every cell's SpeedManager; 'normal' is active at build.
+  // The landing wave steps by each profile's stopDelay (70, 25, 0 ms), so it
+  // flattens as the speed goes up with no stagger of its own.
   .speeds(CLOVER_SPEEDS)
-  // the landing wave flattens as the speed goes up
-  .stagger((reel, cell, speed) => (speed === 'superTurbo' ? 0 : speed === 'turbo' ? (reel + cell) * 25 : (reel + cell) * 70))
   .cellMask(cloverCellMask)
   .respins(3)
   .lockAnimation('landing')

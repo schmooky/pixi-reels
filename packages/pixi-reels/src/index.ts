@@ -271,6 +271,7 @@ export type {
   HwCellSizeOptions,
   HwLockAnimation,
   HwLockAnimationRule,
+  HwStagger,
 } from './board/HwTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)

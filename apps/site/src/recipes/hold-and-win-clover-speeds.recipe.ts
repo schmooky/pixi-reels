@@ -31,10 +31,10 @@ const board = new HoldAndWinBuilder()
   .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
-  // every name lands in every cell's SpeedManager; 'normal' is active at build
+  // every name lands in every cell's SpeedManager; 'normal' is active at build.
+  // The landing wave steps by each profile's stopDelay (70, 25, 0 ms), so it
+  // flattens as the speed goes up with no stagger of its own.
   .speeds(CLOVER_SPEEDS)
-  // the landing wave flattens as the speed goes up
-  .stagger((reel, cell, speed) => (speed === 'superTurbo' ? 0 : speed === 'turbo' ? (reel + cell) * 25 : (reel + cell) * 70))
   .cellMask(cloverCellMask)
   .respins(3)
   .lockAnimation('landing')

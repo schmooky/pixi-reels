@@ -6,7 +6,7 @@ import { HoldAndWinBoard } from './HoldAndWinBoard.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { MaskStrategy } from '../core/ReelViewport.js';
 import type { BoardCellMaskInfo, BoardCellZIndexResolver } from './BoardGrid.js';
-import type { HwCell, HwCellSizeOptions, HwLockAnimationRule } from './HwTypes.js';
+import type { HwCell, HwCellSizeOptions, HwLockAnimationRule, HwStagger } from './HwTypes.js';
 
 /**
  * Fluent builder for {@link HoldAndWinBoard}.
@@ -36,9 +36,12 @@ export class HoldAndWinBuilder<TData = unknown> {
   private _configurator: ((registry: SymbolRegistry) => void) | null = null;
   private _weights: Record<string, number> | null = null;
   private _symbolData: Record<string, Partial<SymbolData>> | null = null;
-  private _speeds: Record<string, SpeedProfile> = { normal: { ...SpeedPresets.NORMAL, minimumSpinTime: 320 } };
+  // `stopDelay: 70` keeps the default board's diagonal wave at 70 ms a step.
+  private _speeds: Record<string, SpeedProfile> = {
+    normal: { ...SpeedPresets.NORMAL, minimumSpinTime: 320, stopDelay: 70 },
+  };
   private _initialSpeed = 'normal';
-  private _stagger: (reel: number, cell: number, speed: string) => number = (reel, cell) => (reel + cell) * 70;
+  private _stagger: HwStagger = (reel, cell, _speed, profile) => (reel + cell) * profile.stopDelay;
   private _skipMode: SkipMode = 'slam';
   private _anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
@@ -188,7 +191,8 @@ export class HoldAndWinBuilder<TData = unknown> {
 
   /**
    * The `'normal'` spin feel for every cell. Default: NORMAL with a 320ms
-   * floor. Shorthand for `speeds({ normal: profile })`.
+   * floor and a 70ms `stopDelay` (the step of the landing wave, see
+   * {@link HoldAndWinBuilder.stagger}). Shorthand for `speeds({ normal: profile })`.
    */
   speedProfile(profile: SpeedProfile): this {
     this._speeds = { ...this._speeds, normal: profile };
@@ -217,12 +221,6 @@ export class HoldAndWinBuilder<TData = unknown> {
   }
 
   /**
-   * Extra milliseconds of spin per cell on top of the active profile's
-   * minimum spin time. Default `(reel + cell) * 70` - the diagonal landing
-   * wave. The active speed's name is the third argument, so a turbo profile
-   * can flatten the wave: `(reel, cell, speed) => speed === 'turbo' ? 0 : ...`.
-   */
-  /**
    * What `board.skip()` does when the call does not say: `'slam'` places the
    * in-flight cells (the default), `'quicken'` lets each spin its symbol in
    * and bounce with its stagger dropped. `board.skip({ mode })` overrides it
@@ -233,7 +231,22 @@ export class HoldAndWinBuilder<TData = unknown> {
     return this;
   }
 
-  stagger(fn: (reel: number, cell: number, speed: string) => number): this {
+  /**
+   * The landing wave: extra milliseconds each cell spins on top of the active
+   * profile's `minimumSpinTime`. Default `(reel + cell) * profile.stopDelay`,
+   * a diagonal wave whose step is the profile's `stopDelay` - the time between
+   * reels stopping on a reel set is the time between wave steps on a board,
+   * so a turbo profile with `stopDelay: 0` lands every cell together and a
+   * slower one stretches the wave, with no stagger of its own to keep in step.
+   *
+   * Pass a function for another shape. It gets the speed's name and profile:
+   *
+   * ```ts
+   * .stagger((reel, cell, _speed, profile) => reel * profile.stopDelay) // column by column
+   * .stagger((reel) => reel * 120)                                       // fixed, whatever the speed
+   * ```
+   */
+  stagger(fn: HwStagger): this {
     this._stagger = fn;
     return this;
   }

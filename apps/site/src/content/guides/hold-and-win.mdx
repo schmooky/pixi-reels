@@ -217,10 +217,20 @@ speeds into all of them and switches all of them:
 ```ts
 const board = new HoldAndWinBuilder()
   .speeds({ normal: NORMAL, turbo: TURBO, superTurbo: SUPER_TURBO })
-  .stagger((reel, cell, speed) => (speed === 'superTurbo' ? 0 : (reel + cell) * 70))
   ...
 board.setSpeed('turbo');            // every cell, at once; fires speed:changed
 board.addSpeed('cinematic', slow);  // one more, after build
+```
+
+Cells land in a diagonal wave, and its step is the active profile's `stopDelay`: the
+time between reels stopping on a reel set is the time between wave steps on a board.
+Each cell spins `(reel + cell) * stopDelay` ms on top of the profile's
+`minimumSpinTime`, so NORMAL's 140 ms steps the wave and TURBO's 0 lands every cell
+together. `.stagger(fn)` replaces the shape; it gets the speed's name and profile:
+
+```ts
+.stagger((reel, cell, speed, profile) => reel * profile.stopDelay) // column by column
+.stagger((reel) => reel * 120)                                     // fixed, whatever the speed
 ```
 
 Same rule as `reelSet.setSpeed()`: a cell already in flight finishes on the profile it

@@ -21,6 +21,7 @@ import type {
   HwEffect,
   HwRespinResult,
   HwLockAnimationRule,
+  HwStagger,
 } from './HwTypes.js';
 
 /** Internal config produced by {@link HoldAndWinBuilder.build}. */
@@ -48,7 +49,7 @@ export interface HoldAndWinBoardConfig<TData> {
   /** Named base profiles, registered into every cell. See `HoldAndWinBuilder.speeds`. */
   speeds: Record<string, SpeedProfile>;
   initialSpeed: string;
-  stagger: (reel: number, cell: number, speed: string) => number;
+  stagger: HwStagger;
   /** What `skip()` does when the call does not say. See `HoldAndWinBuilder.skipMode`. */
   skipMode: SkipMode;
   anticipateWhen:
@@ -524,7 +525,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
 
   /** A cell's concrete profile for a named speed: the base plus this cell's stagger. */
   private _profileFor(name: string, profile: SpeedProfile, cell: HwCell, tense: boolean): SpeedProfile {
-    const floor = (profile.minimumSpinTime ?? 320) + this._stagger(cell.reel, cell.cell, name);
+    const floor = (profile.minimumSpinTime ?? 320) + this._stagger(cell.reel, cell.cell, name, profile);
     return { ...profile, minimumSpinTime: floor + (tense ? TENSION_EXTRA_MS : 0) };
   }
 

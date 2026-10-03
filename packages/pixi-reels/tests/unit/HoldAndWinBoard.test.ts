@@ -186,6 +186,72 @@ describe('HoldAndWinBoard inactive cells', () => {
   });
 });
 
+describe('HoldAndWinBoard landing wave', () => {
+  function wave(configure: (b: HoldAndWinBuilder<{ value: number }>) => HoldAndWinBuilder<{ value: number }>) {
+    const ticker = new FakeTicker();
+    const board = configure(
+      new HoldAndWinBuilder<{ value: number }>()
+        .grid(3, 2)
+        .cellSize(40)
+        .symbols((r) => r.register('coin', TrackedSymbol, {}))
+        .weights({ coin: 1, empty: 1 })
+        .ticker(ticker as unknown as Ticker),
+    ).build();
+    /** A cell's spin floor on a named speed: the profile's minimum plus its wave offset. */
+    const floor = (cell: HwCell, name: string) => board.reelAt(cell).speed.getProfile(name)?.minimumSpinTime;
+    return { board, ticker, floor };
+  }
+
+  it("steps the default diagonal by the profile's stopDelay, so a turbo profile lands every cell together", () => {
+    const { board, ticker, floor } = wave((b) =>
+      b.speeds({
+        normal: { ...SpeedPresets.NORMAL, minimumSpinTime: 300, stopDelay: 100 },
+        turbo: { ...SpeedPresets.TURBO, minimumSpinTime: 200 }, // stopDelay: 0
+      }),
+    );
+    expect(floor({ reel: 0, cell: 0 }, 'normal')).toBe(300);
+    expect(floor({ reel: 1, cell: 0 }, 'normal')).toBe(400);
+    expect(floor({ reel: 2, cell: 1 }, 'normal')).toBe(600);
+    expect(floor({ reel: 2, cell: 1 }, 'turbo')).toBe(200);
+    // The tension variant draws the wave out on top of the same steps.
+    expect(floor({ reel: 2, cell: 1 }, 'normal:tension')! - floor({ reel: 2, cell: 1 }, 'normal')!).toBeGreaterThan(0);
+    board.destroy();
+    ticker.destroy();
+  });
+
+  it('a speed added after build waves by its own stopDelay too', () => {
+    const { board, ticker, floor } = wave((b) => b);
+    board.addSpeed('slow', { ...SpeedPresets.NORMAL, minimumSpinTime: 500, stopDelay: 200 });
+    expect(floor({ reel: 2, cell: 1 }, 'slow')).toBe(500 + 3 * 200);
+    board.destroy();
+    ticker.destroy();
+  });
+
+  it('the default board keeps its 70 ms diagonal', () => {
+    const { board, ticker, floor } = wave((b) => b);
+    expect(floor({ reel: 0, cell: 0 }, 'normal')).toBe(320);
+    expect(floor({ reel: 1, cell: 1 }, 'normal')).toBe(320 + 2 * 70);
+    board.destroy();
+    ticker.destroy();
+  });
+
+  it("a custom stagger gets the speed's name and profile, and wins over the default", () => {
+    const calls: Array<[string, number]> = [];
+    const { board, ticker, floor } = wave((b) =>
+      b
+        .speeds({ normal: { ...SpeedPresets.NORMAL, minimumSpinTime: 300, stopDelay: 50 } })
+        .stagger((reel, _cell, speed, profile) => {
+          calls.push([speed, profile.stopDelay]);
+          return reel * profile.stopDelay * 2;
+        }),
+    );
+    expect(floor({ reel: 2, cell: 1 }, 'normal')).toBe(300 + 2 * 50 * 2);
+    expect(calls).toContainEqual(['normal', 50]);
+    board.destroy();
+    ticker.destroy();
+  });
+});
+
 describe('HoldAndWinBoard named speeds', () => {
   const FAST = { ...SpeedPresets.TURBO, minimumSpinTime: 100 };
   function buildSpeeds() {

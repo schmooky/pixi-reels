@@ -2,12 +2,13 @@
 title: Migrating to 4.0.0
 order: 7
 description: The visual debug tools moved to the pixi-reels/debug subpath and draw
-  with pixi-silk. Two imports change, two console helpers are gone, and nothing
-  a game ships is affected.
+  with pixi-silk; two imports change and two console helpers are gone. A Hold & Win
+  board's landing wave now steps by the speed profile's stopDelay.
 ---
 
-4.0.0 only touches debugging. A game that never imported `debugOverlay` and
-never called `__PIXI_REELS_DEBUG.showMask()` or `.overlay()` has nothing to do.
+4.0.0 touches debugging and one Hold & Win default. A game that never imported
+`debugOverlay`, never called `__PIXI_REELS_DEBUG.showMask()` or `.overlay()`, and
+has no Hold & Win board with its own speed profiles has nothing to do.
 
 ## Why
 
@@ -68,6 +69,22 @@ debugOverlay(reelSet, { layers: ['cells'] });
 
 `showMask` drew into the masked container, under the spotlight; the `mask`
 layer draws the same box and per-reel rects above everything.
+
+## Hold & Win: the landing wave follows `stopDelay`
+
+A board's cells land in a diagonal wave, and its step is now the active profile's
+`stopDelay` instead of a fixed 70 ms. A board built on the builder's defaults is
+unchanged (its `'normal'` profile sets `stopDelay: 70`). A board that registers its
+own profiles and never calls `.stagger()` now waves by their `stopDelay`: 140 ms a
+step on `SpeedPresets.NORMAL`, none on TURBO and SUPER_TURBO. To keep the old wave:
+
+```ts
+new HoldAndWinBuilder()
+  .speeds({ normal: NORMAL, turbo: TURBO })
+  .stagger((reel, cell) => (reel + cell) * 70);
+```
+
+Or set `stopDelay` on each profile, which is what the wave reads now.
 
 ## New, if you want it
 
