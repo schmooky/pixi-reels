@@ -23,6 +23,8 @@ ADRs for pixi-reels. Each one captures a decision that shapes how the code is wr
 | [017](./017-facing-travel-and-the-reel-stage.md) | Facing vs travel, and a composition layer over ReelSets | Partially accepted, shipped in 2.0.0 |
 | [018](./018-motion-contract.md) | The motion contract | Accepted, shipped in 2.0.0 |
 | [021](./021-phase-sections-on-speed-profiles.md) | A speed profile is sectioned by phase, not flattened | Accepted, implemented on `feat/profile-phase-step-config` |
+| [022](./022-debug-subpath-on-pixi-silk.md) | The visual debug tools are a subpath drawn with pixi-silk | Accepted, implemented on `feat/debug-pixi-silk` |
+| [023](./023-growing-reel-sets.md) | A reel set grows by building real reels, and an expansion is one round | Accepted, implemented on `feat/infinite-reels` |
 
 ## Writing a new ADR
 

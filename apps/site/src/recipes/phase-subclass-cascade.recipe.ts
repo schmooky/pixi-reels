@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CascadeDropInPhase, resolveTumbleConfig, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CascadeDropInPhase, resolveTumbleConfig, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // SUBCLASSING A PHASE THAT TAKES CONSTRUCTOR ARGUMENTS.
 //
@@ -59,16 +60,20 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const hud = new PIXI.Text({
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+// Grid-wide from the start. The prompt and the result both wrap to two rows
+// at this width, so the plate is already the size the count needs.
+const hud = new DebugPlaque({
   text: 'press spin: the drop-in phase is the subclass, one per reel',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSpin: async () => {
     drops = 0;
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

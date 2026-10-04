@@ -41,6 +41,16 @@ export class SymbolFactory {
     return this._capacityPerKey;
   }
 
+  /**
+   * @internal Resize the pool with the board. `ReelSet.addReels()` raises it
+   * so a bigger strip does not churn; `removeReels()` lowers it, destroying
+   * what the smaller board can no longer use.
+   */
+  setCapacityPerKey(capacity: number): void {
+    this._capacityPerKey = capacity;
+    this._pool.setMaxPerKey(capacity);
+  }
+
   /** Get a symbol (from pool or newly created), activated with symbolId. */
   acquire(symbolId: string): ReelSymbol {
     const symbol = this._pool.acquire(symbolId);
@@ -50,10 +60,16 @@ export class SymbolFactory {
     return symbol;
   }
 
-  /** Return a symbol to the pool. */
+  /**
+   * Return a symbol to the pool. Its view leaves its container and any render
+   * layer (`ReelSet.promote()`): a pooled symbol belongs to no reel, so a
+   * reel's teardown never reaches a view the pool will hand to another cell.
+   */
   release(symbol: ReelSymbol): void {
     const id = symbol.symbolId;
     symbol.deactivate();
+    symbol.view.parentRenderLayer?.detach(symbol.view);
+    symbol.view.removeFromParent();
     this._pool.release(id, symbol);
   }
 

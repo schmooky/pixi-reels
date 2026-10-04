@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   ReelSymbol, PIXI, app
+//                   ReelSymbol, PIXI, app, SilkGraphics, DebugPlaque
 //
 // `unmask: true` lifts VISIBLE cells only.
 //
@@ -99,34 +99,34 @@ const stage = new PIXI.Container();
 reelSet.y = PAD_TOP;
 stage.addChild(reelSet);
 
-const caption = (text, color, x, y, anchorX) => {
-  const t = new PIXI.Text({
-    text,
-    style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fontWeight: '700', fill: color },
-  });
-  t.anchor.set(anchorX, 0);
-  t.x = x;
-  t.y = y;
-  stage.addChild(t);
-  return t;
-};
-
-caption('same symbol, one cell apart', 0x475569, 0, 0, 0);
-caption('reel 1, top VISIBLE cell: lifted, overflows the grid', 0x7c3aed, 0, 16, 0);
-caption('reel 3, BUFFER cell above: clipped by the mask at the grid edge', 0x94a3b8, 0, 32, 0);
+// One plaque for all three captions: three separate plates would stack too
+// tall to clear the marker below. Swatches key each row to what it describes
+// on the board: the plate's violet (too dark for text on the plaque) and the
+// marker's grey.
+const captions = new DebugPlaque({
+  title: 'same symbol, one cell apart',
+  rows: [
+    { text: 'reel 1, top VISIBLE cell: lifted, overflows the grid', swatch: 0x7c3aed },
+    { text: 'reel 3, BUFFER cell above: clipped by the mask at the grid edge', color: 0x94a3b8, swatch: 0x94a3b8 },
+  ],
+});
+stage.addChild(captions);
 
 // Mark where the buffered plate actually is, since the point of it is what
 // you canNOT see. The dashes sit one cell above the grid, over reel 3.
-const ghost = new PIXI.Graphics();
+const ghost = new SilkGraphics();
 const gx = 3 * (SIZE + GAP);
 const ghostY = PAD_TOP - SIZE - GAP + SIZE / 2;
-for (let i = 0; i < 6; i++) {
-  ghost.rect(gx + i * (SIZE / 6) + 3, ghostY, SIZE / 12, 2);
-}
-ghost.fill({ color: 0x94a3b8 });
-const ghostLabel = caption('plate is parked here', 0x94a3b8, gx + SIZE / 2, ghostY + 6, 0.5);
-ghostLabel.style.fontSize = 9;
-stage.addChild(ghost);
+ghost.line(gx + 6, ghostY, gx + SIZE - 6, ghostY)
+  .stroke({ width: 2, color: 0x94a3b8, dash: [6, 8], cap: 'round' });
+const ghostLabel = new DebugPlaque({
+  text: 'plate is parked here',
+  fontSize: 9,
+  color: 0x94a3b8,
+  anchor: { x: 0.5, y: 0 },
+});
+ghostLabel.position.set(gx + SIZE / 2, ghostY + 6);
+stage.addChild(ghost, ghostLabel);
 
 return {
   reelSet,

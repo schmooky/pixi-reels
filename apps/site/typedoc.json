@@ -3,7 +3,8 @@
   "entryPoints": [
     "../../packages/pixi-reels/src/index.ts",
     "../../packages/pixi-reels/src/spine/index.ts",
-    "../../packages/pixi-reels/src/testing/index.ts"
+    "../../packages/pixi-reels/src/testing/index.ts",
+    "../../packages/pixi-reels/src/debug/index.ts"
   ],
   "entryPointStrategy": "expand",
   "tsconfig": "../../packages/pixi-reels/tsconfig.json",

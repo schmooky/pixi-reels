@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, fitText, pickWeighted, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, fitText, pickWeighted, PIXI, gsap, app, DebugPlaque
 //
 // Value-carrying coins on a Hold & Win board.
 //
@@ -52,8 +52,8 @@ const badge = (cell, value) => {
   t.anchor.set(0.5); t.position.set(p.x, p.y);
   labels.addChild(t); labelAt.set(k, t);
 };
-const total = new PIXI.Text({ text: 'TOTAL: 0', style: { fontFamily: 'system-ui, sans-serif', fontSize: 22, fontWeight: '800', fill: 0xfef08a, stroke: { color: 0x000000, width: 4 } } });
-total.anchor.set(0.5, 0); total.position.set(app.screen.width / 2, board.container.y + boardH + 12);
+const total = new DebugPlaque({ text: 'TOTAL: 0', fontSize: 14, color: 0xfef08a, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+total.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(total);
 const refreshTotal = () => { total.text = `TOTAL: ${board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0)}`; };
 
@@ -71,7 +71,7 @@ const ROUNDS = [
 let busy = false;
 return {
   board,
-  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { total.destroy(); labels.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { total.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

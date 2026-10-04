@@ -271,6 +271,7 @@ export type {
   HwCellSizeOptions,
   HwLockAnimation,
   HwLockAnimationRule,
+  HwStagger,
 } from './board/HwTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)
@@ -303,6 +304,16 @@ export type {
   RunCascadeOptions,
   RunCascadeResult,
 } from './core/ReelSet.js';
+
+// Growing the board: addReels() / removeReels() / expand().
+export type {
+  AddReelsOptions,
+  AddRowsOptions,
+  ExpandOptions,
+  ExpandResult,
+  ExpandStep,
+  ExpandStepLanded,
+} from './core/expand.js';
 
 // Events
 export { EventEmitter } from './events/EventEmitter.js';
@@ -340,14 +351,9 @@ export type {
   RecordedFrame,
   StartRecordingOptions,
 } from './debug/debug.js';
-export { debugOverlay, OVERLAY_LABEL } from './debug/debugOverlay.js';
-export type {
-  DebugOverlayLayer,
-  DebugOverlayOptions,
-  DebugOverlayHandle,
-  DebugOverlaySnapshot,
-  DebugOverlayReelInfo,
-} from './debug/debugOverlay.js';
+// The visual half (`debugOverlay`, `DebugPlaque`, `SpinMetrics`) draws with
+// `pixi-silk` and ships at the `pixi-reels/debug` subpath, so a build that
+// never imports it never needs that dependency.
 
 // Testing utilities ship at the `pixi-reels/testing` subpath. Importing
 // from there keeps the headless harness out of production bundles even

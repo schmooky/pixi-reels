@@ -174,9 +174,10 @@ export interface ReelConfig {
    */
   extent?: number;
   /**
-   * SPIN-time uniform cell height. During SPIN every reel uses this same
-   * height. AdjustPhase later swaps to per-reel `extent / visibleCells`.
-   * Defaults to `symbolHeight`.
+   * The cell extent the strip moves on while it spins. On a MultiWays set
+   * every reel shares it and AdjustPhase reshapes to per-reel
+   * `extent / visibleCells` at land; on any other set it is the reel's own
+   * cell, the same spinning and landed. Defaults to `symbolHeight`.
    */
   spinCellSize?: number;
   /**
@@ -249,8 +250,7 @@ export class Reel implements Disposable {
   public readonly container: Container;
   public readonly events: EventEmitter<ReelEvents>;
   public readonly reelIndex: number;
-  /** Reels in the owning set. */
-  public readonly reelCount: number;
+  private _reelCount: number;
   private readonly _symbolZIndex: SymbolZIndexResolver | null;
 
   /** Current symbols in order (top buffer → visible → bottom buffer). */
@@ -407,7 +407,7 @@ export class Reel implements Disposable {
     viewport: ReelViewport,
   ) {
     this.reelIndex = config.reelIndex;
-    this.reelCount = config.reelCount ?? 1;
+    this._reelCount = config.reelCount ?? 1;
     this._symbolZIndex = config.symbolZIndex ?? null;
     this._symbolFactory = symbolFactory;
     this._randomProvider = randomProvider;
@@ -462,8 +462,8 @@ export class Reel implements Disposable {
         ? config.reelIndex
         : -config.reelIndex;
 
-    // Create initial symbols. Use spinCellSize so during SPIN every reel
-    // uses the same uniform cell height regardless of post-AdjustPhase shape.
+    // Create initial symbols at the spin cell: on MultiWays the one every
+    // reel shares until AdjustPhase reshapes it, elsewhere the reel's own.
     this.symbols = config.initialSymbols.map((symbolId, cell) => {
       const symbol = symbolFactory.acquire(symbolId);
       const spinSize = this._screenSize(this._spinCellSize, this._cellCross);
@@ -534,6 +534,19 @@ export class Reel implements Disposable {
     return this._isDestroyed;
   }
 
+  /** Reels in the owning set. Follows `ReelSet.addReels()` / `removeReels()`. */
+  get reelCount(): number {
+    return this._reelCount;
+  }
+
+  /**
+   * @internal Called by `ReelSet` when the set grows or shrinks, so the
+   * landing context and the z-index resolver see the live count.
+   */
+  setReelCount(count: number): void {
+    this._reelCount = count;
+  }
+
   get isStopping(): boolean {
     return this._isStopping;
   }
@@ -575,8 +588,9 @@ export class Reel implements Disposable {
    * set this is the main extent and a MultiWays reshape moves it; on a
    * horizontal set it is the constant cross extent.
    *
-   * During SPIN the main extent is still `spinCellSize`; the per-reel target
-   * comes into effect when AdjustPhase commits the reshape.
+   * On a MultiWays reel the main extent is still `spinCellSize` during SPIN;
+   * the per-reel target comes into effect when AdjustPhase commits the
+   * reshape.
    */
   get symbolHeight(): number {
     return this._axis.toScreen(this._cellCross, this._cellMain).y;
@@ -630,15 +644,33 @@ export class Reel implements Disposable {
     return this._extent;
   }
 
-  /** Y offset of this reel relative to the viewport top. Set by builder, immutable. */
+  /**
+   * Main-axis offset of this reel inside the board's tallest strip (y on a
+   * vertical set). Set by the builder; it only moves when the tallest strip
+   * does (`ReelSet.addRows()` on a set whose reels are not all one height).
+   */
   get mainOffset(): number {
     return this._mainOffset;
   }
 
   /**
-   * SPIN-time uniform cell height. All reels in a slot use this value during
-   * the SPIN phase regardless of their per-reel `symbolHeight`. Frozen at
-   * construction.
+   * @internal Move the reel along the main axis, for a board whose tallest
+   * strip changed. Only at rest: the strip is re-rendered in place.
+   */
+  setMainOffset(offset: number): void {
+    if (offset === this._mainOffset) return;
+    this._mainOffset = offset;
+    this._axis.setMain(this.container, offset);
+    // An unmasked view lives in viewport space and carries the reel's offset:
+    // put it back at its reel-local place, then add the new offset.
+    this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
+  }
+
+  /**
+   * The cell extent this reel's strip moves on while it spins. On a MultiWays
+   * set every reel shares it, whatever its landed `symbolHeight`; on any other
+   * set it is the reel's own cell. Frozen at construction.
    */
   get spinCellSize(): number {
     return this._spinCellSize;
@@ -1696,6 +1728,11 @@ export class Reel implements Disposable {
       this._placeSymbolView(sym, this._axis.getMain(sym.view), this._effectiveUnmask(id, slot));
       this._parentForSymbolId(id, slot).addChild(sym.view);
       this.symbols.push(sym);
+      // A MultiWays reel grows mid-spin: the new symbol joins the spin the way
+      // a swapped-in one does (`_replaceSymbol`), or it shows its live art in
+      // a strip of snapshots until it wraps.
+      if (this._spinPresentationActive) sym.onReelSpinStart(true);
+      if (this._anticipationActive) sym.onReelAnticipationStart();
     }
 
     // Shrink: release tail symbols.
@@ -1825,13 +1862,18 @@ export class Reel implements Disposable {
     }
     this._nudgeQueue = null;
     this._isNudging = false;
-    // Destroy every symbol's view. We must NOT release live symbols back into
-    // the shared pool here: the container.destroy({ children: true }) below
-    // would then destroy the views of symbols now sitting in the pool, so the
-    // next acquire() would hand out a destroyed view. (Full and partial reel
-    // teardown both run through here.)
+    // Hand the live symbols back to the shared pool rather than destroying
+    // them. `release()` deactivates each one, which stops its animations, so
+    // a win still playing on a reel `removeReels()` takes away ends with its
+    // symbol instead of firing into a dead view; and it detaches the view, so
+    // the container below holds none of the pool's. The pool disposes them on
+    // a whole-set teardown. Stubs are this reel's own.
     for (const symbol of this.symbols) {
-      symbol.destroy();
+      if (symbol instanceof OccupiedStub) {
+        if (!symbol.isDestroyed) symbol.destroy();
+      } else {
+        this._symbolFactory.release(symbol);
+      }
     }
     for (const stub of this._occupiedStubs) {
       if (!stub.isDestroyed) stub.destroy();
@@ -1839,6 +1881,8 @@ export class Reel implements Disposable {
     this._occupiedStubs = [];
     this.symbols = [];
     this._warp?.destroy();
+    // Only the reel's own children are left, and anything a game added to
+    // the container: they go with it.
     this.container.destroy({ children: true });
     this._isDestroyed = true;
     // Emit 'destroyed' while listeners are still attached, THEN remove them —

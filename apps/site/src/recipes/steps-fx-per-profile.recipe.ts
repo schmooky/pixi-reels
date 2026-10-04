@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, PhaseCardSymbol,
-//                   step, insertBefore, insertAfter, PIXI, gsap, app
+//                   step, insertBefore, insertAfter, PIXI, gsap, app, DebugPlaque
 //
 // FX AND BEATS THAT FOLLOW THE SPEED MODE, through the profile.
 //
@@ -21,6 +21,7 @@
 const IDS = ['9', '10', 'J', 'Q', 'K'];
 const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
 const PROFILES = {
@@ -72,10 +73,7 @@ const label = () => {
   const p = PROFILES[current];
   return `speed ${current}: breath ${p.breathMs} ms, glow ${p.landGlow ? `on, fades over ${p.bounceDuration} ms` : 'off'}. tap to switch`;
 };
-const hud = new PIXI.Text({
-  text: label(),
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+const hud = new DebugPlaque({ text: label(), minWidth: TOTAL_W, maxWidth: TOTAL_W });
 hud.position.set(0, TOTAL_H + 10);
 hud.eventMode = 'static';
 hud.cursor = 'pointer';
@@ -92,7 +90,7 @@ return {
     unwatch();
     for (const g of plates) gsap.killTweensOf(g);
     try { plateLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSkip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
   onSpin: async () => {

@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, loadHoldAndWinSprites, bezierFly, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, loadHoldAndWinSprites, bezierFly, PIXI, gsap, app, DebugPlaque
 //
 // A value overlay that survives a symbol swap and rides along on a flight.
 //
@@ -42,8 +42,7 @@ const meterText = badgeText('0');
 meterText.position.set(meter.x, meter.y);
 app.stage.addChild(meterText);
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + CELL + 14);
 app.stage.addChild(hud);
 
@@ -76,7 +75,7 @@ const flyers = new Set();
 let phase = 'ready', total = 0;
 return {
   board,
-  cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); board.destroy(); },
+  cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); hud.destroy(); board.destroy(); },
   onSpin: async () => {
     if (phase === 'swapping' || phase === 'flying') return;
     if (phase === 'collected') { total = 0; meterText.text = '0'; phase = 'ready'; seedBoard(); return; }

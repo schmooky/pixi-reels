@@ -37,6 +37,7 @@
     "lucide-react": "^1.43.0",
     "mermaid": "^11.17.2",
     "pixi-reels": "workspace:*",
+    "pixi-silk": "^0.1.0",
     "pixi.js": "^8.20.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

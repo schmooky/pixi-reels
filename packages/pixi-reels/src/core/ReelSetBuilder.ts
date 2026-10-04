@@ -20,7 +20,7 @@ import {
 } from './ReelViewport.js';
 import { DEFAULTS } from '../config/defaults.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
-import { ReelSet, type ReelSetParams } from './ReelSet.js';
+import { ReelSet, type ReelSetParams, type ReelFactory } from './ReelSet.js';
 import { Reel, type ReelConfig } from './Reel.js';
 import { assertDriveConfig, type ReelDriveConfig } from './ReelDrive.js';
 import { reelAxis, type Orientation, type Direction } from './ReelAxis.js';
@@ -1035,29 +1035,12 @@ export class ReelSetBuilder {
     }
     const mainExtents = reelExtents;
 
-    // Compute per-reel main offset and target cell height.
-    // SPIN-time uniform cell height equals the configured `symbolHeight`.
+    // The tallest strip sets the viewport's main extent; shorter reels sit
+    // inside it by `reelAnchor` (see `mainOffsetFor` below).
     const tallest = Math.max(...mainExtents);
-    const mainOffsets = mainExtents.map((h) => {
-      switch (this._reelAnchor) {
-        case 'start': return 0;
-        case 'end': return tallest - h;
-        case 'center':
-        default: return (tallest - h) / 2;
-      }
-    });
-    // Per-reel MAIN cell extent, derived by dividing the reel's extent by
-    // its cell count (minus the inter-cell gaps).
-    const perReelCellSize: number[] = reelExtents.map((extent, i) => {
-      const cells = visibleCellsPerReel[i];
-      return (extent - (cells - 1) * mainGap) / cells;
-    });
-    // SPIN-time uniform main cell extent. Every reel uses this while the
-    // strip is scrolling, regardless of its post-AdjustPhase shape.
+    // The symbol's main extent. A MultiWays reel spins on it whatever shape it
+    // lands, and a reel with no `reelExtents()` box keeps it from spin to land.
     const spinCellSize = mainCellSize;
-    const initialCellSize = isMultiWays
-      ? new Array(reelCount).fill(spinCellSize)
-      : perReelCellSize;
 
     if (this._speeds.size === 0) {
       this._speeds.set('normal', SpeedPresets.NORMAL);
@@ -1267,56 +1250,96 @@ export class ReelSetBuilder {
       );
     }
 
-    // Create reels with per-reel geometry.
-    const reels: Reel[] = [];
-    const maskRects: ReelMaskRect[] = [];
-    for (let reelIndex = 0; reelIndex < reelCount; reelIndex++) {
-      const cells = visibleCellsPerReel[reelIndex];
+    // One reel, built from the resolved geometry. Captured as a closure so the
+    // set can build more of them after construction (`addReels`) exactly the
+    // way it built these. Every builder field it needs is copied into a const
+    // first: the closure outlives this call, and a builder reused for another
+    // set must not reach into this one.
+    const directionPerReel = this._directionPerReel;
+    const direction = this._direction;
+    const curvePerReel = this._curvePerReel;
+    const curve = this._curve;
+    const orientation = this._orientation;
+    const curveRenderer = this._curveMode === 'warp' ? this._renderer : undefined;
+    const curveBleed = this._curveBleed;
+    const cellStacking = this._cellStacking;
+    const reelStacking = this._reelStacking;
+    const symbolZIndex = this._symbolZIndex ?? undefined;
+    const symbolGap = { ...this._symbolGap };
+    const reelAnchorMode = this._reelAnchor;
+    const gsapInstance = this._gsap;
+    const drive = this._drive;
+    const explicitPoolCapacity = this._poolCapacity;
+    // `reelExtents()` boxes, which an added reel follows like any per-reel
+    // array: past their end, the last one.
+    const explicitExtents = this._reelExtents ? [...this._reelExtents] : undefined;
+    // A per-reel builder array covers the reels it was given; a reel added
+    // past its end takes the array's last entry.
+    const perReel = <T>(values: readonly T[] | undefined, reelIndex: number): T | undefined =>
+      values?.[Math.min(reelIndex, values.length - 1)];
+    // A reel's place along the main axis inside the tallest strip. The board
+    // can grow taller (`addRows`), so the tallest is passed in, not frozen.
+    const mainOffsetFor = (extent: number, tallestNow = tallest): number => {
+      switch (reelAnchorMode) {
+        case 'start': return 0;
+        case 'end': return tallestNow - extent;
+        case 'center':
+        default: return (tallestNow - extent) / 2;
+      }
+    };
+    const createReel = (
+      reelIndex: number,
+      cells: number,
+      extent: number,
+      reelCountNow: number,
+      seed: ColumnTarget | undefined,
+      tallestNow = tallest,
+    ): Reel => {
+      // A MultiWays reel spins on the shared cell and reshapes when it lands.
+      // Any other reel keeps one cell from spin to land, so its strip moves at
+      // the pitch it lands at: its share of a `reelExtents()` box, else the
+      // symbol size itself (not re-derived, which can drift a bit).
+      const cellMain =
+        isMultiWays || !explicitExtents ? spinCellSize : (extent - (cells - 1) * mainGap) / cells;
       // Project this reel's (main, cross) cell extents back to the screen
       // pair `Reel` stores. For vertical that is (symbolWidth, cellMain) as
       // before; for horizontal the per-reel value lands on WIDTH instead,
       // which is what makes a sideways pyramid work.
-      const cellScreen = setAxis.toScreen(crossCellSize, initialCellSize[reelIndex]);
+      const cellScreen = setAxis.toScreen(crossCellSize, cellMain);
 
       // Per-reel initial frame at its own visibleCells count.
-      const initialFrame = frameBuilder.build(
-        reelIndex,
-        cells,
-        bufferStart,
-        bufferEnd,
-        this._initialFrame?.[reelIndex],
-      );
+      const initialFrame = frameBuilder.build(reelIndex, cells, bufferStart, bufferEnd, seed);
 
       const reelConfig: ReelConfig = {
         reelIndex,
-        reelCount,
+        reelCount: reelCountNow,
         visibleCells: cells,
         bufferStart,
         bufferEnd,
         symbolWidth: cellScreen.x,
         symbolHeight: cellScreen.y,
-        symbolGapX: this._symbolGap.x,
-        symbolGapY: this._symbolGap.y,
+        symbolGapX: symbolGap.x,
+        symbolGapY: symbolGap.y,
         symbolsData,
-        symbolZIndex: this._symbolZIndex ?? undefined,
+        symbolZIndex,
         initialSymbols: initialFrame,
-        mainOffset: mainOffsets[reelIndex],
-        extent: reelExtents[reelIndex],
-        spinCellSize,
-        axis: reelAxis(this._orientation, this._directionPerReel?.[reelIndex] ?? this._direction),
-        curve: this._curvePerReel?.[reelIndex] ?? this._curve,
-        curveRenderer: this._curveMode === 'warp' ? this._renderer : undefined,
-        curveTicker: this._curveMode === 'warp' ? ticker : undefined,
-        curveBleed: this._curveBleed,
+        mainOffset: mainOffsetFor(extent, tallestNow),
+        extent,
+        spinCellSize: cellMain,
+        axis: reelAxis(orientation, perReel(directionPerReel, reelIndex) ?? direction),
+        curve: perReel(curvePerReel, reelIndex) ?? curve,
+        curveRenderer,
+        curveTicker: curveRenderer ? ticker : undefined,
+        curveBleed,
         curveFocus:
           curveFocusWeight === 0
             ? undefined
             : crossCellSize / 2 +
               curveFocusWeight *
                 (setCentreCross - reelIndex * (crossCellSize + crossGap) - crossCellSize / 2),
-        cellStacking: this._cellStacking,
-        reelStacking: this._reelStacking,
-        gsap: this._gsap,
+        cellStacking,
+        reelStacking,
+        gsap: gsapInstance,
       };
 
       const reel = new Reel(reelConfig, symbolFactory, randomProvider, viewport);
@@ -1325,24 +1348,68 @@ export class ReelSetBuilder {
       // refreshes both per spin; this is what makes them correct before the
       // first one.
       reel.referenceSpeed = defaultSpinSpeed;
-      if (this._drive) reel.installDrive(this._drive);
-      reels.push(reel);
-      // Per-reel mask rect: cross position marches the reels, main position is
-      // the reel's own offset, cross size is one cell, main size is the strip.
-      const rectPos = setAxis.toScreen(reelIndex * (crossCellSize + crossGap), mainOffsets[reelIndex]);
-      const rectSize = setAxis.toScreen(crossCellSize, mainExtents[reelIndex]);
-      maskRects.push({
-        x: rectPos.x,
-        y: rectPos.y,
-        width: rectSize.x,
-        height: rectSize.y,
-      });
+      if (drive) reel.installDrive(drive);
+      return reel;
+    };
+    // Per-reel mask rect: cross position marches the reels, main position is
+    // the reel's own offset, cross size is one cell, main size is the strip.
+    const maskRectFor = (reelIndex: number, extent: number, tallestNow = tallest): ReelMaskRect => {
+      const rectPos = setAxis.toScreen(
+        reelIndex * (crossCellSize + crossGap),
+        mainOffsetFor(extent, tallestNow),
+      );
+      const rectSize = setAxis.toScreen(crossCellSize, extent);
+      return { x: rectPos.x, y: rectPos.y, width: rectSize.x, height: rectSize.y };
+    };
+
+    // Create reels with per-reel geometry.
+    const reels: Reel[] = [];
+    const maskRects: ReelMaskRect[] = [];
+    for (let reelIndex = 0; reelIndex < reelCount; reelIndex++) {
+      reels.push(
+        createReel(
+          reelIndex,
+          visibleCellsPerReel[reelIndex],
+          reelExtents[reelIndex],
+          reelCount,
+          this._initialFrame?.[reelIndex],
+        ),
+      );
+      maskRects.push(maskRectFor(reelIndex, mainExtents[reelIndex]));
     }
     viewport.updateMaskSize(viewportWidth, viewportHeight, maskRects);
+
+    const multiways = this._multiways ? { ...this._multiways } : undefined;
+    const reelFactory: ReelFactory = {
+      extentFor: (reelIndex, cells) =>
+        multiways?.reelExtent ??
+        perReel(explicitExtents, reelIndex) ??
+        cells * mainCellSize + (cells - 1) * mainGap,
+      create: createReel,
+      maskRect: maskRectFor,
+      mainOffset: mainOffsetFor,
+      viewportSize: (count, tallestNow) => {
+        const size = setAxis.toScreen(count * (crossCellSize + crossGap) - crossGap, tallestNow);
+        return { width: size.x, height: size.y };
+      },
+      // Same rule as the build-time capacity below: the whole strip showing
+      // one id. A MultiWays reel counts at maxCells, its worst case.
+      poolCapacity: (reelsNow) =>
+        explicitPoolCapacity ??
+        Math.max(
+          20,
+          reelsNow.reduce(
+            (sum, r) =>
+              sum + (multiways?.maxCells ?? r.visibleCells) + r.bufferStart + r.bufferEnd,
+            0,
+          ),
+        ),
+    };
 
     const params: ReelSetParams = {
       config,
       reels,
+      reelFactory,
       viewport,
       symbolFactory,
       frameBuilder,

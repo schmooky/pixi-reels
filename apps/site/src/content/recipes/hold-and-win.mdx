@@ -364,7 +364,7 @@ Every cell is its own reel set with its own mask, and cellMask takes a function 
 
 ## One speed switch for every cell
 
-speeds(normal, turbo, superTurbo) registers each profile into every cell's SpeedManager and board.setSpeed(name) switches them all at once, the board's reelSet.setSpeed(); a wave in flight finishes on its own profile, so a turbo press mid-wave is setSpeed plus skip().
+speeds(normal, turbo, superTurbo) registers each profile into every cell's SpeedManager and board.setSpeed(name) switches them all at once, the board's reelSet.setSpeed(); a wave in flight finishes on its own profile, so a turbo press mid-wave is setSpeed plus skip(). The landing wave steps by each profile's `stopDelay` (70, 25 and 0 ms here), so it tightens with the speed and lands as one on superTurbo, with no stagger function.
 
 <RecipeDemo code="hold-and-win-clover-speeds" height={420} />
 

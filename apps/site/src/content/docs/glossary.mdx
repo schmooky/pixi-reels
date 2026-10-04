@@ -98,7 +98,9 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`Disposable`**. Interface every resource-holding class implements. `destroy()` cascades through the composition tree so one `reelSet.destroy()` cleans the whole scene up.
 
-**`enableDebug(reelSet)`**. Attaches `window.__PIXI_REELS_DEBUG` with `.log()`, `.snapshot()`, `.grid()`, `.trace()`. the only way to inspect reel state through a `canvas` (including from an AI agent).
+**`enableDebug(reelSet)`**. Attaches `window.__PIXI_REELS_DEBUG` with `.log()`, `.snapshot()`, `.grid()`, `.trace()`, `.metrics()`. the only way to inspect reel state through a `canvas` (including from an AI agent).
+
+**`debugOverlay(reelSet)`**. The same state drawn on the canvas: cells, mask, travel axis, a per-reel hud, a metrics plaque and a phase timeline per spin. Ships at `pixi-reels/debug` and draws with `pixi-silk`, an optional peer, so only a debug build pays for it. `SpinMetrics` is the per-round recorder behind it, `DebugPlaque` the readout plate it and the recipes are built from.
 
 **`CellPin`**. The cell-persistence primitive. Lock a symbol id to a cell with `reelSet.pin(reel, cell, id)`; the engine acquires an overlay during spin, migrates the cell on reshape, and supports an animated `movePin(from, to)` tween. Works with any `ReelSymbol` subclass. The pin primitive is general, not Spine-specific.
 

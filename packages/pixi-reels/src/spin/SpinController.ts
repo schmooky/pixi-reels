@@ -85,6 +85,33 @@ function assertSegments(segments: AnticipationSegment[], where: string): void {
 }
 
 /**
+ * The checks an anticipation options object can take before any reel is
+ * involved. `setAnticipation()` runs them, and `ReelSet.expand()` runs them
+ * before it adds a reel, so a bad tease throws on an unchanged board.
+ */
+export function assertAnticipationOptions(opts: AnticipationOptions, context: string): void {
+  // `slowdown` is sugar for a two-leg curve, so accepting both would mean
+  // silently picking one. Say which one is redundant instead.
+  if (opts.curve && opts.slowdown) {
+    throw new Error(
+      `${context}: pass either \`slowdown\` or \`curve\`, not both. \`slowdown\` is ` +
+        'shorthand for a two-segment curve; express the whole tease in `curve`.',
+    );
+  }
+  if (opts.cells != null && typeof opts.cells !== 'function' && !(opts.cells > 0)) {
+    throw new Error(
+      `${context}: \`cells\` must be a positive number of symbol pitches, got ${String(opts.cells)}.`,
+    );
+  }
+  if (Array.isArray(opts.curve)) {
+    if (opts.curve.length === 0) {
+      throw new Error(`${context}: \`curve\` must have at least one segment.`);
+    }
+    assertSegments(opts.curve, '`curve`');
+  }
+}
+
+/**
  * A travel anchor measures the FINAL leg, so a final leg that asks for speed
  * `0` can never reach it and the tease always falls through to its time
  * backstop. Legal, and the backstop is there precisely so it cannot hang - but
@@ -268,6 +295,17 @@ export class SpinController implements Disposable {
   private _reelLandedPromises: Map<number, Promise<void>> = new Map();
   private _stopDelayOverride: number[] | null = null;
   /**
+   * A named drop order (`ReelSet.setDropOrder('ltr' | 'rtl' | 'all')`), kept
+   * by name instead of spelled out per reel so it covers whichever reels spin:
+   * reels added since it was set, and an `expand()` step ordered by place.
+   */
+  private _dropOrder: { order: 'ltr' | 'rtl' | 'all'; step: number } | null = null;
+  /**
+   * Per-spin stagger position of each spinning reel, or `null` to stagger by
+   * reel index (the default). See `spin()`'s `round.stagger`.
+   */
+  private _staggerRank: Map<number, number> | null = null;
+  /**
    * Reel groups, or `null` when every reel is on its own. See
    * {@link setReelGroups}. Like `_stopDelayOverride` this PERSISTS across
    * spins: a group layout describes the board, not one round.
@@ -314,8 +352,19 @@ export class SpinController implements Disposable {
   private _skipMode: SkipMode | null = null;
   /** The press behind `_skipMode`, for `SpinResult.skipContext`. */
   private _skipCtx: SkipContext | null = null;
-  /** A `requestSkip()` that arrived before the result; fired by `setResult()`. */
-  private _skipPending: ResolvedSkip | null = null;
+  /**
+   * A press that arrived before the result; fired by `setResult()`. A
+   * `requestSkip()` queues a bare press; a press carried in from between two
+   * steps of one round keeps whether it was a `skip()` (see `carrySkip`).
+   */
+  private _skipPending: { req: ResolvedSkip; withSideEffects: boolean } | null = null;
+  /**
+   * A press that arrived between two spins of one round: an `expand()` step
+   * landed and the next has not started, so nothing was spinning to hear it.
+   * The next continuation spin takes it as its queued press; a spin that
+   * starts a round drops it.
+   */
+  private _carriedSkip: { req: ResolvedSkip; withSideEffects: boolean } | null = null;
   /**
    * What a skip press does to the reels it frees when the call does not say.
    * Set from the builder's `skipMode()`; `'slam'` unless set.
@@ -398,9 +447,11 @@ export class SpinController implements Disposable {
   private _manualSpeedSinceBoost = false;
   /**
    * Cascade-mode round flag. When true, the next `refill()` skips its
-   * phase chain and slams instantly. Set when the player presses `skip()`
-   * during a cascade round (one press = "fast-forward to end of round").
-   * Cleared on the next `spin()` alongside the rest of the stage state.
+   * phase chain and slams instantly, and so does a spin that continues the
+   * round (an `expand()` step) the moment it has its result. Set when the
+   * player presses `skip()` during a cascade round (one press = "fast-forward
+   * to end of round"). Cleared on the next `spin()` that starts a round,
+   * alongside the rest of the stage state.
    */
   private _autoSlamRefills = false;
 
@@ -416,18 +467,11 @@ export class SpinController implements Disposable {
     hooks?: SpinControllerHooks,
   ) {
     this._reels = reels;
-    // The landing-frame signal is raised by `Reel.notifyLanded()`, where every
-    // landing path converges (animated stop, slam, cascade refill); this is
-    // the one place it gets a reel index. Listeners die with the reel.
-    for (const reel of reels) {
-      reel.events.on('landing', (symbols) => {
-        this._events.emit('spin:reelLanding', reel.reelIndex, symbols);
-      });
-    }
     this._speedManager = speedManager;
     this._frameBuilder = frameBuilder;
     this._phaseFactory = phaseFactory;
     this._events = events;
+    for (const reel of reels) this.attachReel(reel);
     this._tickerRef = new TickerRef(ticker);
     this._spinningMode = spinningMode ?? new StandardMode();
     this._defaultSpinMode = defaultSpinMode;
@@ -455,26 +499,12 @@ export class SpinController implements Disposable {
   }
 
   /**
-   * Current `skip()` position within the active round. `0` until the
-   * player presses the slam button, `2` after. Use to drive UI button
-   * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
-   * and is not currently reachable.
+   * The mode a spin would run in, validated against the set: `'cascade'`
+   * needs `.tumble(...)`, `'standard'` needs a buffer to scroll through.
+   * Throws otherwise. `ReelSet.expand()` calls it before adding any reel.
    */
-  get skipStage(): 0 | 1 | 2 {
-    return this._skipStage;
-  }
-
-  async spin(options?: SpinOptions): Promise<SpinResult> {
-    if (this._isSpinning) {
-      throw new Error('Cannot start a new spin while one is in progress.');
-    }
-
-    // Already-aborted signal: never even start the reels.
-    if (options?.signal?.aborted) {
-      return Promise.reject(this._abortError(options.signal));
-    }
-
-    const mode = options?.mode ?? this._defaultSpinMode;
+  resolveSpinMode(requested: 'standard' | 'cascade' | undefined): 'standard' | 'cascade' {
+    const mode = requested ?? this._defaultSpinMode;
     if (mode === 'cascade' && !this._phaseFactory.has('cascade:fall')) {
       throw new Error(
         "spin({ mode: 'cascade' }) requires .tumble(...) on the builder.",
@@ -487,6 +517,75 @@ export class SpinController implements Disposable {
           'built with bufferSymbols({ end: 0 }) for tumble-only use.',
       );
     }
+    return mode;
+  }
+
+  /**
+   * Wire a reel into the set bus. Called for every reel the set is built with
+   * and every one `ReelSet.addReels()` adds later.
+   *
+   * The landing-frame signal is raised by `Reel.notifyLanded()`, where every
+   * landing path converges (animated stop, slam, cascade refill); this is
+   * the one place it gets a reel index. Listeners die with the reel.
+   */
+  attachReel(reel: Reel): void {
+    reel.events.on('landing', (symbols) => {
+      this._events.emit('spin:reelLanding', reel.reelIndex, symbols);
+    });
+  }
+
+  /**
+   * The board grew to `this._reels.length`. A group layout has to name every
+   * reel, so the reels added by one call join the layout as one trailing
+   * group: they land after everything before them, together.
+   */
+  onReelsAdded(from: number): void {
+    if (!this._reelGroups) return;
+    const added = Array.from({ length: this._reels.length - from }, (_, k) => from + k);
+    this.setReelGroups([...this._reelGroups, added]);
+  }
+
+  /** The board shrank to `this._reels.length`: drop removed reels from the group layout. */
+  onReelsRemoved(): void {
+    if (!this._reelGroups) return;
+    const kept = this._reelGroups
+      .map((group) => group.filter((i) => i < this._reels.length))
+      .filter((group) => group.length > 0);
+    this.setReelGroups(kept.length > 0 ? kept : null);
+  }
+
+  /**
+   * Current `skip()` position within the active round. `0` until the
+   * player presses the slam button, `2` after. Use to drive UI button
+   * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
+   * and is not currently reachable.
+   */
+  get skipStage(): 0 | 1 | 2 {
+    return this._skipStage;
+  }
+
+  /**
+   * @param round How this spin relates to the round. `continueRound` keeps
+   *   the round's skip state (stage, boosted speed) instead of starting a new
+   *   round: `ReelSet.expand()` spins each step this way, so a press in one
+   *   step carries into the next. `stagger: 'spinning'` staggers start and
+   *   stop delays by a reel's place among the reels that spin, not by its
+   *   index, so a step that spins reels 12 and 13 does not wait 12 delays.
+   */
+  async spin(
+    options?: SpinOptions,
+    round?: { continueRound?: boolean; stagger?: 'index' | 'spinning' },
+  ): Promise<SpinResult> {
+    if (this._isSpinning) {
+      throw new Error('Cannot start a new spin while one is in progress.');
+    }
+
+    // Already-aborted signal: never even start the reels.
+    if (options?.signal?.aborted) {
+      return Promise.reject(this._abortError(options.signal));
+    }
+
+    const mode = this.resolveSpinMode(options?.mode);
     this._currentSpinMode = mode;
 
     // Round boundary: a new `spin()` ends the previous round. If the
@@ -494,24 +593,30 @@ export class SpinController implements Disposable {
     // `setSpeed()` between rounds, restore the pre-boost speed. The
     // manual-flag check is what distinguishes "user untouched, restore"
     // from "user explicitly chose the boosted name, leave alone". the
-    // activeName comparison alone can't tell those apart.
-    if (this._skipPreviousSpeedName !== null) {
-      const prev = this._skipPreviousSpeedName;
-      this._skipPreviousSpeedName = null;
-      this._skipBoostedToName = null;
-      if (!this._manualSpeedSinceBoost && this._speedManager.activeName !== prev) {
-        this._speedManager.set(prev);
+    // activeName comparison alone can't tell those apart. A continuation
+    // spin is not a boundary: the round's press and boost carry on.
+    if (!round?.continueRound) {
+      if (this._skipPreviousSpeedName !== null) {
+        const prev = this._skipPreviousSpeedName;
+        this._skipPreviousSpeedName = null;
+        this._skipBoostedToName = null;
+        if (!this._manualSpeedSinceBoost && this._speedManager.activeName !== prev) {
+          this._speedManager.set(prev);
+        }
       }
+      this._manualSpeedSinceBoost = false;
+      this._skipStage = 0;
+      this._autoSlamRefills = false;
     }
-    this._manualSpeedSinceBoost = false;
-    this._skipStage = 0;
-    this._autoSlamRefills = false;
 
     this._isSpinning = true;
     this._wasSkipped = false;
     this._skipMode = null;
     this._skipCtx = null;
-    this._skipPending = null;
+    // A press carried in from between two steps is this spin's queued press;
+    // a spin that starts a new round drops it.
+    this._skipPending = round?.continueRound ? this._carriedSkip : null;
+    this._carriedSkip = null;
     this._quickenedReels.clear();
     this._quickenCtx.clear();
     this._quickenBatches.length = 0;
@@ -544,6 +649,13 @@ export class SpinController implements Disposable {
     this._allStartedEmitted = false;
     this._activePhases.clear();
     this._heldReels = this._normalizeHoldReels(options?.holdReels);
+    this._staggerRank = null;
+    if (round?.stagger === 'spinning') {
+      this._staggerRank = new Map();
+      for (let i = 0; i < this._reels.length; i++) {
+        if (!this._heldReels.has(i)) this._staggerRank.set(i, this._staggerRank.size);
+      }
+    }
     this._spinGeneration++;
 
     const generation = this._spinGeneration;
@@ -639,9 +751,15 @@ export class SpinController implements Disposable {
       // `setAnticipation()` to have been called by now. call it BEFORE
       // `setResult()` (every recipe does) or the queued press sees no tease
       // to protect.
-      const req = this._skipPending;
+      const { req, withSideEffects } = this._skipPending;
       this._skipPending = null;
-      this._pressSkip(false, req);
+      this._pressSkip(withSideEffects, req);
+    } else if (this._autoSlamRefills) {
+      // An earlier press this cascade round meant "the rest of the round at
+      // once". `refill()` reads that flag; so does a later spin of the same
+      // round, an `expand()` step. Pressed through the skip machine, so
+      // groups and a step's protected tease still have their say.
+      this._pressSkip(false, { mode: 'slam', speed: null, payload: undefined });
     }
   }
 
@@ -772,6 +890,8 @@ export class SpinController implements Disposable {
     this._allStartedEmitted = false;
     this._activePhases.clear();
     this._heldReels = new Set();
+    // A refill drops every reel; a step spin's stagger ranks do not apply.
+    this._staggerRank = null;
     this._spinGeneration++;
     this._currentSpinMode = 'cascade';
 
@@ -1101,29 +1221,11 @@ export class SpinController implements Disposable {
         : { stagger: options };
     const stagger = opts.stagger ?? 0;
 
+    assertAnticipationOptions(opts, 'setAnticipation()');
+
     // Held reels never reach AnticipationPhase, but filter here too so the
     // public API is forgiving. callers can pass a flat list without
     // tracking which indices are held this spin.
-    // `slowdown` is sugar for a two-leg curve, so accepting both would mean
-    // silently picking one. Say which one is redundant instead.
-    if (opts.curve && opts.slowdown) {
-      throw new Error(
-        'setAnticipation(): pass either `slowdown` or `curve`, not both. `slowdown` is ' +
-          'shorthand for a two-segment curve; express the whole tease in `curve`.',
-      );
-    }
-    if (opts.cells != null && typeof opts.cells !== 'function' && !(opts.cells > 0)) {
-      throw new Error(
-        `setAnticipation(): \`cells\` must be a positive number of symbol pitches, got ${String(opts.cells)}.`,
-      );
-    }
-    if (Array.isArray(opts.curve)) {
-      if (opts.curve.length === 0) {
-        throw new Error('setAnticipation(): `curve` must have at least one segment.');
-      }
-      assertSegments(opts.curve, '`curve`');
-    }
-
     this._anticipationReels = reelIndices.filter((i) => !this._heldReels.has(i));
     this._anticipationStagger = stagger;
     this._anticipationSlowdown = opts.slowdown ?? null;
@@ -1331,9 +1433,21 @@ export class SpinController implements Disposable {
    * When set, these replace the staggered `reelIndex * speed.stopDelay`
    * pattern. Pass `null` to CLEAR the override and restore that default
    * (distinct from passing all-zeros, which lands every reel at once).
+   * Replaces a named {@link setDropOrder}.
    */
   setStopDelays(delays: number[] | null): void {
     this._stopDelayOverride = delays ? [...delays] : null;
+    this._dropOrder = null;
+  }
+
+  /**
+   * A named drop order, `step` ms apart: `'ltr'` and `'rtl'` count each
+   * reel's place among the reels that spin, `'all'` lands them together.
+   * Replaces a {@link setStopDelays} array. Persists like it.
+   */
+  setDropOrder(order: 'ltr' | 'rtl' | 'all', step: number): void {
+    this._dropOrder = { order, step };
+    this._stopDelayOverride = null;
   }
 
   /**
@@ -1378,8 +1492,26 @@ export class SpinController implements Disposable {
       this._pressSkip(false, req);
       return;
     }
-    this._skipPending = req;
+    this._skipPending = { req, withSideEffects: false };
     this._events.emit('skip:queued', skipContextOf({ mode: req.mode, speed: req.speed ?? undefined, payload: req.payload }));
+  }
+
+  /**
+   * Hold a press that arrived while nothing spins but the round is not over
+   * (between two `expand()` steps) for the next continuation spin, which
+   * fires it the moment its result is set. `withSideEffects` is `true` for a
+   * `skip()` press, so a round's first press still boosts. Options are
+   * resolved now, so an unknown speed profile throws at the call site.
+   */
+  carrySkip(options: SkipOptions | undefined, withSideEffects: boolean): void {
+    const req = this._resolveSkip(options);
+    this._carriedSkip = { req, withSideEffects };
+    this._events.emit('skip:queued', skipContextOf({ mode: req.mode, speed: req.speed ?? undefined, payload: req.payload }));
+  }
+
+  /** Drop a carried press: the round it belonged to is over. */
+  clearCarriedSkip(): void {
+    this._carriedSkip = null;
   }
 
   /** Decide the mode and look the profile up; an unknown profile name throws at the call site. */
@@ -2061,6 +2193,29 @@ export class SpinController implements Disposable {
     return true;
   }
 
+  /**
+   * Reshape one reel at rest to `cells` visible cells, through the same
+   * path an AdjustPhase uses. For `ReelSet.addReels()` on a MultiWays set.
+   */
+  reshapeReel(reelIndex: number, cells: number): void {
+    this._applyReshape(reelIndex, cells);
+  }
+
+  /**
+   * Paint the OCCUPIED stubs of every big symbol in `grid`, for a board
+   * placed at rest from `Reel.getTarget()` (`ReelSet.addRows()` /
+   * `removeRows()`). `'land'` checks every block the way a landing does and
+   * throws on one that does not fit; `'rest'` never throws on a block already
+   * on the board.
+   */
+  coordinateBoard(
+    grid: ColumnTarget[],
+    visibleCellsForReel: (i: number) => number,
+    mode: 'land' | 'rest',
+  ): ColumnTarget[] {
+    return this._coordinateBigSymbols(grid, visibleCellsForReel, mode);
+  }
+
   // ── Internal ──────────────────────────────────────────
 
   private async _startReel(reelIndex: number, speed: SpeedProfile, generation: number): Promise<void> {
@@ -2103,7 +2258,7 @@ export class SpinController implements Disposable {
       this._activePhases.set(reelIndex, fallPhase);
       await fallPhase.run({
         spinningMode: this._spinningMode,
-        delay: reelIndex * speed.spinDelay,
+        delay: this._staggerIndex(reelIndex) * speed.spinDelay,
         events: this._events,
       } satisfies CascadeFallPhaseConfig);
     } else {
@@ -2116,7 +2271,7 @@ export class SpinController implements Disposable {
       this._activePhases.set(reelIndex, startPhase);
       await startPhase.run({
         spinningMode: this._spinningMode,
-        delay: reelIndex * speed.spinDelay,
+        delay: this._staggerIndex(reelIndex) * speed.spinDelay,
       } satisfies StartPhaseConfig);
     }
 
@@ -2522,9 +2677,15 @@ export class SpinController implements Disposable {
   }
 
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {
-    if (this._stopDelayOverride) {
-      return this._stopDelayOverride[reelIndex] ?? 0;
+    if (this._dropOrder) {
+      const { order, step } = this._dropOrder;
+      if (order === 'all') return 0;
+      const place = this._staggerIndex(reelIndex);
+      return (order === 'ltr' ? place : this._staggerCount() - 1 - place) * step;
     }
+    // Past the end of an explicit array, no delay: `setStopDelays([])` is
+    // documented as landing every reel at once.
+    if (this._stopDelayOverride) return this._stopDelayOverride[reelIndex] ?? 0;
     // With groups the barrier already orders the board, so the stagger is
     // relative to the reel's place in ITS group. Keeping the whole-board offset
     // would re-add the ordering the barrier just enforced, on top of it.
@@ -2533,7 +2694,17 @@ export class SpinController implements Disposable {
       const within = (this._reelGroups as number[][])[group].indexOf(reelIndex);
       return Math.max(within, 0) * speed.stopDelay;
     }
-    return reelIndex * speed.stopDelay;
+    return this._staggerIndex(reelIndex) * speed.stopDelay;
+  }
+
+  /** A reel's place in this spin's start / stop stagger. */
+  private _staggerIndex(reelIndex: number): number {
+    return this._staggerRank?.get(reelIndex) ?? reelIndex;
+  }
+
+  /** How many places {@link _staggerIndex} counts over this spin. */
+  private _staggerCount(): number {
+    return this._staggerRank?.size ?? this._reels.length;
   }
 
   private _cachedFrames: string[][] | null = null;
@@ -2636,10 +2807,14 @@ export class SpinController implements Disposable {
    *
    * Pure: returns a new grid; does not mutate the input. Zero-overhead for
    * slots with no big symbols (the loop runs but never matches metadata).
+   *
+   * `'rest'` is for a board already on screen, re-placed at rest (see
+   * {@link coordinateBoard}): a block that no longer fits is not an error.
    */
   private _coordinateBigSymbols(
     grid: ColumnTarget[],
     visibleCellsForReel: (i: number) => number,
+    mode: 'land' | 'rest' = 'land',
   ): ColumnTarget[] {
     const bufferStart = this._reels[0]?.bufferStart ?? 0;
     const bufferEnd = this._reels[0]?.bufferEnd ?? 0;
@@ -2664,6 +2839,18 @@ export class SpinController implements Disposable {
     const writeSlot = (reel: number, cell: number, value: string): void => {
       setTargetSlot(out[reel], cell, value);
     };
+    // Unspecify a slot: `Reel.placeStrip` random-fills it. `visible` is typed
+    // `string[]` for callers, but the pipeline reads a hole there the same way.
+    const clearSlot = (reel: number, cell: number): void => {
+      const target = out[reel];
+      if (cell < 0) {
+        if (target.bufferStart) target.bufferStart[-1 - cell] = undefined;
+      } else if (cell < target.visible.length) {
+        (target.visible as (string | undefined)[])[cell] = undefined;
+      } else if (target.bufferEnd) {
+        target.bufferEnd[cell - target.visible.length] = undefined;
+      }
+    };
 
     for (let reel = 0; reel < out.length; reel++) {
       const cells = visibleCellsForReel(reel);
@@ -2682,6 +2869,26 @@ export class SpinController implements Disposable {
         const h = meta.size.cells;
         if (w === 1 && h === 1) continue;
 
+        // At rest, a block already on the board never throws. One past the
+        // last reel is cut at the board's edge, as `removeReels()` leaves it:
+        // reels never move sideways, so the mask clips it for good. One past
+        // the bottom of a strip that got shorter is random-filled: no slots
+        // lie under its overhang, which a reel travelling up would scroll in.
+        const across = mode === 'rest' ? Math.min(w, out.length - reel) : w;
+        if (mode === 'rest') {
+          let fits = true;
+          for (let dx = 0; dx < across; dx++) {
+            if (cell + h > visibleCellsForReel(reel + dx) + bufferEnd) fits = false;
+          }
+          if (!fits) {
+            for (let dx = 0; dx < across; dx++) {
+              const end = visibleCellsForReel(reel + dx) + bufferEnd;
+              for (let dy = 0; dy < h && cell + dy < end; dy++) clearSlot(reel + dx, cell + dy);
+            }
+            continue;
+          }
+        }
+
         // Validate block fit on this reel: anchor + h must stay on the
         // strip. The strip ends at `cells + bufferEnd - 1` (last bufferEnd
         // slot) and starts at `-bufferStart` (first bufferStart slot).
@@ -2692,13 +2899,13 @@ export class SpinController implements Disposable {
             `(anchor cell + h = ${cell + h} > visibleCells + bufferEnd = ${cells + bufferEnd}).`,
           );
         }
-        if (reel + w > out.length) {
+        if (reel + across > out.length) {
           throw new Error(
             `big symbol '${id}' (${w}x${h}) at (reel=${reel}, cell=${cell}) ` +
             `exceeds reel count ${out.length}.`,
           );
         }
-        for (let dx = 0; dx < w; dx++) {
+        for (let dx = 0; dx < across; dx++) {
           const targetReel = reel + dx;
           const targetCells = visibleCellsForReel(targetReel);
           if (cell + h > targetCells + bufferEnd) {
@@ -2714,7 +2921,7 @@ export class SpinController implements Disposable {
         // Stub cells may land in bufferStart (negative cell), visible, or
         // bufferEnd (cell >= visibleCells). `writeSlot` handles all three.
         for (let dy = 0; dy < h; dy++) {
-          for (let dx = 0; dx < w; dx++) {
+          for (let dx = 0; dx < across; dx++) {
             if (dx === 0 && dy === 0) continue;
             writeSlot(reel + dx, cell + dy, OCCUPIED_SENTINEL);
           }

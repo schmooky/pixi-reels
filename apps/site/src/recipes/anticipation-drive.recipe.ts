@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app,
+//                   SilkGraphics, DebugPlaque, DEBUG_FONT
 //
 // THE GAS PEDAL: `motionModel('drive')`.
 //
@@ -61,10 +62,7 @@ const reelSet = new ReelSetBuilder()
 const H = ROWS * SIZE + (ROWS - 1) * GAP;
 const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const hud = new PIXI.Text({
-  text: 'press spin - trace is reel 4 speed, no ease anywhere',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+const hud = new DebugPlaque({ text: 'press spin - trace is reel 4 speed, no ease anywhere', minWidth: W, maxWidth: W });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
 
@@ -79,7 +77,7 @@ reelSet.addChild(hud);
 // and the charts together.
 const LANE_H = 46;
 const LANE_GAP = 8;
-const SPEED_TOP = H + 28;
+const SPEED_TOP = hud.y + hud.plateHeight + 8;
 const ACCEL_TOP = SPEED_TOP + LANE_H + LANE_GAP;
 const SPAN = 260;
 const V_MAX = 2;
@@ -87,16 +85,20 @@ const V_MAX = 2;
 // magnification that puts the drive's plateau on screen at a readable height.
 const A_MAX = 0.06;
 
-const panels = new PIXI.Graphics();
-panels.roundRect(0, SPEED_TOP, W, LANE_H, 6).fill({ color: 0x171310 });
-panels.roundRect(0, ACCEL_TOP, W, LANE_H, 6).fill({ color: 0x171310 });
+// Same plate as the plaques. SilkGraphics keeps the rounded panels, the dotted
+// guides and the traces exact at whatever scale the runner fits them to.
+const panels = new SilkGraphics();
+panels.roundRect(0, SPEED_TOP, W, LANE_H, 8, 0.6)
+  .fill({ color: 0x0b0e14, alpha: 0.84 })
+  .stroke({ width: 1, color: 0xffffff, alpha: 0.1, alignment: 'inside' });
+panels.roundRect(0, ACCEL_TOP, W, LANE_H, 8, 0.6)
+  .fill({ color: 0x0b0e14, alpha: 0.84 })
+  .stroke({ width: 1, color: 0xffffff, alpha: 0.1, alignment: 'inside' });
 // 1x spin speed on the speed lane, and zero acceleration on the accel lane.
 const oneY = SPEED_TOP + LANE_H - (1 / V_MAX) * LANE_H;
 const zeroY = ACCEL_TOP + LANE_H / 2;
-panels.moveTo(0, oneY).lineTo(W, oneY).stroke({ width: 1, color: 0x5c5147 });
-panels.moveTo(0, zeroY).lineTo(W, zeroY).stroke({ width: 1, color: 0x5c5147 });
-panels.roundRect(0, SPEED_TOP, W, LANE_H, 6).stroke({ width: 1, color: 0x332c26 });
-panels.roundRect(0, ACCEL_TOP, W, LANE_H, 6).stroke({ width: 1, color: 0x332c26 });
+panels.line(6, oneY, W - 6, oneY).stroke({ width: 1, color: 0xffffff, alpha: 0.3, dash: [2, 3] });
+panels.line(6, zeroY, W - 6, zeroY).stroke({ width: 1, color: 0xffffff, alpha: 0.3, dash: [2, 3] });
 reelSet.addChild(panels);
 
 const labels = [];
@@ -106,7 +108,7 @@ for (const [text, y, fill] of [
 ]) {
   const t = new PIXI.Text({
     text,
-    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill },
+    style: { fontFamily: DEBUG_FONT, fontSize: 9, fill },
   });
   // INSIDE the panel: a label hanging off the right edge widens the composition
   // past the reels, and the runner's fit centres on total bounds, which would
@@ -116,7 +118,7 @@ for (const [text, y, fill] of [
   labels.push(t);
 }
 
-const trace = new PIXI.Graphics();
+const trace = new SilkGraphics();
 reelSet.addChild(trace);
 
 let speeds = [];
@@ -137,9 +139,9 @@ const tick = () => {
 
   trace.clear();
   const plot = (series, y, color) => {
-    trace.moveTo(0, y(series[0]));
-    for (let i = 1; i < series.length; i++) trace.lineTo((i / SPAN) * W, y(series[i]));
-    trace.stroke({ width: 2, color });
+    const pts = [];
+    for (let i = 0; i < series.length; i++) pts.push((i / SPAN) * W, y(series[i]));
+    trace.polyline(pts).stroke({ width: 2, color, cap: 'round' });
   };
   plot(speeds, speedY, 0x6ad0ff);
   // A tween model spikes here at the start of every transition. A drive shows a
@@ -155,14 +157,14 @@ return {
     try { trace.destroy(); } catch {}
     try { panels.destroy(); } catch {}
     for (const t of labels) { try { t.destroy(); } catch {} }
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
     grid[0].visible[1] = SCAT;
     grid[1].visible[1] = SCAT;
     speeds = []; accels = []; lastSpeed = 0;
-    hud.text = 'blue = speed, orange = acceleration (bounded, ramped by jerk)';
+    hud.text = 'blue = speed, orange = accel (bounded, ramped by jerk)';
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 420));

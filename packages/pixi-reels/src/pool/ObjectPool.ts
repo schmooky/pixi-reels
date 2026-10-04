@@ -69,6 +69,27 @@ export class ObjectPool<T> implements Disposable {
     this._pooled.add(item);
   }
 
+  /** Max items kept per key; releases past it are disposed. */
+  get maxPerKey(): number {
+    return this._maxPerKey;
+  }
+
+  /**
+   * Change the per-key cap. Lowering it disposes whatever each key holds past
+   * the new cap, so a pool sized for a large board gives the memory back when
+   * the board shrinks.
+   */
+  setMaxPerKey(max: number): void {
+    this._maxPerKey = max;
+    for (const pool of this._pools.values()) {
+      while (pool.length > max) {
+        const item = pool.pop()!;
+        this._pooled.delete(item);
+        this._dispose?.(item);
+      }
+    }
+  }
+
   /** Get the number of pooled items for a key. */
   size(key: string): number {
     return this._pools.get(key)?.length ?? 0;

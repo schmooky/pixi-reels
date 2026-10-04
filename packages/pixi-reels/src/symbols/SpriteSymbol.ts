@@ -24,6 +24,8 @@ export class SpriteSymbol extends ReelSymbol {
   private _sprite: Sprite;
   private _textures: Record<string, Texture>;
   private _winTween: gsap.core.Tween | null = null;
+  /** Settles the `playWin()` promise of the tween in flight. */
+  private _winResolve: (() => void) | null = null;
   private _perspective: PerspectiveCell;
 
   constructor(options: SpriteSymbolOptions) {
@@ -76,6 +78,7 @@ export class SpriteSymbol extends ReelSymbol {
     const target = this._perspective.isActive ? this._perspective.mesh : this._sprite;
     if (!target) return;
     return new Promise<void>((resolve) => {
+      this._winResolve = resolve;
       this._winTween = this.gsap.to(target.scale, {
         x: 1.15,
         y: 1.15,
@@ -83,7 +86,11 @@ export class SpriteSymbol extends ReelSymbol {
         yoyo: true,
         repeat: 1,
         ease: 'power2.inOut',
-        onComplete: resolve,
+        onComplete: () => {
+          this._winTween = null;
+          this._winResolve = null;
+          resolve();
+        },
       });
     });
   }
@@ -104,10 +111,14 @@ export class SpriteSymbol extends ReelSymbol {
     this._perspective.destroy();
   }
 
+  /** Kill the win tween in flight and settle its promise, so no `await playWin()` hangs on a stopped win. */
   private _killWinTween(): void {
     if (this._winTween) {
       this._winTween.kill();
       this._winTween = null;
     }
+    const resolve = this._winResolve;
+    this._winResolve = null;
+    resolve?.();
   }
 }

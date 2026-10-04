@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   WILD_CARD, gsap, app, pickWeighted, SilkGraphics
 
 const A = '7', B = '8', C = '9';
 const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
@@ -18,9 +18,11 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker).build();
 
-// One overlay Graphics, redrawn on each spin. Sits above the reel strip
-// because reelSet.addChild puts it after viewport in the stacking order.
-const overlayGfx = new PIXI.Graphics();
+// One overlay, redrawn on each spin. Sits above the reel strip because
+// reelSet.addChild puts it after viewport in the stacking order. SilkGraphics
+// (pixi-silk) has the Graphics drawing API with exact anti-aliased edges, so
+// the rounded outlines and the payline stay smooth at any fitted scale.
+const overlayGfx = new SilkGraphics();
 reelSet.addChild(overlayGfx);
 
 function drawCellOutline(reel, cell, color) {
@@ -36,9 +38,8 @@ function drawPayline(cols, cell, color) {
     const b = reelSet.getCellBounds(reel, cell);
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   });
-  overlayGfx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) overlayGfx.lineTo(pts[i].x, pts[i].y);
-  overlayGfx.stroke({ color, width: 3, alpha: 0.85 });
+  // Translucent, and the joints still do not double-blend.
+  overlayGfx.polyline(pts).stroke({ color, width: 3, alpha: 0.85, cap: 'round' });
 }
 
 // Fixed result: middle cell is all SEVEN. a full-cell payline win.

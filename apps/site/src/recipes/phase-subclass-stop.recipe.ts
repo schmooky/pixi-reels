@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, CardSymbol, CARD_DECK, PIXI, app,
+//                   DebugPlaque
 //
 // SUBCLASS A BUILT-IN PHASE. The built-in phase classes are exported, so a
 // small change to one is a subclass rather than a rewrite.
@@ -19,6 +20,7 @@ const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
 // Flash layer, drawn under the reels' own container so the pulse reads as a
 // backlight behind the landing column.
@@ -73,9 +75,10 @@ for (let i = 0; i < REELS; i++) {
   flashes.push(g);
 }
 
-const hud = new PIXI.Text({
+const hud = new DebugPlaque({
   text: 'StopPhase subclassed: each reel backlights as it begins to stop',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
@@ -85,7 +88,7 @@ return {
   cleanup: () => {
     for (const g of flashes) gsap.killTweensOf(g);
     try { flashLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   // Tap again mid-spin: the slam routes through the same subclass via
   // `onSkip`, so the flash fires on skipped reels too.

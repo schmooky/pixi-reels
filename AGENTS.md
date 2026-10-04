@@ -59,7 +59,7 @@ pixi-reels/
 │   │   ├── utils/                 Disposable, TickerRef
 │   │   ├── testing/               FakeTicker, HeadlessSymbol, createTestReelSet, harness
 │   │   ├── spine/                 SpineReelSymbol (Bonbon vocabulary) -> subpath export
-│   │   ├── debug/                 debugSnapshot, debugGrid, enableDebug
+│   │   ├── debug/                 debugSnapshot, debugGrid, enableDebug; the pixi-reels/debug subpath (debugOverlay, DebugPlaque, SpinMetrics)
 │   │   └── index.ts               the only public barrel
 │   └── tests/                     vitest (unit + integration)
 ├── apps/site/                     Astro + shadcn docs site
@@ -255,9 +255,12 @@ In the browser console (or via `preview_eval`):
 __PIXI_REELS_DEBUG.log()        // ASCII grid + state
 __PIXI_REELS_DEBUG.snapshot()   // full JSON state
 __PIXI_REELS_DEBUG.trace()      // log every domain event as it fires
+__PIXI_REELS_DEBUG.metrics()    // every spin since enableDebug: per-reel phase spans, stop/land times, teases, skips
 ```
 
 [ADR 006](./docs/adr/006-debug-mode.md) documents the shape of the snapshot. No PixiJS types in the output. it is plain JSON, safe to `JSON.stringify`.
+
+The visual half is `pixi-reels/debug` (needs the optional peer `pixi-silk`): `debugOverlay(reelSet, { layers, live, ticker })` draws cells, mask, axis, a per-reel hud, a metrics plaque and a phase timeline; `overlay.describe()` returns the same as JSON. See [ADR 022](./docs/adr/022-debug-subpath-on-pixi-silk.md). Recipe readouts use `DebugPlaque` and `SilkGraphics`, never bare `PIXI.Text` / `PIXI.Graphics`.
 
 ---
 

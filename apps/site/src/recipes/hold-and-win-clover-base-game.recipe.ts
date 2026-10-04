@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, RoundedRectMaskStrategy, HoldAndWinBuilder, CloverSymbol,
-//           loadHwCloverSpines, CLOVER_FRUITS, CLOVER_FEATURES, CLOVER_CELL, PIXI, gsap, app
+//           loadHwCloverSpines, CLOVER_FRUITS, CLOVER_FEATURES, CLOVER_CELL, gsap, app, DebugPlaque
 //
 // The base game of a clover Hold & Win slot, on rectangular cells. Fruits and
 // clovers share the strips: a GOLD clover is money and spins past with a
@@ -53,7 +53,7 @@ const base = new ReelSetBuilder()
   })
   .symbolData(UNMASK)
   .maskStrategy(new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS }))
-  .speed('normal', CLOVER_SPEED)
+  .speed('normal', CLOVER_REEL_SPEED)
   .ticker(app.ticker)
   .build();
 base.position.set(ox, oy);
@@ -81,8 +81,7 @@ board.container.position.set(ox, oy);
 board.container.visible = false;
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({ text: 'press spin · 3+ clovers trigger the feature', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin · 3+ clovers trigger the feature', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, oy + boardH + 24);
 app.stage.addChild(hud);
 
@@ -143,7 +142,7 @@ async function runFeature(clovers) {
 let busy = false;
 return {
   board,
-  cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
+  cleanup: () => { try { hud.destroy({ children: true }); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

@@ -1,0 +1,102 @@
+---
+title: Infinity reels
+order: 8.5
+eyebrow: Building blocks
+description: The base spin lands, then the board grows sideways a reel at a
+  time, as far as the server's result says. One expand() call per round, and
+  removeReels() to shrink back. Rows can grow too.
+---
+
+Infinity reels: the base spin lands, and while the win keeps going the board grows sideways, a reel at a time, as far as the server's result says. In pixi-reels that is one call per round: `reelSet.expand()`. Live demos are on the [infinity reels recipe page](/recipes/infinity-reels/).
+
+## 1. The server's result
+
+The server decides everything: the base board and every reel the board grows by, in order. Each reel is one `ColumnTarget`, the same shape `setResult()` takes.
+
+```ts
+interface InfinityResult {
+  base: ColumnTarget[];  // one per reel the builder made
+  extra: ColumnTarget[]; // the reels the board grows by, in order; often none
+}
+```
+
+## 2. Spin the base, then expand
+
+```ts
+const spin = reelSet.spin();
+const res = await server.spin();
+reelSet.setResult(res.base);
+await spin;
+
+await reelSet.expand({
+  columns: res.extra,
+  step: 1, // reels added and spun per step
+  onStepAdded: () => camera.panTo(reelSet.viewport.maskWidth), // the board's new width
+  onStepLanded: (step) => showWin(step.result.symbols),        // the whole board so far
+});
+```
+
+Each step adds its reels, spins only them with every earlier reel held, and lands them on their columns. `expand()` awaits your hooks, so a camera pan or a win readout plays before the next step. It validates the columns before the first reel is added, so a bad result throws on an untouched board.
+
+## 3. Next round: shrink back
+
+```ts
+reelSet.removeReels(); // back to the reels the builder made; a no-op when the board did not grow
+```
+
+That is the whole mechanic. The rest is choices.
+
+## Rows can grow too
+
+`addRows(count, { cells })` makes every reel `count` rows taller, at its own cell size, and the viewport and mask grow with it. `cells` is what the new rows show, one array per reel, from the server. Inside an expansion, grow the rows between steps, in `onStepLanded`; the reels after that arrive at the new height. `removeRows()` goes back to the rows the builder made.
+
+```ts
+await reelSet.expand({
+  columns: res.extra, // a column may be taller than the board once a row unlocks
+  onStepLanded: (step) => {
+    const row = res.rows[step.index]; // the server's cells for an unlocked row, or nothing
+    if (row) reelSet.addRows(1, { cells: row });
+  },
+});
+// next round
+reelSet.removeReels();
+reelSet.removeRows();
+```
+
+On MultiWays the rows are each reel's shape: an `expand()` column's `visible.length` is that reel's cell count, inside the fixed reel height.
+
+## Ways: count them and draw them
+
+The library computes no wins (see ADR 007); the server does. Two things help you show them.
+
+- **The board's ways** is the product of the reels' row counts: `reelSet.reels.reduce((ways, reel) => ways * reel.visibleCells, 1)`. Eight reels of three rows is 6,561 ways; eight MultiWays reels of seven is 5,764,801.
+- **`WinLines`** in `pixi-reels/debug` draws a payway as a lattice: every winning cell joined to every winning cell on the next reel. A win of millions of ways is still a few dozen segments. It draws the cells you hand it.
+
+```ts
+import { WinLines } from 'pixi-reels/debug';
+
+const lines = new WinLines(reelSet);
+lines.ways(win.perReel); // winning cell indices per reel, from your server: [[0, 2], [1], [0, 1, 2]]
+reelSet.events.on('spin:start', () => lines.clear());
+```
+
+The demos on this site stand in for the server with `evaluateWays()` and `countWays()` from the repository's private `@pixi-reels/cheats` package. Copy them if you want the same left-to-right ways math in a prototype.
+
+## Skip
+
+The steps are one round. The first `skipSpin()` lands the step in flight and speeds up the rest: the fastest profile in standard mode; in cascade mode every later step lands at once. A press between steps, while a hook runs, carries to the next step. To land everything still to come at once, abort the expansion's `signal`.
+
+**Gotcha:** an aborted expansion lands the remaining reels in one step, at the height the board has then. If your rows grow during the expansion, slam each step instead of aborting.
+
+## Events
+
+| Event | When |
+|---|---|
+| `expand:start` | The chain starts: the board grows from `from` reels to `to`. |
+| `reels:added` | A step's reels are on the board. Move the camera here or in `onStepAdded`. |
+| `expand:stepAdded` / `expand:stepLanded` | A step's reels arrived / landed, before its hooks. |
+| `rows:added` / `rows:removed` | `addRows()` / `removeRows()` changed every reel's height. |
+| `expand:complete` | Every step landed. Carries the final board. |
+| `expand:end` | Always last: `'complete'` or `'failed'`. Put the UI back here. |
+
+Each step also fires the usual `spin:*` events. `reelSet.isExpanding` tells them apart from a new round.

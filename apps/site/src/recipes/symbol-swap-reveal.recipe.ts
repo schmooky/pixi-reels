@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, gsap, app,
+//                   DebugPlaque
 //
 // MYSTERY REVEAL: OUT, SWAP, IN.
 //
@@ -50,11 +51,9 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const H = ROWS * SIZE + (ROWS - 1) * GAP;
+const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const hud = new PIXI.Text({
-  text: 'press spin - the ? tiles land, then reveal',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+const hud = new DebugPlaque({ text: 'press spin - the ? tiles land, then reveal', minWidth: W, maxWidth: W });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
 
@@ -64,7 +63,7 @@ let mysteryReel = 1;
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
     for (let cell = 0; cell < ROWS; cell++) grid[mysteryReel].visible[cell] = MYST;

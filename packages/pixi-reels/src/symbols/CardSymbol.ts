@@ -48,6 +48,8 @@ export class CardSymbol extends ReelSymbol {
   private _textColor: number;
   private _gfx: Graphics;
   private _text: Text;
+  /** The win in flight: its timeline, its two fill calls and the promise to settle. */
+  private _win: { tl: gsap.core.Timeline; calls: gsap.core.Tween[]; resolve: () => void } | null = null;
 
   constructor(opts: CardSymbolOptions) {
     super();
@@ -82,6 +84,8 @@ export class CardSymbol extends ReelSymbol {
   }
 
   async playWin(): Promise<void> {
+    // A win already playing ends here, its promise settled, before this one starts.
+    this._endWin();
     return new Promise((resolve) => {
       // Animate only the glyph - the card body stays put. Useful for big
       // symbols (the rectangle is the cell footprint) and any setting
@@ -93,6 +97,7 @@ export class CardSymbol extends ReelSymbol {
       const originalFill = this._textColor;
       const tl = this.gsap.timeline({
         onComplete: () => {
+          this._win = null;
           this._text.scale.set(1, 1);
           this._text.rotation = 0;
           this._text.style.fill = originalFill;
@@ -106,18 +111,41 @@ export class CardSymbol extends ReelSymbol {
         .to(this._text.scale, { x: 1, y: 1, duration: 0.18, ease: 'power2.out' }, 0.32);
       // Glyph fill flashes warm gold mid-pulse - `Text.style.fill` isn't
       // a tweenable target on every Pixi version, so we set it discretely.
-      this.gsap.delayedCall(0.06, () => (this._text.style.fill = 0xffe168));
-      this.gsap.delayedCall(0.42, () => (this._text.style.fill = originalFill));
+      const calls = [
+        this.gsap.delayedCall(0.06, () => (this._text.style.fill = 0xffe168)),
+        this.gsap.delayedCall(0.42, () => (this._text.style.fill = originalFill)),
+      ];
+      this._win = { tl, calls, resolve };
     });
   }
 
   stopAnimation(): void {
+    this._endWin();
     this.gsap.killTweensOf(this._text);
     this.gsap.killTweensOf(this._text.scale);
     this._text.scale.set(1, 1);
     this._text.rotation = 0;
     this._text.style.fill = this._textColor;
     this._gfx.alpha = 1;
+  }
+
+  protected override onDestroy(): void {
+    this._endWin();
+  }
+
+  /**
+   * Kill the win in flight and settle its promise. Killing the glyph's tweens
+   * alone would leave the timeline's `onComplete` and both fill calls armed,
+   * and they would fire into a symbol that has since been recycled or
+   * destroyed, with the `await playWin()` never settling.
+   */
+  private _endWin(): void {
+    const win = this._win;
+    if (!win) return;
+    this._win = null;
+    win.tl.kill();
+    for (const call of win.calls) call.kill();
+    win.resolve();
   }
 
   resize(width: number, height: number): void {

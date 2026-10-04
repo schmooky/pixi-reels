@@ -88,6 +88,7 @@ const ENTRY_FILES = [
   path.join(libRoot, 'index.ts'),
   path.join(libRoot, 'spine', 'index.ts'),
   path.join(libRoot, 'testing', 'index.ts'),
+  path.join(libRoot, 'debug', 'index.ts'),
 ];
 
 const NARRATIVE_GLOB_DIRS = [

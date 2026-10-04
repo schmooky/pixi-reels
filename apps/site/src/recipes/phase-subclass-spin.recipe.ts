@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpinPhase, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, SpinPhase, CardSymbol, CARD_DECK, app,
+//                   DebugPlaque
 //
 // SUBCLASS `SpinPhase`. Per-reel spin floor, decided by the phase itself.
 //
@@ -45,19 +46,16 @@ const reelSet = new ReelSetBuilder()
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
-// The face loads async from Google Fonts, and PIXI.Text bakes its metrics
-// at construction. Without this the first paint measures the fallback and
-// only corrects itself on the next label update.
-await document.fonts.load('9px "Fira Code"');
-
 const labels = [];
 for (let i = 0; i < REELS; i++) {
-  const t = new PIXI.Text({
+  const t = new DebugPlaque({
     text: `${floorFor(i)}ms\nfloor`,
-    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill: i === 0 ? 0x6b7280 : 0xfef08a },
+    fontSize: 9,
+    color: i === 0 ? 0x9ca3af : 0xfef08a,
+    align: 'center',
+    anchor: { x: 0.5, y: 0 },
+    minWidth: SIZE,
   });
-  t.anchor.set(0.5, 0);
-  t.style.align = 'center';
   t.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 8);
   reelSet.addChild(t);
   labels.push(t);
@@ -88,7 +86,7 @@ reelSet.events.on('spin:reelLanded', (i) => {
 
 return {
   reelSet,
-  cleanup: () => { for (const t of labels) { try { t.destroy(); } catch {} } },
+  cleanup: () => { for (const t of labels) { try { t.destroy({ children: true }); } catch {} } },
   onSpin: async () => {
     for (let i = 0; i < REELS; i++) labels[i].text = `${floorFor(i)}ms\nfloor`;
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

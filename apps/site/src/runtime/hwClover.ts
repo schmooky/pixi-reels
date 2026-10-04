@@ -43,23 +43,37 @@ export const CLOVER_FEATURES = ['collect', 'multi', 'mystery', 'super'] as const
  * The spin feel for a clover cell. The engine's NORMAL preset lands with a
  * 56px, 600ms bounce - a fifth of a reel window, right for a tall reel and
  * far too much for an 85px cell, where the whole clover visibly overshoots.
- * A few pixels over a short beat reads as a settle instead.
+ * A few pixels over a short beat reads as a settle instead. `stopDelay` is
+ * the step of the board's diagonal landing wave: 70ms a step.
  */
 export const CLOVER_SPEED: SpeedProfile = {
   ...SpeedPresets.NORMAL,
   minimumSpinTime: 320,
+  stopDelay: 70,
   bounceDistance: 6,
   bounceDuration: 240,
+};
+
+/**
+ * {@link CLOVER_SPEED} for a plain clover reel set. `stopDelay` is the gap
+ * between two reels stopping there, not a wave step, so the reels keep the
+ * NORMAL preset's 140ms instead of the board's 70.
+ */
+export const CLOVER_REEL_SPEED: SpeedProfile = {
+  ...CLOVER_SPEED,
+  stopDelay: SpeedPresets.NORMAL.stopDelay,
 };
 
 /**
  * The three speeds a clover board offers, for `HoldAndWinBuilder.speeds()`:
  * the engine's NORMAL / TURBO / SUPER_TURBO, each with the cell-sized bounce
  * of {@link CLOVER_SPEED}. `board.setSpeed('turbo')` moves every cell at once.
+ * The landing wave tightens with the speed through `stopDelay`: 70ms a step,
+ * then 25, then none (SUPER_TURBO's own 0).
  */
 export const CLOVER_SPEEDS: Record<'normal' | 'turbo' | 'superTurbo', SpeedProfile> = {
   normal: CLOVER_SPEED,
-  turbo: { ...SpeedPresets.TURBO, minimumSpinTime: 180, bounceDistance: 4, bounceDuration: 160 },
+  turbo: { ...SpeedPresets.TURBO, minimumSpinTime: 180, stopDelay: 25, bounceDistance: 4, bounceDuration: 160 },
   superTurbo: { ...SpeedPresets.SUPER_TURBO, minimumSpinTime: 80, bounceDistance: 2, bounceDuration: 100 },
 };
 

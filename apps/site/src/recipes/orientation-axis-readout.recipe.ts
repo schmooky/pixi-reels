@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, app, pickWeighted
+//                   WILD_CARD, app, pickWeighted, SilkGraphics, DebugPlaque
 
 // Ask the reel which way it goes instead of remembering.
 //
@@ -42,12 +42,12 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-const gfx = new PIXI.Graphics();
+const gfx = new SilkGraphics();
 reelSet.addChild(gfx);
 
 const labels = [];
 const ARM = 16;   // arrow half-length
-const HEAD = 6;
+const HEAD = 7;
 
 for (let i = 0; i < REELS; i++) {
   const axis = reelSet.getReel(i).axis;
@@ -58,27 +58,24 @@ for (let i = 0; i < REELS; i++) {
   const cx = last.x + last.width + 24;
   const cy = last.y + last.height / 2;
 
-  gfx.moveTo(cx - step.x * ARM, cy - step.y * ARM)
-    .lineTo(cx + step.x * ARM, cy + step.y * ARM)
-    .stroke({ color: 0xff6b35, width: 3 });
-  // Head: step rotated a quarter turn each way, so it follows any axis.
-  gfx.moveTo(cx + step.x * (ARM - HEAD) - step.y * HEAD, cy + step.y * (ARM - HEAD) + step.x * HEAD)
-    .lineTo(cx + step.x * ARM, cy + step.y * ARM)
-    .lineTo(cx + step.x * (ARM - HEAD) + step.y * HEAD, cy + step.y * (ARM - HEAD) - step.x * HEAD)
-    .stroke({ color: 0xff6b35, width: 3 });
+  // Shaft up to the head's base, then the head as one filled triangle: step
+  // rotated a quarter turn each way, so it follows any axis.
+  gfx.line(cx - step.x * ARM, cy - step.y * ARM, cx + step.x * (ARM - HEAD), cy + step.y * (ARM - HEAD))
+    .stroke({ color: 0xff6b35, width: 3, cap: 'round' });
+  gfx.triangle(
+    cx + step.x * ARM, cy + step.y * ARM,
+    cx + step.x * (ARM - HEAD) - step.y * HEAD, cy + step.y * (ARM - HEAD) + step.x * HEAD,
+    cx + step.x * (ARM - HEAD) + step.y * HEAD, cy + step.y * (ARM - HEAD) - step.x * HEAD,
+    1,
+  ).fill(0xff6b35);
 
-  const text = new PIXI.Text({
+  const text = new DebugPlaque({
     text:
       `r${i} ${axis.orientation} / ${axis.direction}\n` +
       `main=${axis.mainProp} cross=${axis.crossProp} feed=${axis.feedEdge}`,
-    style: {
-      fontFamily: 'monospace',
-      fontSize: 12,
-      lineHeight: 17,
-      fill: 0xff6b35,
-    },
+    accent: 0xff6b35,
+    anchor: { x: 0, y: 0.5 },
   });
-  text.anchor.set(0, 0.5);
   text.position.set(cx + ARM + 12, cy);
   reelSet.addChild(text);
   labels.push(text);
@@ -91,7 +88,7 @@ return {
       Array.from({ length: CELLS }, () => pickWeighted(weights)),
     ),
   cleanup: () => {
-    for (const t of labels) t.destroy();
+    for (const t of labels) t.destroy({ children: true });
     gfx.destroy();
   },
 };

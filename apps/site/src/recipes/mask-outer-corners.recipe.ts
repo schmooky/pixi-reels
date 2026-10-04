@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
-//                   CardSymbol, CARD_DECK, PIXI, app
+//                   CardSymbol, CARD_DECK, app, SilkGraphics, DebugPlaque
 //
 // ONE RECT PER REEL, ONLY THE WINDOW'S CORNERS ROUNDED.
 //
@@ -38,16 +38,14 @@ const reelSet = new ReelSetBuilder()
 
 const W = REELS * SIZE, H = ROWS * SIZE;
 
-// The frame the mask is cut to match: one rounded window around the grid...
-const outline = new PIXI.Graphics();
+// The frame the mask is cut to match: one rounded window around the grid,
+// radius per corner as [topLeft, topRight, bottomRight, bottomLeft]...
+const outline = new SilkGraphics();
 const rr = (on) => (on ? RADIUS : 0);
 const c = CORNERS ?? { topLeft: true, topRight: true, bottomLeft: true, bottomRight: true };
-outline.roundShape([
-  { x: 0, y: 0, radius: rr(c.topLeft) },
-  { x: W, y: 0, radius: rr(c.topRight) },
-  { x: W, y: H, radius: rr(c.bottomRight) },
-  { x: 0, y: H, radius: rr(c.bottomLeft) },
-], RADIUS).stroke({ width: 2, color: 0x6ad0ff, alpha: 0.85 });
+outline
+  .roundRect(0, 0, W, H, [rr(c.topLeft), rr(c.topRight), rr(c.bottomRight), rr(c.bottomLeft)])
+  .stroke({ width: 2, color: 0x6ad0ff, alpha: 0.85 });
 // ...and the seams between the reels' own rects, which stay straight.
 for (let i = 1; i < REELS; i++) {
   outline.moveTo(i * SIZE, 0).lineTo(i * SIZE, H);
@@ -55,9 +53,11 @@ for (let i = 1; i < REELS; i++) {
 outline.stroke({ width: 1, color: 0x6ad0ff, alpha: 0.3 });
 reelSet.addChild(outline);
 
-const hud = new PIXI.Text({
-  text: `scope: 'outer', radius ${RADIUS}, gap 0  -  one rect per reel, seams square, window corners round`,
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+// Two rows: the settings, then what they add up to.
+const hud = new DebugPlaque({
+  text: `scope: 'outer', radius ${RADIUS}, gap 0\none rect per reel, seams square, window corners round`,
+  minWidth: W,
+  maxWidth: W,
 });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
@@ -66,7 +66,7 @@ return {
   reelSet,
   cleanup: () => {
     try { outline.destroy(); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

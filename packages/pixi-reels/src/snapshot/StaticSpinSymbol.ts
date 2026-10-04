@@ -217,12 +217,19 @@ export class StaticSpinSymbol extends ReelSymbol {
   }
 
   resize(width: number, height: number): void {
+    const resized = width !== this._cellW || height !== this._cellH;
     this._cellW = width;
     this._cellH = height;
     this._staticSprite.position.set(width / 2, height / 2);
     this._blurSprite.position.set(width / 2, height / 2);
-    this._fitSprites();
     this._inner.resize(width, height);
+    // A MultiWays reshape resizes the cell mid-spin. Re-point the snapshot at
+    // the capture for the NEW size rather than stretching the old one.
+    if (resized && this._spinning && this.symbolId !== '') {
+      this._showSnapshot(this.symbolId, { instant: true });
+      return;
+    }
+    this._fitSprites();
   }
 
   protected override onDestroy(): void {
@@ -299,11 +306,13 @@ export class StaticSpinSymbol extends ReelSymbol {
    * Static texture for `symbolId`, capturing from the inner symbol on a
    * cache miss. If the inner symbol currently holds a different identity
    * (mid-spin wrap), it is briefly activated offscreen for the capture and
-   * deactivated again. one-time cost per symbolId; avoid it entirely with
+   * deactivated again. one-time cost per symbolId and cell size; avoid it with
    * `prewarmSpinTextures`.
    */
   private _ensureStatic(symbolId: string) {
-    const cached = this._cache.getStatic(symbolId);
+    // Size-keyed: on MultiWays the same id is a different cell size on every
+    // reel, and each reel has to spin on a snapshot of ITS size.
+    const cached = this._cache.getStatic(symbolId, this._cellW, this._cellH);
     if (cached) return cached;
 
     const needsTempActivation = this._inner.symbolId !== symbolId;

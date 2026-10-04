@@ -66,6 +66,14 @@ Core never draws lines. subscribe to win:group and plot your own overlay from ge
 
 <RecipeDemo code="paylines-events-only" />
 
+<a id="win-lines"></a>
+
+## Paylines and payways with WinLines
+
+`WinLines` from `pixi-reels/debug` draws a payline as one stroke through one cell per reel, and a payway as every winning cell joined to every winning cell on the next reel. Spins alternate between ten paylines, drawn as the presenter reaches each, and ways, every winning lattice at once.
+
+<RecipeDemo code="win-lines" height={400} />
+
 <a id="paylines-custom-animation"></a>
 
 ## Custom per-symbol animation

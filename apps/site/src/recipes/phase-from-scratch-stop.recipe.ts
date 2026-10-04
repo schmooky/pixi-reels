@@ -1,5 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, CardSymbol, CARD_DECK, PIXI, gsap, app
+// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, CardSymbol, CARD_DECK, gsap, app,
+//                   DebugPlaque
 //
 // A STOP PHASE WRITTEN FROM SCRATCH, on `ReelPhase`. The instant stop.
 //
@@ -95,16 +96,18 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const hud = new PIXI.Text({
+const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+const hud = new DebugPlaque({
   text: 'StopPhase replaced: stop dead, place, slide a tenth of a cell in, land, bounce.',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fontWeight: '600', fill: 0x9c8f78 },
+  minWidth: TOTAL_W,
+  maxWidth: TOTAL_W,
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

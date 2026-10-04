@@ -7,7 +7,11 @@ description: Snapshot the reel state as JSON, render an ASCII grid, trace every 
 
 PixiJS draws to a canvas, so AI agents and automated tooling can't *see* the
 reels. pixi-reels ships three utilities that solve this: `debugSnapshot`,
-`debugGrid`, and `enableDebug`.
+`debugGrid`, and `enableDebug`. They are data only and live in the main entry.
+
+Drawing the same state on the canvas (cell geometry, a per-reel hud, a metrics
+plaque and a phase timeline for every spin) is the `pixi-reels/debug` subpath,
+[further down](#the-visual-overlay).
 
 ## One-liner: attach to window
 
@@ -30,7 +34,20 @@ __PIXI_REELS_DEBUG.log();
 
 const stop = __PIXI_REELS_DEBUG.trace();  // logs every event on the set bus from now on
 stop();                                    // and stops
+
+__PIXI_REELS_DEBUG.metrics();
+// { rounds: [{ index: 1, profile: 'normal', duration: 2310, landOrder: [0, 1, 2, 3, 4],
+//              reels: [{ phases: [{ phase: 'start', start: 0, end: 212 }, ...],
+//                        stoppingAt: 820, landedAt: 1204, tease: null, ... }, ...],
+//              skips: [], ... }],
+//   totals: { rounds: 1, skipped: 0, averageDuration: 2310 } }
 ```
+
+`metrics()` answers for every spin since `enableDebug` was called: per reel,
+when each phase started and ended, when the reel was asked to stop, when it
+landed, its tease window; per round, every skip press, the landing order, and
+how many symbols were swapped into cells. Times are ms since the round's
+`spin:start`. It is the text half of the timeline described below.
 
 `trace()` is `reelSet.events.onAny(...)` with a `console.log` in it. The same
 hook is yours on every bus, and `onNotice` is its twin for engine notices:
@@ -55,7 +72,11 @@ payload unwrapped under the event, one member per line. The filter
 takes words and `!words` (`skip !symbol:created`), pause freezes the view
 while the recorder keeps going, copy puts the visible rows on the clipboard
 as JSON. Engine notices show up as `notice` rows. On a recipe that returns a
-reel set the same button also draws the geometry overlay described below.
+reel set the same button also draws the overlay described below, with a
+toggle per group of layers: `info` (hud, metrics, timeline), `grid` (mask,
+cells, blocks, pins), `motion` (axis, feed, buffers, thresholds) and
+`bounds`. Every demo records its spins from the moment it mounts, so the
+timeline shows the spin that made you reach for the button.
 
 ## Programmatic snapshot
 
@@ -126,14 +147,22 @@ Two things to know about the buffer:
 ## The visual overlay
 
 `debugSnapshot` tells you what the engine thinks; `debugOverlay` draws it on
-top of the canvas, so you can see whether the picture agrees.
+top of the canvas, so you can see whether the picture agrees. It lives at the
+`pixi-reels/debug` subpath and draws with
+[pixi-silk](https://pixi-silk.schmooky.dev), an optional peer dependency that
+renders every shape as an exact distance field, so a 1px outline stays a clean
+1px line at whatever scale the reel set is fitted to:
+
+```bash
+pnpm add -D pixi-silk
+```
 
 ```ts
-import { debugOverlay } from 'pixi-reels';
+import { debugOverlay } from 'pixi-reels/debug';
 
 const overlay = debugOverlay(reelSet, {
-  layers: ['cells', 'axis', 'bounds'],   // or 'all'
-  live: true,                            // redraw each tick; false = draw once
+  layers: ['cells', 'hud', 'timeline'],  // or 'all'
+  live: true,                            // redraw each tick; false = follow the spin events
   ticker: app.ticker,                    // drive the live redraw off your ticker
 });
 
@@ -141,6 +170,11 @@ overlay.setLayers(['cells', 'pins']);
 overlay.redraw();
 overlay.destroy();
 ```
+
+A build that never imports `pixi-reels/debug` never needs `pixi-silk`. It draws
+through WebGL: on a WebGPU renderer the overlay's shapes draw nothing, so debug
+on `app.init({ preference: 'webgl' })`. Building one in a headless test needs a
+canvas stand-in; the [4.0 migration guide](/docs/migrating-to-4-0/) has it.
 
 | Layer | Draws | Catches |
 |---|---|---|
@@ -153,11 +187,73 @@ overlay.destroy();
 | `bounds` | Real `view.getBounds()` per symbol | Spine overrun past its cell |
 | `blocks` | `getBlockBounds` outline for big symbols | 2x2 anchors, and block/screen transposition |
 | `pins` | Pin cells and pin-overlay positions | A pin overlay drifting off its cell |
-| `hud` | Per-reel `r0 VF feed=start spd=0.0 idle cells=3` | Reading state without opening the console |
+| `hud` | A row per reel, `r0 VF feed=start spd=0.0 idle cells=3`, with a phase swatch and a speed meter | Reading state without opening the console |
+| `metrics` | A plaque under the mask for the current round: its length, time to the first stop, landing order and the largest gap, tease windows, the last skip press, symbols built, events, fps | "Why did that spin feel slow?" answered with numbers |
+| `timeline` | Every reel's phases for the round on one time axis, the speed trace on top, a tick at the stop request, a dot at the landing, a dashed line per skip press | Stagger, tease holds and a slam that cut a stop short, as shapes |
 
 The overlay draws into the `ReelSet` itself, so it renders above the viewport
-*and* above the spotlight container. It is dev-only: it reads internals, it is
-not semver-protected, and it must not reach a production bundle.
+*and* above the spotlight container. The geometry and the hud stay inside the
+mask; `metrics` and `timeline` sit under it, side by side when the set is wide
+enough, so they add to the reel set's bounds: fit your camera after enabling
+them. It is dev-only: it reads internals, it is not semver-protected, and it
+must not reach a production bundle.
+
+### The timeline, read
+
+Each lane is one reel. The colored blocks are its phases, in the colors
+`PhaseCardSymbol` paints (sky `start`, blue `spin`, amber `anticipation`,
+violet `stop`); the white line on top is `speedNormalized`, so a surge-then-
+crawl tease is a bump and a slope, not a guess. The white tick is when the
+controller asked the reel to stop, the green dot is when it came to rest, and
+the amber underline is its tease window. A red dashed line is a slam press, a
+yellow one a quicken. While the round runs a cursor marks now.
+
+### Recording from the start
+
+The `metrics` and `timeline` layers read a `SpinMetrics`. By default the
+overlay starts its own, so they show the rounds from the moment it was
+created. To see the spin before that, keep a recorder running and hand it
+over:
+
+```ts
+import { SpinMetrics, debugOverlay } from 'pixi-reels/debug';
+
+const metrics = new SpinMetrics(reelSet, { ticker: app.ticker }); // at boot
+// ... later, when something looks wrong:
+debugOverlay(reelSet, { layers: ['timeline', 'metrics'], live: true, ticker: app.ticker, metrics });
+```
+
+`metrics.current` is the latest round, `metrics.rounds` the last 20,
+`metrics.snapshot()` a plain-JSON copy. Without a `ticker` it still records
+every event-driven time; the ticker adds the speed trace. It lets go of the
+buses when the reel set is destroyed.
+
+### DebugPlaque
+
+The plate every panel is built from, exported for your own readouts: rows of
+monospace text on a smooth rounded plate, with an optional title, swatches
+for a legend and meters for a speed or a progress. It sizes itself from the
+character count, so it is exact without measuring text and cheap to update
+every frame.
+
+```ts
+import { DebugPlaque } from 'pixi-reels/debug';
+
+const hud = new DebugPlaque({ text: 'press spin', minWidth: gridWidth });
+hud.position.set(0, gridHeight + 10);
+reelSet.addChild(hud);
+
+hud.text = `landed ${count} reels`;             // like a Text
+hud.update({ rows: [{ text: 'spin', swatch: 0x2563eb, meter: reel.speedNormalized }] });
+```
+
+`minWidth` and `reserveRows` fix its size up front, and `maxWidth` wraps long
+rows, so a readout never outgrows a camera that was fitted to it once.
+
+Every status line, label and legend in the recipes on this site is one.
+`roundRectPath(g, x, y, w, h, r)` is its companion for dashed boxes:
+pixi-silk dashes paths but strokes `roundRect` solid, so it traces the box as
+one path and `.stroke({ dash: [7, 5] })` then dashes it round the corners.
 
 ### describe() - the overlay as data
 
@@ -168,6 +264,7 @@ back plain JSON:
 
 ```ts
 const info = debugOverlay(reelSet, { layers: 'all' }).describe();
+// info.round is the round the metrics and timeline panels show, as plain JSON
 
 info.reels[0];
 // {

@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
 //                   PathMaskStrategy, composeMasks, inset,
-//                   CardSymbol, CARD_DECK, PIXI, app
+//                   CardSymbol, CARD_DECK, PIXI, app, DebugPlaque
 //
 // TWO DECORATORS: `inset(...)` AND `composeMasks(...)`.
 //
@@ -65,9 +65,10 @@ bannerText.position.set(W / 2, BANNER_H / 2);
 banner.addChild(bannerText);
 reelSet.viewport.maskedContainer.addChild(banner);
 
-const hud = new PIXI.Text({
-  text: 'composeMasks(inset(rounded, 4), bannerStrip)  -  union only',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+const hud = new DebugPlaque({
+  text: 'composeMasks(inset(rounded, 4), bannerStrip) - union only',
+  minWidth: W,
+  maxWidth: W,
 });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
@@ -82,7 +83,7 @@ return {
   cleanup: () => {
     drift.kill();
     try { banner.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
+    try { hud.destroy({ children: true }); } catch {}
   },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));

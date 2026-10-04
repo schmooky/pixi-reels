@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, anticipationForScatters,
-//                   CardSymbol, CARD_DECK, PIXI, app
+//                   CardSymbol, CARD_DECK, app, DebugPlaque
 //
 // A DIFFERENT CURVE PER REEL, BY TEASE ORDER.
 //
@@ -38,22 +38,22 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const H = ROWS * SIZE + (ROWS - 1) * GAP;
-const hud = new PIXI.Text({
-  text: 'press spin',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
-});
+const W = REELS * SIZE + (REELS - 1) * GAP;
+// One row per tease reel, three reserved from the start: the canvas is
+// fitted to what is here at setup.
+const hud = new DebugPlaque({ text: 'press spin', reserveRows: 3, minWidth: W, maxWidth: W });
 hud.position.set(0, H + 10);
 reelSet.addChild(hud);
 
 const lines = [];
 reelSet.events.on('anticipation:reel', ({ reelIndex, order, total }) => {
   lines.push(`reel ${reelIndex} = tease order ${order}/${total - 1}`);
-  hud.text = lines.join('   ');
+  hud.text = lines.join('\n');
 });
 
 return {
   reelSet,
-  cleanup: () => { try { hud.destroy(); } catch {} },
+  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
     grid[0].visible[1] = SCAT;
@@ -85,6 +85,6 @@ return {
       },
     });
     await p;
-    hud.text = `${lines.join('   ')}  -  landed`;
+    hud.text = `${lines.join('\n')}  -  landed`;
   },
 };

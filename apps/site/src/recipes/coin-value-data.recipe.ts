@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, ReelSymbol, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, ReelSymbol, PIXI, gsap, app, DebugPlaque
 //
 // BEGINNER LESSON - carry the value as DATA instead of baking it into the
 // symbol class.
@@ -74,11 +74,7 @@ const paintValue = (coin) => {
 
 board.events.on('coin:locked', ({ coin }) => paintValue(coin));
 
-const hud = new PIXI.Text({
-  text: 'press spin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 14, fontWeight: '700', fill: 0x9c8f78 },
-});
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 13, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 

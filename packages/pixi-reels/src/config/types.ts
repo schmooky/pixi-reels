@@ -328,7 +328,10 @@ export interface SpeedProfileBase {
   readonly spinDelay: number;
   /** Pixels per frame at full spin speed. */
   readonly spinSpeed: number;
-  /** Milliseconds between each reel stopping. */
+  /**
+   * Milliseconds between each reel stopping. On a Hold & Win board, the step
+   * of the cells' landing wave (see `HoldAndWinBuilder.stagger`).
+   */
   readonly stopDelay: number;
   /** Milliseconds to hold anticipation phase. */
   readonly anticipationDelay: number;

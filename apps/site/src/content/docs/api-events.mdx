@@ -19,13 +19,14 @@ Both emitters' `on(name, cb)` returns the emitter, for chaining. Unsubscribe wit
 |---|---|---|
 | Spin lifecycle | `spin:start` · `spin:allStarted` · `spin:stopping` · `spin:reelLanded` · `spin:allLanded` · `spin:complete` | Every `spin()` |
 | Nudge | `nudge:start` · `nudge:complete` · `nudge:cancelled` | `nudge()` |
-| Skip / slam | `skip:requested` · `skip:completed` · `skip:boosted` | `skipSpin()` · `requestSkip()` · `slamStop()` |
+| Skip / slam | `skip:requested` · `skip:completed` · `skip:queued` · `skip:boosted` | `skipSpin()` · `requestSkip()` · `slamStop()` |
 | Speed | `speed:changed` | `setSpeed()` |
 | Cascade | `cascade:chain:start` · `cascade:chain:end` · `cascade:fall:start` · `cascade:fall:symbol` · `cascade:fall:end` · `cascade:place:end` · `cascade:dropIn:start` · `cascade:dropIn:symbol` · `cascade:dropIn:end` · `cascade:destroy:start` · `cascade:destroy:end` · `cascade:gravity:start` · `cascade:gravity:symbol` · `cascade:gravity:end` · `cascade:gravity:error` | `.tumble()` + `spin({mode:'cascade'})` / `refill()` / `runCascade()` / `destroySymbols()` |
 | Spotlight | `spotlight:start` · `spotlight:end` | `spotlight.cycle(...)` |
 | Wins | `win:start` · `win:group` · `win:symbol` · `win:end` | `WinPresenter.show(...)` |
 | Pins | `pin:placed` · `pin:moved` · `pin:expired` · `pin:migrated` · `pin:overlayCreated` · `pin:overlayDestroyed` | `pin()` · `unpin()` · `movePin()` · MultiWays reshape |
 | MultiWays | `shape:changed` · `adjust:start` · `adjust:complete` | `setShape()` |
+| Growing the board | `reels:added` · `reels:removed` · `rows:added` · `rows:removed` · `expand:start` · `expand:stepAdded` · `expand:stepLanded` · `expand:complete` · `expand:end` | `addReels()` · `removeReels()` · `addRows()` · `removeRows()` · `expand()` |
 | Lifecycle | `destroyed` | `destroy()` |
 
 Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Scopes are `chain` (one stage inside the runCascade loop), `fall` / `place` / `dropIn` / `gravity` (phase-level animation), `destroy` (one batch of destroySymbols). Steps are `start` / `symbol` / `end`. `:symbol` appears only on the per-cell variants of fall, dropIn, and gravity. `:place` has only `:end` because placement is a single-moment swap with no animation. The runCascade chain itself is delimited by the returned `Promise`. `await` the call to know when it's done.
@@ -67,7 +68,7 @@ interface SpinResult {
 |---|---|---|
 | `skip:requested` | `(info: SkipInfo)` = `({ reels: number[], partial: boolean, mode: SkipMode, speed?: SpeedProfile, payload?: unknown })` | A press freed reels. from `skipSpin()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. `reels` is what this press frees; `partial` is `true` when reels are still spinning after it (a protected tease, a reel group, or `slamStop({ reels })` / `slamStop({ except })`); `mode` says what freeing means: `'slam'` places them now, `'quicken'` asks each for its landing sooner and the landing arrives as the usual `spin:reelLanding` / `spin:reelLanded`. `speed` and `payload` are the press's own, the same `SkipContext` every phase's `onSkip(ctx)` saw; keys the press did not set are absent. An engine slam (abort, timeout, `slamStop()`) is a bare `mode: 'slam'`. |
 | `skip:completed` | `(info: SkipInfo)` | The same press, once its reels are down: in the same tick for a slam, as the last freed reel lands for a quicken (however it got down, its own stop or a later slam). The same `info` its `skip:requested` carried. |
-| `skip:queued` | `(info: SkipContext)` = `({ mode, speed?, payload? })` | `requestSkip()` came before `setResult()`: the press is kept and fires the moment the result arrives. The same context its `skip:requested` will carry, minus the reels, which are not known yet. |
+| `skip:queued` | `(info: SkipContext)` = `({ mode, speed?, payload? })` | `requestSkip()` came before `setResult()`, or a press came between two `expand()` steps: the press is kept and fires the moment the (next step's) result arrives. The same context its `skip:requested` will carry, minus the reels, which are not known yet. |
 | `skip:boosted` | `({ previous: SpeedProfile, current: SpeedProfile })` | First `skipSpin()` press of a STANDARD-mode round; engine bumped to the fastest registered profile for the rest of the round. Cascade rounds set the auto-slam-refills flag instead and never emit this event. Restore on the next `spin()` does **not** re-emit. |
 
 ```ts
@@ -239,6 +240,22 @@ Emitted by `WinPresenter` only. listeners are dead weight if you don't use it.
 | `shape:changed` | `(cellsPerReel: number[])` | `setShape(...)` accepted. Fires before any geometry change. pin migrations and AdjustPhase happen later in the spin. |
 | `adjust:start` | `({ reelIndex: number, fromCells: number, toCells: number })` | Per-reel `AdjustPhase` entered. |
 | `adjust:complete` | `({ reelIndex: number })` | Per-reel `AdjustPhase` finished. |
+
+## Growing the board
+
+| Event | Payload | When |
+|---|---|---|
+| `reels:added` | `({ from: number, count: number })` | `addReels()` or an `expand()` step appended reels `from .. from + count - 1`. They are in `reelSet.reels` and the viewport covers them: move a camera here (`reelSet.viewport.maskWidth` is the new board width). |
+| `reels:removed` | `({ from: number, count: number })` | `removeReels()` destroyed reels `from .. from + count - 1`. |
+| `rows:added` | `({ count: number, rows: number[] })` | `addRows()` grew every reel by `count` rows below the last one. `rows` is each reel's row count now; the viewport covers them (`reelSet.viewport.maskHeight` is the new height). |
+| `rows:removed` | `({ count: number, rows: number[] })` | `removeRows()` took `count` rows off every reel. |
+| `expand:start` | `({ from: number, to: number, steps: number })` | `expand()` validated its columns and is about to add the first step. |
+| `expand:stepAdded` | `(step: ExpandStep)` | A step's reels are on the board; they spin next. Fires before `onStepAdded`. |
+| `expand:stepLanded` | `(step: ExpandStepLanded)` | A step's reels landed. Fires before `onStepLanded`. |
+| `expand:complete` | `(result: ExpandResult)` | Every step landed, the fast-forward step included. |
+| `expand:end` | `(reason: 'complete' \| 'failed')` | The expansion is over, whichever way: `'complete'` right after `expand:complete`, `'failed'` when it threw. The one place to put a UI back. `reelSet.isExpanding` is `false` again by then, so a listener here can start the next round. |
+
+Each step is a spin of its own reels with every earlier reel held, so the usual `spin:*` events fire for it too, and `spin:reelLanded` only for the reels the step added.
 
 ## Lifecycle
 

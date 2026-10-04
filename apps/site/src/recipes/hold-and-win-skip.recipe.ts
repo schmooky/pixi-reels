@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, loadHoldAndWinSprites, bezierFly, coinWaves, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, loadHoldAndWinSprites, bezierFly, coinWaves, PIXI, gsap, app, DebugPlaque
 //
 // One skip fast-forwards everything, then one event says "done".
 //
@@ -35,8 +35,7 @@ const meterText = valueText('0.00', 26);
 meterText.position.set(meter.x, meter.y);
 app.stage.addChild(meterText);
 
-const hud = new PIXI.Text({ text: 'press spin · then tap again to SKIP', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin · then tap again to SKIP', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 
@@ -80,7 +79,7 @@ async function collect() {
 let running = false;
 return {
   board,
-  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { meterText.destroy(); hud.destroy(); labels.destroy({ children: false }); } catch {} board.destroy(); },
+  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { meterText.destroy(); hud.destroy({ children: true }); labels.destroy({ children: false }); } catch {} board.destroy(); },
   // RecipeRunner calls onSkip when the button is tapped mid-feature
   onSkip: () => {
     if (!running || skipping) return;

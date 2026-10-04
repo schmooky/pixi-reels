@@ -19,6 +19,9 @@
  */
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
+import { SilkGraphics } from 'pixi-silk';
+import { DebugPlaque, DEBUG_FONT, roundRectPath, WinLines } from 'pixi-reels/debug';
+import { countWays, evaluateWays } from '@pixi-reels/cheats/ways';
 import {
   AdjustPhase,
   AnimatedSpriteSymbol,
@@ -144,6 +147,7 @@ async function loadHwCloverGlobals(): Promise<Record<string, unknown>> {
     CLOVER_FRUITS: clover.CLOVER_FRUITS,
     CLOVER_FEATURES: clover.CLOVER_FEATURES,
     CLOVER_SPEED: clover.CLOVER_SPEED,
+    CLOVER_REEL_SPEED: clover.CLOVER_REEL_SPEED,
     CLOVER_SPEEDS: clover.CLOVER_SPEEDS,
     CLOVER_CELL_RADIUS: clover.CLOVER_CELL_RADIUS,
     cloverCellMask: clover.cloverCellMask,
@@ -167,6 +171,23 @@ const LAZY_GROUPS: Array<{ test: RegExp; load: () => Promise<Record<string, unkn
   // The clover skeletons: pulls the Spine runtime in behind it, so it stays lazy too.
   { test: /CloverSpineSymbol|loadHwCloverSpines|CLOVER_SPINE_/, load: loadHwCloverSpineGlobals },
 ];
+
+/**
+ * Wait for the readout face before a recipe builds its plaques.
+ *
+ * A Pixi `Text` rasterizes with whatever font is ready when it first renders
+ * and does not redraw when a better one arrives, so a plaque built during the
+ * font's download keeps the fallback face until its text next changes. Two
+ * recipes used to await this themselves; doing it once here covers all of
+ * them. Resolves to no globals, and resolves regardless: the fallback face is
+ * still monospace, so a plaque sized for Fira Code fits it too.
+ */
+async function readoutFontReady(): Promise<Record<string, unknown>> {
+  if (typeof document !== 'undefined' && document.fonts) {
+    await document.fonts.load(`11px ${DEBUG_FONT}`).catch(() => undefined);
+  }
+  return {};
+}
 
 /** Per-runtime values. Everything else is the same in all three. */
 export interface RecipeGlobalsEnv {
@@ -243,6 +264,22 @@ export function buildRecipeGlobals(
     gsap,
     PIXI,
 
+    // Readouts. Every label, status line, legend and outline a recipe draws
+    // to explain itself goes through these: `DebugPlaque` for text on a
+    // plate, `SilkGraphics` (pixi-silk, the same smooth-vector library the
+    // debug overlay draws with) for lines, outlines, arrows and charts.
+    SilkGraphics,
+    DebugPlaque,
+    DEBUG_FONT,
+    roundRectPath,
+    // Win lines (paylines and payways) drawn with the same library.
+    WinLines,
+
+    // Pay-ways math, a stand-in for the server: the library never computes
+    // wins (ADR 007). `evaluateWays(grid, { wilds })` and `countWays(shape)`.
+    evaluateWays,
+    countWays,
+
     // Example symbol kits
     BlurSpriteSymbol,
     CardSymbol,
@@ -289,9 +326,10 @@ export async function runRecipeSource<T>(
   env: RecipeGlobalsEnv,
   trailer = '',
 ): Promise<T> {
-  const loaded = await Promise.all(
-    LAZY_GROUPS.filter((g) => g.test.test(compiledJs)).map((g) => g.load()),
-  );
+  const loaded = await Promise.all([
+    ...LAZY_GROUPS.filter((g) => g.test.test(compiledJs)).map((g) => g.load()),
+    readoutFontReady(),
+  ]);
   const globals = buildRecipeGlobals(env, Object.assign({}, ...loaded));
   const names = Object.keys(globals);
   const AsyncFunction = Object.getPrototypeOf(async function () {})

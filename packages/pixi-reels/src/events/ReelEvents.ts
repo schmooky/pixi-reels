@@ -8,6 +8,7 @@ import type {
 } from '../config/types.js';
 import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
+import type { ExpandResult, ExpandStep, ExpandStepLanded } from '../core/expand.js';
 
 // Re-export SymbolPosition (lives in config/types) so existing imports
 // from this module keep working.
@@ -243,6 +244,40 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'adjust:start': [info: { reelIndex: number; fromCells: number; toCells: number }];
   /** MultiWays: per-reel AdjustPhase exit. */
   'adjust:complete': [info: { reelIndex: number }];
+  /**
+   * The board grew: reels `from .. from + count - 1` were added by
+   * `addReels()` or an `expand()` step. They are already in `reelSet.reels`
+   * and the viewport and mask cover them, so this is the place to move a
+   * camera or size a frame to the new bounds.
+   */
+  'reels:added': [info: { from: number; count: number }];
+  /**
+   * The board shrank: reels `from .. from + count - 1` were removed by
+   * `removeReels()` and destroyed.
+   */
+  'reels:removed': [info: { from: number; count: number }];
+  /**
+   * The board grew taller: `addRows()` added `count` rows below the last one
+   * on every reel. `rows` is each reel's row count now. The viewport and mask
+   * already cover them.
+   */
+  'rows:added': [info: { count: number; rows: number[] }];
+  /** The board got shorter: `removeRows()` took `count` rows off every reel. `rows` is each reel's count now. */
+  'rows:removed': [info: { count: number; rows: number[] }];
+  /** `expand()` started: the board grows from `from` reels to `to`, in `steps` steps. */
+  'expand:start': [info: { from: number; to: number; steps: number }];
+  /** An `expand()` step added its reels; they spin next. Fires before the step's `onStepAdded`. */
+  'expand:stepAdded': [step: ExpandStep];
+  /** An `expand()` step's reels landed. Fires before the step's `onStepLanded`. */
+  'expand:stepLanded': [step: ExpandStepLanded];
+  /** `expand()` finished: every step landed (or was fast-forwarded). */
+  'expand:complete': [result: ExpandResult];
+  /**
+   * `expand()` is over, whichever way: `'complete'` right after
+   * `expand:complete`, `'failed'` when it threw (a hook, a bad step). The one
+   * place to put a UI back, the way `win:end` closes a presentation.
+   */
+  'expand:end': [reason: 'complete' | 'failed'];
   /**
    * Tumble cascade: this reel's fall-out animation just started. Fires once
    * per reel per `spin()` (never on `refill()`. refill skips the fall).

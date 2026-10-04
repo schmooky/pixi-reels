@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, SpineReelSymbol, Spine, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, SpineReelSymbol, Spine, PIXI, gsap, app, DebugPlaque
 //
 // Hold & Win on a 5x4 board with the source game's full Spine cast
 // (converted 3.7 -> 4.2 via tools/spine-3.7-to-4.2): fruit symbols spin
@@ -210,11 +210,10 @@ const flashPanel = (tier) => {
 };
 
 // -- HUD + per-coin value labels, driven only by board events --
-const hud = new PIXI.Text({
-  text: 'press spin',
-  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
-});
-hud.anchor.set(0.5, 0);
+// The HUD plate hugs its text rather than spanning the board: the MAJOR
+// coin lands in the bottom-right cell and its animation reaches below the
+// board, where a board-wide plate would cover it.
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 } });
 hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
 app.stage.addChild(hud);
 const refreshHud = () => {
@@ -338,7 +337,7 @@ return {
     flyers.clear();
     gsap.killTweensOf(totalText.scale);
     for (const { plaque, label } of Object.values(panels)) { try { plaque.destroy(); label.destroy(); } catch {} }
-    try { hud.destroy(); labels.destroy(); totalText.destroy(); } catch {}
+    try { hud.destroy({ children: true }); labels.destroy(); totalText.destroy(); } catch {}
     labelAt.clear();
     board.destroy();
     counter.destroy();

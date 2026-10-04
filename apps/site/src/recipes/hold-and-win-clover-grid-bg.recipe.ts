@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSpineSymbol, CloverSymbol, loadHwCloverSpines, CLOVER_SPEED, CLOVER_CELL, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSpineSymbol, CloverSymbol, loadHwCloverSpines, CLOVER_SPEED, CLOVER_CELL, PIXI, gsap, app, DebugPlaque
 //
 // The game's own framing: cells in a visible grid with real gaps between
 // them, and the gaps are not empty - the background under the board shows
@@ -81,8 +81,7 @@ const board = new HoldAndWinBuilder()
 board.container.position.set(ox, oy);
 app.stage.addChild(board.container);
 
-const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
-hud.anchor.set(0.5, 0);
+const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
 hud.position.set(app.screen.width / 2, oy + boardH + MARGIN + 8);
 app.stage.addChild(hud);
 
@@ -102,7 +101,7 @@ return {
   board,
   cleanup: () => {
     framePulse.kill();
-    try { hud.destroy(); bg.destroy({ children: true }); } catch {}
+    try { hud.destroy({ children: true }); bg.destroy({ children: true }); } catch {}
     board.destroy();
   },
   onSpin: async () => {

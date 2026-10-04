@@ -75,6 +75,8 @@ can draw. Set `version = MASK_STRATEGY_VERSION` on it.
 To see what is actually clipped:
 
 ```ts
+import { debugOverlay } from 'pixi-reels/debug'; // needs pixi-silk, a dev dependency
+
 debugOverlay(reelSet, { layers: ['mask', 'cells', 'buffers'] });
 ```
 
