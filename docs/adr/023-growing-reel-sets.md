@@ -69,15 +69,28 @@ cell count: MultiWays applies it with `setShape()` for the step, a jagged set
 builds the reel at that height (never taller than the tallest reel, which would
 move every reel on the board).
 
+**Rows grow at rest, between steps.** `addRows()` / `removeRows()` change
+every reel's row count at its own cell size, the board's height with it, and
+the factory measures the tallest strip from the board as it is rather than
+as the builder made it. They are allowed between `expand()` steps (in
+`onStepLanded`) and nowhere a step is in flight: a step's columns were sized
+for the board's height when it started. A column taller than the board is
+therefore checked when its step starts, not up front. MultiWays is out: there
+a reel's rows are its shape, set per spin.
+
 **Win math stays out (ADR 007).** The pay-ways evaluator the recipes use lives
 in `@pixi-reels/cheats/ways` beside the other server stand-ins. The library
 only draws: `WinLines` in `pixi-reels/debug` strokes the cells it is handed.
 
 ## Consequences
 
-- New public API: `addReels()`, `removeReels()`, `expand()`, and the events
-  `reels:added`, `reels:removed`, `expand:start`, `expand:stepAdded`,
-  `expand:stepLanded`, `expand:complete`. Additive.
+- New public API: `addReels()`, `removeReels()`, `addRows()`, `removeRows()`,
+  `expand()`, `isExpanding`, and the events `reels:added`, `reels:removed`,
+  `rows:added`, `rows:removed`, `expand:start`, `expand:stepAdded`,
+  `expand:stepLanded`, `expand:complete`, `expand:end`. Additive.
+- A fast-forward (an aborted `signal`) lands every reel still to come in one
+  step at the board's height then, so it cannot cross a row that grows during
+  the expansion.
 - `Reel.reelCount` became a getter that follows the board.
 - Destroying one reel of a live set used to destroy the views of symbols it had
   released to the shared pool, because a released view stayed parented to the

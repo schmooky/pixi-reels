@@ -27,6 +27,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'Orientation & direction', href: '/guides/orientation-and-direction/' },
       { label: 'Per-reel geometry', href: '/guides/per-reel-geometry/' },
       { label: 'MultiWays', href: '/guides/multiways/' },
+      { label: 'Infinity reels', href: '/guides/infinity-reels/' },
       { label: 'Big symbols', href: '/guides/big-symbols/' },
       { label: 'Buffer indexing', href: '/guides/buffer-indexing/' },
       { label: 'Nudge', href: '/guides/nudge/' },
@@ -59,6 +60,7 @@ export const WIKI_NAV: NavSection[] = [
     title: 'Full reference',
     items: [
       { label: 'API index (TypeDoc)', href: '/api/' },
+      { label: 'Migrating to 4.0', href: '/docs/migrating-to-4-0/' },
       { label: 'Migrating to 2.0', href: '/docs/migrating-to-2-0/' },
       { label: 'Migrating to 1.0', href: '/docs/migrating-to-1-0/' },
       { label: 'Glossary', href: '/docs/glossary/' },

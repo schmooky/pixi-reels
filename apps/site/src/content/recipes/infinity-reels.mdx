@@ -7,6 +7,7 @@ tags:
   - expand
   - addReels
   - removeReels
+  - addRows
   - multiways
   - ways
   - big-symbols
@@ -14,7 +15,7 @@ tags:
   - win-lines
 ---
 
-The base spin lands, then the board grows: `reelSet.expand({ columns })` adds the reels the server's result has beyond the base board, a step at a time, spinning only the new ones while everything before them holds. `addReels()` and `removeReels()` are the primitives under it; the next round shrinks back with `removeReels()`.
+The base spin lands, then the board grows: `reelSet.expand({ columns })` adds the reels the server's result has beyond the base board, a step at a time, spinning only the new ones while everything before them holds. `addReels()` and `removeReels()` are the primitives under it; the next round shrinks back with `removeReels()`. The [infinity reels guide](/guides/infinity-reels/) is the short version: what the server sends, the calls, and the events.
 
 <a id="infinity-reels"></a>
 
@@ -25,6 +26,16 @@ While the win still runs into the last reel, the server adds another reel to its
 **Skip:** the steps are one round. The first press slams the step in flight and turbos the rest, the same boost `skipSpin()` gives the rest of any round (a cascade-mode expansion lands its later steps at once instead, the way one press ends a cascade); the second aborts the expansion's `signal`, which lands every reel still to come in one step.
 
 <RecipeDemo code="infinity-reels" height={420} />
+
+<a id="infinity-reels-rows"></a>
+
+## Rows grow too
+
+A wild on a new reel unlocks a row: `addRows(1, { cells })` in `onStepLanded` makes every reel one cell taller with the server's cells for the new row, and the reels after it arrive at the new height. The camera zooms out to fit, reading the board's size off `viewport.maskWidth` and `maskHeight`. The next round goes back with `removeReels()` and `removeRows()`.
+
+**Gotcha:** rows change only between steps. Inside `onStepAdded` the step's reels are about to spin on columns sized for the board's old height, so `addRows()` throws there. A fast-forward (an aborted `signal`) lands every reel still to come in one step at the height the board has then, so this demo's skip slams a step at a time instead.
+
+<RecipeDemo code="infinity-reels-rows" height={440} />
 
 <a id="infinity-reels-multiways"></a>
 
@@ -65,7 +76,7 @@ Press as often as you like and read the log. The base board is grouped (dashed b
 
 ## What carries across steps
 
-- **Events.** Each step fires the usual `spin:*` events for its own reels, plus `reels:added`, `expand:stepAdded` and `expand:stepLanded`; the chain opens with `expand:start` and closes with `expand:complete`.
+- **Events.** Each step fires the usual `spin:*` events for its own reels, plus `reels:added`, `expand:stepAdded` and `expand:stepLanded`, and `rows:added` when a hook grows the rows; the chain opens with `expand:start` and closes with `expand:complete` and then `expand:end` (`'complete'`, or `'failed'` when it threw). `reelSet.isExpanding` is `true` in between, so a `spin:start` listener can tell a step from a new round.
 - **Stagger.** Start and stop delays count a reel's place in its step, not its index, so reel 40 does not wait forty delays.
 - **Pins.** A sticky pin's turns and an `'eval'` pin belong to the round, so they are not spent per step.
 - **Memory.** Reels are real reels while they are on the board; `removeReels()` destroys them and shrinks the viewport, mask and symbol pool back.
