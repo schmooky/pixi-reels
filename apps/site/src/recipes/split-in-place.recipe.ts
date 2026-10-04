@@ -141,7 +141,8 @@ async function splitInPlace(r, cell, count, id) {
   box.addChild(glow);
   running = gsap.fromTo(glow, { alpha: 0 }, { alpha: 1, duration: 0.25 });
   await running;
-  running = gsap.to(glow, { alpha: 0, duration: 0.2 });
+  running = gsap.to(glow, { alpha: 0, duration: 0.15 });
+  await running;
 
   // 2. Pop, pop: one more copy at a time, below the ones before it.
   for (let k = 1; k < count; k++) {
