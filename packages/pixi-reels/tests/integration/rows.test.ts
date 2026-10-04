@@ -229,11 +229,84 @@ describe('rows inside an expand() chain', () => {
   });
 });
 
+describe('big symbols on a board that changes rows', () => {
+  const OCC = '__pixi_reels_occupied__';
+  const bigHarness = (reels = 3) =>
+    makeHarness({
+      reels,
+      symbolIds: [...IDS, 'big', 'tall'],
+      symbolData: { big: { weight: 0, size: { reels: 2, cells: 2 } }, tall: { weight: 0, size: { reels: 1, cells: 3 } } },
+    });
+  const strip = (h: ReturnType<typeof makeHarness>, reel: number) =>
+    h.reelSet.reels[reel].symbols.map((s) => s.symbolId);
+  const count = (h: ReturnType<typeof makeHarness>, id: string) =>
+    h.reelSet.reels.flatMap((reel) => reel.symbols).filter((s) => s.symbolId === id).length;
+
+  it('addRows keeps a block one block, and a block cut at the old bottom shows more of itself', async () => {
+    const h = bigHarness();
+    await land(h, [col('big', 'a', 'big'), col('b', 'b', 'c'), col('a', 'b', 'c')]);
+    // Two 2x2 blocks: rows 0-1 and rows 2-3 (cut at the bottom) of reels 0-1.
+    h.reelSet.addRows(1, { cells: [['d'], ['d'], ['wild']] });
+
+    expect(count(h, 'big')).toBe(2);
+    expect(strip(h, 0).slice(1, 5)).toEqual(['big', OCC, 'big', OCC]);
+    expect(strip(h, 1).slice(1, 5)).toEqual([OCC, OCC, OCC, OCC]);
+    // The lower block's tail fills the new row on reels 0-1; reel 2 shows its new cell.
+    expect(h.reelSet.getVisibleGrid()).toEqual([
+      ['big', 'big', 'big', 'big'],
+      ['big', 'big', 'big', 'big'],
+      ['a', 'b', 'c', 'wild'],
+    ]);
+  });
+
+  it('removeRows cuts a block that still fits the buffer, and random-fills one that does not', async () => {
+    const h = bigHarness();
+    h.reelSet.addRows(2);
+    await land(h, [col('a', 'b', 'big', 'c', 'd'), col('a', 'b', 'c', 'd', 'a'), col('b', 'c', 'tall', 'a', 'b')]);
+
+    h.reelSet.removeRows();
+
+    // The 2x2 at row 2 keeps its anchor, its tail in the buffer below.
+    expect(h.reelSet.getVisibleGrid()[0]).toEqual(['a', 'b', 'big']);
+    expect(h.reelSet.getVisibleGrid()[1]).toEqual(['a', 'b', 'big']);
+    expect(strip(h, 1)[4]).toBe(OCC);
+    // The 1x3 at row 2 would run two cells past the shorter strip.
+    expect(count(h, 'tall')).toBe(0);
+    expect(strip(h, 2).slice(1, 3)).toEqual(['b', 'c']);
+    expect(strip(h, 2)).not.toContain(OCC);
+    // And the board spins on.
+    const result = await land(h, board(3, 3));
+    expect(result.symbols).toEqual(board(3, 3).map((c) => c.visible));
+  });
+
+  it('refuses a big symbol in the new rows that does not fit, before anything moves', () => {
+    const h = bigHarness();
+    expect(() => h.reelSet.addRows(1, { cells: [['a'], ['a'], ['tall']] })).toThrow(/'tall' .* past the bottom/);
+    expect(() => h.reelSet.addRows(1, { cells: [['a'], ['a'], ['big']] })).toThrow(/exceeds reel count 3/);
+    expect(h.reelSet.reels.every((r) => r.visibleCells === 3)).toBe(true);
+  });
+
+  it('leaves a block that removeReels() cut at the edge as it is', async () => {
+    const h = bigHarness();
+    h.reelSet.addReels(1);
+    await land(h, [col('a', 'b', 'c'), col('a', 'b', 'c'), col('big', 'b', 'c'), col('a', 'b', 'c')]);
+    h.reelSet.removeReels(1);
+
+    h.reelSet.addRows(1);
+    h.reelSet.removeRows();
+
+    expect(strip(h, 2).slice(1, 3)).toEqual(['big', OCC]);
+    expect(h.reelSet.getVisibleGrid()[2].slice(0, 2)).toEqual(['big', 'big']);
+  });
+});
+
 describe('expand() events and state', () => {
   it('isExpanding spans the chain, and expand:end closes it whichever way it ends', async () => {
     const h = makeHarness();
     await land(h, board(5, 3));
     const log = captureEvents(h.reelSet, ['expand:complete', 'expand:end']);
+    const atEnd: boolean[] = [];
+    h.reelSet.events.on('expand:end', () => atEnd.push(h.reelSet.isExpanding));
     const during: boolean[] = [];
     await h.reelSet.expand({
       columns: [col('a', 'a', 'a')],
@@ -259,5 +332,20 @@ describe('expand() events and state', () => {
     ).rejects.toThrow('hook bug');
     expect(log).toEqual([{ event: 'expand:end', args: ['failed'] }]);
     expect(h.reelSet.isExpanding).toBe(false);
+    // Cleared before expand:end fires, so a listener there may start a round.
+    expect(atEnd).toEqual([false, false]);
+  });
+
+  it('an expand:end listener can start the next round', async () => {
+    const h = makeHarness();
+    await land(h, board(5, 3));
+    let next: Promise<unknown> | null = null;
+    h.reelSet.events.on('expand:end', () => {
+      next = h.reelSet.spin();
+      h.reelSet.setResult(board(6, 3));
+    });
+    await h.reelSet.expand({ columns: [col('a', 'a', 'a')] });
+    expect(next).not.toBeNull();
+    await expect(next).resolves.toMatchObject({ symbols: board(6, 3).map((c) => c.visible) });
   });
 });

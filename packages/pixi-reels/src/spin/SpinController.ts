@@ -2201,6 +2201,21 @@ export class SpinController implements Disposable {
     this._applyReshape(reelIndex, cells);
   }
 
+  /**
+   * Paint the OCCUPIED stubs of every big symbol in `grid`, for a board
+   * placed at rest from `Reel.getTarget()` (`ReelSet.addRows()` /
+   * `removeRows()`). `'land'` checks every block the way a landing does and
+   * throws on one that does not fit; `'rest'` never throws on a block already
+   * on the board.
+   */
+  coordinateBoard(
+    grid: ColumnTarget[],
+    visibleCellsForReel: (i: number) => number,
+    mode: 'land' | 'rest',
+  ): ColumnTarget[] {
+    return this._coordinateBigSymbols(grid, visibleCellsForReel, mode);
+  }
+
   // ── Internal ──────────────────────────────────────────
 
   private async _startReel(reelIndex: number, speed: SpeedProfile, generation: number): Promise<void> {
@@ -2792,10 +2807,14 @@ export class SpinController implements Disposable {
    *
    * Pure: returns a new grid; does not mutate the input. Zero-overhead for
    * slots with no big symbols (the loop runs but never matches metadata).
+   *
+   * `'rest'` is for a board already on screen, re-placed at rest (see
+   * {@link coordinateBoard}): a block that no longer fits is not an error.
    */
   private _coordinateBigSymbols(
     grid: ColumnTarget[],
     visibleCellsForReel: (i: number) => number,
+    mode: 'land' | 'rest' = 'land',
   ): ColumnTarget[] {
     const bufferStart = this._reels[0]?.bufferStart ?? 0;
     const bufferEnd = this._reels[0]?.bufferEnd ?? 0;
@@ -2820,6 +2839,18 @@ export class SpinController implements Disposable {
     const writeSlot = (reel: number, cell: number, value: string): void => {
       setTargetSlot(out[reel], cell, value);
     };
+    // Unspecify a slot: `Reel.placeStrip` random-fills it. `visible` is typed
+    // `string[]` for callers, but the pipeline reads a hole there the same way.
+    const clearSlot = (reel: number, cell: number): void => {
+      const target = out[reel];
+      if (cell < 0) {
+        if (target.bufferStart) target.bufferStart[-1 - cell] = undefined;
+      } else if (cell < target.visible.length) {
+        (target.visible as (string | undefined)[])[cell] = undefined;
+      } else if (target.bufferEnd) {
+        target.bufferEnd[cell - target.visible.length] = undefined;
+      }
+    };
 
     for (let reel = 0; reel < out.length; reel++) {
       const cells = visibleCellsForReel(reel);
@@ -2838,6 +2869,26 @@ export class SpinController implements Disposable {
         const h = meta.size.cells;
         if (w === 1 && h === 1) continue;
 
+        // At rest, a block already on the board never throws. One past the
+        // last reel is cut at the board's edge, as `removeReels()` leaves it:
+        // reels never move sideways, so the mask clips it for good. One past
+        // the bottom of a strip that got shorter is random-filled: no slots
+        // lie under its overhang, which a reel travelling up would scroll in.
+        const across = mode === 'rest' ? Math.min(w, out.length - reel) : w;
+        if (mode === 'rest') {
+          let fits = true;
+          for (let dx = 0; dx < across; dx++) {
+            if (cell + h > visibleCellsForReel(reel + dx) + bufferEnd) fits = false;
+          }
+          if (!fits) {
+            for (let dx = 0; dx < across; dx++) {
+              const end = visibleCellsForReel(reel + dx) + bufferEnd;
+              for (let dy = 0; dy < h && cell + dy < end; dy++) clearSlot(reel + dx, cell + dy);
+            }
+            continue;
+          }
+        }
+
         // Validate block fit on this reel: anchor + h must stay on the
         // strip. The strip ends at `cells + bufferEnd - 1` (last bufferEnd
         // slot) and starts at `-bufferStart` (first bufferStart slot).
@@ -2848,13 +2899,13 @@ export class SpinController implements Disposable {
             `(anchor cell + h = ${cell + h} > visibleCells + bufferEnd = ${cells + bufferEnd}).`,
           );
         }
-        if (reel + w > out.length) {
+        if (reel + across > out.length) {
           throw new Error(
             `big symbol '${id}' (${w}x${h}) at (reel=${reel}, cell=${cell}) ` +
             `exceeds reel count ${out.length}.`,
           );
         }
-        for (let dx = 0; dx < w; dx++) {
+        for (let dx = 0; dx < across; dx++) {
           const targetReel = reel + dx;
           const targetCells = visibleCellsForReel(targetReel);
           if (cell + h > targetCells + bufferEnd) {
@@ -2870,7 +2921,7 @@ export class SpinController implements Disposable {
         // Stub cells may land in bufferStart (negative cell), visible, or
         // bufferEnd (cell >= visibleCells). `writeSlot` handles all three.
         for (let dy = 0; dy < h; dy++) {
-          for (let dx = 0; dx < w; dx++) {
+          for (let dx = 0; dx < across; dx++) {
             if (dx === 0 && dy === 0) continue;
             writeSlot(reel + dx, cell + dy, OCCUPIED_SENTINEL);
           }

@@ -2016,8 +2016,10 @@ export class ReelSet extends Container implements Disposable {
    * viewport, mask and symbol pool grow with it. What the new rows show comes
    * from `options.cells` (one array per reel), else random fill.
    *
-   * The rows a reel had keep their symbols and pins, and a reel added later
-   * with `addReels()` or `expand()` may be as tall as the board is now. Inside
+   * The rows a reel had keep their symbols and pins. A big symbol cut at the
+   * old bottom shows more of itself, in place of the new cells under it. A
+   * reel added later with `addReels()` or `expand()` may be as tall as the
+   * board is now. Inside
    * an expansion, grow the rows between steps, in `onStepLanded`: a step's
    * columns are sized for the rows the board has when the step starts.
    *
@@ -2034,6 +2036,7 @@ export class ReelSet extends Container implements Disposable {
       throw new RangeError(`addRows: count must be a whole number of rows, at least 1 (got ${String(count)}).`);
     }
     const cells = options.cells;
+    const rows = this._reels.map((reel) => reel.visibleCells + count);
     if (cells) {
       if (cells.length !== this._reels.length) {
         throw new RangeError(`addRows: cells has ${cells.length} columns for ${this._reels.length} reels.`);
@@ -2044,14 +2047,29 @@ export class ReelSet extends Container implements Disposable {
         }
       });
       this._assertKnownIds(cells.map((column) => ({ visible: [...column] })), 'addRows cells');
+      // A big symbol in the new rows has to fit, as in a landing.
+      this._spinController.coordinateBoard(
+        cells.map((column, r) => ({ visible: [...new Array(rows[r] - count), ...column] })),
+        (r) => rows[r],
+        'land',
+      );
     }
     if (this._spotlight.isActive) this._spotlight.hide();
 
+    // Through the big-symbol coordinator, so a block stays one block. The old
+    // buffer below is left out: the new rows sit between it and the window.
+    const board = this._spinController.coordinateBoard(
+      this._reels.map((reel, r) => {
+        const { bufferStart, visible } = reel.getTarget();
+        // A missing id is random-filled, which is what no `cells` asks for.
+        return { bufferStart, visible: [...visible, ...(cells?.[r] ?? new Array(count))] };
+      }),
+      (r) => rows[r],
+      'rest',
+    );
     this._reels.forEach((reel, r) => {
-      const target = reel.getTarget();
-      reel.reshape(reel.visibleCells + count, reel.cellMain, reel.bufferStart, reel.bufferEnd);
-      // A missing id is random-filled, which is what no `cells` asks for.
-      reel.placeSymbols({ ...target, visible: [...target.visible, ...(cells?.[r] ?? new Array(count))] });
+      reel.reshape(rows[r], reel.cellMain, reel.bufferStart, reel.bufferEnd);
+      reel.placeSymbols(board[r]);
     });
     this._addedRows += count;
     this._afterBoardChange();
@@ -2065,8 +2083,9 @@ export class ReelSet extends Container implements Disposable {
    * (`pin:expired` with reason `'explicit'`), a spotlight is hidden, and the
    * viewport, mask and pool shrink back. Every reel keeps at least one row.
    *
-   * A big symbol reaching into a removed row is cut at the new edge. Throws
-   * where `addRows()` does.
+   * A big symbol reaching into a removed row is cut at the new edge when its
+   * block still fits the buffer below; a taller one is replaced by random
+   * symbols. Throws where `addRows()` does.
    *
    * @example
    * reelSet.removeRows(); // next round: back to the rows the builder made
@@ -2089,12 +2108,19 @@ export class ReelSet extends Container implements Disposable {
     }
     if (this._spotlight.isActive) this._spotlight.hide();
 
-    for (const reel of this._reels) {
-      const target = reel.getTarget();
-      const rows = reel.visibleCells - count;
-      reel.reshape(rows, reel.cellMain, reel.bufferStart, reel.bufferEnd);
-      reel.placeSymbols({ ...target, visible: target.visible.slice(0, rows) });
-    }
+    const rows = this._reels.map((reel) => reel.visibleCells - count);
+    const board = this._spinController.coordinateBoard(
+      this._reels.map((reel, r) => {
+        const { bufferStart, visible } = reel.getTarget();
+        return { bufferStart, visible: visible.slice(0, rows[r]) };
+      }),
+      (r) => rows[r],
+      'rest',
+    );
+    this._reels.forEach((reel, r) => {
+      reel.reshape(rows[r], reel.cellMain, reel.bufferStart, reel.bufferEnd);
+      reel.placeSymbols(board[r]);
+    });
     this._addedRows = Math.max(0, this._addedRows - count);
     this._afterBoardChange();
     this._events.emit('rows:removed', { count, rows: this._reels.map((reel) => reel.visibleCells) });
@@ -2324,8 +2350,10 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * `true` while `expand()` runs, from `expand:start` to `expand:end`: the
-   * `spin:*` events a step fires are an expansion step's, not a new round's.
+   * `true` while `expand()` runs, from `expand:start` on: the `spin:*` events
+   * a step fires are an expansion step's, not a new round's. It is `false`
+   * again by `expand:complete` and `expand:end`, so a listener there can
+   * start the next round.
    */
   get isExpanding(): boolean {
     return this._expanding;

@@ -76,7 +76,11 @@ as the builder made it. They are allowed between `expand()` steps (in
 `onStepLanded`) and nowhere a step is in flight: a step's columns were sized
 for the board's height when it started. A column taller than the board is
 therefore checked when its step starts, not up front. MultiWays is out: there
-a reel's rows are its shape, set per spin.
+a reel's rows are its shape, set per spin. Both re-place every reel through the
+big-symbol coordinator, so a block stays one block. A block already on the
+board never makes them throw: one cut at the right edge by `removeReels()`
+stays cut, and one that no longer fits a shorter strip is random-filled: no
+slots lie under its overhang, which a reel travelling up would scroll into view.
 
 **Win math stays out (ADR 007).** The pay-ways evaluator the recipes use lives
 in `@pixi-reels/cheats/ways` beside the other server stand-ins. The library
