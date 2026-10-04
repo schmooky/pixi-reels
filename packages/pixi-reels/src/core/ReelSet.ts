@@ -45,7 +45,13 @@ import { pinKey } from '../pins/CellPin.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
 import type { RandomSymbolControl } from '../frame/SymbolPool.js';
-import { assertBufferCountsInRange, assertColumnTargets, cloneColumnTarget } from '../frame/ColumnTarget.js';
+import {
+  assertBufferCountsInRange,
+  assertColumnTargets,
+  clearTargetSlot,
+  cloneColumnTarget,
+  setTargetSlot,
+} from '../frame/ColumnTarget.js';
 import { V1_OPTION_KEYS, assertNoV1Keys } from '../config/v1Renames.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 import { noticeError, noticeWarn } from '../utils/notify.js';
@@ -2405,6 +2411,15 @@ export class ReelSet extends Container implements Disposable {
       // through the loop below would leave the set with some of its reels.
       this._assertKnownIds(seeds, 'addReels initialFrame');
     }
+    // Seeded the way a landing places a result: a big symbol gets its whole
+    // block, and one that does not fit on the new reels throws here.
+    const placed = seeds
+      ? this._spinController.coordinateBoard(
+          seeds,
+          (k) => (this._isMultiWaysSlot ? this._multiwaysMaxCells : cellsFor(k)),
+          'land',
+        )
+      : undefined;
 
     const total = from + count;
     const tallest = this._tallestExtent();
@@ -2414,7 +2429,7 @@ export class ReelSet extends Container implements Disposable {
       // MultiWays reels share one spin-time geometry and reshape at land.
       const cells = this._isMultiWaysSlot ? this._multiwaysMaxCells : cellsFor(k);
       const extent = this._reelFactory.extentFor(reelIndex, cells);
-      const reel = this._reelFactory.create(reelIndex, cells, extent, total, seeds?.[k], tallest);
+      const reel = this._reelFactory.create(reelIndex, cells, extent, total, placed?.[k], tallest);
       // A curve set at runtime is the board's curve now, not the builder's. A
       // per-reel one covers the reels it named; past its end, its last entry.
       const curve = this._runtimeCurve;
@@ -3037,6 +3052,11 @@ export class ReelSet extends Container implements Disposable {
    * Negative cells are rejected. Place buffer-cell anchors via `setResult()`
    * with `bufferStart` / `bufferEnd` on the column's `ColumnTarget`.
    *
+   * At rest, a pin on a cell of a big symbol replaces the block: the block
+   * goes and its other cells refill, so the pin shows at once. A block that
+   * only shares the reel stays whole. A big symbol pinned at rest has to
+   * fit, as in a landing.
+   *
    * @example
    * // Sticky wild for 3 spins
    * reelSet.pin(2, 1, 'wild', { turns: 3 })
@@ -3056,6 +3076,9 @@ export class ReelSet extends Container implements Disposable {
     if (cell < 0 || cell >= target.visibleCells) {
       throw new Error(`pin(): cell ${cell} out of range [0, ${target.visibleCells})`);
     }
+    // At rest the pin goes on the board now, so a big symbol that cannot fit
+    // throws before the pin is recorded.
+    if (!this._spinController.isSpinning) this._assertCellsFit([{ reel, cell, id: symbolId }]);
 
     const pin: CellPin = {
       reel,
@@ -3230,9 +3253,7 @@ export class ReelSet extends Container implements Disposable {
     // symbol is still in motion.
     const backfill =
       opts?.backfill ?? this._frameBuilder.randomProvider.next('spinning', from.reel);
-    const fromVisible = fromReel.getVisibleSymbols();
-    fromVisible[from.cell] = backfill;
-    fromReel.placeSymbols({ visible: fromVisible });
+    this._placeCellsAtRest([{ reel: from.reel, cell: from.cell, id: backfill }]);
 
     // Spawn the flight symbol on the unmasked container so it renders above
     // the reels and can cross column boundaries.
@@ -3285,9 +3306,7 @@ export class ReelSet extends Container implements Disposable {
     }
 
     // Apply the pin visually at the destination cell.
-    const toVisible = toReel.getVisibleSymbols();
-    toVisible[to.cell] = pin.symbolId;
-    toReel.placeSymbols({ visible: toVisible });
+    this._placeCellsAtRest([{ reel: to.reel, cell: to.cell, id: pin.symbolId }]);
 
     this._viewport.unmaskedContainer.removeChild(flight.view);
     this._symbolFactory.release(flight);
@@ -3508,11 +3527,42 @@ export class ReelSet extends Container implements Disposable {
    * away so `getVisibleSymbols()` reflects the pin.
    */
   private _applyPinVisually(reel: number, cell: number, symbolId: string): void {
-    const target = this._reels[reel];
-    const current = target.getVisibleSymbols();
-    if (current[cell] === symbolId) return; // already there
-    current[cell] = symbolId;
-    target.placeSymbols({ visible: current });
+    if (this._reels[reel].getVisibleSymbols()[cell] === symbolId) return; // already there
+    this._placeCellsAtRest([{ reel, cell, id: symbolId }]);
+  }
+
+  /**
+   * Put single cells on the board at rest (`pin()`, `movePin()`). The reels
+   * they touch are replayed through the big-symbol coordinator, so a block
+   * that shares a reel with an edited cell stays one block. A cell inside a
+   * block takes the block's place: the block goes, and the rest of its cells
+   * refill at random, so the cell shows its new symbol right away.
+   */
+  private _placeCellsAtRest(edits: readonly { reel: number; cell: number; id: string }[]): void {
+    this._assertCellsFit(edits);
+    const targets = this.getTargets();
+    const touched = new Set<number>();
+    for (const { reel, cell } of edits) {
+      touched.add(reel);
+      const { anchor, size } = this.getSymbolFootprint(reel, cell);
+      if (size.reels === 1 && size.cells === 1) continue;
+      for (let dx = 0; dx < size.reels; dx++) {
+        const target = targets[anchor.reel + dx];
+        if (!target) continue;
+        touched.add(anchor.reel + dx);
+        for (let dy = 0; dy < size.cells; dy++) clearTargetSlot(target, anchor.cell + dy);
+      }
+    }
+    for (const { reel, cell, id } of edits) setTargetSlot(targets[reel], cell, id);
+    const board = this._spinController.coordinateBoard(targets, (r) => this._reels[r].visibleCells, 'rest');
+    for (const r of touched) this._reels[r].placeSymbols(board[r]);
+  }
+
+  /** A big symbol placed on the board at rest has to fit, as in a landing. */
+  private _assertCellsFit(edits: readonly { reel: number; cell: number; id: string }[]): void {
+    const placed = this._reels.map((reel) => ({ visible: new Array<string>(reel.visibleCells) }));
+    for (const { reel, cell, id } of edits) setTargetSlot(placed[reel], cell, id);
+    this._spinController.coordinateBoard(placed, (r) => this._reels[r].visibleCells, 'land');
   }
 
   /**

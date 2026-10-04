@@ -52,6 +52,7 @@ import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
 import { CascadePlacePhase } from '../spin/phases/CascadePlacePhase.js';
 import { CascadeDropInPhase } from '../spin/phases/CascadeDropInPhase.js';
 import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
+import { coordinateBigSymbols } from '../spin/bigSymbolBlocks.js';
 import { noticeInfo, noticeWarnOnce } from '../utils/notify.js';
 
 /**
@@ -939,6 +940,9 @@ export class ReelSetBuilder {
    * (`[0]` is the slot closest to the visible window, later indices go
    * further out).
    *
+   * A big symbol's id at its anchor cell gets the whole block, as in
+   * `setResult()`. `build()` throws if a block does not fit.
+   *
    * @example
    * builder.initialFrame([
    *   { visible: ['A','B','C'] },
@@ -1249,6 +1253,17 @@ export class ReelSetBuilder {
         'initialFrame',
       );
     }
+    // Seed the reels the way a landing places a result: a big symbol in the
+    // frame gets its whole block, and one that does not fit throws here,
+    // before any reel exists.
+    const seeds = this._initialFrame
+      ? coordinateBigSymbols(this._initialFrame, {
+          visibleCellsForReel: (i) => visibleCellsPerReel[i],
+          symbolsData,
+          bufferStart,
+          bufferEnd,
+        })
+      : undefined;
 
     // One reel, built from the resolved geometry. Captured as a closure so the
     // set can build more of them after construction (`addReels`) exactly the
@@ -1372,7 +1387,7 @@ export class ReelSetBuilder {
           visibleCellsPerReel[reelIndex],
           reelExtents[reelIndex],
           reelCount,
-          this._initialFrame?.[reelIndex],
+          seeds?.[reelIndex],
         ),
       );
       maskRects.push(maskRectFor(reelIndex, mainExtents[reelIndex]));

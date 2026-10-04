@@ -464,7 +464,10 @@ export class Reel implements Disposable {
 
     // Create initial symbols at the spin cell: on MultiWays the one every
     // reel shares until AdjustPhase reshapes it, elsewhere the reel's own.
+    // A seeded big symbol's non-anchor cells arrive as OCCUPIED (the builder
+    // and `addReels()` run the big-symbol coordinator on their seeds).
     this.symbols = config.initialSymbols.map((symbolId, cell) => {
+      if (symbolId === OCCUPIED_SENTINEL) return this._newOccupiedStub();
       const symbol = symbolFactory.acquire(symbolId);
       const spinSize = this._screenSize(this._spinCellSize, this._cellCross);
       symbol.resize(spinSize.width, spinSize.height);
@@ -524,6 +527,9 @@ export class Reel implements Disposable {
       this._viewport.maskedContainer.addChild(this._warp);
     }
 
+    // Size big-symbol anchors and record their blocks, as every later
+    // placement does: a seeded block draws whole from the first frame.
+    this._finalizeFrame();
     // The initial frame is ordered like every later one. Before this the
     // views sat at zIndex 0 until the first wrap or snap, which a consumer
     // resolver would have read as "never asked at build".
@@ -2248,6 +2254,14 @@ export class Reel implements Disposable {
     for (const stub of this._occupiedStubs) {
       if (!stub.view.parent) return stub;
     }
+    return this._newOccupiedStub();
+  }
+
+  /**
+   * A fresh stub. The constructor takes these directly: its views are not
+   * parented yet, so a reuse scan would hand every cell the same stub.
+   */
+  private _newOccupiedStub(): OccupiedStub {
     const stub = new OccupiedStub();
     stub.activate(OCCUPIED_SENTINEL);
     this._occupiedStubs.push(stub);
