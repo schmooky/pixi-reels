@@ -105,6 +105,32 @@ describe('SpinTextureCache', () => {
     cache.destroy();
   });
 
+  it('one cell is one capture, whichever float path computed its size', () => {
+    const { renderer, spy } = makeRenderer();
+    const cache = new SpinTextureCache({ renderer });
+    const source = new Container();
+    // `symbolSize(96, 203 * 0.55)` on a 3-cell reel: the spin cell and the
+    // builder's per-reel cell differ in the last bit.
+    const spinCell = 203 * 0.55;
+    const reelCell = (3 * spinCell) / 3;
+    expect(reelCell).not.toBe(spinCell);
+
+    const tex = cache.captureStatic('cherry', source, 96, spinCell);
+    expect(cache.captureStatic('cherry', source, 96, reelCell)).toBe(tex);
+    expect(cache.getStatic('cherry', 96, reelCell)).toBe(tex);
+    expect(spy).toHaveBeenCalledTimes(1);
+    cache.destroy();
+  });
+
+  it('captureBlurred never stretches a capture of another size into a blur', () => {
+    const { renderer } = makeRenderer();
+    const cache = new SpinTextureCache({ renderer });
+    cache.captureStatic('cherry', new Container(), 92, 80);
+    expect(() => cache.captureBlurred('cherry', 92, 280)).toThrow(/no static texture to blur at 92x280/);
+    expect(cache.getBlurred('cherry', 92, 280)).toBeNull();
+    cache.destroy();
+  });
+
   it('captureBlurred fails loud when no static texture exists', () => {
     const { renderer } = makeRenderer();
     const cache = new SpinTextureCache({ renderer });

@@ -56,9 +56,20 @@ export interface SpinTextureCacheOptions {
  */
 type Captures = Map<string, Texture>;
 
-/** Key of one capture: the cell size, plus the smear axis for a blurred one. */
+/**
+ * Key of one capture: the cell size, plus the smear axis for a blurred one.
+ * Sizes are rounded to a thousandth of a pixel. The engine derives one cell
+ * size along two float paths (the builder's per-reel box, the spin cell), and
+ * the two can differ in the last bit: `111.65` and `111.65000000000002` are one
+ * cell, and must be one capture, or a prewarmed texture is missed mid-spin.
+ */
 function sizeKey(width: number, height: number, axis?: 'y' | 'x'): string {
-  return axis ? `${width}x${height}:${axis}` : `${width}x${height}`;
+  const size = `${roundPx(width)}x${roundPx(height)}`;
+  return axis ? `${size}:${axis}` : size;
+}
+
+function roundPx(value: number): number {
+  return Math.round(value * 1000) / 1000;
 }
 
 /**
@@ -183,8 +194,9 @@ export class SpinTextureCache implements Disposable {
    * derives it from the set's orientation) — and the
    * result is `2 * padding` larger than the cell on that axis only. Draw
    * it center-anchored at the cell center and the smear extends evenly
-   * past the cell on both sides. Blurs the static capture taken at the same
-   * size when there is one, so a tall cell is not smeared from a short one.
+   * past the cell on both sides. Blurs the user-provided static texture, or
+   * the capture taken at this same size: a capture at another size is never
+   * stretched into this one, which would bake (and cache) a distorted blur.
    */
   captureBlurred(
     symbolId: string,
@@ -195,11 +207,11 @@ export class SpinTextureCache implements Disposable {
     const axis = blur?.axis ?? this._blurDefaults.axis ?? 'y';
     const existing = this.getBlurred(symbolId, width, height, axis);
     if (existing) return existing;
-    const staticTex = this.getStatic(symbolId, width, height) ?? this.getStatic(symbolId);
+    const staticTex = this.getStatic(symbolId, width, height);
     if (!staticTex) {
       throw new Error(
-        `SpinTextureCache.captureBlurred('${symbolId}'): no static texture to blur. ` +
-          `Call captureStatic() or setStatic() for this symbolId first.`,
+        `SpinTextureCache.captureBlurred('${symbolId}'): no static texture to blur at ` +
+          `${width}x${height}. Call captureStatic() for this symbolId at this size, or setStatic(), first.`,
       );
     }
 
