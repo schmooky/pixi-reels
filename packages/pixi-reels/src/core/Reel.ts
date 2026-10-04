@@ -174,9 +174,10 @@ export interface ReelConfig {
    */
   extent?: number;
   /**
-   * SPIN-time uniform cell height. During SPIN every reel uses this same
-   * height. AdjustPhase later swaps to per-reel `extent / visibleCells`.
-   * Defaults to `symbolHeight`.
+   * The cell extent the strip moves on while it spins. On a MultiWays set
+   * every reel shares it and AdjustPhase reshapes to per-reel
+   * `extent / visibleCells` at land; on any other set it is the reel's own
+   * cell, the same spinning and landed. Defaults to `symbolHeight`.
    */
   spinCellSize?: number;
   /**
@@ -461,8 +462,8 @@ export class Reel implements Disposable {
         ? config.reelIndex
         : -config.reelIndex;
 
-    // Create initial symbols. Use spinCellSize so during SPIN every reel
-    // uses the same uniform cell height regardless of post-AdjustPhase shape.
+    // Create initial symbols at the spin cell: on MultiWays the one every
+    // reel shares until AdjustPhase reshapes it, elsewhere the reel's own.
     this.symbols = config.initialSymbols.map((symbolId, cell) => {
       const symbol = symbolFactory.acquire(symbolId);
       const spinSize = this._screenSize(this._spinCellSize, this._cellCross);
@@ -587,8 +588,9 @@ export class Reel implements Disposable {
    * set this is the main extent and a MultiWays reshape moves it; on a
    * horizontal set it is the constant cross extent.
    *
-   * During SPIN the main extent is still `spinCellSize`; the per-reel target
-   * comes into effect when AdjustPhase commits the reshape.
+   * On a MultiWays reel the main extent is still `spinCellSize` during SPIN;
+   * the per-reel target comes into effect when AdjustPhase commits the
+   * reshape.
    */
   get symbolHeight(): number {
     return this._axis.toScreen(this._cellCross, this._cellMain).y;
@@ -648,9 +650,9 @@ export class Reel implements Disposable {
   }
 
   /**
-   * SPIN-time uniform cell height. All reels in a slot use this value during
-   * the SPIN phase regardless of their per-reel `symbolHeight`. Frozen at
-   * construction.
+   * The cell extent this reel's strip moves on while it spins. On a MultiWays
+   * set every reel shares it, whatever its landed `symbolHeight`; on any other
+   * set it is the reel's own cell. Frozen at construction.
    */
   get spinCellSize(): number {
     return this._spinCellSize;

@@ -1038,8 +1038,8 @@ export class ReelSetBuilder {
     // The tallest strip sets the viewport's main extent; shorter reels sit
     // inside it by `reelAnchor` (see `mainOffsetFor` below).
     const tallest = Math.max(...mainExtents);
-    // SPIN-time uniform main cell extent. Every reel uses this while the
-    // strip is scrolling, regardless of its post-AdjustPhase shape.
+    // The symbol's main extent. A MultiWays reel spins on it whatever shape it
+    // lands, and a reel with no `reelExtents()` box keeps it from spin to land.
     const spinCellSize = mainCellSize;
 
     if (this._speeds.size === 0) {
@@ -1270,6 +1270,9 @@ export class ReelSetBuilder {
     const gsapInstance = this._gsap;
     const drive = this._drive;
     const explicitPoolCapacity = this._poolCapacity;
+    // `reelExtents()` boxes, which an added reel follows like any per-reel
+    // array: past their end, the last one.
+    const explicitExtents = this._reelExtents ? [...this._reelExtents] : undefined;
     // A per-reel builder array covers the reels it was given; a reel added
     // past its end takes the array's last entry.
     const perReel = <T>(values: readonly T[] | undefined, reelIndex: number): T | undefined =>
@@ -1289,9 +1292,12 @@ export class ReelSetBuilder {
       reelCountNow: number,
       seed: ColumnTarget | undefined,
     ): Reel => {
-      // SPIN-time cell: MultiWays reels all spin at the uniform cell and
-      // reshape at land; every other reel divides its own box.
-      const cellMain = isMultiWays ? spinCellSize : (extent - (cells - 1) * mainGap) / cells;
+      // A MultiWays reel spins on the shared cell and reshapes when it lands.
+      // Any other reel keeps one cell from spin to land, so its strip moves at
+      // the pitch it lands at: its share of a `reelExtents()` box, else the
+      // symbol size itself (not re-derived, which can drift a bit).
+      const cellMain =
+        isMultiWays || !explicitExtents ? spinCellSize : (extent - (cells - 1) * mainGap) / cells;
       // Project this reel's (main, cross) cell extents back to the screen
       // pair `Reel` stores. For vertical that is (symbolWidth, cellMain) as
       // before; for horizontal the per-reel value lands on WIDTH instead,
@@ -1316,7 +1322,7 @@ export class ReelSetBuilder {
         initialSymbols: initialFrame,
         mainOffset: mainOffsetFor(extent),
         extent,
-        spinCellSize,
+        spinCellSize: cellMain,
         axis: reelAxis(orientation, perReel(directionPerReel, reelIndex) ?? direction),
         curve: perReel(curvePerReel, reelIndex) ?? curve,
         curveRenderer,
@@ -1368,9 +1374,6 @@ export class ReelSetBuilder {
     viewport.updateMaskSize(viewportWidth, viewportHeight, maskRects);
 
     const multiways = this._multiways ? { ...this._multiways } : undefined;
-    // `reelExtents()` boxes, which an added reel follows like any per-reel
-    // array: past their end, the last one.
-    const explicitExtents = this._reelExtents ? [...this._reelExtents] : undefined;
     const reelFactory: ReelFactory = {
       extentFor: (reelIndex, cells) =>
         multiways?.reelExtent ??
