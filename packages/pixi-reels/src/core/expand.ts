@@ -17,7 +17,8 @@ export interface AddReelsOptions {
   /**
    * What the new reels show before their first spin, one `ColumnTarget` per
    * new reel. Default: random fill, like a set built without
-   * `initialFrame()`.
+   * `initialFrame()`. A big symbol gets its whole block, which has to end on
+   * a reel this call adds.
    */
   initialFrame?: readonly ColumnTarget[];
 }

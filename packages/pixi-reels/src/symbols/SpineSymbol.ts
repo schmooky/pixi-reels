@@ -56,7 +56,8 @@ export class SpineSymbol extends ReelSymbol {
   private _idleAnimation: string;
   private _winAnimation: string;
   private _defaultSkin: string;
-  private _winResolve: (() => void) | null = null;
+  /** The win in flight: its track entry and the resolve of its `playWin()`. */
+  private _win: { entry: any; resolve: () => void } | null = null;
   private _currentSkeletonKey: string = '';
   private _strict: boolean;
 
@@ -78,6 +79,9 @@ export class SpineSymbol extends ReelSymbol {
   }
 
   protected onActivate(symbolId: string): void {
+    // A win left playing on the instance about to be reused, or destroyed
+    // below, would never complete: settle its `await` now.
+    this._settleWin();
     const skeletonData = this._skeletonDataMap[symbolId];
     if (!skeletonData) return;
 
@@ -107,17 +111,11 @@ export class SpineSymbol extends ReelSymbol {
   }
 
   protected onDeactivate(): void {
-    if (this._spine) {
-      this._spine.state.clearListeners();
-      this._spine.state.clearTracks();
-    }
     // Settle any pending playWin so awaiters don't hang when the symbol is
     // recycled mid-animation. Mirrors the same fix in SpineReelSymbol.
-    if (this._winResolve) {
-      const r = this._winResolve;
-      this._winResolve = null;
-      r();
-    }
+    this._settleWin();
+    // The tracks only: a listener on the state is not the symbol's to drop.
+    if (this._spine) this._spine.state.clearTracks();
   }
 
   async playWin(): Promise<void> {
@@ -132,34 +130,56 @@ export class SpineSymbol extends ReelSymbol {
       return;
     }
 
+    // A win still playing settles before this one takes its track, or its
+    // `await` would wait on an animation that never completes.
+    this._settleWin();
+    const spine = this._spine;
     return new Promise<void>((resolve) => {
-      this._winResolve = resolve;
-      const entry = this._spine.state.setAnimation(0, this._winAnimation, false);
-      this._spine.state.addListener({
-        complete: (trackEntry: any) => {
-          if (trackEntry === entry) {
-            this._spine.state.clearListeners();
-            if (this._spine.skeleton.data.findAnimation(this._idleAnimation)) {
-              this._spine.state.setAnimation(0, this._idleAnimation, true);
-            }
-            this._winResolve = null;
-            resolve();
+      const entry = spine.state.setAnimation(0, this._winAnimation, false);
+      // The entry's own listener, not one on the state: spine calls it for
+      // this entry alone, and nothing here ever edits the state's listener
+      // list. Clearing that list dropped every listener the game had added,
+      // and doing it inside spine's dispatch, which walks the list live, made
+      // the listeners after this one miss the event.
+      entry.listener = {
+        complete: () => {
+          if (!this._settleWin(entry)) return;
+          if (spine.skeleton.data.findAnimation(this._idleAnimation)) {
+            spine.state.setAnimation(0, this._idleAnimation, true);
           }
         },
-      });
+        // Something else took track 0 before the win completed: a subclass
+        // swapping the animation, `stopAnimation()`, the tracks cleared.
+        interrupt: () => this._settleWin(entry),
+        end: () => this._settleWin(entry),
+      };
+      this._win = { entry, resolve };
     });
   }
 
   stopAnimation(): void {
     if (!this._spine) return;
-    this._spine.state.clearListeners();
+    this._settleWin();
     if (this._spine.skeleton.data.findAnimation(this._idleAnimation)) {
       this._spine.state.setAnimation(0, this._idleAnimation, true);
     }
-    if (this._winResolve) {
-      this._winResolve();
-      this._winResolve = null;
-    }
+  }
+
+  /**
+   * Settle the win in flight, if any: drop its track entry's listener and
+   * resolve its `playWin()`. A listener passes its own `entry`, so a late
+   * event from an earlier win cannot settle a newer one. `true` when it
+   * settled one.
+   */
+  private _settleWin(entry?: unknown): boolean {
+    const win = this._win;
+    if (!win || (entry !== undefined && win.entry !== entry)) return false;
+    this._win = null;
+    // Spine pools its track entries: a listener left on this one would fire
+    // for whatever animation reuses it.
+    win.entry.listener = null;
+    win.resolve();
+    return true;
   }
 
   resize(width: number, height: number): void {
@@ -174,15 +194,12 @@ export class SpineSymbol extends ReelSymbol {
   }
 
   protected override onDestroy(): void {
+    this._settleWin();
     if (this._spine) {
+      // The spine goes, and everything listening to it with it.
       this._spine.state.clearListeners();
       this._spine.destroy();
       this._spine = null;
-    }
-    if (this._winResolve) {
-      const r = this._winResolve;
-      this._winResolve = null;
-      r();
     }
   }
 }

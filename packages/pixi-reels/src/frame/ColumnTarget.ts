@@ -69,6 +69,24 @@ export function setTargetSlot(target: ColumnTarget, cell: number, id: string): v
 }
 
 /**
+ * Unspecify one slot of a `ColumnTarget` by cell, the coordinate of
+ * {@link getTargetSlot}, so the engine random-fills it. `visible` is typed
+ * `string[]` for callers, but the pipeline reads a hole there the way it
+ * reads a missing buffer entry.
+ *
+ * Mutates `target`. @internal Not exported from the package.
+ */
+export function clearTargetSlot(target: ColumnTarget, cell: number): void {
+  if (cell < 0) {
+    if (target.bufferStart) target.bufferStart[-1 - cell] = undefined;
+  } else if (cell < target.visible.length) {
+    (target.visible as (string | undefined)[])[cell] = undefined;
+  } else if (target.bufferEnd) {
+    target.bufferEnd[cell - target.visible.length] = undefined;
+  }
+}
+
+/**
  * Materialize a `ColumnTarget` into **strip form**: one entry per strip
  * slot, top to bottom. Index `0` is the furthest buffer-above cell, index
  * `bufferStart` is the first visible cell, and the tail holds buffer-below
