@@ -157,7 +157,7 @@ A small readable card: rows of monospace text on a smooth rounded plate, with op
 
 ### SpinMetrics
 URL: https://pixi-reels.schmooky.dev/api/classes/debug.SpinMetrics/
-Records what each spin did, per reel, on a clock: when every phase started and ended, when the reel was asked to stop, landed and settled, the tease window, every skip press, and how many symbols the
+Records what each spin did, per reel, on a clock: when every phase started and ended, when the reel was asked to stop, landed and settled, the tease window, every skip press, and how many symbols were
 
 ### WinLines
 URL: https://pixi-reels.schmooky.dev/api/classes/debug.WinLines/
@@ -1078,6 +1078,10 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.WinLine/
 ### WinPresenterOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.WinPresenterOptions/
 
+### OneShotOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/spine.OneShotOptions/
+Options for [SpineReelSymbol.playOneShot](/api/classes/spine.SpineReelSymbol/#playoneshot).
+
 ### SpineReelSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/spine.SpineReelSymbolOptions/
 
@@ -1175,6 +1179,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.HwPhase/
 ### HwRespinReason
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwRespinReason/
 ```ts type HwRespinReason = "seed" | "hit-reset" | "miss"; ```
+
+### HwStagger
+URL: https://pixi-reels.schmooky.dev/api/types/index.HwStagger/
+```ts type HwStagger = (reel: number, cell: number, speed: string, profile: SpeedProfile) => number; ```
 
 ### LogLevel
 URL: https://pixi-reels.schmooky.dev/api/types/index.LogLevel/
@@ -1299,6 +1307,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.WinSymbolAnim/
 ### LandingDecision
 URL: https://pixi-reels.schmooky.dev/api/types/spine.LandingDecision/
 ```ts type LandingDecision = boolean | string; ```
+
+### OneShotEnd
+URL: https://pixi-reels.schmooky.dev/api/types/spine.OneShotEnd/
+```ts type OneShotEnd = "idle" | "hold" | "clear"; ```
 
 ### SymbolAnimOverrides
 URL: https://pixi-reels.schmooky.dev/api/types/spine.SymbolAnimOverrides/
@@ -5819,7 +5831,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/clover-promote-win-line/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover,
-//           CLOVER_FRUITS, CLOVER_CELL, CLOVER_CELL_RADIUS, CLOVER_SPEED, gsap, app, DebugPlaque
+//           CLOVER_FRUITS, CLOVER_CELL, CLOVER_CELL_RADIUS, CLOVER_REEL_SPEED, gsap, app, DebugPlaque
 //
 // PROMOTE, WITHOUT THE SPOTLIGHT. `spotlight.show()` is a whole presentation:
 // it dims, reparents the winners, plays their win animation and only resolves
@@ -5848,7 +5860,7 @@ const reels = new ReelSetBuilder()
   .symbolSize(CELL.width, CELL.height).symbolGap(COLUMN_GAP, ROW_GAP)
   .symbols((r) => { for (const id of CLOVER_FRUITS) r.register(id, CloverSymbol, { art, idleAfterLand: false }); })
   .maskStrategy(new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS }))
-  .speed('normal', CLOVER_SPEED)
+  .speed('normal', CLOVER_REEL_SPEED)
   .ticker(app.ticker)
   .build();
 
@@ -9046,7 +9058,7 @@ const base = new ReelSetBuilder()
   })
   .symbolData(UNMASK)
   .maskStrategy(new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS }))
-  .speed('normal', CLOVER_SPEED)
+  .speed('normal', CLOVER_REEL_SPEED)
   .ticker(app.ticker)
   .build();
 base.position.set(ox, oy);
@@ -14103,7 +14115,7 @@ const flyers = new Set();
 let phase = 'ready', total = 0;
 return {
   board,
-  cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); try { hud.destroy({ children: true }); } catch {} board.destroy(); },
+  cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); hud.destroy(); board.destroy(); },
   onSpin: async () => {
     if (phase === 'swapping' || phase === 'flying') return;
     if (phase === 'collected') { total = 0; meterText.text = '0'; phase = 'ready'; seedBoard(); return; }
@@ -14825,7 +14837,9 @@ async function onSpin() {
   });
 }
 
-return { reelSet, stage, onSpin };
+// A demo scrolled away mid-pan unmounts with the tween still running; kill it
+// so it does not tick on into a destroyed camera.
+return { reelSet, stage, onSpin, cleanup: () => gsap.killTweensOf(camera) };
 ```
 
 ### infinity-reels-multiways
@@ -14944,7 +14958,9 @@ async function onSpin() {
   });
 }
 
-return { reelSet, stage, onSpin };
+// A demo scrolled away mid-pan unmounts with the tween still running; kill it
+// so it does not tick on into a destroyed camera.
+return { reelSet, stage, onSpin, cleanup: () => gsap.killTweensOf(camera) };
 ```
 
 ### infinity-reels-skip
@@ -15131,7 +15147,9 @@ function onSkip() {
   if (noted === before) note(`press ${presses}: the tease is protected, it plays on`);
 }
 
-return { reelSet, stage, onSpin, onSkip };
+// A demo scrolled away mid-pan unmounts with the tween still running; kill it
+// so it does not tick on into a destroyed camera.
+return { reelSet, stage, onSpin, onSkip, cleanup: () => gsap.killTweensOf(camera) };
 ```
 
 ### infinity-reels
@@ -15308,7 +15326,9 @@ function onSkip() {
   }
 }
 
-return { reelSet, stage, onSpin, onSkip };
+// A demo scrolled away mid-pan unmounts with the tween still running; kill it
+// so it does not tick on into a destroyed camera.
+return { reelSet, stage, onSpin, onSkip, cleanup: () => gsap.killTweensOf(camera) };
 ```
 
 ### landing-signal
@@ -22063,8 +22083,8 @@ return {
   reelSet,
   cleanup: () => {
     app.ticker.remove(tick);
-    try { face.destroy({ children: true }); } catch {}
-    try { stageText.destroy({ children: true }); } catch {}
+    face.destroy();
+    stageText.destroy();
   },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {
