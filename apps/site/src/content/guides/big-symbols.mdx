@@ -111,11 +111,13 @@ If `symbolGap.x > 0`, the **default per-reel mask** has horizontal gaps between 
 
 The engine **auto-picks `SharedRectMaskStrategy`** when:
 
-1. At least one big symbol is registered (`SymbolData.size > 1×1`), **or any symbol sets `unmask: true`**, AND
+1. At least one big symbol **wider than one reel** is registered (`SymbolData.size.reels > 1`), **or any symbol sets `unmask: true`**, AND
 2. the **cross-axis** gap is above 0 -- `symbolGap.x` on a vertical set, `symbolGap.y` on a horizontal one, AND
 3. No explicit `.maskStrategy(...)` call was made.
 
 It logs a `console.info(...)` so you can see what happened. Pass `.maskStrategy(...)` to override.
+
+A stack one reel wide (`size: { reels: 1, cells: 3 }`) never crosses a gap, so it keeps the per-reel mask: a reel that `setColumn()` or `splitSymbol()` makes taller or shorter than the rest needs its own mask, or one box shows the buffer cells past the shorter reels. Art that bleeds past its cell into the gap is clipped there; pass `.maskStrategy(new SharedRectMaskStrategy())` to keep one box.
 
 ```ts
 import { SharedRectMaskStrategy } from 'pixi-reels';

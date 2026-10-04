@@ -8,7 +8,7 @@ ADR 012 introduced `MaskStrategy` as an **internal** seam inside `ReelViewport`.
 
 That changed during PR review for the per-reel-geometry / MultiWays / big-symbols work:
 
-- Big symbols + `symbolGap.x > 0` need `SharedRectMaskStrategy` to avoid clipping a cross-reel block at every column gap. The engine auto-picks it, but consumers wanted an explicit override knob without monkey-patching `ReelViewport`.
+- Big symbols wider than one reel + `symbolGap.x > 0` need `SharedRectMaskStrategy` to avoid clipping a cross-reel block at every column gap. The engine auto-picks it, but consumers wanted an explicit override knob without monkey-patching `ReelViewport`.
 - Pyramid layouts and big-symbol slots have different correctness requirements (per-reel rects clip pyramid buffer-row peek; shared rect lets big symbols stay whole). Letting the consumer make that choice explicitly is cleaner than baking heuristics into the builder.
 - A "non-rectangular masks come later" promise gets stale fast. Promoting the seam now means recipe authors can demo curved frames without forking the library.
 
@@ -20,7 +20,7 @@ ADR 012 noted this as deferred. This ADR records the decision to promote.
 
 - `MaskStrategy`, `RectMaskStrategy`, `SharedRectMaskStrategy`, and `ReelMaskRect` are exported from `pixi-reels`.
 - `ReelSetBuilder.maskStrategy(strategy)` is the wiring point. It validates that `strategy` has both `build(...)` and `update(...)` methods (throws otherwise so plain-JS callers get a grep-able error instead of a deep `ReelViewport` crash).
-- The auto-pick in the builder (`SharedRectMaskStrategy` when big symbols are registered AND `symbolGap.x > 0`) still runs, and only fires when the consumer didn't call `maskStrategy(...)` explicitly. Explicit always wins.
+- The auto-pick in the builder (`SharedRectMaskStrategy` when big symbols wider than one reel are registered AND `symbolGap.x > 0`) still runs, and only fires when the consumer didn't call `maskStrategy(...)` explicitly. Explicit always wins. (Until 4.1 it fired for any big symbol; a stack one reel wide never crosses a gap, and one shared box cannot clip reels of different heights, which `setColumn()` makes. ADR 023.)
 - The interface is small: `build(rects, totalWidth, totalHeight) → Graphics` and `update(graphics, rects, totalWidth, totalHeight) → void`. Custom strategies are free to draw any shape PixiJS supports — rounded rects, hex tiles, full-canvas filters.
 
 ## Consequences

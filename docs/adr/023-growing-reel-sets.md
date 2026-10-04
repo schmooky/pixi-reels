@@ -96,10 +96,14 @@ the common case, from the symbol covering a cell (any symbol one reel wide)
 and the server's ids, and moves the pins below it down with their symbols.
 `resetColumns()` goes back to each reel's built or added cells and cell size.
 Only new content is held to a landing's fit rule, so a reset never throws on a
-board that is already on screen, and reels whose symbols do not change are not
-re-placed, so their animations carry on. A block wider than one reel spans
-reels that share one cell size and offset, so neither call touches a reel such
-a block covers. A shared mask cannot clip reels of different heights, so the
+board that is already on screen. Only the cells that change are replaced: the
+changed reel splices its new cells in between the symbols it keeps, and the
+other reels are not re-placed, so every animation that is not on a replaced
+cell carries on. A pin keeps its cell and its symbol, so a column that would
+show something else there throws; a pinned symbol does not split. A block
+wider than one reel spans reels that share one cell size and offset, so
+neither call touches a reel such a block covers, and a landing that puts one
+across reels of different geometry warns. A shared mask cannot clip reels of different heights, so the
 builder now auto-picks one only for blocks wider than a reel, and `setColumn()`
 warns once if one is in use.
 

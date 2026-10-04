@@ -5,13 +5,18 @@
  * reel grows (`height: 'grow'`) or keeps its height and shrinks its cells
  * (`height: 'keep'`, as on MultiWays).
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import type { Renderer, Ticker } from 'pixi.js';
 import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
+import { RoundedRectMaskStrategy } from '../../src/core/maskStrategies.js';
+import { ReelWarp } from '../../src/core/ReelWarp.js';
+import { FakeTicker } from '../../src/testing/FakeTicker.js';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import { onNotice, resetNoticesForTest } from '../../src/utils/notify.js';
 import type { TestReelSetOptions } from '../../src/testing/testHarness.js';
 import type { SpeedProfile } from '../../src/config/types.js';
 import type { ColumnTarget } from '../../src/frame/ColumnTarget.js';
-import type { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 
 const FAST: SpeedProfile = {
   name: 'fast',
@@ -52,6 +57,28 @@ function make(opts: TestReelSetOptions = {}) {
   const handle = { ...h, stopPump: () => clearInterval(pump) };
   harnesses.push(handle);
   return handle;
+}
+
+// A set the harness has no option for (a mask strategy, a warp renderer).
+function custom(configure: (builder: ReelSetBuilder) => ReelSetBuilder) {
+  const ticker = new FakeTicker();
+  const builder = new ReelSetBuilder()
+    .reels(3)
+    .visibleCells(4)
+    .symbolSize(120, 100)
+    .symbols((r) => {
+      for (const id of ['q', 'k', 'w']) r.register(id, HeadlessSymbol, {});
+    })
+    .ticker(ticker as unknown as Ticker);
+  const reelSet = configure(builder).build();
+  harnesses.push({ destroy: () => { reelSet.destroy(); ticker.destroy(); }, stopPump: () => {} });
+  return reelSet;
+}
+
+function notices(): { seen: string[]; off: () => void } {
+  resetNoticesForTest();
+  const seen: string[] = [];
+  return { seen, off: onNotice((n) => seen.push(n.code)) };
 }
 
 const col = (...visible: string[]): ColumnTarget => ({ visible });
@@ -127,11 +154,11 @@ describe('setColumn()', () => {
     const extent = 4 * 100 + 3 * 4;
     expect(r0.visibleCells).toBe(6);
     expect(r0.cellMain).toBeCloseTo((extent - 5 * 4) / 6, 9);
-    expect(r0.extent).toBeCloseTo(extent, 9);
+    expect(r0.extent).toBe(extent);
     for (const symbol of r0.symbols) expect((symbol as HeadlessSymbol).height).toBeCloseTo(r0.cellMain, 9);
     // Nothing else moved, and nothing else was re-placed.
-    expect(h.reelSet.viewport.maskHeight).toBeCloseTo(maskHeight, 9);
-    h.reelSet.reels.forEach((r, i) => expect(r.mainOffset).toBeCloseTo(offsets[i], 9));
+    expect(h.reelSet.viewport.maskHeight).toBe(maskHeight);
+    h.reelSet.reels.forEach((r, i) => expect(r.mainOffset).toBe(offsets[i]));
     [1, 2].forEach((r, i) => expect(h.reelSet.reels[r].symbols).toEqual(others[i]));
     expect(log).toEqual([{ event: 'column:set', args: [{ reelIndex: 0, fromCells: 4, toCells: 6 }] }]);
 
@@ -164,6 +191,72 @@ describe('setColumn()', () => {
     // @ts-expect-error: a height the API does not name.
     expect(() => h.reelSet.setColumn(0, col('q'), { height: 'shrink' })).toThrow(/height must be 'grow' or 'keep'/);
     expect(h.reelSet.reels[0].visibleCells).toBe(4);
+  });
+
+  it("keeps a kept height exact, so a 'keep' round trip leaves nothing for resetColumns()", () => {
+    // 400 / 11 does not round-trip: 11 cells of it come to 400.00000000000006.
+    const h = make();
+    h.reelSet.setColumn(0, col(...new Array<string>(11).fill('q')), { height: 'keep' });
+    expect(h.reelSet.reels[0].extent).toBe(400);
+    h.reelSet.setColumn(0, col('q', 'q', 'q', 'q'), { height: 'keep' });
+    const log = captureEvents(h.reelSet, ['column:set']);
+    h.reelSet.resetColumns();
+    expect(log).toEqual([]);
+  });
+
+  it('refuses a column that drops a pinned symbol, and keeps one that shows it', async () => {
+    const h = make();
+    await land(h, BUFFALO);
+    h.reelSet.pin(1, 2, 'wild');
+    expect(() => h.reelSet.setColumn(1, col('w', 'q', 'k', 'w'))).toThrow(
+      /\(reel 1, cell 2\) is pinned to 'wild', but the column shows 'k' there/,
+    );
+    expect(h.reelSet.getVisibleGrid()[1]).toEqual(['w', 'q', 'wild', 'w']);
+    h.reelSet.setColumn(1, col('k', 'q', 'wild', 'w', 'k'));
+    expect(h.reelSet.getPin(1, 2)?.symbolId).toBe('wild');
+    expect(h.reelSet.getVisibleGrid()[1]).toEqual(['k', 'q', 'wild', 'w', 'k']);
+  });
+
+  it('replaces only the cells that change: every other symbol keeps its instance and animation', async () => {
+    const h = make();
+    await land(h, BUFFALO);
+    const reel = h.reelSet.reels[1];
+    const before = reel.symbols.slice();
+    const stops = before.map((symbol) => vi.spyOn(symbol, 'stopAnimation'));
+    const created: number[] = [];
+    reel.events.on('symbol:created', (_id, index) => created.push(index));
+
+    h.reelSet.splitSymbol(1, 1, ['q', 'q', 'q']); // w q q w becomes w q q q q w
+
+    for (const symbol of before) expect(reel.symbols).toContain(symbol);
+    expect(created).toHaveLength(2);
+    for (const spy of stops) expect(spy).not.toHaveBeenCalled();
+    expect(h.reelSet.getVisibleGrid()[1]).toEqual(['w', 'q', 'q', 'q', 'q', 'w']);
+  });
+
+  it('warns once for any mask that covers the board as one box, and not for a per-reel one', () => {
+    const { seen, off } = notices();
+    try {
+      const perReel = custom((b) => b.maskStrategy(new RoundedRectMaskStrategy({ radius: 12, scope: 'reel' })));
+      perReel.setColumn(0, col('q', 'q', 'q', 'q', 'q', 'q'));
+      expect(seen).not.toContain('shared-mask-jagged');
+      const oneBox = custom((b) => b.maskStrategy(new RoundedRectMaskStrategy({ radius: 12 })));
+      oneBox.setColumn(0, col('q', 'q', 'q', 'q', 'q', 'q'));
+      expect(seen).toContain('shared-mask-jagged');
+    } finally {
+      off();
+    }
+  });
+
+  it('moves a warped reel with its offset when the board re-centres', () => {
+    // The warp draws the reel; a stub renderer is enough to build it.
+    const renderer = { resolution: 1, render: () => {} } as unknown as Renderer;
+    const rs = custom((b) => b.curve(0.3).curveMode('warp').renderer(renderer));
+    rs.setColumn(0, col('q', 'q', 'q', 'q', 'q', 'q'));
+    const warps = rs.viewport.maskedContainer.children.filter((c): c is ReelWarp => c instanceof ReelWarp);
+    expect(warps).toHaveLength(3);
+    expect(rs.reels[1].mainOffset).toBe(100);
+    rs.reels.forEach((reel, i) => expect(warps[i].y).toBe(reel.mainOffset));
   });
 });
 
@@ -244,6 +337,53 @@ describe('splitSymbol()', () => {
     expect(() => h.reelSet.splitSymbol(0, 0, ['q'])).toThrow(/while the reels spin/);
     h.reelSet.setResult(BUFFALO);
     await spin;
+  });
+
+  it('keeps a stack hanging in from above where it is when another cell on its reel splits', async () => {
+    const h = make();
+    await land(h, [{ bufferStart: ['q3'], visible: ['k', 'k', 'w', 'k'] }, col('w', 'w', 'w', 'w'), col('w', 'w', 'w', 'w')]);
+    expect(h.reelSet.getVisibleGrid()[0]).toEqual(['q3', 'q3', 'w', 'k']);
+    h.reelSet.splitSymbol(0, 3, ['q', 'q']);
+    expect(h.reelSet.getVisibleGrid()[0]).toEqual(['q3', 'q3', 'w', 'q', 'q']);
+  });
+
+  it('refuses ids whose last block runs past them, a pinned symbol, and a cell out of range', async () => {
+    const h = make();
+    await land(h, BUFFALO);
+    expect(() => h.reelSet.splitSymbol(1, 1, ['q', 'q2'])).toThrow(/'q2' at ids\[1\] covers 2 cells/);
+    h.reelSet.pin(1, 2, 'wild');
+    expect(() => h.reelSet.splitSymbol(1, 2, ['q', 'k'])).toThrow(/\(reel 1, cell 2\) is pinned to 'wild'/);
+    expect(() => h.reelSet.splitSymbol(1, 9, ['q'])).toThrow(/splitSymbol: cell 9 out of range \[0, 4\)/);
+    expect(h.reelSet.getVisibleGrid()[1]).toEqual(['w', 'q', 'wild', 'w']);
+    // A block that ends inside the ids is fine.
+    h.reelSet.splitSymbol(1, 1, ['q2', 'q2', 'k']);
+    expect(window(h, 1)).toEqual(['w', 'q2', OCC, 'k', 'wild', 'w']);
+    expect(h.reelSet.getPin(1, 4)?.symbolId).toBe('wild');
+  });
+
+  it('warns once when a block wider than a reel lands across reels a split resized', async () => {
+    const { seen, off } = notices();
+    try {
+      const h = make();
+      await land(h, BUFFALO);
+      h.reelSet.splitSymbol(1, 1, ['q', 'q'], { height: 'keep' });
+      await land(h, [col('big', 'big', 'w', 'w'), col('big', 'big', 'w', 'w', 'w'), col('w', 'w', 'w', 'w')]);
+      expect(seen).toContain('wide-block-misaligned');
+    } finally {
+      off();
+    }
+  });
+
+  it('adds a reel at its built cells after a split on the last reel', async () => {
+    const h = make();
+    await land(h, BUFFALO);
+    h.reelSet.splitSymbol(2, 1, ['q', 'q', 'q'], { height: 'keep' });
+    expect(h.reelSet.addReels(1)[0].visibleCells).toBe(4);
+    h.reelSet.addRows(1);
+    expect(h.reelSet.addReels(1)[0].visibleCells).toBe(5);
+    h.reelSet.removeReels();
+    h.reelSet.resetColumns();
+    expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([4, 4, 4]);
   });
 
   it('refuses a reel a block wider than one reel covers, or a column that holds one', async () => {
