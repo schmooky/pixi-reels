@@ -124,7 +124,7 @@ describe('addReels()', () => {
     expect(h.reelSet.reels[5].visibleCells).toBe(3);
     expect(h.reelSet.reels[5].mainOffset).toBe(h.reelSet.reels[0].mainOffset);
     expect(h.reelSet.reels[6].mainOffset).toBe(0);
-    expect(() => h.reelSet.addReels(1, { visibleCells: 6 })).toThrow(/taller than the set's tallest reel/);
+    expect(() => h.reelSet.addReels(1, { visibleCells: 6 })).toThrow(/taller than the board's tallest reel/);
     expect(h.reelSet.reels).toHaveLength(7);
   });
 
@@ -721,7 +721,7 @@ describe('expand()', () => {
         h.reelSet.expand({ columns: [{ visible: ['a'], bufferStart: ['a', 'b'] }] }),
       ).rejects.toThrow(/bufferStart/);
       await expect(h.reelSet.expand({ columns: [col('a', 'a', 'a', 'a', 'a')] })).rejects.toThrow(
-        /taller than the set's tallest reel/,
+        /taller than the board's tallest reel/,
       );
       await expect(h.reelSet.expand({ columns: [col('a')], step: 0 })).rejects.toThrow(/at least 1/);
       await expect(h.reelSet.expand({ columns: [col('a')], mode: 'cascade' })).rejects.toThrow(/requires \.tumble/);

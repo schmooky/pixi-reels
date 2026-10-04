@@ -24,6 +24,7 @@ import { ReelViewport } from './ReelViewport.js';
 import type { ReelMaskRect } from './ReelViewport.js';
 import type {
   AddReelsOptions,
+  AddRowsOptions,
   ExpandOptions,
   ExpandResult,
   ExpandStep,
@@ -62,17 +63,22 @@ export interface ReelFactory {
    * the last one), else the cells' natural size.
    */
   extentFor(reelIndex: number, cells: number): number;
-  /** The tallest strip, which the viewport's main extent is sized to. */
-  readonly tallestExtent: number;
+  /**
+   * The geometry below takes `tallest`, the board's tallest strip as it is
+   * now: `addRows()` can make it taller than the builder made it.
+   */
   create(
     reelIndex: number,
     cells: number,
     extent: number,
     reelCount: number,
     seed: ColumnTarget | undefined,
+    tallest: number,
   ): Reel;
-  maskRect(reelIndex: number, extent: number): ReelMaskRect;
-  viewportSize(reelCount: number): { width: number; height: number };
+  maskRect(reelIndex: number, extent: number, tallest: number): ReelMaskRect;
+  /** Where a reel of `extent` sits along the main axis, per the builder's `reelAnchor`. */
+  mainOffset(extent: number, tallest: number): number;
+  viewportSize(reelCount: number, tallest: number): { width: number; height: number };
   /** Pool capacity per symbol id for these reels, the builder's explicit one if set. */
   poolCapacity(reels: readonly Reel[]): number;
 }
@@ -605,6 +611,14 @@ export class ReelSet extends Container implements Disposable {
   private _reelFactory: ReelFactory;
   /** True while `expand()` runs: the board is mid-chain, so nothing else may resize it. */
   private _expanding = false;
+  /**
+   * True from the moment an `expand()` step adds its reels until they land:
+   * the step's columns were sized for the rows the board had, so the rows may
+   * only change between steps.
+   */
+  private _expandStepPending = false;
+  /** Rows `addRows()` added since `build()`, net of `removeRows()`. */
+  private _addedRows = 0;
   /** Reels the builder made. `removeReels()` with no count goes back to it. */
   private _builtReelCount: number;
   /** The last `setCurve()`, which reels added after it take instead of the builder's curve. */
@@ -1991,9 +2005,121 @@ export class ReelSet extends Container implements Disposable {
     for (const reel of removed) reel.destroy();
     // A shape recorded for the next landing drops the reels that are gone.
     if (this._targetShape) this._targetShape.length = from;
-    this._afterReelCountChange(this._viewport.maskRects.slice(0, from));
+    this._afterBoardChange();
     this._spinController.onReelsRemoved();
     this._events.emit('reels:removed', { from, count });
+  }
+
+  /**
+   * Add `count` rows below the last one, on every reel: the board grows
+   * taller, each reel showing `count` more cells at its own cell size, and the
+   * viewport, mask and symbol pool grow with it. What the new rows show comes
+   * from `options.cells` (one array per reel), else random fill.
+   *
+   * The rows a reel had keep their symbols and pins, and a reel added later
+   * with `addReels()` or `expand()` may be as tall as the board is now. Inside
+   * an expansion, grow the rows between steps, in `onStepLanded`: a step's
+   * columns are sized for the rows the board has when the step starts.
+   *
+   * Not on MultiWays: there a reel's rows are its shape, set per spin with
+   * `setShape()` or by an `expand()` column's length. Throws while the reels
+   * spin, a nudge runs, or an `expand()` step is in flight.
+   *
+   * @example
+   * reelSet.addRows(1, { cells: res.newRow.map((id) => [id]) }); // 5x3 becomes 5x4
+   */
+  addRows(count: number, options: AddRowsOptions = {}): void {
+    this._assertCanChangeRows('addRows');
+    if (!Number.isInteger(count) || count < 1) {
+      throw new RangeError(`addRows: count must be a whole number of rows, at least 1 (got ${String(count)}).`);
+    }
+    const cells = options.cells;
+    if (cells) {
+      if (cells.length !== this._reels.length) {
+        throw new RangeError(`addRows: cells has ${cells.length} columns for ${this._reels.length} reels.`);
+      }
+      cells.forEach((column, r) => {
+        if (column.length !== count) {
+          throw new RangeError(`addRows: cells column ${r} has ${column.length} ids for ${count} new rows.`);
+        }
+      });
+      this._assertKnownIds(cells.map((column) => ({ visible: [...column] })), 'addRows cells');
+    }
+    if (this._spotlight.isActive) this._spotlight.hide();
+
+    this._reels.forEach((reel, r) => {
+      const target = reel.getTarget();
+      reel.reshape(reel.visibleCells + count, reel.cellMain, reel.bufferStart, reel.bufferEnd);
+      // A missing id is random-filled, which is what no `cells` asks for.
+      reel.placeSymbols({ ...target, visible: [...target.visible, ...(cells?.[r] ?? new Array(count))] });
+    });
+    this._addedRows += count;
+    this._afterBoardChange();
+    this._events.emit('rows:added', { count, rows: this._reels.map((reel) => reel.visibleCells) });
+  }
+
+  /**
+   * Remove the last `count` rows from every reel. Without `count`, remove
+   * every row `addRows()` added since `build()`, a no-op when there are none,
+   * so it is safe at the start of every round. Pins on removed rows expire
+   * (`pin:expired` with reason `'explicit'`), a spotlight is hidden, and the
+   * viewport, mask and pool shrink back. Every reel keeps at least one row.
+   *
+   * A big symbol reaching into a removed row is cut at the new edge. Throws
+   * where `addRows()` does.
+   *
+   * @example
+   * reelSet.removeRows(); // next round: back to the rows the builder made
+   */
+  removeRows(count?: number): void {
+    this._assertCanChangeRows('removeRows');
+    if (count === undefined) {
+      count = this._addedRows;
+      if (count <= 0) return;
+    }
+    const shortest = Math.min(...this._reels.map((reel) => reel.visibleCells));
+    if (!Number.isInteger(count) || count < 1 || count >= shortest) {
+      throw new RangeError(
+        `removeRows: count must be a whole number from 1 to ${shortest - 1} (the shortest reel has ` +
+          `${shortest} rows and keeps at least one), got ${String(count)}.`,
+      );
+    }
+    for (const pin of [...this._pins.values()]) {
+      if (pin.cell >= this._reels[pin.reel].visibleCells - count) this.unpin(pin.reel, pin.cell);
+    }
+    if (this._spotlight.isActive) this._spotlight.hide();
+
+    for (const reel of this._reels) {
+      const target = reel.getTarget();
+      const rows = reel.visibleCells - count;
+      reel.reshape(rows, reel.cellMain, reel.bufferStart, reel.bufferEnd);
+      reel.placeSymbols({ ...target, visible: target.visible.slice(0, rows) });
+    }
+    this._addedRows = Math.max(0, this._addedRows - count);
+    this._afterBoardChange();
+    this._events.emit('rows:removed', { count, rows: this._reels.map((reel) => reel.visibleCells) });
+  }
+
+  /** `addRows()` / `removeRows()` guard: at rest, and only between `expand()` steps. */
+  private _assertCanChangeRows(method: string): void {
+    if (this._isMultiWaysSlot) this._throwMultiWaysRows(method);
+    if (this._spinController.isSpinning) {
+      throw new Error(`ReelSet.${method}: cannot change the rows while the reels spin. Await the spin first.`);
+    }
+    this._assertNoNudgeInFlight(method);
+    if (this._expandStepPending) {
+      throw new Error(
+        `ReelSet.${method}: an expand() step is in flight, and its columns were sized for the rows ` +
+          'the board had when it started. Change the rows between steps, in onStepLanded.',
+      );
+    }
+  }
+
+  private _throwMultiWaysRows(method: string): never {
+    throw new Error(
+      `ReelSet.${method}: a MultiWays set's rows are its reels' shapes. Land more of them with ` +
+        "setShape() on a spin, or with an expand() column's length.",
+    );
   }
 
   /**
@@ -2077,7 +2203,9 @@ export class ReelSet extends Container implements Disposable {
     );
     const shapes = columns.map((c) => c.visible.length);
     const start = this._reels.length;
-    shapes.forEach((cells, i) => this._assertAddableCells(start + i, cells, `expand() column ${i}`));
+    // Heights are checked again per step, against the board as it is then: an
+    // `addRows()` between steps makes room for a taller column.
+    shapes.forEach((cells, i) => this._assertAddableCells(start + i, cells, `expand() column ${i}`, false));
     this._assertKnownIds(columns, 'expand()');
     // An options object is the same for every step: check it before any reel
     // exists. A function's answer is checked per step, before that step's reels.
@@ -2106,6 +2234,7 @@ export class ReelSet extends Container implements Disposable {
     const onDestroyed = (): void => signal?.removeEventListener('abort', slam);
     if (signal) this._events.on('destroyed', onDestroyed);
     this._expanding = true;
+    let completed = false;
     this._events.emit('expand:start', { from: start, to: start + columns.length, steps: plan.length });
     try {
       for (let k = 0, index = 0; k < columns.length; index++) {
@@ -2129,7 +2258,12 @@ export class ReelSet extends Container implements Disposable {
         }
         // Reels are added at the spin-time geometry; a MultiWays reel takes
         // its landed shape from the step's setShape() like any other reel.
-        this._addReels(count, this._isMultiWaysSlot ? {} : { visibleCells: shapes.slice(k, k + count) });
+        this._expandStepPending = true;
+        this._addReels(
+          count,
+          this._isMultiWaysSlot ? {} : { visibleCells: shapes.slice(k, k + count) },
+          (i) => `expand() column ${k + i}`,
+        );
         this._events.emit('expand:stepAdded', step);
         await options.onStepAdded?.(step);
 
@@ -2164,6 +2298,7 @@ export class ReelSet extends Container implements Disposable {
         // Removed however the step ends, so a rejected step leaves nothing on
         // the caller's signal to slam a later, unrelated spin.
         const spun = await spinDone.finally(() => signal?.removeEventListener('abort', slam));
+        this._expandStepPending = false;
 
         if (spun.wasSkipped || fastForward || signal?.aborted) result.wasSkipped = true;
         const landed: ExpandStepLanded = { ...step, result: spun };
@@ -2172,20 +2307,36 @@ export class ReelSet extends Container implements Disposable {
         result.steps++;
         k += count;
       }
+      completed = true;
     } finally {
       this._events.off('destroyed', onDestroyed);
       this._expanding = false;
+      this._expandStepPending = false;
       // A press during the last step's `onStepLanded` has no step left to land.
       this._spinController.clearCarriedSkip();
+      if (!completed) this._events.emit('expand:end', 'failed');
     }
     result.reelCount = this._reels.length;
     result.symbols = this.getVisibleGrid();
     this._events.emit('expand:complete', result);
+    this._events.emit('expand:end', 'complete');
     return result;
   }
 
-  /** `addReels()` without the idle guard, for `expand()`. */
-  private _addReels(count: number, options: AddReelsOptions): Reel[] {
+  /**
+   * `true` while `expand()` runs, from `expand:start` to `expand:end`: the
+   * `spin:*` events a step fires are an expansion step's, not a new round's.
+   */
+  get isExpanding(): boolean {
+    return this._expanding;
+  }
+
+  /** `addReels()` without the idle guard, for `expand()`, which names its columns. */
+  private _addReels(
+    count: number,
+    options: AddReelsOptions,
+    label: (k: number) => string = (k) => `addReels: reel ${k}`,
+  ): Reel[] {
     if (!Number.isInteger(count) || count < 1) {
       throw new RangeError(`addReels: count must be a whole number of reels, at least 1 (got ${String(count)}).`);
     }
@@ -2206,7 +2357,7 @@ export class ReelSet extends Container implements Disposable {
           ? cellsOption
           : (cellsOption as readonly number[])[k];
     const from = this._reels.length;
-    for (let k = 0; k < count; k++) this._assertAddableCells(from + k, cellsFor(k), `addReels: reel ${k}`);
+    for (let k = 0; k < count; k++) this._assertAddableCells(from + k, cellsFor(k), label(k));
     const seeds = options.initialFrame as ColumnTarget[] | undefined;
     if (seeds) {
       assertColumnTargets(seeds, 'addReels initialFrame');
@@ -2228,14 +2379,14 @@ export class ReelSet extends Container implements Disposable {
     }
 
     const total = from + count;
-    const rects = [...this._viewport.maskRects];
+    const tallest = this._tallestExtent();
     const added: Reel[] = [];
     for (let k = 0; k < count; k++) {
       const reelIndex = from + k;
       // MultiWays reels share one spin-time geometry and reshape at land.
       const cells = this._isMultiWaysSlot ? this._multiwaysMaxCells : cellsFor(k);
       const extent = this._reelFactory.extentFor(reelIndex, cells);
-      const reel = this._reelFactory.create(reelIndex, cells, extent, total, seeds?.[k]);
+      const reel = this._reelFactory.create(reelIndex, cells, extent, total, seeds?.[k], tallest);
       // A curve set at runtime is the board's curve now, not the builder's. A
       // per-reel one covers the reels it named; past its end, its last entry.
       const curve = this._runtimeCurve;
@@ -2243,10 +2394,9 @@ export class ReelSet extends Container implements Disposable {
       this._wireCrossReelResolver(reel);
       this._spinController.attachReel(reel);
       this._reels.push(reel);
-      rects.push(this._reelFactory.maskRect(reelIndex, extent));
       added.push(reel);
     }
-    this._afterReelCountChange(rects);
+    this._afterBoardChange();
     this._spinController.onReelsAdded(from);
     if (this._isMultiWaysSlot && cellsOption !== undefined) {
       for (let k = 0; k < count; k++) this._spinController.reshapeReel(from + k, cellsFor(k));
@@ -2271,8 +2421,12 @@ export class ReelSet extends Container implements Disposable {
     });
   }
 
-  /** Validate the visible-cell count of a reel about to be added at `reelIndex`. */
-  private _assertAddableCells(reelIndex: number, cells: number, context: string): void {
+  /**
+   * Validate the visible-cell count of a reel about to be added at
+   * `reelIndex`. `height: false` leaves out the check against the board's
+   * tallest reel, for a column whose step may come after an `addRows()`.
+   */
+  private _assertAddableCells(reelIndex: number, cells: number, context: string, height = true): void {
     if (!Number.isInteger(cells) || cells < 1) {
       throw new RangeError(`${context}: a reel needs a whole number of visible cells, at least 1 (got ${String(cells)}).`);
     }
@@ -2284,21 +2438,39 @@ export class ReelSet extends Container implements Disposable {
       }
       return;
     }
+    if (!height) return;
     const extent = this._reelFactory.extentFor(reelIndex, cells);
+    const tallest = this._tallestExtent();
     // A float tolerance: extents are sums of cell sizes and gaps.
-    if (extent > this._reelFactory.tallestExtent + 1e-6) {
+    if (extent > tallest + 1e-6) {
       throw new RangeError(
-        `${context}: ${cells} cells (${extent}px) is taller than the set's tallest reel ` +
-          `(${this._reelFactory.tallestExtent}px). Growing the board's height would move every reel on it.`,
+        `${context}: ${cells} cells (${extent}px) is taller than the board's tallest reel ` +
+          `(${tallest}px). Grow the board first with addRows(), between expand() steps in onStepLanded.`,
       );
     }
   }
 
-  /** Re-sync everything sized from the reel count: reels, viewport, mask, pool. */
-  private _afterReelCountChange(rects: ReelMaskRect[]): void {
+  /** The board's tallest strip as it is now, which the viewport's main extent is sized to. */
+  private _tallestExtent(): number {
+    if (this._isMultiWaysSlot) return this._multiwaysReelExtent;
+    let tallest = 0;
+    for (const reel of this._reels) tallest = Math.max(tallest, reel.extent);
+    return tallest;
+  }
+
+  /**
+   * Re-sync everything sized from the board, after its reel count or its rows
+   * changed: each reel's count and place, the viewport, the mask, the pool.
+   */
+  private _afterBoardChange(): void {
     const total = this._reels.length;
-    for (const reel of this._reels) reel.setReelCount(total);
-    const size = this._reelFactory.viewportSize(total);
+    const tallest = this._tallestExtent();
+    const rects = this._reels.map((reel, i) => {
+      reel.setReelCount(total);
+      reel.setMainOffset(this._reelFactory.mainOffset(reel.extent, tallest));
+      return this._reelFactory.maskRect(i, reel.extent, tallest);
+    });
+    const size = this._reelFactory.viewportSize(total, tallest);
     this._viewport.updateMaskSize(size.width, size.height, rects);
     this._symbolFactory.setCapacityPerKey(this._reelFactory.poolCapacity(this._reels));
   }

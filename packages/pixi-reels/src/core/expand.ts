@@ -10,8 +10,8 @@ export interface AddReelsOptions {
    * new reel. Default: the last reel's count (the set's `visibleCells` on a
    * uniform set). On a MultiWays set a reel is added at `maxCells`, the
    * spin-time geometry every reel shares, and a count here reshapes it at
-   * once. A reel can never be taller than the set's tallest reel: that
-   * would move every reel already on the board.
+   * once. A reel can never be taller than the board's tallest reel; grow
+   * every reel first with `addRows()`.
    */
   visibleCells?: number | readonly number[];
   /**
@@ -20,6 +20,16 @@ export interface AddReelsOptions {
    * `initialFrame()`.
    */
   initialFrame?: readonly ColumnTarget[];
+}
+
+/** Options for {@link ReelSet.addRows}. */
+export interface AddRowsOptions {
+  /**
+   * What the new rows show: one array per reel, each `count` ids long, top to
+   * bottom. These are the server's cells for the rows it unlocked. Default:
+   * random fill, like a set built without `initialFrame()`.
+   */
+  cells?: readonly (readonly string[])[];
 }
 
 /** One step of an {@link ReelSet.expand} chain: the reels it added. */
@@ -51,7 +61,10 @@ export interface ExpandOptions {
    * The result of every reel to add, in order, one `ColumnTarget` per reel.
    * Its length is how many reels the board grows by; the server decides it.
    * Each column's `visible.length` is that reel's cell count, so a MultiWays
-   * set takes its per-reel shape from here and a jagged set its height.
+   * set takes its per-reel shape from here and a jagged set its height. A
+   * column may be taller than the board if an `addRows()` in an earlier
+   * step's `onStepLanded` makes room for it; its height is checked when its
+   * step starts.
    * Big symbols anchor in these columns like they do in `setResult()`, and
    * a block has to end on a reel this expansion adds.
    */

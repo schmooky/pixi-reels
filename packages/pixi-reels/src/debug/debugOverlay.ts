@@ -335,6 +335,8 @@ class DebugOverlay implements DebugOverlayHandle {
     // Static layers redraw only on reshape, not per tick.
     _reelSet.events.on('shape:changed', this._onStatic);
     _reelSet.events.on('adjust:complete', this._onStatic);
+    _reelSet.events.on('rows:added', this._onStatic);
+    _reelSet.events.on('rows:removed', this._onStatic);
     _reelSet.events.on('reels:added', this._onReelsAdded);
     _reelSet.events.on('reels:removed', this._onReelsRemoved);
     _reelSet.events.on('destroyed', this._onDestroyed);
@@ -444,6 +446,8 @@ class DebugOverlay implements DebugOverlayHandle {
 
     this._reelSet.events.off('shape:changed', this._onStatic);
     this._reelSet.events.off('adjust:complete', this._onStatic);
+    this._reelSet.events.off('rows:added', this._onStatic);
+    this._reelSet.events.off('rows:removed', this._onStatic);
     this._reelSet.events.off('reels:added', this._onReelsAdded);
     this._reelSet.events.off('reels:removed', this._onReelsRemoved);
     this._reelSet.events.off('destroyed', this._onDestroyed);

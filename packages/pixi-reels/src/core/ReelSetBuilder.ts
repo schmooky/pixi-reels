@@ -1277,12 +1277,14 @@ export class ReelSetBuilder {
     // past its end takes the array's last entry.
     const perReel = <T>(values: readonly T[] | undefined, reelIndex: number): T | undefined =>
       values?.[Math.min(reelIndex, values.length - 1)];
-    const mainOffsetFor = (extent: number): number => {
+    // A reel's place along the main axis inside the tallest strip. The board
+    // can grow taller (`addRows`), so the tallest is passed in, not frozen.
+    const mainOffsetFor = (extent: number, tallestNow = tallest): number => {
       switch (reelAnchorMode) {
         case 'start': return 0;
-        case 'end': return tallest - extent;
+        case 'end': return tallestNow - extent;
         case 'center':
-        default: return (tallest - extent) / 2;
+        default: return (tallestNow - extent) / 2;
       }
     };
     const createReel = (
@@ -1291,6 +1293,7 @@ export class ReelSetBuilder {
       extent: number,
       reelCountNow: number,
       seed: ColumnTarget | undefined,
+      tallestNow = tallest,
     ): Reel => {
       // A MultiWays reel spins on the shared cell and reshapes when it lands.
       // Any other reel keeps one cell from spin to land, so its strip moves at
@@ -1320,7 +1323,7 @@ export class ReelSetBuilder {
         symbolsData,
         symbolZIndex,
         initialSymbols: initialFrame,
-        mainOffset: mainOffsetFor(extent),
+        mainOffset: mainOffsetFor(extent, tallestNow),
         extent,
         spinCellSize: cellMain,
         axis: reelAxis(orientation, perReel(directionPerReel, reelIndex) ?? direction),
@@ -1350,8 +1353,11 @@ export class ReelSetBuilder {
     };
     // Per-reel mask rect: cross position marches the reels, main position is
     // the reel's own offset, cross size is one cell, main size is the strip.
-    const maskRectFor = (reelIndex: number, extent: number): ReelMaskRect => {
-      const rectPos = setAxis.toScreen(reelIndex * (crossCellSize + crossGap), mainOffsetFor(extent));
+    const maskRectFor = (reelIndex: number, extent: number, tallestNow = tallest): ReelMaskRect => {
+      const rectPos = setAxis.toScreen(
+        reelIndex * (crossCellSize + crossGap),
+        mainOffsetFor(extent, tallestNow),
+      );
       const rectSize = setAxis.toScreen(crossCellSize, extent);
       return { x: rectPos.x, y: rectPos.y, width: rectSize.x, height: rectSize.y };
     };
@@ -1379,11 +1385,11 @@ export class ReelSetBuilder {
         multiways?.reelExtent ??
         perReel(explicitExtents, reelIndex) ??
         cells * mainCellSize + (cells - 1) * mainGap,
-      tallestExtent: tallest,
       create: createReel,
       maskRect: maskRectFor,
-      viewportSize: (count) => {
-        const size = setAxis.toScreen(count * (crossCellSize + crossGap) - crossGap, tallest);
+      mainOffset: mainOffsetFor,
+      viewportSize: (count, tallestNow) => {
+        const size = setAxis.toScreen(count * (crossCellSize + crossGap) - crossGap, tallestNow);
         return { width: size.x, height: size.y };
       },
       // Same rule as the build-time capacity below: the whole strip showing

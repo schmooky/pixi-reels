@@ -644,9 +644,27 @@ export class Reel implements Disposable {
     return this._extent;
   }
 
-  /** Y offset of this reel relative to the viewport top. Set by builder, immutable. */
+  /**
+   * Main-axis offset of this reel inside the board's tallest strip (y on a
+   * vertical set). Set by the builder; it only moves when the tallest strip
+   * does (`ReelSet.addRows()` on a set whose reels are not all one height).
+   */
   get mainOffset(): number {
     return this._mainOffset;
+  }
+
+  /**
+   * @internal Move the reel along the main axis, for a board whose tallest
+   * strip changed. Only at rest: the strip is re-rendered in place.
+   */
+  setMainOffset(offset: number): void {
+    if (offset === this._mainOffset) return;
+    this._mainOffset = offset;
+    this._axis.setMain(this.container, offset);
+    // An unmasked view lives in viewport space and carries the reel's offset:
+    // put it back at its reel-local place, then add the new offset.
+    this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
   }
 
   /**

@@ -308,6 +308,7 @@ export type {
 // Growing the board: addReels() / removeReels() / expand().
 export type {
   AddReelsOptions,
+  AddRowsOptions,
   ExpandOptions,
   ExpandResult,
   ExpandStep,
