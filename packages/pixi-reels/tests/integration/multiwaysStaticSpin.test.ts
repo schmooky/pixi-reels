@@ -93,6 +93,49 @@ describe('MultiWays on StaticSpinSymbol with one shared cache', () => {
     ticker.destroy();
   });
 
+  it('symbols a mid-spin grow adds spin as snapshots like the rest of the strip', async () => {
+    const { reelSet, cache, ticker } = build();
+    const land = reelSet.spin();
+    reelSet.setShape([2, 2, 2, 2, 2]);
+    reelSet.setResult(Array.from({ length: 5 }, () => column(2, 'a')));
+    reelSet.slamStop();
+    await land;
+
+    // Reel 0 grows from 2 cells to 7 while it still spins (AdjustPhase), on a
+    // profile quick enough to get there.
+    reelSet.speed.addProfile('fast', {
+      ...reelSet.speed.active,
+      name: 'fast',
+      spinDelay: 0,
+      stopDelay: 0,
+      accelerationDuration: 20,
+      minimumSpinTime: 0,
+    });
+    reelSet.setSpeed('fast');
+    let live: boolean[] | null = null;
+    reelSet.events.on('adjust:complete', ({ reelIndex }) => {
+      if (reelIndex !== 0 || live) return;
+      live = reelSet.reels[0].symbols.map((s) => !(s as StaticSpinSymbol).isShowingSnapshot);
+    });
+    const spin = reelSet.spin();
+    ticker.tickFor(200);
+    reelSet.setShape([7, 7, 7, 7, 7]);
+    reelSet.setResult(Array.from({ length: 5 }, () => column(7, 'b')));
+    // GSAP runs on the wall clock in node: pump the ticker alongside it.
+    const deadline = Date.now() + 5000;
+    while (!live && Date.now() < deadline) {
+      ticker.tick(16);
+      await new Promise((r) => setTimeout(r, 8));
+    }
+    expect(live).not.toBeNull();
+    expect(live!.some(Boolean)).toBe(false);
+    reelSet.slamStop();
+    await spin;
+    reelSet.destroy();
+    cache.destroy();
+    ticker.destroy();
+  });
+
   it('an expansion adds reels that capture at their own size, leaving the board intact', async () => {
     const { reelSet, cache, ticker } = build();
     const spin = reelSet.spin();

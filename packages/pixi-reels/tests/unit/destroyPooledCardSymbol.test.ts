@@ -1,12 +1,13 @@
 /**
  * `ReelSet.destroy()` with a pooled `CardSymbol`.
  *
- * A released symbol's view stays a child of its reel container, so
- * `Reel.destroy()` destroys it (children included) before the symbol pool
- * disposes the symbol itself. `CardSymbol.stopAnimation()` then reset the
+ * A released symbol's view used to stay a child of its reel container, so
+ * `Reel.destroy()` destroyed it (children included) before the symbol pool
+ * disposed the symbol itself. `CardSymbol.stopAnimation()` then reset the
  * scale of a label that no longer had one, and the whole teardown threw.
  * Any symbol whose `stopAnimation()` reaches into a child was exposed the
  * same way; `HeadlessSymbol` never was, which is why no test caught it.
+ * A release now detaches the view; this keeps the teardown honest.
  */
 import type { Ticker } from 'pixi.js';
 import { describe, it, expect } from 'vitest';

@@ -1367,11 +1367,15 @@ export class ReelSetBuilder {
     }
     viewport.updateMaskSize(viewportWidth, viewportHeight, maskRects);
 
-    const lastCells = visibleCellsPerReel[reelCount - 1];
     const multiways = this._multiways ? { ...this._multiways } : undefined;
+    // `reelExtents()` boxes, which an added reel follows like any per-reel
+    // array: past their end, the last one.
+    const explicitExtents = this._reelExtents ? [...this._reelExtents] : undefined;
     const reelFactory: ReelFactory = {
-      defaultCells: () => multiways?.maxCells ?? lastCells,
-      extentFor: (cells) => multiways?.reelExtent ?? cells * mainCellSize + (cells - 1) * mainGap,
+      extentFor: (reelIndex, cells) =>
+        multiways?.reelExtent ??
+        perReel(explicitExtents, reelIndex) ??
+        cells * mainCellSize + (cells - 1) * mainGap,
       tallestExtent: tallest,
       create: createReel,
       maskRect: maskRectFor,

@@ -1708,6 +1708,11 @@ export class Reel implements Disposable {
       this._placeSymbolView(sym, this._axis.getMain(sym.view), this._effectiveUnmask(id, slot));
       this._parentForSymbolId(id, slot).addChild(sym.view);
       this.symbols.push(sym);
+      // A MultiWays reel grows mid-spin: the new symbol joins the spin the way
+      // a swapped-in one does (`_replaceSymbol`), or it shows its live art in
+      // a strip of snapshots until it wraps.
+      if (this._spinPresentationActive) sym.onReelSpinStart(true);
+      if (this._anticipationActive) sym.onReelAnticipationStart();
     }
 
     // Shrink: release tail symbols.
@@ -1837,13 +1842,18 @@ export class Reel implements Disposable {
     }
     this._nudgeQueue = null;
     this._isNudging = false;
-    // Destroy every symbol's view. We must NOT release live symbols back into
-    // the shared pool here: the container.destroy({ children: true }) below
-    // would then destroy the views of symbols now sitting in the pool, so the
-    // next acquire() would hand out a destroyed view. (Full and partial reel
-    // teardown both run through here.)
+    // Hand the live symbols back to the shared pool rather than destroying
+    // them. `release()` deactivates each one, which stops its animations, so
+    // a win still playing on a reel `removeReels()` takes away ends with its
+    // symbol instead of firing into a dead view; and it detaches the view, so
+    // the container below holds none of the pool's. The pool disposes them on
+    // a whole-set teardown. Stubs are this reel's own.
     for (const symbol of this.symbols) {
-      symbol.destroy();
+      if (symbol instanceof OccupiedStub) {
+        if (!symbol.isDestroyed) symbol.destroy();
+      } else {
+        this._symbolFactory.release(symbol);
+      }
     }
     for (const stub of this._occupiedStubs) {
       if (!stub.isDestroyed) stub.destroy();
@@ -1851,12 +1861,8 @@ export class Reel implements Disposable {
     this._occupiedStubs = [];
     this.symbols = [];
     this._warp?.destroy();
-    // What is left in the container are views of symbols this reel released
-    // to the shared pool: a release hides a view but leaves it parented. On a
-    // whole-set teardown the pool dies next anyway, but `removeReels()` keeps
-    // the pool, and destroying those views here would hand the next acquire a
-    // symbol with a dead view. Detach them; the pool owns them now.
-    this.container.removeChildren();
+    // Only the reel's own children are left, and anything a game added to
+    // the container: they go with it.
     this.container.destroy({ children: true });
     this._isDestroyed = true;
     // Emit 'destroyed' while listeners are still attached, THEN remove them —

@@ -244,6 +244,61 @@ describe('skip in an expansion', () => {
     expect(h.reelSet.getVisibleGrid()[5]).toEqual(['wild', 'a', 'b']);
   });
 
+  it('cascade mode: after one press, every later step lands the moment it has its result', async () => {
+    const h = makeHarness({ tumble: {} });
+    // The base lands on its own: a slamStop() would end the round skipped,
+    // and a skipped round has no first press left to spend.
+    h.reelSet.setSpeed(TURBO.name);
+    const base = h.reelSet.spin({ mode: 'cascade' });
+    h.reelSet.setResult(BASE);
+    await base;
+    h.reelSet.setSpeed(SLOW.name);
+
+    // Pressed between steps, before the first one spins: the press carries.
+    h.reelSet.events.on('expand:stepAdded', (step) => {
+      if (step.index === 0) h.reelSet.skipSpin();
+    });
+    const skipped: boolean[] = [];
+    const t0 = Date.now();
+    await h.reelSet.expand({
+      columns: [col('a', 'a', 'a'), col('b', 'b', 'b'), col('c', 'c', 'c')],
+      mode: 'cascade',
+      onStepLanded: (step) => {
+        skipped.push(step.result.wasSkipped);
+      },
+    });
+    // Unpressed, each cascade step runs over a second on this profile.
+    expect(Date.now() - t0).toBeLessThan(1000);
+    expect(skipped).toEqual([true, true, true]);
+    expect(h.reelSet.getVisibleGrid().slice(5)).toEqual([['a', 'a', 'a'], ['b', 'b', 'b'], ['c', 'c', 'c']]);
+  });
+
+  it('a named drop order covers reels added after it was set, and orders a step by place', async () => {
+    const h = makeHarness();
+    h.reelSet.setSpeed(TURBO.name);
+    h.reelSet.setDropOrder('ltr', 60);
+    h.reelSet.addReels(3);
+    const landed = captureEvents(h.reelSet, ['spin:reelLanded']);
+    const spin = h.reelSet.spin();
+    h.reelSet.setResult(Array.from({ length: 8 }, () => col('a', 'b', 'c')));
+    await spin;
+    // Reels 5-7 come last, not together with reel 0.
+    expect(landed.map((e) => e.args[0])).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+
+    // A two-reel step counts places 0 and 1, not indices 8 and 9.
+    const controller = (h.reelSet as unknown as {
+      _spinController: { _stopDelayFor(reel: number, speed: SpeedProfile): number };
+    })._spinController;
+    const delays: number[] = [];
+    const onStart = (): void => {
+      delays.push(controller._stopDelayFor(8, TURBO), controller._stopDelayFor(9, TURBO));
+    };
+    h.reelSet.events.on('spin:start', onStart);
+    await h.reelSet.expand({ columns: [col('a', 'a', 'a'), col('b', 'b', 'b')], step: 2 });
+    h.reelSet.events.off('spin:start', onStart);
+    expect(delays).toEqual([0, 60]);
+  });
+
   it('a partial slam lands one reel of a two-reel step and lets the other run', async () => {
     const h = makeHarness();
     await landBase(h);

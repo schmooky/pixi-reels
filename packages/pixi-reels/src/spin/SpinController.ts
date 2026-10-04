@@ -85,6 +85,33 @@ function assertSegments(segments: AnticipationSegment[], where: string): void {
 }
 
 /**
+ * The checks an anticipation options object can take before any reel is
+ * involved. `setAnticipation()` runs them, and `ReelSet.expand()` runs them
+ * before it adds a reel, so a bad tease throws on an unchanged board.
+ */
+export function assertAnticipationOptions(opts: AnticipationOptions, context: string): void {
+  // `slowdown` is sugar for a two-leg curve, so accepting both would mean
+  // silently picking one. Say which one is redundant instead.
+  if (opts.curve && opts.slowdown) {
+    throw new Error(
+      `${context}: pass either \`slowdown\` or \`curve\`, not both. \`slowdown\` is ` +
+        'shorthand for a two-segment curve; express the whole tease in `curve`.',
+    );
+  }
+  if (opts.cells != null && typeof opts.cells !== 'function' && !(opts.cells > 0)) {
+    throw new Error(
+      `${context}: \`cells\` must be a positive number of symbol pitches, got ${String(opts.cells)}.`,
+    );
+  }
+  if (Array.isArray(opts.curve)) {
+    if (opts.curve.length === 0) {
+      throw new Error(`${context}: \`curve\` must have at least one segment.`);
+    }
+    assertSegments(opts.curve, '`curve`');
+  }
+}
+
+/**
  * A travel anchor measures the FINAL leg, so a final leg that asks for speed
  * `0` can never reach it and the tease always falls through to its time
  * backstop. Legal, and the backstop is there precisely so it cannot hang - but
@@ -268,6 +295,12 @@ export class SpinController implements Disposable {
   private _reelLandedPromises: Map<number, Promise<void>> = new Map();
   private _stopDelayOverride: number[] | null = null;
   /**
+   * A named drop order (`ReelSet.setDropOrder('ltr' | 'rtl' | 'all')`), kept
+   * by name instead of spelled out per reel so it covers whichever reels spin:
+   * reels added since it was set, and an `expand()` step ordered by place.
+   */
+  private _dropOrder: { order: 'ltr' | 'rtl' | 'all'; step: number } | null = null;
+  /**
    * Per-spin stagger position of each spinning reel, or `null` to stagger by
    * reel index (the default). See `spin()`'s `round.stagger`.
    */
@@ -414,9 +447,11 @@ export class SpinController implements Disposable {
   private _manualSpeedSinceBoost = false;
   /**
    * Cascade-mode round flag. When true, the next `refill()` skips its
-   * phase chain and slams instantly. Set when the player presses `skip()`
-   * during a cascade round (one press = "fast-forward to end of round").
-   * Cleared on the next `spin()` alongside the rest of the stage state.
+   * phase chain and slams instantly, and so does a spin that continues the
+   * round (an `expand()` step) the moment it has its result. Set when the
+   * player presses `skip()` during a cascade round (one press = "fast-forward
+   * to end of round"). Cleared on the next `spin()` that starts a round,
+   * alongside the rest of the stage state.
    */
   private _autoSlamRefills = false;
 
@@ -719,6 +754,12 @@ export class SpinController implements Disposable {
       const { req, withSideEffects } = this._skipPending;
       this._skipPending = null;
       this._pressSkip(withSideEffects, req);
+    } else if (this._autoSlamRefills) {
+      // An earlier press this cascade round meant "the rest of the round at
+      // once". `refill()` reads that flag; so does a later spin of the same
+      // round, an `expand()` step. Pressed through the skip machine, so
+      // groups and a step's protected tease still have their say.
+      this._pressSkip(false, { mode: 'slam', speed: null, payload: undefined });
     }
   }
 
@@ -1180,29 +1221,11 @@ export class SpinController implements Disposable {
         : { stagger: options };
     const stagger = opts.stagger ?? 0;
 
+    assertAnticipationOptions(opts, 'setAnticipation()');
+
     // Held reels never reach AnticipationPhase, but filter here too so the
     // public API is forgiving. callers can pass a flat list without
     // tracking which indices are held this spin.
-    // `slowdown` is sugar for a two-leg curve, so accepting both would mean
-    // silently picking one. Say which one is redundant instead.
-    if (opts.curve && opts.slowdown) {
-      throw new Error(
-        'setAnticipation(): pass either `slowdown` or `curve`, not both. `slowdown` is ' +
-          'shorthand for a two-segment curve; express the whole tease in `curve`.',
-      );
-    }
-    if (opts.cells != null && typeof opts.cells !== 'function' && !(opts.cells > 0)) {
-      throw new Error(
-        `setAnticipation(): \`cells\` must be a positive number of symbol pitches, got ${String(opts.cells)}.`,
-      );
-    }
-    if (Array.isArray(opts.curve)) {
-      if (opts.curve.length === 0) {
-        throw new Error('setAnticipation(): `curve` must have at least one segment.');
-      }
-      assertSegments(opts.curve, '`curve`');
-    }
-
     this._anticipationReels = reelIndices.filter((i) => !this._heldReels.has(i));
     this._anticipationStagger = stagger;
     this._anticipationSlowdown = opts.slowdown ?? null;
@@ -1410,9 +1433,21 @@ export class SpinController implements Disposable {
    * When set, these replace the staggered `reelIndex * speed.stopDelay`
    * pattern. Pass `null` to CLEAR the override and restore that default
    * (distinct from passing all-zeros, which lands every reel at once).
+   * Replaces a named {@link setDropOrder}.
    */
   setStopDelays(delays: number[] | null): void {
     this._stopDelayOverride = delays ? [...delays] : null;
+    this._dropOrder = null;
+  }
+
+  /**
+   * A named drop order, `step` ms apart: `'ltr'` and `'rtl'` count each
+   * reel's place among the reels that spin, `'all'` lands them together.
+   * Replaces a {@link setStopDelays} array. Persists like it.
+   */
+  setDropOrder(order: 'ltr' | 'rtl' | 'all', step: number): void {
+    this._dropOrder = { order, step };
+    this._stopDelayOverride = null;
   }
 
   /**
@@ -2627,9 +2662,15 @@ export class SpinController implements Disposable {
   }
 
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {
-    if (this._stopDelayOverride) {
-      return this._stopDelayOverride[reelIndex] ?? 0;
+    if (this._dropOrder) {
+      const { order, step } = this._dropOrder;
+      if (order === 'all') return 0;
+      const place = this._staggerIndex(reelIndex);
+      return (order === 'ltr' ? place : this._staggerCount() - 1 - place) * step;
     }
+    // Past the end of an explicit array, no delay: `setStopDelays([])` is
+    // documented as landing every reel at once.
+    if (this._stopDelayOverride) return this._stopDelayOverride[reelIndex] ?? 0;
     // With groups the barrier already orders the board, so the stagger is
     // relative to the reel's place in ITS group. Keeping the whole-board offset
     // would re-add the ordering the barrier just enforced, on top of it.
@@ -2644,6 +2685,11 @@ export class SpinController implements Disposable {
   /** A reel's place in this spin's start / stop stagger. */
   private _staggerIndex(reelIndex: number): number {
     return this._staggerRank?.get(reelIndex) ?? reelIndex;
+  }
+
+  /** How many places {@link _staggerIndex} counts over this spin. */
+  private _staggerCount(): number {
+    return this._staggerRank?.size ?? this._reels.length;
   }
 
   private _cachedFrames: string[][] | null = null;

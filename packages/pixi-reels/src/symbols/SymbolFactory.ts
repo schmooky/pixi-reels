@@ -60,10 +60,16 @@ export class SymbolFactory {
     return symbol;
   }
 
-  /** Return a symbol to the pool. */
+  /**
+   * Return a symbol to the pool. Its view leaves its container and any render
+   * layer (`ReelSet.promote()`): a pooled symbol belongs to no reel, so a
+   * reel's teardown never reaches a view the pool will hand to another cell.
+   */
   release(symbol: ReelSymbol): void {
     const id = symbol.symbolId;
     symbol.deactivate();
+    symbol.view.parentRenderLayer?.detach(symbol.view);
+    symbol.view.removeFromParent();
     this._pool.release(id, symbol);
   }
 

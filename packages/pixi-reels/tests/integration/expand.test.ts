@@ -12,8 +12,12 @@
  * clock in Node, so a `setInterval` pumps the FakeTicker alongside it (the
  * same arrangement as `reelGroups.test.ts`).
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { Container, type Ticker } from 'pixi.js';
 import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
+import { FakeTicker } from '../../src/testing/FakeTicker.js';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import type { TestReelSetOptions } from '../../src/testing/testHarness.js';
 import type { SpeedProfile } from '../../src/config/types.js';
 import type { ColumnTarget } from '../../src/frame/ColumnTarget.js';
@@ -164,6 +168,65 @@ describe('addReels()', () => {
     expect(h.reelSet.reels).toHaveLength(5);
   });
 
+  it('checks every id and key of initialFrame before it builds a reel', () => {
+    const h = makeHarness();
+    const log = captureEvents(h.reelSet, ['reels:added']);
+    expect(() =>
+      h.reelSet.addReels(2, { initialFrame: [col('a', 'b', 'c'), col('nope', 'a', 'b')] }),
+    ).toThrow(/addReels initialFrame column 1: symbol 'nope' is not registered/);
+    expect(() =>
+      h.reelSet.addReels(1, {
+        initialFrame: [{ visible: ['a', 'b', 'c'], bufferAbove: ['wild'] } as unknown as ColumnTarget],
+      }),
+    ).toThrow(/bufferAbove/);
+    // Nothing half-built: no reel, no mask rect, no count, no event.
+    expect(h.reelSet.reels).toHaveLength(5);
+    expect(h.reelSet.viewport.maskRects).toHaveLength(5);
+    for (const reel of h.reelSet.reels) expect(reel.reelCount).toBe(5);
+    expect(log).toEqual([]);
+  });
+
+  it('without a count, follows the last reel as the board is now, not as it was built', () => {
+    const h = makeHarness({ visibleCells: [3, 4, 4, 4, 3] });
+    h.reelSet.addReels(1, { visibleCells: 4 });
+    h.reelSet.addReels(1);
+    expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([3, 4, 4, 4, 3, 4, 4]);
+  });
+
+  it('takes the curve setCurve() set, not the one the builder was given', () => {
+    const h = makeHarness({ curve: 0.4 });
+    h.reelSet.setCurve(0.8);
+    const [curved] = h.reelSet.addReels(1);
+    expect(curved.curve?.config.amount).toBe(0.8);
+    h.reelSet.setCurve(0);
+    const [flat] = h.reelSet.addReels(1);
+    expect(flat.curve).toBeUndefined();
+  });
+
+  it('follows reelExtents(): an added reel takes the last box and divides it', () => {
+    const ticker = new FakeTicker();
+    const reelSet = new ReelSetBuilder()
+      .reels(5)
+      .visibleCellsPerReel([3, 4, 5, 4, 3])
+      .reelExtents([300, 300, 300, 300, 300])
+      .symbolSize(100, 100)
+      .ticker(ticker as unknown as Ticker)
+      .symbols((r) => {
+        for (const id of IDS) r.register(id, HeadlessSymbol, {});
+      })
+      .build();
+    try {
+      // Reel 1 already shows 4 cells in 300px; a 4-cell reel is not taller.
+      const [four] = reelSet.addReels(1, { visibleCells: 4 });
+      expect(four.extent).toBe(300);
+      expect(four.cellMain).toBe(reelSet.reels[1].cellMain);
+      expect(reelSet.viewport.maskRects[5]).toMatchObject({ y: 0, height: 300 });
+    } finally {
+      reelSet.destroy();
+      ticker.destroy();
+    }
+  });
+
   it('throws while the reels spin', async () => {
     const h = makeHarness();
     const spin = h.reelSet.spin();
@@ -225,13 +288,34 @@ describe('removeReels()', () => {
     const h = makeHarness();
     h.reelSet.addReels(5);
     const wide = [...base(), ...base()];
-    // Natural spins wrap symbols through the pool; their views stay parented
-    // to the reel that released them.
+    // Natural spins wrap symbols through the pool, so the pool holds symbols
+    // this reel released: its teardown must not reach them.
     await landBase(h, wide);
     await landBase(h, wide);
     h.reelSet.removeReels(5);
     for (let i = 0; i < 3; i++) await landBase(h);
     expect(h.reelSet.getVisibleGrid()).toEqual(base().map((c) => c.visible));
+  });
+
+  it("hands a removed reel's symbols back to the pool, stopped, and destroys what a game added to it", () => {
+    const h = makeHarness();
+    const [reel] = h.reelSet.addReels(1);
+    const live = [...reel.symbols];
+    const stopped = live.map((symbol) => vi.spyOn(symbol, 'stopAnimation'));
+    const extra = new Container();
+    reel.container.addChild(extra);
+
+    h.reelSet.removeReels(1);
+
+    for (const symbol of live) {
+      // Released, not destroyed: deactivated (its animation stopped) and out
+      // of the reel's container, ready for another cell.
+      expect(symbol.isDestroyed).toBe(false);
+      expect(symbol.symbolId).toBe('');
+      expect(symbol.view.parent).toBeNull();
+    }
+    for (const spy of stopped) expect(spy).toHaveBeenCalled();
+    expect(extra.destroyed).toBe(true);
   });
 
   it('without a count, removes every reel added since build, and is a no-op when there are none', () => {
@@ -405,6 +489,19 @@ describe('expand()', () => {
       expect(h.reelSet.reels.reduce((p, r) => p * r.visibleCells, 1)).toBe(5_764_801);
     });
 
+    it('a setShape() pending when reels are added lands them at the shape they were added with', async () => {
+      const h = makeHarness({ multiways: MW });
+      // A fresh set takes setShape() before spin() (cascade's reshape-before-fall order).
+      h.reelSet.setShape([3, 4, 2, 7, 7]);
+      h.reelSet.addReels(1);
+      const spin = h.reelSet.spin();
+      h.reelSet.setResult([3, 4, 2, 7, 7, 7].map((n) => col(...Array(n).fill('a'))));
+      h.reelSet.slamStop();
+      const result = await spin;
+      expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([3, 4, 2, 7, 7, 7]);
+      expect(result.symbols[5]).toEqual(Array(7).fill('a'));
+    });
+
     it('refuses a column outside the range before adding anything', async () => {
       const h = makeHarness({ multiways: MW });
       await expect(h.reelSet.expand({ columns: [col('a', 'a', 'a'), col('a')] })).rejects.toThrow(
@@ -540,6 +637,25 @@ describe('expand()', () => {
       expect(h.reelSet.getVisibleGrid().slice(5)).toEqual(columns.map((c) => c.visible));
     });
 
+    it("lets go of the caller's signal when the set is destroyed mid-step, and never slams it", async () => {
+      const h = makeHarness();
+      await landBase(h);
+      const controller = new AbortController();
+      const added = vi.spyOn(controller.signal, 'addEventListener');
+      const removed = vi.spyOn(controller.signal, 'removeEventListener');
+      // Torn down mid-step: that step's spin never settles.
+      h.reelSet.events.on('spin:start', () => queueMicrotask(() => h.reelSet.destroy()));
+      void h.reelSet.expand({ columns: [col('a', 'a', 'a')], signal: controller.signal });
+      await new Promise((r) => setTimeout(r, 30));
+
+      expect(h.reelSet.isDestroyed).toBe(true);
+      const listeners = added.mock.calls.filter(([type]) => type === 'abort').map(([, fn]) => fn);
+      expect(listeners).toHaveLength(1);
+      expect(removed.mock.calls.some(([type, fn]) => type === 'abort' && fn === listeners[0])).toBe(true);
+      // The usual teardown order, destroy then abort, reaches nothing.
+      expect(() => controller.abort()).not.toThrow();
+    });
+
     it('an already-aborted signal is one fast-forward step', async () => {
       const h = makeHarness();
       await landBase(h);
@@ -610,6 +726,33 @@ describe('expand()', () => {
       await expect(h.reelSet.expand({ columns: [col('a')], step: 0 })).rejects.toThrow(/at least 1/);
       await expect(h.reelSet.expand({ columns: [col('a')], mode: 'cascade' })).rejects.toThrow(/requires \.tumble/);
       expect(h.reelSet.reels).toHaveLength(5);
+    });
+
+    it('checks symbol ids and an anticipation object before adding anything', async () => {
+      const h = makeHarness();
+      await landBase(h);
+      const log = captureEvents(h.reelSet, ['expand:start', 'reels:added']);
+      await expect(
+        h.reelSet.expand({ columns: [col('a', 'a', 'a'), col('a', 'a', 'a'), col('nope', 'a', 'b')] }),
+      ).rejects.toThrow(/expand\(\) column 2: symbol 'nope' is not registered/);
+      await expect(
+        h.reelSet.expand({ columns: [col('a', 'a', 'a')], anticipation: { curve: [] } }),
+      ).rejects.toThrow(/expand\(\) anticipation: `curve` must have at least one segment/);
+      expect(h.reelSet.reels).toHaveLength(5);
+      expect(log).toEqual([]);
+    });
+
+    it("checks a function's anticipation for a step before that step's reels exist", async () => {
+      const h = makeHarness();
+      await landBase(h);
+      await expect(
+        h.reelSet.expand({
+          columns: [col('a', 'a', 'a'), col('b', 'b', 'b')],
+          anticipation: (step) => (step.index === 1 ? { cells: -1 } : false),
+        }),
+      ).rejects.toThrow(/expand\(\) anticipation for step 1: `cells` must be a positive number/);
+      // Step 0 landed; step 1 never added its reel.
+      expect(h.reelSet.reels).toHaveLength(6);
     });
   });
 
