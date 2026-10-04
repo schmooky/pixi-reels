@@ -55,6 +55,16 @@ export const CLOVER_SPEED: SpeedProfile = {
 };
 
 /**
+ * {@link CLOVER_SPEED} for a plain clover reel set. `stopDelay` is the gap
+ * between two reels stopping there, not a wave step, so the reels keep the
+ * NORMAL preset's 140ms instead of the board's 70.
+ */
+export const CLOVER_REEL_SPEED: SpeedProfile = {
+  ...CLOVER_SPEED,
+  stopDelay: SpeedPresets.NORMAL.stopDelay,
+};
+
+/**
  * The three speeds a clover board offers, for `HoldAndWinBuilder.speeds()`:
  * the engine's NORMAL / TURBO / SUPER_TURBO, each with the cell-sized bounce
  * of {@link CLOVER_SPEED}. `board.setSpeed('turbo')` moves every cell at once.

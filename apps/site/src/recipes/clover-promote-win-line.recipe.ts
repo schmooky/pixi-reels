@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover,
-//           CLOVER_FRUITS, CLOVER_CELL, CLOVER_CELL_RADIUS, CLOVER_SPEED, gsap, app, DebugPlaque
+//           CLOVER_FRUITS, CLOVER_CELL, CLOVER_CELL_RADIUS, CLOVER_REEL_SPEED, gsap, app, DebugPlaque
 //
 // PROMOTE, WITHOUT THE SPOTLIGHT. `spotlight.show()` is a whole presentation:
 // it dims, reparents the winners, plays their win animation and only resolves
@@ -29,7 +29,7 @@ const reels = new ReelSetBuilder()
   .symbolSize(CELL.width, CELL.height).symbolGap(COLUMN_GAP, ROW_GAP)
   .symbols((r) => { for (const id of CLOVER_FRUITS) r.register(id, CloverSymbol, { art, idleAfterLand: false }); })
   .maskStrategy(new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS }))
-  .speed('normal', CLOVER_SPEED)
+  .speed('normal', CLOVER_REEL_SPEED)
   .ticker(app.ticker)
   .build();
 

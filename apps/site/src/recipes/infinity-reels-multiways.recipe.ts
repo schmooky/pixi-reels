@@ -111,4 +111,6 @@ async function onSpin() {
   });
 }
 
-return { reelSet, stage, onSpin };
+// A demo scrolled away mid-pan unmounts with the tween still running; kill it
+// so it does not tick on into a destroyed camera.
+return { reelSet, stage, onSpin, cleanup: () => gsap.killTweensOf(camera) };

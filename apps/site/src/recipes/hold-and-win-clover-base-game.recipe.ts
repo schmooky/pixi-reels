@@ -53,7 +53,7 @@ const base = new ReelSetBuilder()
   })
   .symbolData(UNMASK)
   .maskStrategy(new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS }))
-  .speed('normal', CLOVER_SPEED)
+  .speed('normal', CLOVER_REEL_SPEED)
   .ticker(app.ticker)
   .build();
 base.position.set(ox, oy);

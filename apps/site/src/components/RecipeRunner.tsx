@@ -390,7 +390,29 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       sets.forEach((rs, k) => {
         const setLabel = sets.length === 1 ? 'set' : `set${k}`;
         listen(rs.events as unknown as AnyBus, setLabel);
-        rs.reels.forEach((reel, i) => listen(reel.events as unknown as AnyBus, sets.length === 1 ? `reel ${i}` : `${setLabel}/r${i}`));
+        // A growing set (`addReels`, `expand`) adds reels after mount: follow
+        // them, and let go of each one's bus when it is removed.
+        const reelOff: Array<() => void> = [];
+        const listenReel = (i: number): void => {
+          const bus = rs.reels[i].events as unknown as AnyBus;
+          const fn = record(sets.length === 1 ? `reel ${i}` : `${setLabel}/r${i}`);
+          bus.onAny(fn);
+          reelOff[i] = () => bus.offAny(fn);
+        };
+        rs.reels.forEach((_, i) => listenReel(i));
+        const onAdded = ({ from, count }: { from: number; count: number }): void => {
+          for (let i = from; i < from + count; i++) listenReel(i);
+        };
+        const onRemoved = ({ from }: { from: number }): void => {
+          for (const off of reelOff.splice(from)) off();
+        };
+        rs.events.on('reels:added', onAdded);
+        rs.events.on('reels:removed', onRemoved);
+        unsubscribeRef.current.push(() => {
+          rs.events.off('reels:added', onAdded);
+          rs.events.off('reels:removed', onRemoved);
+          for (const off of reelOff) off();
+        });
       });
       if (result.board?.events) listen(result.board.events, 'board');
       unsubscribeRef.current.push(onNotice((n) => record('notice')(n.code, { kind: n.kind, message: n.message, detail: n.detail })));

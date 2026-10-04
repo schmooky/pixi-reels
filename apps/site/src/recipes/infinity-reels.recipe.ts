@@ -169,4 +169,6 @@ function onSkip() {
   }
 }
 
-return { reelSet, stage, onSpin, onSkip };
+// A demo scrolled away mid-pan unmounts with the tween still running; kill it
+// so it does not tick on into a destroyed camera.
+return { reelSet, stage, onSpin, onSkip, cleanup: () => gsap.killTweensOf(camera) };

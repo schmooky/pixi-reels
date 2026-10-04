@@ -74,8 +74,8 @@ return {
   reelSet,
   cleanup: () => {
     app.ticker.remove(tick);
-    try { face.destroy({ children: true }); } catch {}
-    try { stageText.destroy({ children: true }); } catch {}
+    face.destroy();
+    stageText.destroy();
   },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {
