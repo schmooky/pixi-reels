@@ -159,6 +159,7 @@ The standalone `examples/` apps moved to their own repo in 2.0. Keeping two para
 - `pixi.js` ^8.18.1
 - `gsap` ^3.15.0
 - `@esotericsoftware/spine-pixi-v8` ~4.2.110 (optional, only if you use `SpineReelSymbol`)
+- `pixi-silk` ^0.1.0 (optional, only where you import `pixi-reels/debug`)
 
 ## Contributing
 
