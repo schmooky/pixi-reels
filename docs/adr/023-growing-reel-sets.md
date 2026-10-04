@@ -82,6 +82,20 @@ board never makes them throw: one cut at the right edge by `removeReels()`
 stays cut, and one that no longer fits a shorter strip is random-filled: no
 slots lie under its overhang, which a reel travelling up would scroll into view.
 
+**One reel's height, at rest.** Stacked symbols that split when they win
+(a 1x3 becoming six single cells, its reel growing past the frame) change one
+reel, not every reel. `setColumn(reel, column)` is the primitive: one reel shows
+a column of any length at its own cell size, and the board re-anchors around it
+through the builder's `reelAnchor`, whose default `'center'` grows it both ways.
+`splitBlock(reel, cell, ids)` builds the column for the common case, from the
+stack covering a cell and the server's ids, and moves the pins below the stack
+down with their symbols. `resetColumns()` goes back to each reel's built or
+added cells. Only new content is held to a landing's fit rule, so a reset never
+throws on a board that is already on screen, and reels whose symbols do not
+change are not re-placed, so their animations carry on. A shared mask cannot
+clip reels of different heights, so the builder now auto-picks one only for
+blocks wider than a reel, and `setColumn()` warns once if one is in use.
+
 **Win math stays out (ADR 007).** The pay-ways evaluator the recipes use lives
 in `@pixi-reels/cheats/ways` beside the other server stand-ins. The library
 only draws: `WinLines` in `pixi-reels/debug` strokes the cells it is handed.
@@ -89,8 +103,9 @@ only draws: `WinLines` in `pixi-reels/debug` strokes the cells it is handed.
 ## Consequences
 
 - New public API: `addReels()`, `removeReels()`, `addRows()`, `removeRows()`,
+  `setColumn()`, `splitBlock()`, `resetColumns()`,
   `expand()`, `isExpanding`, and the events `reels:added`, `reels:removed`,
-  `rows:added`, `rows:removed`, `expand:start`, `expand:stepAdded`,
+  `rows:added`, `rows:removed`, `column:set`, `expand:start`, `expand:stepAdded`,
   `expand:stepLanded`, `expand:complete`, `expand:end`. Additive.
 - A fast-forward (an aborted `signal`) lands every reel still to come in one
   step at the board's height then, so it cannot cross a row that grows during

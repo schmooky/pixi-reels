@@ -65,6 +65,17 @@ reelSet.removeRows();
 
 On MultiWays the rows are each reel's shape: an `expand()` column's `visible.length` is that reel's cell count, inside the fixed reel height.
 
+## Stacked symbols that split
+
+Some infinity slots land a symbol stacked two to four cells tall and, when it wins, split the stack into more single symbols than it had cells, its reel growing past the frame. A stack is a big symbol one reel wide; the server says what it splits into.
+
+```ts
+// .symbolData({ Q3: { weight: 0, size: { reels: 1, cells: 3 } } })
+const { from, count } = reelSet.splitBlock(reel, cell, res.split); // e.g. six 'Q's
+```
+
+The reel grows by the difference, the cells above and below keep their symbols, and the board re-centres around the taller reel: keep the other reels still on screen while your camera eases out, or they jump. Split at rest, or between `expand()` steps in `onStepLanded`. Next round, `resetColumns()` puts every reel back. For any other change to one reel's height, `setColumn(reel, column)` shows a column of any length.
+
 ## Ways: count them and draw them
 
 The library computes no wins (see ADR 007); the server does. Two things help you show them.
@@ -96,6 +107,7 @@ The steps are one round. The first `skipSpin()` lands the step in flight and spe
 | `reels:added` | A step's reels are on the board. Move the camera here or in `onStepAdded`. |
 | `expand:stepAdded` / `expand:stepLanded` | A step's reels arrived / landed, before its hooks. |
 | `rows:added` / `rows:removed` | `addRows()` / `removeRows()` changed every reel's height. |
+| `column:set` | One reel changed height: `setColumn()`, `splitBlock()` or `resetColumns()`. |
 | `expand:complete` | Every step landed. Carries the final board. |
 | `expand:end` | Always last: `'complete'` or `'failed'`. Put the UI back here. |
 
