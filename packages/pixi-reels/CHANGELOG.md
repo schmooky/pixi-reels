@@ -1,5 +1,98 @@
 # pixi-reels
 
+## 4.0.0
+
+### Major Changes
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: a `pixi-reels/debug` subpath drawn with `pixi-silk` (smooth, exact vector graphics), with a spin timeline, a metrics plaque, a phase-aware hud, `SpinMetrics`, `DebugPlaque` and `roundRectPath`. Move: `debugOverlay` and `OVERLAY_LABEL` from `pixi-reels` to `pixi-reels/debug`. Remove: `showMask()` and `overlay()` from the `enableDebug()` window hook. Breaking only for code that imports the overlay or calls those two; `debugSnapshot`, `debugGrid`, the frame recorder and `enableDebug` stay where they were.
+  
+  **Opt in with one import.** `pixi-silk` is an optional peer dependency, like the Spine runtime: install it next to `pixi-reels` (`pnpm add -D pixi-silk`) and import from `pixi-reels/debug`. A build that never imports the subpath never needs it, and the main entry no longer carries any drawing code for debugging. pixi-silk 0.1 draws through WebGL: on a WebGPU renderer its shapes draw nothing (debug on `preference: 'webgl'`), and building one needs `DOMAdapter.createCanvas()`, so a headless test installs a canvas stand-in (the migration guide shows it).
+  
+  ```ts
+  import { debugOverlay } from 'pixi-reels/debug';
+  
+  const overlay = debugOverlay(reelSet, { layers: 'all', live: true, ticker: app.ticker });
+  ```
+  
+  **The overlay is drawn with pixi-silk.** Every layer (`mask`, `cells`, `buffers`, `thresholds`, `axis`, `feed`, `bounds`, `blocks`, `pins`) is a `SilkGraphics`, so outlines, dashes and arrows stay exact at the scale the reel set is fitted to instead of faceting or crawling. Layer objects keep their `pixi-reels:debugOverlay:<layer>` labels.
+  
+  **New layers.** `metrics` is a plaque under the mask with the current round: its length, time to the first stop, the landing order and the largest gap between landings, every tease window, the last skip press (mode, reels, time), how many symbols were swapped into cells, event count, fps, pins, spotlight, wins and cascade chains. `timeline` is a panel beside it: every reel's phases for the round on one time axis, colored like `PhaseCardSymbol`, with the reel's speed traced on top, a tick where it was asked to stop, a dot where it landed, and a dashed line at every skip press. `hud` is now one plaque with a phase swatch and a speed meter per reel row. `describe()` also returns the `round` the panels show.
+  
+  **`SpinMetrics`.** The recorder behind those panels, usable on its own: `new SpinMetrics(reelSet, { ticker })` keeps the last rounds (`current`, `rounds`, `totals`, `snapshot()`), each with per-reel phase spans, stop, landing and settle times, tease windows, skip presses and, given a ticker, a speed trace. Pass one to `debugOverlay(reelSet, { metrics })` and the panels show the rounds from before the overlay existed.
+  
+  **`DebugPlaque`.** Rows of monospace text on a smooth rounded plate, with optional title, swatches (legends) and meters, sized from the character count so it is exact and cheap enough to update every frame. `plaque.text = '...'` works like a `Text`, and a plain `destroy()` frees its plate and text. Every readout on the docs site's recipes now uses it.
+  
+  **`__PIXI_REELS_DEBUG.metrics()`.** `enableDebug()` records rounds from the moment it is called (one recorder per reel set, however often it is called), and `metrics()` hands them back as plain JSON, so an agent can ask how long a tease lasted or which reel landed last without a canvas.
+  
+  **Removed from the window hook.** `showMask(enabled)` drew with plain `Graphics` into the masked container, under the spotlight; `debugOverlay(reelSet, { layers: ['mask'] })` draws the same mask box and per-reel rects above everything. `overlay(options)` is `debugOverlay(reelSet, options)` from `pixi-reels/debug`.
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Breaking: a Hold & Win board's landing wave steps by the active speed profile's `stopDelay`, the way reels stop `stopDelay` apart on a reel set. Each cell spins `(reel + cell) * stopDelay` ms on top of the profile's `minimumSpinTime`, so the wave follows `board.setSpeed()`: a turbo profile with `stopDelay: 0` lands every cell together, and no `stagger` function has to branch on profile names to do it.
+  
+  The builder's default `'normal'` profile sets `stopDelay: 70`, so a board on defaults keeps its 70 ms wave. A board that registers its own profiles and no `.stagger()` now waves by their `stopDelay`: 140 ms a step on the NORMAL preset, none on TURBO and SUPER_TURBO. To keep the old fixed wave, `.stagger((reel, cell) => (reel + cell) * 70)`.
+  
+  `HoldAndWinBuilder.stagger(fn)` still replaces the wave, and `fn` now also gets the speed's profile: `.stagger((reel, cell, speed, profile) => reel * profile.stopDelay)` is a column-by-column wave that scales with the speed. Its type is exported as `HwStagger`.
+
+### Minor Changes
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: reel sets that grow sideways at runtime, for "infinity reels" style mechanics. `reelSet.addReels(count, { visibleCells, initialFrame })` appends reels after the last one (laid out, masked and pooled like the rest), `reelSet.removeReels(count?)` destroys the last ones (every added one without a count, back to the board the builder made) and gives the memory back, and `reelSet.expand({ columns, step, onStepAdded, onStepLanded, anticipation, signal })` runs the whole chain from one server result: add a step's reels, spin only them, land them on their columns, repeat.
+  
+  ```ts
+  const spin = reelSet.spin();
+  reelSet.setResult(res.columns.slice(0, 5));
+  await spin;
+  await reelSet.expand({
+    columns: res.columns.slice(5), // the server decides how many
+    step: 1,                       // or 2, or (info) => ...
+    onStepAdded: () => camera.panTo(reelSet.viewport.maskWidth), // the board's new width
+    onStepLanded: (step) => showWays(step.result.symbols),
+  });
+  reelSet.removeReels(); // next round: back to the board the builder made
+  ```
+  
+  The steps are one round: pin turns and `'eval'` pins are not spent per step, and start and stop delays stagger by a reel's place in its step rather than its index, so reel 40 does not wait forty delays. Skip works a step at a time: `skipSpin()` frees the step in flight (slam or quicken, per `skipMode()`) and speeds up the rest of the round once (the fastest profile; a cascade-mode expansion lands its later steps at once, the way one press ends a cascade); a press between steps, while a hook runs and nothing spins, carries to the next step instead of being dropped (both `skipSpin()` and `requestSkip()`); a step's reels join a `setReelGroups()` layout as one trailing group; `anticipation` takes `AnticipationOptions`, so a step's tease can be protected from the first press (`{ protect: 'once' }`). Aborting `signal` fast-forwards rather than cancels: everything still to come lands in one step (`AbortSignal.abort()` lands a whole expansion at once, for quick spin, autoplay and tests). On a MultiWays set each column's length is that reel's shape, so the ways multiply as the board grows (eight reels of seven cells is 5,764,801 ways). A step that a big symbol would straddle is widened to take the block whole, so a 2-wide block arriving in a one-reel step adds two. Columns, symbol ids, shapes, blocks and an `anticipation` object are validated before the first reel is added, so a bad result throws on an untouched board; an `anticipation` function's answer is checked before its step's reels exist. An abort listener never outlives the expansion on the caller's signal, even when the set is destroyed mid-step.
+  
+  Added reels are built the way the builder built the others: a reel without a count copies the last reel as the board is now, `reelExtents()` boxes and a runtime `setCurve()` carry over, and a `setShape()` still pending lands them at their own shape. A named `setDropOrder('ltr' | 'rtl' | 'all')` now counts over the reels that spin rather than the reel count when it was set, so it covers added reels and orders an `expand()` step by place. `removeReels()` hands the removed reels' symbols back to the pool, which stops any animation still playing on them, and destroys anything a game added to those reels' containers.
+  
+  Rows can grow too: `reelSet.addRows(count, { cells })` makes every reel `count` rows taller at its own cell size (the viewport and mask grow with it, `cells` is what the new rows show), and `removeRows(count?)` goes back. Inside an expansion they run between steps, in `onStepLanded`, and the reels after it may arrive at the new height. Big symbols stay whole; one that no longer fits a shorter strip is random-filled. Not on MultiWays, where a reel's rows are its shape.
+  
+  New events: `reels:added`, `reels:removed`, `rows:added`, `rows:removed`, `expand:start`, `expand:stepAdded`, `expand:stepLanded`, `expand:complete`, and `expand:end` (`'complete'` or `'failed'`, always last, the place to put a UI back). `reelSet.isExpanding` is `true` from `expand:start` on, so a `spin:*` listener can tell an expansion step from a new round, and `false` again by `expand:complete` and `expand:end`, so a listener there can start the next round. `Reel.reelCount` follows the board. `SpinMetrics` and `debugOverlay` follow reels added and removed after they were created, and the overlay redraws when the rows change.
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `SpineReelSymbol.playOneShot(animation, { track, then })`, the awaitable one-shot that `playWin()`, `playLanding()` and `playOut()` are built on. It resolves when the animation completes and leaves the track on the idle loop (`then: 'idle'`, the default on track 0), on its last frame (`'hold'`), or empty (`'clear'`, the default on any other track, so an overlay mixes out and the tracks under it show through). Use it where `playOnTrack(track, name, false)` gave no way to know the one-shot had ended and never went back to idle; `playOnTrack` stays for loops and raw track entries.
+  
+  ```ts
+  await coin.playOneShot('collect');                   // track 0, then idle
+  await coin.playOneShot('react_u', { track: 1 });     // overlay, cleared after
+  await coin.playOneShot('explode', { then: 'hold' }); // stays on its last frame
+  ```
+  
+  One-shots on different tracks run side by side: each track settles only its own promise, and `stopAnimation()` settles all of them and clears the overlays, including one that ended holding its last frame (`then: 'hold'`). `OneShotOptions` and `OneShotEnd` are exported from `pixi-reels/spine`.
+  
+  Fix: a `playWin()` / `playLanding()` / `playOut()` promise no longer waits forever when something else takes its track (`playOnTrack()`, a raw `setAnimation()`): it settles the moment its animation is replaced.
+  
+  Fix: a game's own `spine.state` listener no longer misses the `complete`, `interrupt` or `end` of a one-shot. The symbol listened on the state and removed itself during spine's dispatch, which walks the listener list live, so the listener after it was skipped; it now listens on the one-shot's own track entry.
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `WinLines` in `pixi-reels/debug`, paylines and payways drawn over a reel set with pixi-silk. `lines.line(cells)` draws one polyline through the cell centres; `lines.ways(perReel)` joins every winning cell to every winning cell on the next reel, a lattice whose paths are the ways, so a win of millions of ways is still a few dozen segments. Each call returns its own `SilkGraphics` for fading or pulsing; `clear()` removes them. It is `Disposable`: `destroy()` frees every line, and drawing after it throws. Cells are read at draw time, so a board that grew with `expand()` is drawn where it is now. The library still computes no wins: it draws the cells it is handed.
+  
+  ```ts
+  import { WinLines } from 'pixi-reels/debug';
+  
+  const lines = new WinLines(reelSet);
+  lines.ways(win.perReel);       // [[0, 2], [1], [0, 1, 2]]: winning cells per reel
+  reelSet.events.on('spin:start', () => lines.clear());
+  ```
+
+### Patch Changes
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the symbols a MultiWays reel adds when it grows mid-spin join the spin (`onReelSpinStart(true)`, and the tease hook when the reel is teasing), the way a symbol swapped in mid-spin does. A `StaticSpinSymbol` among them showed its live art in a strip of blurred snapshots until it wrapped.
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: a reel on a set that is not MultiWays lays its cells out at its share of a `reelExtents()` box. The builder sized each cell to fit the box but gave every reel the symbol size as the pitch its strip moves on, and such a reel never reshapes when it lands: a 4-cell reel in a 300px box drew 75px cells 100px apart, the last past the bottom of its mask, and `getCellBounds()` reported them there. The spin pitch is now the reel's own cell, spinning and landed. A set without `reelExtents()` keeps the symbol size exactly, instead of re-deriving it from the reel's height, which could drift by a bit (`111.65` came back as `111.65000000000002`).
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `SpinTextureCache` no longer destroys a texture another reel is still drawing. It kept one capture per symbol id, so on a MultiWays set, where every reel sizes the same id differently, each reel's capture at its own cell size destroyed the one the previous reel was spinning on and the next render crashed on a destroyed texture. Captures are now keyed by id and cell size (and smear axis for blurred ones), sizes are kept side by side, and `clear()` / `invalidate()` / `destroy()` remain the only calls that destroy them. `getStatic()` / `getBlurred()` take an optional size to read one capture; without it they return the most recent, as before. Sizes are compared to a thousandth of a pixel, so one cell size reached along two float paths (`111.65` and `111.65000000000002`) is one capture and a prewarmed texture is found. `captureBlurred()` blurs only the provided static or the capture at its own size, and throws rather than stretch a capture of another size into a cached blur.
+  
+  `StaticSpinSymbol` now spins every reel on the snapshot of its own cell size, and a MultiWays reshape mid-spin re-points the snapshot at the new size instead of stretching the old one. To prewarm a MultiWays set, call `prewarmSpinTextures` once per cell size the reels can land on.
+
+- [#265](https://github.com/schmooky/pixi-reels/pull/265) [`05db169`](https://github.com/schmooky/pixi-reels/commit/05db169caaa4c4e8fe557848c03d21f7a8935a7e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `CardSymbol` and `SpriteSymbol` settle a pending `playWin()` when `stopAnimation()` cuts the win short (a recycle, a spotlight hide, `removeReels()`), as `AnimatedSpriteSymbol` and the Spine symbols already did, so an `await` on it, or a `WinPresenter.show()`, no longer hangs. `CardSymbol` also kills the rest of its win timeline and its two fill calls, which used to fire into a symbol that had moved on or been destroyed. A second `playWin()` settles the first.
+
 ## 3.1.0
 
 ### Minor Changes
