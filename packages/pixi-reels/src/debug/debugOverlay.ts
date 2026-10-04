@@ -34,7 +34,7 @@ import { roundRectPath } from './roundRectPath.js';
  *                  a phase-colored swatch and a speed meter.
  *   - `metrics`    A plaque under the mask: the current round's length, time
  *                  to the first stop, landing order, tease and skip windows,
- *                  symbols the pool had to build, events, fps.
+ *                  symbols swapped into cells, events, fps.
  *   - `timeline`   A panel under the mask: every reel's phases for the current
  *                  round on one time axis, with its speed trace, the moment it
  *                  was asked to stop, the moment it landed and every skip press.
@@ -306,9 +306,13 @@ class DebugOverlay implements DebugOverlayHandle {
     }
     this._redrawStatic();
   };
-  /** The board shrank: the removed reels' listeners died with them. */
+  /**
+   * The board shrank. The removed reels' listeners died with them; drop the
+   * detach closures too, the last thing here that holds each reel.
+   */
   private _onReelsRemoved = (info: { from: number }): void => {
     this._phase.length = info.from;
+    for (const detach of this._reelDetach.splice(info.from)) detach();
     this._redrawStatic();
   };
 
@@ -368,10 +372,10 @@ class DebugOverlay implements DebugOverlayHandle {
     };
     reel.events.on('phase:enter', onEnter);
     reel.events.on('phase:exit', onExit);
-    this._reelDetach.push(() => {
+    this._reelDetach[i] = () => {
       reel.events.off('phase:enter', onEnter);
       reel.events.off('phase:exit', onExit);
-    });
+    };
   }
 
   get metrics(): SpinMetrics {
@@ -884,7 +888,7 @@ class DebugOverlay implements DebugOverlayHandle {
       .filter((t): t is number => t !== null);
     const gaps = landed.slice(1).map((t, i) => t - landed[i]);
     const teases = round.reels.filter((r) => r.tease !== null);
-    const created = round.reels.reduce((sum, r) => sum + r.symbolsCreated, 0);
+    const swaps = round.reels.reduce((sum, r) => sum + r.symbolSwaps, 0);
     const lastSkip = round.skips[round.skips.length - 1];
     const fps = this._ticker ? `${Math.round(this._ticker.FPS)}` : '-';
 
@@ -923,7 +927,7 @@ class DebugOverlay implements DebugOverlayHandle {
             : 'skip   -',
         color: lastSkip ? SKIP_COLORS[lastSkip.mode] : round.queuedSkipAt !== null ? SKIP_COLORS.quicken : DIM,
       },
-      { text: `pool   +${created} symbols   events ${round.events}` },
+      { text: `swaps  ${swaps}   events ${round.events}` },
       {
         text:
           `fps    ${fps}   pins ${this._reelSet.pins.size}   ` +

@@ -105,6 +105,16 @@ describe('DebugPlaque', () => {
     three.destroy({ children: true });
   });
 
+  it('a plain destroy() frees its plate and text too, and a second one does nothing', () => {
+    const p = new DebugPlaque({ title: 'reel 2', rows: ['phase stop', 'speed 0.4'] });
+    const owned = [...p.children];
+    expect(owned.length).toBeGreaterThan(1);
+    p.destroy();
+    expect(p.isDestroyed).toBe(true);
+    expect(owned.every((c) => c.destroyed)).toBe(true);
+    expect(() => p.destroy()).not.toThrow();
+  });
+
   it('ignores a write that arrives after it was destroyed, like a Text', () => {
     const p = new DebugPlaque({ text: 'round 1' });
     p.destroy({ children: true });

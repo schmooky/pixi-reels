@@ -26,6 +26,22 @@ describe('WinLines', () => {
     }
   });
 
+  it('is Disposable: destroy() once, then refuses to draw on a container nothing frees', () => {
+    const h = harness();
+    try {
+      const lines = new WinLines(h.reelSet);
+      const g = lines.line([{ reelIndex: 0, cellIndex: 0 }, { reelIndex: 1, cellIndex: 1 }]);
+      lines.destroy();
+      expect(lines.isDestroyed).toBe(true);
+      expect(g.destroyed).toBe(true);
+      expect(() => lines.destroy()).not.toThrow();
+      expect(() => lines.line([{ reelIndex: 0, cellIndex: 0 }])).toThrow(/after destroy\(\)/);
+      expect(() => lines.ways([[0], [1]])).toThrow(/after destroy\(\)/);
+    } finally {
+      h.destroy();
+    }
+  });
+
   it('a payline spans its cell centres', () => {
     const h = harness();
     try {

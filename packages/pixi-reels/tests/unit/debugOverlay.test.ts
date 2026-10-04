@@ -174,6 +174,21 @@ describe('debugOverlay info panels', () => {
     }
   });
 
+  it('lets go of the reels the board removes', () => {
+    const harness = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    try {
+      const overlay = debugOverlay(harness.reelSet, { layers: ['hud'] });
+      for (let i = 0; i < 5; i++) {
+        harness.reelSet.addReels(2);
+        harness.reelSet.removeReels();
+      }
+      expect((overlay as unknown as { _reelDetach: unknown[] })._reelDetach).toHaveLength(3);
+      overlay.destroy();
+    } finally {
+      harness.destroy();
+    }
+  });
+
   it('reads a recorder it was handed and leaves it running on destroy', async () => {
     const harness = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     const metrics = new SpinMetrics(harness.reelSet);

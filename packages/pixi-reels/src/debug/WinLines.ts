@@ -2,6 +2,7 @@ import { Container } from 'pixi.js';
 import { SilkGraphics, type PolylineOptions } from 'pixi-silk';
 import type { SymbolPosition } from '../config/types.js';
 import type { ReelSet } from '../core/ReelSet.js';
+import type { Disposable } from '../utils/Disposable.js';
 
 /** How one line is drawn. Every field is optional. */
 export interface WinLineStyle {
@@ -49,7 +50,7 @@ const PALETTE = [0xffc94a, 0x4ad8ff, 0xff5c8a, 0x8cff6b, 0xb88cff, 0xff9f43];
  * reelSet.events.on('spin:start', () => lines.clear());
  * ```
  */
-export class WinLines extends Container {
+export class WinLines extends Container implements Disposable {
   private _style: Required<Omit<WinLineStyle, 'color' | 'dot'>> & Pick<WinLineStyle, 'color' | 'dot'>;
   private _palette: readonly number[];
   private _next = 0;
@@ -133,12 +134,22 @@ export class WinLines extends Container {
     return this;
   }
 
+  get isDestroyed(): boolean {
+    return this.destroyed;
+  }
+
+  /** Destroy every line with it. Calling it again does nothing. */
   override destroy(): void {
+    if (this.destroyed) return;
     this.clear();
     super.destroy({ children: true });
   }
 
   private _add(): SilkGraphics {
+    if (this.destroyed) {
+      // A line drawn now would go on a detached container nothing frees.
+      throw new Error('WinLines: line() / ways() called after destroy(). Make a new WinLines for the next win.');
+    }
     const g = new SilkGraphics({ label: 'pixi-reels:winLine' });
     this.addChild(g);
     return g;

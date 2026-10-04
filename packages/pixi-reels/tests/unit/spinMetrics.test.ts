@@ -173,7 +173,79 @@ describe('SpinMetrics', () => {
   });
 });
 
+describe('SpinMetrics round edges', () => {
+  it('an aborted spin ends its round: not live, and marked skipped', async () => {
+    let now = 0;
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    const metrics = new SpinMetrics(h.reelSet, { now: () => now });
+    try {
+      const controller = new AbortController();
+      const spin = h.reelSet.spin({ signal: controller.signal });
+      now = 100;
+      h.advance(100);
+      controller.abort();
+      await expect(spin).rejects.toThrow();
+
+      // An abort never emits spin:complete; ten seconds on, the round is over all the same.
+      now = 10_000;
+      const round = metrics.current!;
+      expect(round.completeAt).toBeNull();
+      expect(metrics.isActive).toBe(false);
+      expect(metrics.length).toBe(round.lastActivityAt);
+      expect(metrics.length).toBeLessThan(1000);
+      expect(round.wasSkipped).toBe(true);
+      expect(metrics.totals.skipped).toBe(1);
+    } finally {
+      metrics.destroy();
+      h.destroy();
+    }
+  });
+
+  it('a set event between rounds is counted but does not stretch the round that settled', async () => {
+    let now = 0;
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    const metrics = new SpinMetrics(h.reelSet, { now: () => now });
+    try {
+      const spin = h.reelSet.spin();
+      now = 150;
+      h.reelSet.setResult(grid(3));
+      h.reelSet.slamStop();
+      await spin;
+      expect(metrics.length).toBe(150);
+      const events = metrics.current!.events;
+
+      // Thirty seconds later, before the next spin: housekeeping on the set.
+      now = 30_150;
+      h.reelSet.speed.addProfile('other', { ...h.reelSet.speed.active, name: 'other' });
+      h.reelSet.setSpeed('other');
+      h.reelSet.addReels(1);
+      h.reelSet.removeReels();
+      expect(metrics.current!.events).toBeGreaterThan(events);
+      expect(metrics.length).toBe(150);
+    } finally {
+      metrics.destroy();
+      h.destroy();
+    }
+  });
+});
+
 describe('SpinMetrics on a growing board', () => {
+  it('lets go of the reels the board removes', () => {
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    const metrics = new SpinMetrics(h.reelSet);
+    try {
+      for (let i = 0; i < 10; i++) {
+        h.reelSet.addReels(2);
+        h.reelSet.removeReels();
+      }
+      // A listener per reel on the board, not per reel it ever had.
+      expect((metrics as unknown as { _reelDetach: unknown[] })._reelDetach).toHaveLength(3);
+    } finally {
+      metrics.destroy();
+      h.destroy();
+    }
+  });
+
   it('records the phases of reels added after it was created', async () => {
     const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     const metrics = new SpinMetrics(h.reelSet);

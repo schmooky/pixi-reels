@@ -1,5 +1,6 @@
-import { Container, Rectangle, Text } from 'pixi.js';
+import { Container, Rectangle, Text, type DestroyOptions } from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
+import type { Disposable } from '../utils/Disposable.js';
 
 /** One line of a {@link DebugPlaque}. */
 export interface DebugPlaqueRow {
@@ -128,7 +129,7 @@ interface ResolvedRow {
  * plaque.update({ rows: ['phase  landed'] }); // cheap enough to call per frame
  * ```
  */
-export class DebugPlaque extends Container {
+export class DebugPlaque extends Container implements Disposable {
   private _opts: DebugPlaqueOptions;
   private _gfx = new SilkGraphics({ label: 'DebugPlaque:plate' });
   private _title: Text | null = null;
@@ -143,6 +144,19 @@ export class DebugPlaque extends Container {
     this._opts = { ...options };
     this.addChild(this._gfx);
     this._layout();
+  }
+
+  get isDestroyed(): boolean {
+    return this.destroyed;
+  }
+
+  /**
+   * Destroy the plaque with its plate and text: it owns everything in it, so
+   * a plain `destroy()` frees them too. Calling it again does nothing.
+   */
+  override destroy(options?: DestroyOptions): void {
+    if (this.destroyed) return;
+    super.destroy(typeof options === 'object' ? { ...options, children: true } : { children: true });
   }
 
   /** Width of the plate in local px, from the character count. */

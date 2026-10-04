@@ -39,8 +39,11 @@ export interface DebugReelRound {
   landedAt: number | null;
   /** The anticipation tease, when the reel teased. */
   tease: { start: number; end: number | null; order: number; total: number } | null;
-  /** `symbol:created` count: how many symbols the pool had to build. */
-  symbolsCreated: number;
+  /**
+   * `symbol:created` count: how many times a cell took a different symbol
+   * this round, from the pool or freshly built. The swap churn a spin causes.
+   */
+  symbolSwaps: number;
   /**
    * `reel.speedNormalized` samples as flat `[t0, v0, t1, v1, ...]`. Only
    * recorded when the metrics were given a ticker; empty otherwise.
@@ -83,7 +86,12 @@ export interface DebugRound {
   cascadeChains: number;
   /** `win:group` count. */
   wins: number;
-  /** Last time anything was recorded, ms since the round opened. */
+  /**
+   * Last time the round itself did something, ms since the round opened: its
+   * spin, phase and skip events, a win. A set event between rounds (a speed
+   * change, `removeReels()` before the next spin) is counted but does not
+   * stretch a round that has settled.
+   */
   lastActivityAt: number;
 }
 
@@ -126,9 +134,32 @@ const DEFAULT_SAMPLE_MS = 33;
 const MAX_SAMPLES = 1800;
 
 /**
+ * The set events a round records. They mark its activity even once it has
+ * settled (a win presented after `spin:complete`); any other set event only
+ * counts toward `events`.
+ */
+const ROUND_EVENTS = new Set([
+  'spin:start',
+  'spin:allStarted',
+  'spin:stopping',
+  'spin:reelLanding',
+  'spin:reelLanded',
+  'anticipation:reel',
+  'anticipation:reelEnd',
+  'spin:allLanded',
+  'spin:complete',
+  'skip:requested',
+  'skip:completed',
+  'skip:queued',
+  'skip:boosted',
+  'cascade:chain:start',
+  'win:group',
+]);
+
+/**
  * Records what each spin did, per reel, on a clock: when every phase started
  * and ended, when the reel was asked to stop, landed and settled, the tease
- * window, every skip press, and how many symbols the pool had to build.
+ * window, every skip press, and how many symbols were swapped into cells.
  *
  * Event-driven: it listens on the set bus and on every reel's bus, so it costs
  * nothing between spins. Given a `ticker`, it also samples each reel's
@@ -154,6 +185,8 @@ export class SpinMetrics implements Disposable {
   private _lastSampleAt = Number.NEGATIVE_INFINITY;
   private _tickerRef: TickerRef | null = null;
   private _detach: Array<() => void> = [];
+  /** One per reel, by index, so a removed reel's listener (and the reel) can go. */
+  private _reelDetach: Array<() => void> = [];
   private _isDestroyed = false;
 
   constructor(
@@ -192,12 +225,13 @@ export class SpinMetrics implements Disposable {
 
   /**
    * Whether the current round is still moving: a reel is inside a phase, or a
-   * spin has not reached `spin:complete` yet.
+   * spin has not reached `spin:complete` yet. An aborted or timed-out spin
+   * never reaches it, so a spin round also ends when the set stops spinning.
    */
   get isActive(): boolean {
     const r = this.current;
     if (!r) return false;
-    if (r.spin && r.completeAt === null) return true;
+    if (r.spin && r.completeAt === null && this._reelSet.isSpinning) return true;
     return r.reels.some((reel) => reel.phases.some((p) => p.end === null));
   }
 
@@ -243,6 +277,8 @@ export class SpinMetrics implements Disposable {
     this._tickerRef = null;
     for (const detach of this._detach) detach();
     this._detach.length = 0;
+    for (const detach of this._reelDetach) detach();
+    this._reelDetach.length = 0;
   }
 
   // --- recording -----------------------------------------------------------
@@ -268,7 +304,7 @@ export class SpinMetrics implements Disposable {
         landingAt: null,
         landedAt: null,
         tease: null,
-        symbolsCreated: 0,
+        symbolSwaps: 0,
         speed: [],
       })),
       landOrder: [],
@@ -290,11 +326,11 @@ export class SpinMetrics implements Disposable {
     return this.current ?? this._open(false);
   }
 
-  /** ms since the round opened, and mark it as the round's latest activity. */
-  private _stamp(round: DebugRound): number {
+  /** ms since the round opened; `extend` marks it as the round's latest activity. */
+  private _stamp(round: DebugRound, extend: boolean): number {
     const t = this._now() - round.startedAt;
     round.events++;
-    if (t > round.lastActivityAt) round.lastActivityAt = t;
+    if (extend && t > round.lastActivityAt) round.lastActivityAt = t;
     return t;
   }
 
@@ -302,7 +338,7 @@ export class SpinMetrics implements Disposable {
   private _attachReel(reel: ReelSet['reels'][number], index: number): void {
     const onReel = (event: string, ...args: unknown[]): void => this._onReelEvent(index, event, args);
     reel.events.onAny(onReel);
-    this._detach.push(() => reel.events.offAny(onReel));
+    this._reelDetach[index] = () => reel.events.offAny(onReel);
   }
 
   private _onSetEvent(event: string, args: unknown[]): void {
@@ -317,8 +353,15 @@ export class SpinMetrics implements Disposable {
       for (let i = from; i < from + count; i++) this._attachReel(this._reelSet.reels[i], i);
       return;
     }
+    if (event === 'reels:removed') {
+      // The removed reels are destroyed: drop their listeners, and with them
+      // the last reference this recorder holds to each one.
+      const { from } = args[0] as { from: number };
+      for (const detach of this._reelDetach.splice(from)) detach();
+      return;
+    }
     const round = event === 'spin:start' ? this._open(true) : this._round();
-    const t = this._stamp(round);
+    const t = this._stamp(round, this.isActive || ROUND_EVENTS.has(event));
     switch (event) {
       case 'spin:allStarted':
         round.allStartedAt = t;
@@ -366,6 +409,8 @@ export class SpinMetrics implements Disposable {
       }
       case 'skip:requested': {
         const info = args[0] as SkipInfo;
+        // Set here too: an aborted spin slams and never reaches `spin:complete`.
+        round.wasSkipped = true;
         round.skips.push({
           at: t,
           mode: info.mode,
@@ -404,7 +449,7 @@ export class SpinMetrics implements Disposable {
     const round = this._round();
     const reel = round.reels[index];
     if (!reel) return;
-    const t = this._stamp(round);
+    const t = this._stamp(round, this.isActive || event.startsWith('phase:'));
     switch (event) {
       case 'phase:enter':
         reel.phases.push({ phase: args[0] as string, start: t, end: null });
@@ -421,7 +466,7 @@ export class SpinMetrics implements Disposable {
         break;
       }
       case 'symbol:created':
-        reel.symbolsCreated++;
+        reel.symbolSwaps++;
         break;
     }
   }

@@ -63,6 +63,33 @@ describe('enableDebug metrics()', () => {
   });
 });
 
+describe('enableDebug called again', () => {
+  const g = globalThis as unknown as { window?: Record<string, unknown> };
+  const hadWindow = 'window' in g;
+
+  afterEach(() => {
+    if (!hadWindow) delete g.window;
+  });
+
+  it('keeps the recorder already listening instead of stacking another', async () => {
+    g.window = g.window ?? {};
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    const grid = Array.from({ length: 3 }, () => ({ visible: ['a', 'b', 'c'] }));
+    try {
+      enableDebug(h.reelSet, 'twice');
+      await h.spinAndLand(grid);
+      // A hot reload, a debug toggle: enabled again on the same set.
+      enableDebug(h.reelSet, 'twice');
+      await h.spinAndLand(grid);
+      const debug = (g.window as Record<string, any>).__PIXI_REELS_DEBUG_INSTANCES.twice;
+      // One recorder since the first call: it holds both rounds.
+      expect(debug.metrics().rounds).toHaveLength(2);
+    } finally {
+      h.destroy();
+    }
+  });
+});
+
 describe('debugSnapshot reports the travel axis', () => {
   // `allSymbols[].y` was hard-coded, so on a horizontal set - the one
   // orientation v2 exists to add - every symbol reported a constant 0 and the

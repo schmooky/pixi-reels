@@ -263,6 +263,9 @@ export function clearFrames(): void {
   _recordedFrames.length = 0;
 }
 
+/** The recorder `enableDebug` started for each set. */
+const recorders = new WeakMap<ReelSet, SpinMetrics>();
+
 /**
  * Enable debug mode: attaches debug utilities to `window.__PIXI_REELS_DEBUG`.
  *
@@ -294,8 +297,14 @@ export function enableDebug(reelSet: ReelSet, key?: string): void {
 
   // Recording from now on, so `metrics()` can answer for the spins that
   // happen before anyone thinks to ask. Event listeners only: nothing runs
-  // between spins, and it lets go of the set when the set is destroyed.
-  const metrics = new SpinMetrics(reelSet);
+  // between spins, and it lets go of the set when the set is destroyed. One
+  // per set: a second call (a hot reload, a debug toggle) keeps the recorder
+  // already listening instead of stacking another nothing can stop.
+  let metrics = recorders.get(reelSet);
+  if (!metrics || metrics.isDestroyed) {
+    metrics = new SpinMetrics(reelSet);
+    recorders.set(reelSet, metrics);
+  }
 
   const debug = {
     reelSet,
@@ -330,8 +339,8 @@ export function enableDebug(reelSet: ReelSet, key?: string): void {
     /**
      * Every round recorded since `enableDebug`, as plain JSON: when each reel
      * entered and left each phase, was asked to stop, landed and settled, its
-     * tease window, every skip press, the landing order, how many symbols the
-     * pool built. Times are ms since the round's `spin:start`.
+     * tease window, every skip press, the landing order, how many symbols
+     * were swapped into cells. Times are ms since the round's `spin:start`.
      */
     metrics: () => metrics.snapshot(),
   };
