@@ -1,5 +1,15 @@
 # pixi-reels
 
+## 4.0.1
+
+### Patch Changes
+
+- [#268](https://github.com/schmooky/pixi-reels/pull/268) [`bcd08f5`](https://github.com/schmooky/pixi-reels/commit/bcd08f566b5ff639a7963ae9c553d7c384d75450) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: big symbols stay whole wherever the engine places symbols outside a landing. A big symbol in the builder's `initialFrame()` or in `addReels({ initialFrame })` now gets its whole block, as in `setResult()` (it used to get no stubs, draw at one cell and leave its neighbours reported under it), and a block that does not fit throws before anything is built. `pin()` and `movePin()` at rest no longer turn the stubs of a block that shares the reel into extra anchors. A pin on a cell of a big symbol replaces the block, so the pin shows at once, and a big symbol pinned at rest has to fit, as in a landing.
+
+- [#268](https://github.com/schmooky/pixi-reels/pull/268) [`bcd08f5`](https://github.com/schmooky/pixi-reels/commit/bcd08f566b5ff639a7963ae9c553d7c384d75450) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `SpineSymbol` no longer clears every listener on its skeleton's animation state. It listened for its win on the state and called `state.clearListeners()` when the win completed, on `stopAnimation()` and on every recycle, dropping any listener a game or subclass had added, and, run inside spine's dispatch, making the listeners after it miss the event. It now listens on the win's own track entry and leaves the state's listeners alone (it still clears them when the symbol is destroyed, with its skeleton).
+  
+  Fix: a `SpineSymbol.playWin()` promise settles when something else takes track 0 before the win completes (a subclass setting another animation, a second `playWin()`), instead of waiting forever. A second `playWin()` settles the first.
+
 ## 4.0.0
 
 ### Major Changes
