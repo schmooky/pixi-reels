@@ -10,6 +10,8 @@ await coin.playOneShot('react_u', { track: 1 });     // overlay, cleared after
 await coin.playOneShot('explode', { then: 'hold' }); // stays on its last frame
 ```
 
-One-shots on different tracks run side by side: each track settles only its own promise, and `stopAnimation()` settles all of them and clears the overlays. `OneShotOptions` and `OneShotEnd` are exported from `pixi-reels/spine`.
+One-shots on different tracks run side by side: each track settles only its own promise, and `stopAnimation()` settles all of them and clears the overlays, including one that ended holding its last frame (`then: 'hold'`). `OneShotOptions` and `OneShotEnd` are exported from `pixi-reels/spine`.
 
 Fix: a `playWin()` / `playLanding()` / `playOut()` promise no longer waits forever when something else takes its track (`playOnTrack()`, a raw `setAnimation()`): it settles the moment its animation is replaced.
+
+Fix: a game's own `spine.state` listener no longer misses the `complete`, `interrupt` or `end` of a one-shot. The symbol listened on the state and removed itself during spine's dispatch, which walks the listener list live, so the listener after it was skipped; it now listens on the one-shot's own track entry.

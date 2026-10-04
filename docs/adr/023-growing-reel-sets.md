@@ -46,17 +46,21 @@ columns, awaits the landing and the game's hooks, and repeats. Two things
 change for those spins, both internal to the controller:
 
 - **They continue the round.** The skip stage and a boosted speed carry over
-  instead of resetting, so a press in one step slams it and turbos the rest,
-  exactly what `skipSpin()` does to the rest of any round. Pin turns and
-  `'eval'` pins are not spent per step.
+  instead of resetting, so a press in one step slams it and speeds up the rest,
+  exactly what `skipSpin()` does to the rest of any round: turbo in standard
+  mode, an instant landing for every later step in cascade mode, the way a
+  press auto-slams a cascade's later refills. Pin turns and `'eval'` pins are
+  not spent per step.
 - **They stagger by place, not index.** Start and stop delays count a reel's
   position among the reels that spin, so reel 40 does not wait forty delays.
+  A named drop order (`setDropOrder('ltr' | 'rtl' | 'all')`) counts the same
+  way, so it covers reels added after it was set.
 
 `holdReels` spins keep the index stagger they always had.
 
-**Validate the whole expansion before the first reel exists.** Columns, buffer
-counts, MultiWays shapes and big-symbol fit are checked up front, so a bad
-result throws on an untouched board. A step that a big symbol would straddle is
+**Validate the whole expansion before the first reel exists.** Columns, symbol
+ids, buffer counts, MultiWays shapes and big-symbol fit are checked up front, so
+a bad result throws on an untouched board. A step that a big symbol would straddle is
 widened to take the block whole; the plan walks the columns the way the
 big-symbol coordinator does, so a replayed block is read as one.
 
@@ -76,10 +80,15 @@ only draws: `WinLines` in `pixi-reels/debug` strokes the cells it is handed.
   `expand:stepLanded`, `expand:complete`. Additive.
 - `Reel.reelCount` became a getter that follows the board.
 - Destroying one reel of a live set used to destroy the views of symbols it had
-  released to the shared pool. Harmless on a full teardown, fatal on a partial
-  one; `Reel.destroy()` now detaches them.
+  released to the shared pool, because a released view stayed parented to the
+  reel. Harmless on a full teardown, fatal on a partial one. A release now
+  detaches the view, and `Reel.destroy()` releases its live symbols to the pool
+  instead of destroying them, so an animation still running on a removed reel
+  stops with its symbol (`deactivate()`) rather than firing into a dead view.
 - `curveFocus('set')` keeps converging on the build-time board centre after the
   board grows.
-- A press between steps (while a hook runs) finds the engine idle. A game that
-  wants it to mean "fast-forward" aborts the expansion's `signal`, which lands
-  everything left in one step.
+- A press between steps (while a hook runs) finds nothing spinning, so the
+  round carries it: `skipSpin()` and `requestSkip()` queue it (`skip:queued`)
+  and the next step fires it the moment it has its result. A game that wants
+  a press to mean "fast-forward" aborts the expansion's `signal` instead,
+  which lands everything left in one step.

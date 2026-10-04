@@ -46,7 +46,7 @@ __PIXI_REELS_DEBUG.metrics();
 `metrics()` answers for every spin since `enableDebug` was called: per reel,
 when each phase started and ended, when the reel was asked to stop, when it
 landed, its tease window; per round, every skip press, the landing order, and
-how many symbols the pool had to build. Times are ms since the round's
+how many symbols were swapped into cells. Times are ms since the round's
 `spin:start`. It is the text half of the timeline described below.
 
 `trace()` is `reelSet.events.onAny(...)` with a `console.log` in it. The same
@@ -171,7 +171,10 @@ overlay.redraw();
 overlay.destroy();
 ```
 
-A build that never imports `pixi-reels/debug` never needs `pixi-silk`.
+A build that never imports `pixi-reels/debug` never needs `pixi-silk`. It draws
+through WebGL: on a WebGPU renderer the overlay's shapes draw nothing, so debug
+on `app.init({ preference: 'webgl' })`. Building one in a headless test needs a
+canvas stand-in; the [4.0 migration guide](/docs/migrating-to-4-0/) has it.
 
 | Layer | Draws | Catches |
 |---|---|---|

@@ -30,6 +30,34 @@ pnpm add -D pixi-silk
 It is only needed where you import `pixi-reels/debug`. A dev dependency is
 enough when the overlay is dev-only, which it should be.
 
+### What pixi-silk needs to draw
+
+pixi-silk 0.1 draws through a WebGL shader, and everything in
+`pixi-reels/debug` that draws (`debugOverlay`, `DebugPlaque`, `WinLines`) is
+built on it. Two things follow:
+
+- **A WebGL renderer.** On WebGPU the plates, outlines and lines draw nothing
+  (Pixi logs `Mesh shader has no gpuProgram`); only plaque text shows. Ask for
+  WebGL while you debug: `await app.init({ preference: 'webgl' })`.
+- **A DOM, or a stand-in for one, to build them.** A `SilkGraphics` probes the
+  shader's precision through `DOMAdapter.createCanvas()`, so in plain Node
+  `new DebugPlaque()`, `new WinLines()` and `debugOverlay()` (its `describe()`
+  included) throw `document is not defined`. A headless test hands Pixi a
+  canvas without WebGL, and the probe settles on `mediump`:
+
+```ts
+import { DOMAdapter, BrowserAdapter } from 'pixi.js';
+
+DOMAdapter.set({
+  ...BrowserAdapter,
+  createCanvas: (width = 0, height = 0) =>
+    ({ width, height, getContext: () => null }) as unknown as HTMLCanvasElement,
+});
+```
+
+`enableDebug()`, `debugSnapshot()` and `debugGrid()` stay in the main entry and
+need neither.
+
 ## `debugOverlay` and `OVERLAY_LABEL` moved
 
 ```ts

@@ -22,7 +22,7 @@ The base spin lands, then the board grows: `reelSet.expand({ columns })` adds th
 
 While the win still runs into the last reel, the server adds another reel to its result. Each step pans the camera to the new reel (`onStepAdded`), spins and lands it, then counts the ways and draws them with `WinLines` (`onStepLanded`).
 
-**Skip:** the steps are one round. The first press slams the step in flight and turbos the rest, the same boost `skipSpin()` gives the rest of any round; the second aborts the expansion's `signal`, which lands every reel still to come in one step.
+**Skip:** the steps are one round. The first press slams the step in flight and turbos the rest, the same boost `skipSpin()` gives the rest of any round (a cascade-mode expansion lands its later steps at once instead, the way one press ends a cascade); the second aborts the expansion's `signal`, which lands every reel still to come in one step.
 
 <RecipeDemo code="infinity-reels" height={420} />
 
@@ -61,7 +61,7 @@ Press as often as you like and read the log. The base board is grouped (dashed b
 - **Wide steps, one reel per press.** A step's reels arrive as one group. Call `setReelGroups()` in `onStepAdded` to split them, and each press frees one; or `slamStop({ reels: [...] })` lands part of a step and lets the rest play.
 - **Keep the deciding tease.** `anticipation: (step) => stillWinning ? { protect: 'once', duration: 900 } : false` keeps the "will it continue?" tease through the first press, only on the steps where it matters.
 
-**Gotcha:** `slamStop()` between steps has nothing to land, and a press after the last step has no step left: both are no-ops. A sticky `setStopDelays()` array covers the reels it was given; reels past its end stop with no delay.
+**Gotcha:** `slamStop()` between steps has nothing to land, and a press after the last step has no step left: both are no-ops. A named `setDropOrder('ltr' | 'rtl' | 'all')` follows the reels that spin, so it covers the added reels and orders a step by place; a sticky `setStopDelays()` array covers only the reels it was given, and reels past its end stop with no delay.
 
 ## What carries across steps
 

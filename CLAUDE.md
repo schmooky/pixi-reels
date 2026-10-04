@@ -248,7 +248,7 @@ Example `debugSnapshot()` fields:
 
 `visibleCells` is `number[]` (one entry per reel) so jagged shapes (pyramids, MultiWays) are representable. For uniform slots every entry is the same value.
 
-`__PIXI_REELS_DEBUG.metrics()` returns every spin since `enableDebug` as plain JSON: per reel, each phase's start/end, the stop request, the landing and the tease window; per round, skip presses, landing order and how many symbols the pool built (ms since the round's `spin:start`).
+`__PIXI_REELS_DEBUG.metrics()` returns every spin since `enableDebug` as plain JSON: per reel, each phase's start/end, the stop request, the landing and the tease window; per round, skip presses, landing order and how many symbols were swapped into cells (ms since the round's `spin:start`).
 
 **When debugging reel issues as an AI agent:**
 1. Call `__PIXI_REELS_DEBUG.log()` via eval to understand current state

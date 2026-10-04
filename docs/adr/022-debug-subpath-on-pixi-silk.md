@@ -49,7 +49,8 @@ which makes each cascade refill a round of its own.
 
 **One readout primitive.** `DebugPlaque` is rows of monospace text on a silk
 plate, sized from the character count instead of measured, so it is exact,
-headless-safe and cheap to update per frame. The overlay's panels are built
+assertable without a renderer and cheap to update per frame. (Building one still
+needs `DOMAdapter.createCanvas()`; see below.) The overlay's panels are built
 from it, and every recipe readout uses it instead of a bare `Text`.
 
 ## Consequences
@@ -60,8 +61,10 @@ from it, and every recipe readout uses it instead of a bare `Text`.
 - The overlay's `metrics` and `timeline` panels sit under the mask and add to
   the reel set's bounds. A host that framed its camera before enabling them has
   to re-fit; the docs runner does.
-- pixi-silk 0.1 is WebGL2 only and dashes paths and ellipses but not
-  `roundRect` strokes. `roundRectPath` traces a box as a path to get dashed
+- pixi-silk 0.1 is WebGL2 only: on a WebGPU renderer every silk shape (layer,
+  plate, win line) draws nothing and only plaque text shows. The 4.0 migration
+  guide says so and shows the headless stand-in. It dashes paths and ellipses
+  but not `roundRect` strokes. `roundRectPath` traces a box as a path to get dashed
   outlines; it can go once pixi-silk dashes rect strokes itself.
 - Headless tests construct `SilkGraphics`, whose shader probes a WebGL context
   through `DOMAdapter.createCanvas()`. The test setup installs an adapter whose
