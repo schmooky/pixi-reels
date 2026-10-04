@@ -1160,7 +1160,7 @@ export class ReelSetBuilder {
     //     per-reel mask would clip them at every column gap (visible
     //     vertical strips through the symbol), so we share a single mask.
     //     A stack one reel wide (1 x N) never crosses a gap, and a board
-    //     whose reels change height (`setColumn()`, `splitBlock()`) needs
+    //     whose reels change height (`setColumn()`, `splitSymbol()`) needs
     //     per-reel masks: one shared rectangle shows a shorter reel's
     //     buffer cells.
     //   - **unmasked symbols** (`SymbolData.unmask: true`). these render

@@ -1,7 +1,9 @@
 /**
- * One reel growing at rest: `setColumn()`, `splitBlock()` (a stacked symbol
- * that splits into more cells when it wins, as in "expanding stacked
- * symbols") and `resetColumns()`, alone and between `expand()` steps.
+ * One reel changing its cells at rest: `setColumn()`, `splitSymbol()` (a
+ * symbol that splits into more cells when it wins, as in "expanding stacked
+ * symbols") and `resetColumns()`, alone and between `expand()` steps. The
+ * reel grows (`height: 'grow'`) or keeps its height and shrinks its cells
+ * (`height: 'keep'`, as on MultiWays).
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
@@ -9,6 +11,7 @@ import { onNotice, resetNoticesForTest } from '../../src/utils/notify.js';
 import type { TestReelSetOptions } from '../../src/testing/testHarness.js';
 import type { SpeedProfile } from '../../src/config/types.js';
 import type { ColumnTarget } from '../../src/frame/ColumnTarget.js';
+import type { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 
 const FAST: SpeedProfile = {
   name: 'fast',
@@ -109,16 +112,69 @@ describe('setColumn()', () => {
     expect(result.symbols.map((c) => c.length)).toEqual([6, 4, 4]);
     expect(result.symbols[0]).toEqual(['k', 'k', 'k', 'k', 'k', 'k']);
   });
+
+  it("keeps the reel's height under height: 'keep', its cells shrinking to share it", async () => {
+    const h = make({ symbolGap: { x: 10, y: 4 } });
+    await land(h, BUFFALO);
+    const offsets = h.reelSet.reels.map((r) => r.mainOffset);
+    const maskHeight = h.reelSet.viewport.maskHeight;
+    const others = [1, 2].map((r) => h.reelSet.reels[r].symbols.slice());
+    const log = captureEvents(h.reelSet, ['column:set']);
+
+    h.reelSet.setColumn(0, col('q', 'q', 'q', 'q', 'q', 'q'), { height: 'keep' });
+
+    const r0 = h.reelSet.reels[0];
+    const extent = 4 * 100 + 3 * 4;
+    expect(r0.visibleCells).toBe(6);
+    expect(r0.cellMain).toBeCloseTo((extent - 5 * 4) / 6, 9);
+    expect(r0.extent).toBeCloseTo(extent, 9);
+    for (const symbol of r0.symbols) expect((symbol as HeadlessSymbol).height).toBeCloseTo(r0.cellMain, 9);
+    // Nothing else moved, and nothing else was re-placed.
+    expect(h.reelSet.viewport.maskHeight).toBeCloseTo(maskHeight, 9);
+    h.reelSet.reels.forEach((r, i) => expect(r.mainOffset).toBeCloseTo(offsets[i], 9));
+    [1, 2].forEach((r, i) => expect(h.reelSet.reels[r].symbols).toEqual(others[i]));
+    expect(log).toEqual([{ event: 'column:set', args: [{ reelIndex: 0, fromCells: 4, toCells: 6 }] }]);
+
+    // A spin lands the reel at its new count and size.
+    const result = await land(h, [col('k', 'k', 'k', 'k', 'k', 'k'), col('q', 'q', 'q', 'q'), col('w', 'w', 'w', 'w')]);
+    expect(result.symbols.map((c) => c.length)).toEqual([6, 4, 4]);
+    expect(h.reelSet.reels[0].extent).toBeCloseTo(extent, 9);
+  });
+
+  it("keeps a horizontal reel's width, its cells narrowing along the travel axis", async () => {
+    // Reels are rows here: the main axis is x, so a cell's width is what shrinks.
+    const h = make({ orientation: 'horizontal', symbolGap: { x: 6, y: 10 } });
+    const r0 = h.reelSet.reels[0];
+    const extent = r0.extent;
+    expect(extent).toBe(4 * 120 + 3 * 6);
+    h.reelSet.setColumn(0, col('q', 'k', 'q', 'k', 'q'), { height: 'keep' });
+    expect(r0.extent).toBeCloseTo(extent, 9);
+    expect(r0.cellMain).toBeCloseTo((extent - 4 * 6) / 5, 9);
+    const symbol = r0.getSymbolAt(0) as HeadlessSymbol;
+    expect(symbol.width).toBeCloseTo(r0.cellMain, 9);
+    expect(symbol.height).toBe(100);
+  });
+
+  it("refuses a 'keep' that leaves no room for the cells, and an unknown height", () => {
+    const h = make({ symbolGap: { x: 10, y: 4 } });
+    // 412px of reel cannot hold 104 cells and their 103 gaps of 4px.
+    expect(() => h.reelSet.setColumn(0, col(...new Array<string>(104).fill('q')), { height: 'keep' })).toThrow(
+      /104 cells with 4px gaps do not fit reel 0's 412px/,
+    );
+    // @ts-expect-error: a height the API does not name.
+    expect(() => h.reelSet.setColumn(0, col('q'), { height: 'shrink' })).toThrow(/height must be 'grow' or 'keep'/);
+    expect(h.reelSet.reels[0].visibleCells).toBe(4);
+  });
 });
 
-describe('splitBlock()', () => {
+describe('splitSymbol()', () => {
   it('splits a 1x3 into six cells of its own, the reel growing by three', async () => {
     const h = make();
     await land(h, BUFFALO);
     h.reelSet.pin(0, 3, 'wild');
     const moves = captureEvents(h.reelSet, ['pin:moved']);
 
-    const res = h.reelSet.splitBlock(0, 1, ['q', 'q', 'q', 'q', 'q', 'q']);
+    const res = h.reelSet.splitSymbol(0, 1, ['q', 'q', 'q', 'q', 'q', 'q']);
 
     expect(res).toEqual({ reelIndex: 0, from: 0, count: 6 });
     expect(h.reelSet.getVisibleGrid()[0]).toEqual(['q', 'q', 'q', 'q', 'q', 'q', 'wild']);
@@ -130,7 +186,7 @@ describe('splitBlock()', () => {
     expect(moves[0].args[1]).toEqual({ reel: 0, cell: 3 });
 
     // Then the 1x2 on reel 2 into four: 6 x 2 x 4 cells of q now.
-    h.reelSet.splitBlock(2, 2, ['q', 'q', 'q', 'q']);
+    h.reelSet.splitSymbol(2, 2, ['q', 'q', 'q', 'q']);
     expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([7, 4, 6]);
     expect(h.reelSet.getVisibleGrid()[2]).toEqual(['w', 'q', 'q', 'q', 'q', 'w']);
   });
@@ -139,29 +195,115 @@ describe('splitBlock()', () => {
     const h = make();
     await land(h, [col('q2', 'q2', 'q2', 'q2'), col('w', 'w', 'w', 'w'), col('w', 'w', 'w', 'w')]);
     // Two 1x2s on reel 0: split the lower one.
-    h.reelSet.splitBlock(0, 3, ['q', 'q2', 'q2']);
+    h.reelSet.splitSymbol(0, 3, ['q', 'q2', 'q2']);
     expect(window(h, 0)).toEqual(['q2', OCC, 'q', 'q2', OCC]);
   });
 
-  it('refuses what is not a stacked symbol in full view', async () => {
+  it('splits any symbol one reel wide, a 1x1 too', async () => {
+    const h = make();
+    await land(h, BUFFALO);
+    // One q on reel 1 into three: the reel grows by two.
+    expect(h.reelSet.splitSymbol(1, 2, ['q', 'k', 'q'])).toEqual({ reelIndex: 1, from: 2, count: 3 });
+    expect(h.reelSet.getVisibleGrid()[1]).toEqual(['w', 'q', 'q', 'k', 'q', 'w']);
+    // Into one: a swap that keeps the count.
+    h.reelSet.splitSymbol(1, 0, ['k']);
+    expect(h.reelSet.getVisibleGrid()[1]).toEqual(['k', 'q', 'q', 'k', 'q', 'w']);
+  });
+
+  it("splits in place under height: 'keep', the reel as tall as before", async () => {
+    const h = make({ symbolGap: { x: 10, y: 4 } });
+    await land(h, BUFFALO);
+    const extent = h.reelSet.reels[0].extent;
+    h.reelSet.pin(0, 3, 'wild');
+
+    h.reelSet.splitSymbol(0, 0, ['q', 'q', 'q', 'q', 'q', 'q'], { height: 'keep' });
+
+    const r0 = h.reelSet.reels[0];
+    expect(h.reelSet.getVisibleGrid()[0]).toEqual(['q', 'q', 'q', 'q', 'q', 'q', 'wild']);
+    expect(r0.extent).toBeCloseTo(extent, 9);
+    expect(r0.cellMain).toBeCloseTo((extent - 6 * 4) / 7, 9);
+    expect(h.reelSet.getPin(0, 6)?.symbolId).toBe('wild');
+    // A stack left on a kept reel is sized from the reel's new cells.
+    h.reelSet.splitSymbol(2, 1, ['q2', 'q2', 'q'], { height: 'keep' });
+    const r2 = h.reelSet.reels[2];
+    const stack = r2.getSymbolAt(1) as HeadlessSymbol;
+    expect(stack.symbolId).toBe('q2');
+    expect(stack.height).toBeCloseTo(2 * r2.cellMain + 4, 9);
+  });
+
+  it('refuses what is not one reel wide and in full view', async () => {
     const h = make();
     await land(h, [col('big', 'big', 'w', 'w'), col('big', 'big', 'w', 'w'), col('q', 'q', 'w', 'w')]);
-    expect(() => h.reelSet.splitBlock(2, 0, ['q', 'q'])).toThrow(/holds no stacked symbol/);
-    expect(() => h.reelSet.splitBlock(0, 0, ['q', 'q', 'q'])).toThrow(/holds no stacked symbol/);
+    expect(() => h.reelSet.splitSymbol(0, 0, ['q', 'q', 'q'])).toThrow(/is part of a 2x2 block/);
+    expect(() => h.reelSet.splitSymbol(1, 1, ['q', 'q', 'q'])).toThrow(/is part of a 2x2 block/);
     await land(h, [col('w', 'w', 'w', 'w'), col('w', 'w', 'w', 'w'), col('w', 'w', 'w', 'q2')]);
     // The 1x2 anchored on the last cell runs into the buffer below.
-    expect(() => h.reelSet.splitBlock(2, 3, ['q', 'q', 'q'])).toThrow(/runs past the reel's window/);
+    expect(() => h.reelSet.splitSymbol(2, 3, ['q', 'q', 'q'])).toThrow(/runs past the reel's window/);
 
     const spin = h.reelSet.spin();
-    expect(() => h.reelSet.splitBlock(0, 0, ['q'])).toThrow(/while the reels spin/);
+    expect(() => h.reelSet.splitSymbol(0, 0, ['q'])).toThrow(/while the reels spin/);
     h.reelSet.setResult(BUFFALO);
     await spin;
   });
 
-  it('is not for MultiWays, where a reel cell count is its shape', () => {
-    // Big symbols are not allowed on MultiWays, so this set registers none.
-    const h = make({ multiways: { minCells: 2, maxCells: 7, reelExtent: 700 }, symbolData: {}, symbolIds: ['q', 'k'] });
-    expect(() => h.reelSet.setColumn(0, col('q', 'q'))).toThrow(/MultiWays set's rows are its reels' shapes/);
+  it('refuses a reel a block wider than one reel covers, or a column that holds one', async () => {
+    const h = make();
+    await land(h, [col('w', 'w', 'q2', 'q2'), col('big', 'big', 'w', 'w'), col('big', 'big', 'w', 'w')]);
+    // The 2x2 on reels 1-2 would stop lining up with one of its reels.
+    expect(() => h.reelSet.splitSymbol(1, 3, ['q', 'q'])).toThrow(/reel 1 is covered by a 2x2 block anchored at \(reel 1, cell 0\)/);
+    expect(() => h.reelSet.splitSymbol(2, 2, ['q', 'q'], { height: 'keep' })).toThrow(/reel 2 is covered by a 2x2 block/);
+    expect(() => h.reelSet.setColumn(0, col('big', 'big', 'w', 'w'))).toThrow(/'big' \(2x2\) spans 2 reels/);
+    // A reel the block does not touch still splits.
+    h.reelSet.splitSymbol(0, 2, ['q', 'q', 'q']);
+    expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([5, 4, 4]);
+  });
+});
+
+describe('on MultiWays', () => {
+  // Big symbols are not allowed on MultiWays, so these sets register none.
+  const WAYS: TestReelSetOptions = {
+    multiways: { minCells: 2, maxCells: 7, reelExtent: 700 },
+    symbolData: {},
+    symbolIds: ['q', 'k'],
+  };
+
+  it("splits a symbol in place, 'keep' being the default, and the next shape lands from there", async () => {
+    const h = make(WAYS);
+    const spin = h.reelSet.spin();
+    h.reelSet.setShape([3, 4, 5]);
+    h.reelSet.setResult([col('q', 'k', 'q'), col('k', 'k', 'k', 'k'), col('q', 'q', 'q', 'q', 'q')]);
+    await spin;
+
+    h.reelSet.splitSymbol(0, 1, ['k', 'k']);
+    const r0 = h.reelSet.reels[0];
+    expect(h.reelSet.getVisibleGrid()[0]).toEqual(['q', 'k', 'k', 'q']);
+    expect(r0.cellMain).toBeCloseTo(175, 9);
+    expect(r0.extent).toBeCloseTo(700, 9);
+
+    const next = h.reelSet.spin();
+    h.reelSet.setShape([2, 2, 2]);
+    h.reelSet.setResult([col('k', 'k'), col('q', 'q'), col('k', 'q')]);
+    const result = await next;
+    expect(result.symbols.map((c) => c.length)).toEqual([2, 2, 2]);
+    expect(h.reelSet.reels[0].cellMain).toBeCloseTo(350, 9);
+  });
+
+  it('keeps the count within [minCells, maxCells], and refuses to grow or reset', () => {
+    const h = make(WAYS);
+    // Every reel starts at maxCells, so one more cell is out of range.
+    expect(() => h.reelSet.splitSymbol(0, 0, ['q', 'q'])).toThrow(/8 cells is outside the MultiWays range \[2, 7\]/);
+    expect(() => h.reelSet.setColumn(0, col('q', 'q'), { height: 'grow' })).toThrow(/MultiWays reel's height is fixed/);
+    expect(() => h.reelSet.resetColumns()).toThrow(/MultiWays set's rows are its reels' shapes/);
+    h.reelSet.setColumn(0, col('q', 'k'));
+    expect(h.reelSet.reels[0].visibleCells).toBe(2);
+  });
+
+  it('shares out reelExtent, as a landing does, even before the first spin', () => {
+    // Seven 100px cells and six 10px gaps would be 760px; the reel is 700.
+    const h = make({ ...WAYS, symbolGap: { x: 0, y: 10 } });
+    h.reelSet.setColumn(0, col('q', 'k'));
+    expect(h.reelSet.reels[0].cellMain).toBeCloseTo((700 - 10) / 2, 9);
+    expect(h.reelSet.reels[0].extent).toBeCloseTo(700, 9);
   });
 });
 
@@ -173,7 +315,7 @@ describe('resetColumns()', () => {
     h.reelSet.resetColumns();
     expect(log).toEqual([]);
 
-    h.reelSet.splitBlock(0, 0, ['q', 'q', 'q', 'q', 'q']);
+    h.reelSet.splitSymbol(0, 0, ['q', 'q', 'q', 'q', 'q']);
     h.reelSet.addRows(1);
     h.reelSet.resetColumns();
     expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([4, 4, 4]);
@@ -182,6 +324,17 @@ describe('resetColumns()', () => {
     const removed = captureEvents(h.reelSet, ['rows:removed']);
     h.reelSet.removeRows();
     expect(removed).toEqual([]);
+  });
+
+  it("puts a kept reel's cell size back as well as its count", async () => {
+    const h = make();
+    await land(h, BUFFALO);
+    h.reelSet.splitSymbol(0, 0, ['q', 'q', 'q', 'q', 'q'], { height: 'keep' });
+    h.reelSet.resetColumns();
+    const r0 = h.reelSet.reels[0];
+    expect(r0.visibleCells).toBe(4);
+    expect(r0.cellMain).toBe(100);
+    expect(h.reelSet.getVisibleGrid()[0]).toEqual(['q', 'q', 'q', 'q']);
   });
 });
 
@@ -193,7 +346,7 @@ describe('splits inside an expand() chain', () => {
     const result = await h.reelSet.expand({
       columns: [col('q2', 'q2', 'w', 'w'), col('q', 'w', 'w', 'w')],
       onStepLanded: ({ index, from }) => {
-        if (index === 0) h.reelSet.splitBlock(from, 0, ['q', 'q', 'q']);
+        if (index === 0) h.reelSet.splitSymbol(from, 0, ['q', 'q', 'q']);
       },
     });
     expect(result.reelCount).toBe(5);
@@ -215,7 +368,7 @@ describe('splits inside an expand() chain', () => {
       columns: [col('q', 'w', 'w', 'w')],
       onStepAdded: () => {
         try {
-          h.reelSet.splitBlock(0, 0, ['q', 'q', 'q', 'q']);
+          h.reelSet.splitSymbol(0, 0, ['q', 'q', 'q', 'q']);
         } catch (err) {
           refused = err;
         }
@@ -231,7 +384,7 @@ describe('masks on a board whose reels change height', () => {
     const { big: _wide, ...stacks } = DATA;
     const h = make({ symbolGap: { x: 6, y: 6 }, symbolData: stacks });
     await land(h, BUFFALO);
-    h.reelSet.splitBlock(0, 0, ['q', 'q', 'q', 'q', 'q', 'q']);
+    h.reelSet.splitSymbol(0, 0, ['q', 'q', 'q', 'q', 'q', 'q']);
     // One mask rect per reel, each its own reel's height.
     const rects = h.reelSet.viewport.maskRects;
     expect(rects.map((r) => Math.round(r.height))).toEqual(h.reelSet.reels.map((r) => Math.round(r.extent)));
@@ -247,8 +400,8 @@ describe('masks on a board whose reels change height', () => {
       // A 2x2 block plus a reel gap: the builder picks one shared mask.
       const h = make({ symbolGap: { x: 6, y: 6 } });
       await land(h, BUFFALO);
-      h.reelSet.splitBlock(0, 0, ['q', 'q', 'q', 'q']);
-      h.reelSet.splitBlock(2, 1, ['q', 'q', 'q']);
+      h.reelSet.splitSymbol(0, 0, ['q', 'q', 'q', 'q']);
+      h.reelSet.splitSymbol(2, 1, ['q', 'q', 'q']);
       expect(seen.filter((code) => code === 'shared-mask-jagged')).toHaveLength(1);
     } finally {
       off();

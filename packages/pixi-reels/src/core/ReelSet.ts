@@ -29,6 +29,7 @@ import type {
   ExpandResult,
   ExpandStep,
   ExpandStepLanded,
+  SetColumnOptions,
 } from './expand.js';
 import { planExpandSteps } from './expand.js';
 import { SpinController, assertAnticipationOptions } from '../spin/SpinController.js';
@@ -628,8 +629,8 @@ export class ReelSet extends Container implements Disposable {
   private _addedRows = 0;
   /** Reels the builder made. `removeReels()` with no count goes back to it. */
   private _builtReelCount: number;
-  /** Each reel's cells as built or added; `resetColumns()` goes back to them. */
-  private _baseCells: number[];
+  /** Each reel's cells and cell size as built or added; `resetColumns()` goes back to them. */
+  private _baseCells: { cells: number; cellMain: number }[];
   /** The last `setCurve()`, which reels added after it take instead of the builder's curve. */
   private _runtimeCurve: ReelCurveInput | ReelCurveInput[] | null = null;
 
@@ -640,7 +641,7 @@ export class ReelSet extends Container implements Disposable {
 
     this._reels = params.reels;
     this._builtReelCount = params.reels.length;
-    this._baseCells = params.reels.map((reel) => reel.visibleCells);
+    this._baseCells = params.reels.map((reel) => ({ cells: reel.visibleCells, cellMain: reel.cellMain }));
     this._reelFactory = params.reelFactory;
     this._viewport = params.viewport;
     this._symbolFactory = params.symbolFactory;
@@ -2137,9 +2138,14 @@ export class ReelSet extends Container implements Disposable {
     this._events.emit('rows:removed', { count, rows: this._reels.map((reel) => reel.visibleCells) });
   }
 
-  /** `addRows()` / `removeRows()` guard: at rest, and only between `expand()` steps. */
+  /** `addRows()` / `removeRows()` guard: not on MultiWays, and {@link _assertAtRest}. */
   private _assertCanChangeRows(method: string): void {
     if (this._isMultiWaysSlot) this._throwMultiWaysRows(method);
+    this._assertAtRest(method);
+  }
+
+  /** At rest, and only between `expand()` steps. */
+  private _assertAtRest(method: string): void {
     if (this._spinController.isSpinning) {
       throw new Error(`ReelSet.${method}: cannot change the rows while the reels spin. Await the spin first.`);
     }
@@ -2160,26 +2166,33 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Show `column` on one reel, at rest, at the reel's own cell size: the reel
-   * grows or shrinks to `column.visible.length` cells. The board re-anchors
-   * around it per the builder's `reelAnchor` (the default `'center'` grows it
-   * both ways, so on a board kept centred the other reels stay put), and the
-   * viewport, mask and pool follow. Only reels whose symbols change re-place.
+   * Show `column` on one reel, at rest: the reel shows `column.visible.length`
+   * cells. With `height: 'grow'` (the default) its cells keep their size and
+   * the reel grows or shrinks; the board re-anchors around it per the
+   * builder's `reelAnchor` (the default `'center'` grows it both ways, so on
+   * a board kept centred the other reels stay put), and the viewport, mask and
+   * pool follow. With `height: 'keep'` the reel keeps its height and its cells
+   * resize to share it, so nothing else moves. Only reels whose symbols change
+   * re-place.
    *
    * Big symbols in `column` get their whole block, as in a landing, and one
    * that does not fit throws before anything changes. A block already on the
    * board that reaches into the reel stays whole. Pins keep their cells, and a
    * pin past the new length expires.
    *
-   * Not on MultiWays, where a reel's cell count is its shape. Throws while
-   * the reels spin, a nudge runs, or an `expand()` step is in flight; between
-   * steps, in `onStepLanded`, is fine.
+   * On MultiWays a reel's height is fixed: `'keep'` is the default there,
+   * `'grow'` throws, and the count stays within the set's
+   * `[minCells, maxCells]`. Also throws when a big symbol wider than one reel
+   * covers the reel or is in `column` (the reels a block spans share one
+   * geometry), while the reels spin, a nudge runs, or an `expand()` step is
+   * in flight; between steps, in `onStepLanded`, is fine.
    *
    * @example
    * reelSet.setColumn(0, { visible: ['Q', 'Q', 'Q', 'Q', 'Q', 'Q', 'wheat'] }); // reel 0 grows to 7
+   * reelSet.setColumn(2, { visible: ['A', 'K', 'K', 'J', 'A'] }, { height: 'keep' }); // 5 smaller cells
    */
-  setColumn(reel: number, column: ColumnTarget): void {
-    this._assertCanChangeRows('setColumn');
+  setColumn(reel: number, column: ColumnTarget, options: SetColumnOptions = {}): void {
+    this._assertAtRest('setColumn');
     this._assertReelInRange(reel, 'setColumn');
     assertColumnTargets([column], 'setColumn()');
     assertNoV1Keys(column, V1_OPTION_KEYS['initialFrame() / setResult() column'], 'setColumn() column');
@@ -2189,66 +2202,79 @@ export class ReelSet extends Container implements Disposable {
     const first = this._reels[0];
     assertBufferCountsInRange([column], [first.bufferStart], [first.bufferEnd], 'setColumn');
     this._assertKnownIds([column], 'setColumn');
-    this._setColumn(reel, column, { check: column });
+    this._assertNoWideBlock(reel, column, 'setColumn');
+    const cellMain = this._columnCellMain(reel, column.visible.length, options, 'setColumn');
+    this._setColumn(reel, column, { check: column, cellMain });
   }
 
   /**
-   * Split the stacked symbol covering `(reel, cell)` into `ids.length` cells
-   * of their own. The block has to be a big symbol one reel wide and two or
-   * more cells tall, in full view. Its reel grows by the difference (a 1x3
-   * split into six adds three cells), the cells above and below keep their
-   * symbols, and a pin below moves down with its symbol (`pin:moved`). It
-   * goes through `setColumn()`, so the board re-anchors and `column:set`
-   * fires.
+   * Split the symbol covering `(reel, cell)` into `ids.length` cells of their
+   * own. Any symbol one reel wide splits, in full view: a 1x1, or a stacked
+   * big symbol. The cells above and below keep their symbols, and a pin below
+   * moves down with its symbol (`pin:moved`).
+   *
+   * `height` says what gives, as in `setColumn()`: with `'grow'` (the
+   * default) the reel grows by the difference (a 1x3 split into six adds
+   * three cells); with `'keep'` (the default on MultiWays) the reel keeps its
+   * height and every cell on it shrinks to fit. It goes through
+   * `setColumn()`, so `column:set` fires, and it throws where `setColumn()`
+   * does.
    *
    * The server decides the ids; this places them. The new cells are `from`
    * to `from + count - 1` on the reel, for animating the split.
    *
    * @example
-   * const { from, count } = reelSet.splitBlock(0, 0, ['Q', 'Q', 'Q', 'Q', 'Q', 'Q']); // a 1x3 Q into six
+   * const { from, count } = reelSet.splitSymbol(0, 0, ['Q', 'Q', 'Q', 'Q', 'Q', 'Q']); // a 1x3 Q into six
+   * reelSet.splitSymbol(3, 2, ['A', 'A'], { height: 'keep' }); // one A into two, the reel as tall as before
    */
-  splitBlock(reel: number, cell: number, ids: readonly string[]): { reelIndex: number; from: number; count: number } {
-    this._assertCanChangeRows('splitBlock');
-    this._assertReelInRange(reel, 'splitBlock');
+  splitSymbol(
+    reel: number,
+    cell: number,
+    ids: readonly string[],
+    options: SetColumnOptions = {},
+  ): { reelIndex: number; from: number; count: number } {
+    this._assertAtRest('splitSymbol');
+    this._assertReelInRange(reel, 'splitSymbol');
     const { anchor, size } = this.getSymbolFootprint(reel, cell);
     const target = this._reels[reel];
-    if (size.reels !== 1 || size.cells < 2) {
+    if (size.reels !== 1) {
       throw new Error(
-        `splitBlock: (reel ${reel}, cell ${cell}) holds no stacked symbol. It splits a big symbol one ` +
-          'reel wide and two or more cells tall.',
+        `splitSymbol: (reel ${reel}, cell ${cell}) is part of a ${size.reels}x${size.cells} block. ` +
+          'Only a symbol one reel wide splits.',
       );
     }
     const end = anchor.cell + size.cells;
     if (anchor.cell < 0 || end > target.visibleCells) {
       throw new Error(
-        `splitBlock: the block at (reel ${reel}, cell ${anchor.cell}) runs past the reel's window; ` +
-          'only a block in full view splits.',
+        `splitSymbol: the symbol at (reel ${reel}, cell ${anchor.cell}) runs past the reel's window; ` +
+          'only a symbol in full view splits.',
       );
     }
     if (ids.length < 1) {
-      throw new RangeError('splitBlock: ids must name at least one symbol.');
+      throw new RangeError('splitSymbol: ids must name at least one symbol.');
     }
-    this._assertKnownIds([{ visible: [...ids] }], 'splitBlock ids');
+    this._assertKnownIds([{ visible: [...ids] }], 'splitSymbol ids');
 
     const { visible } = target.getTarget();
     const after = visible.length - end;
-    this._setColumn(
-      reel,
-      { visible: [...visible.slice(0, anchor.cell), ...ids, ...visible.slice(end)] },
-      {
-        // Only the new cells are new: what the reel already shows fit as it was.
-        check: { visible: [...new Array<string>(anchor.cell), ...ids, ...new Array<string>(after)] },
-        shift: { from: end, by: ids.length - size.cells },
-      },
-    );
+    const column = { visible: [...visible.slice(0, anchor.cell), ...ids, ...visible.slice(end)] };
+    this._assertNoWideBlock(reel, column, 'splitSymbol');
+    this._setColumn(reel, column, {
+      // Only the new cells are new: what the reel already shows fit as it was.
+      check: { visible: [...new Array<string>(anchor.cell), ...ids, ...new Array<string>(after)] },
+      shift: { from: end, by: ids.length - size.cells },
+      cellMain: this._columnCellMain(reel, column.visible.length, options, 'splitSymbol'),
+    });
     return { reelIndex: reel, from: anchor.cell, count: ids.length };
   }
 
   /**
-   * Every reel back to the cells it was built or added with, keeping each
-   * reel's top cells: undoes `setColumn()`, `splitBlock()` and `addRows()`.
-   * A no-op when no reel changed, so it is safe at the start of every round,
-   * after `removeReels()`. Throws where `setColumn()` does.
+   * Every reel back to the cells it was built or added with, at their size,
+   * keeping each reel's top cells: undoes `setColumn()`, `splitSymbol()` and
+   * `addRows()`. A no-op when no reel changed, so it is safe at the start of
+   * every round, after `removeReels()`. Not on MultiWays, where the next
+   * `setShape()` sets every reel's cells; otherwise throws where
+   * `setColumn()` does.
    *
    * @example
    * reelSet.removeReels();  // next round: back to the builder's reels
@@ -2258,23 +2284,63 @@ export class ReelSet extends Container implements Disposable {
     this._assertCanChangeRows('resetColumns');
     this._reels.forEach((reel, r) => {
       const base = this._baseCells[r];
-      if (reel.visibleCells === base) return;
+      if (reel.visibleCells === base.cells && reel.cellMain === base.cellMain) return;
       const { bufferStart, visible } = reel.getTarget();
-      const kept = visible.length > base ? visible.slice(0, base) : [...visible, ...new Array<string>(base - visible.length)];
-      this._setColumn(r, { bufferStart, visible: kept }, {});
+      const kept =
+        visible.length > base.cells
+          ? visible.slice(0, base.cells)
+          : [...visible, ...new Array<string>(base.cells - visible.length)];
+      this._setColumn(r, { bufferStart, visible: kept }, { cellMain: base.cellMain });
     });
     this._addedRows = 0;
   }
 
   /**
+   * The cell size `reel` takes at `cells` cells under `options.height`: its
+   * own for `'grow'`, its height shared out for `'keep'`.
+   */
+  private _columnCellMain(reel: number, cells: number, options: SetColumnOptions, method: string): number {
+    const height = options.height ?? (this._isMultiWaysSlot ? 'keep' : 'grow');
+    const target = this._reels[reel];
+    if (height === 'grow') {
+      if (this._isMultiWaysSlot) {
+        throw new Error(
+          `ReelSet.${method}: a MultiWays reel's height is fixed (multiways reelExtent), so it cannot ` +
+            "grow. Use height: 'keep', the default there.",
+        );
+      }
+      return target.cellMain;
+    }
+    if (height !== 'keep') {
+      throw new RangeError(`ReelSet.${method}: height must be 'grow' or 'keep', got ${String(height)}.`);
+    }
+    if (this._isMultiWaysSlot && (cells < this._multiwaysMinCells || cells > this._multiwaysMaxCells)) {
+      throw new RangeError(
+        `ReelSet.${method}: ${cells} cells is outside the MultiWays range ` +
+          `[${this._multiwaysMinCells}, ${this._multiwaysMaxCells}]. Raise the builder's multiways({ maxCells }) ` +
+          'to split further.',
+      );
+    }
+    const cellMain = (target.extent - (cells - 1) * target.mainGap) / cells;
+    if (!(cellMain > 0)) {
+      throw new RangeError(
+        `ReelSet.${method}: ${cells} cells with ${target.mainGap}px gaps do not fit reel ${reel}'s ` +
+          `${target.extent}px.`,
+      );
+    }
+    return cellMain;
+  }
+
+  /**
    * `setColumn()` past its argument checks. `check` is the content that is
    * new to the board, held to a landing's rule that a big symbol fits;
-   * `shift` moves the pins at and after a cell along with their symbols.
+   * `shift` moves the pins at and after a cell along with their symbols;
+   * `cellMain` is the reel's cell size after.
    */
   private _setColumn(
     reel: number,
     column: ColumnTarget,
-    opts: { check?: ColumnTarget; shift?: { from: number; by: number } },
+    opts: { check?: ColumnTarget; shift?: { from: number; by: number }; cellMain: number },
   ): void {
     const cells = column.visible.length;
     const rows = this._reels.map((r, i) => (i === reel ? cells : r.visibleCells));
@@ -2314,15 +2380,14 @@ export class ReelSet extends Container implements Disposable {
       cellsFor,
       'rest',
     );
-    target.reshape(cells, target.cellMain, target.bufferStart, target.bufferEnd);
+    target.reshape(cells, opts.cellMain, target.bufferStart, target.bufferEnd);
     this._reels.forEach((r, i) => {
       if (i === reel || !this._showsTarget(r, board[i])) r.placeSymbols(board[i]);
     });
     this._afterBoardChange();
-    if (
-      this._viewport.maskStrategy instanceof SharedRectMaskStrategy &&
-      new Set(this._reels.map((r) => r.extent)).size > 1
-    ) {
+    // A kept height is recomputed from the new cell size, so allow for rounding.
+    const extents = this._reels.map((r) => r.extent);
+    if (this._viewport.maskStrategy instanceof SharedRectMaskStrategy && Math.max(...extents) - Math.min(...extents) > 1e-6) {
       noticeWarnOnce(
         'shared-mask-jagged',
         'ReelSet.setColumn: the reels now differ in height, but one shared mask rectangle covers the ' +
@@ -2332,6 +2397,32 @@ export class ReelSet extends Container implements Disposable {
     }
     this._events.emit('column:set', { reelIndex: reel, fromCells, toCells: cells });
     for (const { pin, from } of moved) this._events.emit('pin:moved', pin, { reel, cell: from });
+  }
+
+  /**
+   * A block wider than one reel spans reels that share one cell size and one
+   * offset; one of them changing alone would cut it out of line with the rest.
+   */
+  private _assertNoWideBlock(reel: number, column: ColumnTarget, method: string): void {
+    for (let cell = 0; cell < this._reels[reel].visibleCells; cell++) {
+      const { anchor, size } = this.getSymbolFootprint(reel, cell);
+      if (size.reels > 1) {
+        throw new Error(
+          `ReelSet.${method}: reel ${reel} is covered by a ${size.reels}x${size.cells} block anchored at ` +
+            `(reel ${anchor.reel}, cell ${anchor.cell}). A reel a block spans cannot change on its own, ` +
+            "or the block's reels stop lining up.",
+        );
+      }
+    }
+    for (const id of [...(column.bufferStart ?? []), ...column.visible, ...(column.bufferEnd ?? [])]) {
+      const size = id === undefined ? undefined : this._symbolsData[id]?.size;
+      if (size && size.reels > 1) {
+        throw new Error(
+          `ReelSet.${method}: '${id}' (${size.reels}x${size.cells}) spans ${size.reels} reels; a column ` +
+            'set on one reel holds only symbols one reel wide.',
+        );
+      }
+    }
   }
 
   /** Whether `reel` already shows `target`, slot for slot. */
@@ -2639,7 +2730,7 @@ export class ReelSet extends Container implements Disposable {
     // A shape `setShape()` recorded for the next landing names every reel the
     // board had then. The new reels land at the shape they have now.
     if (this._targetShape) this._targetShape.push(...added.map((r) => r.visibleCells));
-    this._baseCells.push(...added.map((r) => r.visibleCells));
+    this._baseCells.push(...added.map((r) => ({ cells: r.visibleCells, cellMain: r.cellMain })));
     this._events.emit('reels:added', { from, count });
     return added;
   }

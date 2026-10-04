@@ -33,6 +33,22 @@ export interface AddRowsOptions {
   cells?: readonly (readonly string[])[];
 }
 
+/** Options for {@link ReelSet.setColumn} and {@link ReelSet.splitSymbol}. */
+export interface SetColumnOptions {
+  /**
+   * What gives when the reel's cell count changes.
+   *
+   * - `'grow'`: the cells keep their size and the reel's height follows the
+   *   count. The board re-anchors around it per the builder's `reelAnchor`.
+   * - `'keep'`: the reel keeps its height and its cells resize to share it,
+   *   as a MultiWays reel's do. The board does not move.
+   *
+   * Default: `'grow'`, or `'keep'` on MultiWays, where a reel's height is
+   * fixed and `'grow'` throws.
+   */
+  height?: 'grow' | 'keep';
+}
+
 /** One step of an {@link ReelSet.expand} chain: the reels it added. */
 export interface ExpandStep {
   /** Step number within this `expand()` call, from `0`. */

@@ -9,7 +9,7 @@
 // 4-6, 1x4 into 5-8) and its reel grows past the frame both ways. While the
 // win reaches the last reel, a reel is added and the multiplier goes up by one.
 //
-// `reelSet.splitBlock(reel, cell, ids)` places a split: the stack covering
+// `reelSet.splitSymbol(reel, cell, ids)` places a split: the stack covering
 // (reel, cell) becomes `ids`, one per cell, the cells above and below keep
 // their symbols, and the board re-centres around the taller reel. `expand()`
 // adds the reels. The next round goes back with `removeReels()` and
@@ -125,7 +125,7 @@ function showWays(note) {
 }
 
 // --- The split, on screen ----------------------------------------------
-// `splitBlock()` only places cells; every bit of motion here is this demo's,
+// `splitSymbol()` only places cells; every bit of motion here is this demo's,
 // timed on the Buffalo Win original. The stack glows and burns, then single
 // Qs pop in one by one from its top cell down. Each pop past the stack's own
 // cells pushes the cells below down a cell, and the whole reel drifts up as
@@ -224,7 +224,7 @@ async function splitStack(r, stack) {
   const ref = r === 0 ? 1 : 0;
   const refBefore = reelSet.reels[ref].mainOffset;
   const selfBefore = reelSet.reels[r].mainOffset;
-  const { from } = reelSet.splitBlock(r, top, new Array(n).fill('Q'));
+  const { from } = reelSet.splitSymbol(r, top, new Array(n).fill('Q'));
   const reel = reelSet.reels[r];
   const refShift = reelSet.reels[ref].mainOffset - refBefore;
   camera.y -= refShift * camera.scale.y;
