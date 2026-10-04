@@ -316,6 +316,9 @@ export class ReelViewport extends Container implements Disposable {
   get maskHeight(): number { return this._maskHeight; }
   /** Per-reel mask rects last passed to the strategy. Used by debug overlays. */
   get maskRects(): readonly ReelMaskRect[] { return this._maskRects; }
+
+  /** @internal The strategy drawing the mask, for the engine's own checks. */
+  get maskStrategy(): MaskStrategy { return this._maskStrategy; }
   /** Internal mask Graphics. Exposed so debug helpers can recolor it. */
   get maskGraphics(): Graphics { return this._mask; }
   /** The set's travel axis. Read by debug overlays and mask strategies. */

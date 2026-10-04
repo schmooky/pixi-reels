@@ -1156,9 +1156,13 @@ export class ReelSetBuilder {
     // Auto-pick `SharedRectMaskStrategy` when the layout has horizontal
     // gaps AND any registered symbol needs to span across reel boundaries:
     //
-    //   - **big symbols** (footprint w > 1 or h > 1). the per-reel mask
-    //     would clip cross-reel big symbols at every column gap (visible
+    //   - **big symbols wider than one reel** (footprint w > 1). the
+    //     per-reel mask would clip them at every column gap (visible
     //     vertical strips through the symbol), so we share a single mask.
+    //     A stack one reel wide (1 x N) never crosses a gap, and a board
+    //     whose reels change height (`setColumn()`, `splitBlock()`) needs
+    //     per-reel masks: one shared rectangle shows a shorter reel's
+    //     buffer cells.
     //   - **unmasked symbols** (`SymbolData.unmask: true`). these render
     //     above the per-reel mask anyway, but neighboring (masked)
     //     symbols still get clipped at the gap. Players see a
@@ -1166,9 +1170,7 @@ export class ReelSetBuilder {
     //     one mask removes the gap stripe.
     //
     // Explicit `.maskStrategy(...)` calls always win.
-    const hasBigSymbols = Object.values(symbolsData).some(
-      (d) => d.size && (d.size.reels > 1 || d.size.cells > 1),
-    );
+    const hasWideBlocks = Object.values(symbolsData).some((d) => d.size && d.size.reels > 1);
     const hasUnmaskedSymbols = Object.values(symbolsData).some((d) => d.unmask);
 
     // Unmask works on jagged/pyramid layouts (non-zero reel `mainOffset`) too:
@@ -1178,13 +1180,13 @@ export class ReelSetBuilder {
 
     if (
       !this._maskStrategyExplicit &&
-      (hasBigSymbols || hasUnmaskedSymbols) &&
+      (hasWideBlocks || hasUnmaskedSymbols) &&
       crossGap > 0
     ) {
       this._maskStrategy = new SharedRectMaskStrategy();
       // Heads-up so devs see the auto-pick in their console.
-      const reason = hasBigSymbols
-        ? 'big symbols are registered'
+      const reason = hasWideBlocks
+        ? 'big symbols wider than one reel are registered'
         : 'one or more symbols use `unmask: true`';
       noticeInfo(
         'mask-auto-shared',
