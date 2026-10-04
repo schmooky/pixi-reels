@@ -20,6 +20,8 @@ import { Container } from 'pixi.js';
 interface MockTrackEntry {
   animation: { name: string };
   track?: number;
+  /** The entry's own listener, called before the state's (spine-core's `TrackEntry.listener`). */
+  listener?: MockListener | null;
 }
 
 interface MockListener {
@@ -31,6 +33,10 @@ interface MockListener {
 /**
  * Per-track like the real AnimationState: setting a track replaces its entry
  * and fires `interrupt` for the one it replaced; clearing fires `end`.
+ * Dispatch matches spine-core's `EventQueue.drain`: the entry's own listener
+ * first, then the state's listeners, walking the LIVE array by index, so a
+ * listener removed mid-dispatch makes the next one miss the event, as it does
+ * in spine.
  */
 class MockAnimationState {
   listeners: MockListener[] = [];
@@ -40,11 +46,16 @@ class MockAnimationState {
   data = { defaultMix: 0.2 };
   emptied: Array<{ track: number; mix: number }> = [];
 
+  private _dispatch(type: 'complete' | 'interrupt' | 'end', entry: MockTrackEntry): void {
+    entry.listener?.[type]?.(entry);
+    for (let i = 0; i < this.listeners.length; i++) this.listeners[i][type]?.(entry);
+  }
+
   private _replace(track: number, entry: MockTrackEntry | null): void {
     const previous = this.tracks.get(track);
     if (entry) this.tracks.set(track, entry);
     else this.tracks.delete(track);
-    if (previous) for (const l of [...this.listeners]) l.interrupt?.(previous);
+    if (previous) this._dispatch('interrupt', previous);
   }
 
   setAnimation(track: number, name: string, _loop: boolean): MockTrackEntry {
@@ -70,7 +81,9 @@ class MockAnimationState {
   }
 
   removeListener(listener: MockListener): void {
-    this.listeners = this.listeners.filter((l) => l !== listener);
+    // In place, like spine-core's splice: the array a dispatch is walking.
+    const index = this.listeners.indexOf(listener);
+    if (index !== -1) this.listeners.splice(index, 1);
   }
 
   clearListeners(): void {
@@ -81,14 +94,12 @@ class MockAnimationState {
     const ended = [...this.tracks.values()];
     this.tracks.clear();
     this.current = null;
-    for (const entry of ended) for (const l of [...this.listeners]) l.end?.(entry);
+    for (const entry of ended) this._dispatch('end', entry);
   }
 
   /** Test helper: simulate the spine engine completing an entry. */
   fireComplete(entry: MockTrackEntry): void {
-    for (const l of [...this.listeners]) {
-      l.complete?.(entry);
-    }
+    this._dispatch('complete', entry);
   }
 }
 
@@ -240,18 +251,49 @@ describe('SpineReelSymbol one-shot promise settle', () => {
     const spine = getLastSpine();
 
     const p1 = sym.playWin();
-    expect(spine.state.listeners.length).toBe(1);
+    const first = spine.state.current!;
+    expect(first.listener).toBeTruthy();
 
-    // Start a new one - the prior listener should be removed.
+    // Start a new one - the prior one-shot lets go of its entry.
     const p2 = sym.playOut();
-    expect(spine.state.listeners.length).toBe(1);
+    const second = spine.state.current!;
+    expect(first.listener).toBeNull();
+    expect(second.listener).toBeTruthy();
 
-    spine.state.fireComplete(spine.state.current!);
+    spine.state.fireComplete(second);
     await expect(p1).resolves.toBeUndefined();
     await expect(p2).resolves.toBeUndefined();
 
-    // After the second one settles, the listener is detached too.
+    // After the second one settles its entry's listener goes too, and the
+    // state's own listener list was never touched.
+    expect(second.listener).toBeNull();
     expect(spine.state.listeners.length).toBe(0);
+  });
+
+  it("does not make a game's own state listener miss an event", async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+
+    // The game listens after the win started, so it sits after anything the
+    // symbol would have put on the state.
+    const win = sym.playWin();
+    const winEntry = spine.state.current!;
+    const seen: string[] = [];
+    spine.state.addListener({
+      interrupt: (e) => seen.push(`interrupt:${e.animation.name}`),
+      end: (e) => seen.push(`end:${e.animation.name}`),
+    });
+
+    sym.playOnTrack(0, 'spin', true);
+    await win;
+    expect(seen).toContain('interrupt:win');
+    expect(winEntry.listener).toBeNull();
+
+    const glow = sym.playOneShot('glow', { track: 1 });
+    spine.state.clearTracks();
+    await glow;
+    expect(seen).toContain('end:glow');
   });
 });
 
@@ -351,6 +393,35 @@ describe('SpineReelSymbol.playOneShot', () => {
     expect(spine.state.getCurrent(0)?.animation.name).toBe('idle');
     expect(spine.state.getCurrent(1)?.animation.name).toBe('<empty>');
     expect(spine.state.listeners).toHaveLength(0);
+  });
+
+  it("stopAnimation clears an overlay that ended holding its last frame", async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+
+    const held = sym.playOneShot('glow', { track: 1, then: 'hold' });
+    spine.state.fireComplete(spine.state.getCurrent(1)!);
+    await held;
+    expect(spine.state.getCurrent(1)?.animation.name).toBe('glow');
+
+    sym.stopAnimation();
+    expect(spine.state.getCurrent(1)?.animation.name).toBe('<empty>');
+  });
+
+  it('forgets a held overlay once something else takes its track', async () => {
+    const sym = makeSymbol();
+    sym.activate('test');
+    const spine = getLastSpine();
+
+    const held = sym.playOneShot('glow', { track: 1, then: 'hold' });
+    spine.state.fireComplete(spine.state.getCurrent(1)!);
+    await held;
+    // The game puts its own loop on the overlay track; stopAnimation() must
+    // not clear an animation the symbol never played.
+    sym.playOnTrack(1, 'react_u', true);
+    sym.stopAnimation();
+    expect(spine.state.getCurrent(1)?.animation.name).toBe('react_u');
   });
 
   it('resolves at once, playing nothing, for an animation the skeleton lacks', async () => {

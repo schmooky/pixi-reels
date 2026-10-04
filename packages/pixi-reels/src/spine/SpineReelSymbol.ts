@@ -1,4 +1,4 @@
-import { Spine, type AnimationStateListener, type TrackEntry } from '@esotericsoftware/spine-pixi-v8';
+import { Spine, type TrackEntry } from '@esotericsoftware/spine-pixi-v8';
 import { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { ReelLandingContext } from '../config/types.js';
 
@@ -126,11 +126,14 @@ export class SpineReelSymbol extends ReelSymbol {
   private _scale: number;
   private _autoPlayBlur: boolean;
   private _autoPlayLanding: boolean | ((ctx: ReelLandingContext) => LandingDecision);
-  /** The one-shot in flight on each track: its spine, its listener, its resolve. */
-  private _oneShots = new Map<
-    number,
-    { spine: Spine; listener: AnimationStateListener; resolve: () => void }
-  >();
+  /** The one-shot in flight on each track: its track entry and its resolve. */
+  private _oneShots = new Map<number, { entry: TrackEntry; resolve: () => void }>();
+  /**
+   * Overlay tracks (1 and up) a one-shot finished on with `then: 'hold'`,
+   * still showing its last frame: `stopAnimation()` clears them. A record
+   * goes as soon as anything else takes its track.
+   */
+  private _heldOverlays = new Map<number, TrackEntry>();
   private _cellWidth = 0;
   private _cellHeight = 0;
 
@@ -183,6 +186,8 @@ export class SpineReelSymbol extends ReelSymbol {
     // `await playWin()` doesn't dangle when the symbol is recycled
     // mid-animation. Before the swap: each one-shot detaches from its own spine.
     this._settleOneShots();
+    // A hold belongs to the spine being parked, not the one about to show.
+    this._heldOverlays.clear();
     if (this._currentSpine) this._park(this._currentSpine);
 
     let spine = this._spines.get(symbolId);
@@ -226,6 +231,7 @@ export class SpineReelSymbol extends ReelSymbol {
 
   protected onDeactivate(): void {
     this._settleOneShots();
+    this._heldOverlays.clear();
     if (this._currentSpine) {
       this._currentSpine.state.clearTracks();
       // Reset the skeleton to its setup pose, otherwise a symbol that ends on
@@ -298,12 +304,13 @@ export class SpineReelSymbol extends ReelSymbol {
 
     return new Promise<void>((resolve) => {
       const entry = spine.state.setAnimation(track, animation, false);
-      // Track-entry guard on every callback: ignore events from earlier or
-      // unrelated entries (an idle loop wrapping, another track's one-shot).
-      const listener: AnimationStateListener = {
-        complete: (done) => {
-          if (done !== entry) return;
-          this._settleOneShot(track);
+      // The entry's own listener, not one on the state: spine calls it for
+      // this entry alone, and dropping it never edits the state's listener
+      // list, which spine walks live while it dispatches. Removing a state
+      // listener mid-dispatch made the game's next listener miss the event.
+      entry.listener = {
+        complete: () => {
+          if (!this._settleOneShot(track, entry)) return;
           if (then === 'idle') {
             const idleName = this._animNameFor('idle');
             if (spine.skeleton.data.findAnimation(idleName)) {
@@ -311,18 +318,15 @@ export class SpineReelSymbol extends ReelSymbol {
             }
           } else if (then === 'clear') {
             spine.state.setEmptyAnimation(track, spine.state.data.defaultMix);
+          } else if (track !== 0) {
+            this._holdOverlay(track, entry);
           }
         },
         // Something else took the track before the animation completed.
-        interrupt: (done) => {
-          if (done === entry) this._settleOneShot(track);
-        },
-        end: (done) => {
-          if (done === entry) this._settleOneShot(track);
-        },
+        interrupt: () => this._settleOneShot(track, entry),
+        end: () => this._settleOneShot(track, entry),
       };
-      this._oneShots.set(track, { spine, listener, resolve });
-      spine.state.addListener(listener);
+      this._oneShots.set(track, { entry, resolve });
     });
   }
 
@@ -428,11 +432,14 @@ export class SpineReelSymbol extends ReelSymbol {
     if (!this._currentSpine) return;
     const spine = this._currentSpine;
     // Every one-shot stops: a pending promise settles, and an overlay
-    // one-shot on a higher track is cleared off the symbol.
+    // one-shot on a higher track is cleared off the symbol, whether it is
+    // still playing or already holding its last frame.
     for (const track of [...this._oneShots.keys()]) {
       this._settleOneShot(track);
       if (track !== 0) spine.state.setEmptyAnimation(track, 0);
     }
+    for (const track of [...this._heldOverlays.keys()]) spine.state.setEmptyAnimation(track, 0);
+    this._heldOverlays.clear();
     const idleName = this._animNameFor('idle');
     if (spine.skeleton.data.findAnimation(idleName)) {
       spine.state.setAnimation(0, idleName, true);
@@ -447,17 +454,35 @@ export class SpineReelSymbol extends ReelSymbol {
   // -- Internals -----------------------------------------------------------
 
   /**
-   * Settle the one-shot in flight on `track`, if any: detach its listener
-   * from the spine it was playing on and resolve its promise. Called before
-   * a new one-shot takes the track, by `playBlur` (track 0), and from the
-   * one-shot's own completion and interruption callbacks.
+   * Settle the one-shot in flight on `track`, if any: drop its track entry's
+   * listener and resolve its promise. Called before a new one-shot takes the
+   * track, by `playBlur` (track 0), and from the one-shot's own completion
+   * and interruption callbacks, which pass their `entry` so a late event of
+   * an old one-shot cannot settle a newer one. `true` when it settled one.
    */
-  private _settleOneShot(track: number): void {
+  private _settleOneShot(track: number, entry?: TrackEntry): boolean {
     const pending = this._oneShots.get(track);
-    if (!pending) return;
+    // From a listener: only its own one-shot, never a newer one on the track.
+    if (!pending || (entry !== undefined && pending.entry !== entry)) return false;
     this._oneShots.delete(track);
-    pending.spine.state.removeListener(pending.listener);
+    // Spine pools its track entries: a listener left on this one would fire
+    // for whatever animation reuses it.
+    pending.entry.listener = null;
     pending.resolve();
+    return true;
+  }
+
+  /**
+   * Remember an overlay one-shot that ended on its last frame, until
+   * `stopAnimation()` clears it or anything else takes the track.
+   */
+  private _holdOverlay(track: number, entry: TrackEntry): void {
+    this._heldOverlays.set(track, entry);
+    const release = (): void => {
+      if (this._heldOverlays.get(track) === entry) this._heldOverlays.delete(track);
+      entry.listener = null;
+    };
+    entry.listener = { interrupt: release, end: release };
   }
 
   /**
