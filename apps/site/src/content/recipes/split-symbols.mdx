@@ -1,0 +1,57 @@
+---
+title: "Splitting symbols"
+group: mechanics
+oneLiner: A symbol splits into more cells when it wins. Its reel grows past the frame, or keeps its height while its cells shrink, on any board and on MultiWays.
+order: 53
+tags:
+  - split
+  - splitSymbol
+  - setColumn
+  - resetColumns
+  - ways
+  - multiways
+  - stacked-symbols
+---
+
+When a symbol splits, the cell it stands on becomes two or more cells of their own. `reelSet.splitSymbol(reel, cell, ids, { height })` places the server's split: the symbol covering `(reel, cell)` becomes `ids`, one per cell, and the cells above and below keep their symbols. Any symbol one reel wide splits, in any slot: a 1x1, or a stacked big symbol in full view. It returns `{ reelIndex, from, count }`, the new cells, so the game can animate them. `height` says what gives:
+
+- `'grow'` (the default): the cells keep their size and the reel grows. The board re-anchors around it per the builder's `reelAnchor`.
+- `'keep'`: the reel keeps its height and every cell on it shrinks to share it, as a MultiWays reel's do. Nothing else moves. It is the default on MultiWays, where a reel's height is fixed.
+
+`resetColumns()` puts every reel back to the cells it was built with, at their size. `setColumn(reel, column, { height })` is the primitive under both: one reel shows a column of any length. The [infinity reels guide](/guides/infinity-reels/#stacked-symbols-that-split) has the short version.
+
+<a id="split-modes"></a>
+
+## Grow or keep
+
+Both boards land the same result and split the same cells, one copy at a time. On the left the reel grows; on the right it keeps its height and its cells shrink. The titles read each reel's cells and height off the engine.
+
+**Gotcha:** under `'keep'` every symbol on the reel is resized, so its art has to draw at any cell height, as MultiWays art already does. These boards anchor their reels at the top (`reelAnchor('start')`), so a reel grows downward; with the default `'center'` it grows both ways and the board re-centres.
+
+<RecipeDemo code="split-modes" height={440} />
+
+<a id="split-tap"></a>
+
+## Tap a cell to split it
+
+Tap any cell and it splits in two; the readout prints the exact call. Pick `grow` or `keep` above the board. Spin to start over: `resetColumns()` runs first.
+
+<RecipeDemo code="split-tap" height={520} />
+
+<a id="split-in-place"></a>
+
+## Split in place on MultiWays
+
+On MultiWays a reel's height is fixed, so a split makes room inside it, and the ways go up with the count. The server names the winning symbol and which of its cells split, into two or three copies each, and `WinLines` draws the ways after every split.
+
+**Gotcha:** the count stays within the set's `[minCells, maxCells]`, as a `setShape()` would. Raise `multiways({ maxCells })` to split further. The next spin's `setShape()` reshapes every reel from wherever its split left it.
+
+<RecipeDemo code="split-in-place" height={440} />
+
+<a id="stacked-symbols"></a>
+
+## Stacked symbols on infinity reels
+
+A stack two to four cells tall splits into more single symbols than it had cells, its reel growing past the frame both ways while `expand()` adds reels. That demo is on the [infinity reels page](/recipes/infinity-reels/#infinity-reels-split).
+
+**Gotcha:** a reel a block wider than one reel covers cannot change on its own, or the block's reels stop lining up, so `splitSymbol()` and `setColumn()` throw there. Every demo here splits a symbol one reel wide.

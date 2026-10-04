@@ -1450,6 +1450,10 @@ Tags: curve, curvature, perspective, projection, cylinder, drum, 3d
 URL: https://pixi-reels.schmooky.dev/recipes/skip/
 Tags: skip, slam, anticipation, tease, phases, timing, groups
 
+### Splitting symbols
+URL: https://pixi-reels.schmooky.dev/recipes/split-symbols/
+Tags: split, splitSymbol, setColumn, resetColumns, ways, multiways, stacked-symbols
+
 ### Starters
 URL: https://pixi-reels.schmooky.dev/recipes/starters/
 Tags: starter, 5x3, cascade, multiways, hold-and-win, horizontal, reverse, orientation
@@ -15382,7 +15386,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/infinity-reels-split/
 // 4-6, 1x4 into 5-8) and its reel grows past the frame both ways. While the
 // win reaches the last reel, a reel is added and the multiplier goes up by one.
 //
-// `reelSet.splitBlock(reel, cell, ids)` places a split: the stack covering
+// `reelSet.splitSymbol(reel, cell, ids)` places a split: the stack covering
 // (reel, cell) becomes `ids`, one per cell, the cells above and below keep
 // their symbols, and the board re-centres around the taller reel. `expand()`
 // adds the reels. The next round goes back with `removeReels()` and
@@ -15498,7 +15502,7 @@ function showWays(note) {
 }
 
 // --- The split, on screen ----------------------------------------------
-// `splitBlock()` only places cells; every bit of motion here is this demo's,
+// `splitSymbol()` only places cells; every bit of motion here is this demo's,
 // timed on the Buffalo Win original. The stack glows and burns, then single
 // Qs pop in one by one from its top cell down. Each pop past the stack's own
 // cells pushes the cells below down a cell, and the whole reel drifts up as
@@ -15597,7 +15601,7 @@ async function splitStack(r, stack) {
   const ref = r === 0 ? 1 : 0;
   const refBefore = reelSet.reels[ref].mainOffset;
   const selfBefore = reelSet.reels[r].mainOffset;
-  const { from } = reelSet.splitBlock(r, top, new Array(n).fill('Q'));
+  const { from } = reelSet.splitSymbol(r, top, new Array(n).fill('Q'));
   const reel = reelSet.reels[r];
   const refShift = reelSet.reels[ref].mainOffset - refBefore;
   camera.y -= refShift * camera.scale.y;
@@ -24068,6 +24072,682 @@ return {
     ROWS_PER_REEL.map((cells) =>
       Array.from({ length: cells }, () => pickWeighted(weights)),
     ),
+};
+```
+
+### split-in-place
+URL: https://pixi-reels.schmooky.dev/recipes/split-in-place/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, gsap, app, pickWeighted, DebugPlaque, SilkGraphics,
+//                   WinLines
+//
+// Symbols that split in place, on MultiWays. A reel's height is fixed here,
+// so a split makes room inside it: every cell on the reel shrinks, and the
+// ways go up with the count. The server names the winning symbol and which
+// of its cells split, into two or three copies each.
+//
+// `reelSet.splitSymbol(reel, cell, ids, { height: 'keep' })` places a split:
+// the cell becomes `ids`, one per cell, the cells above and below keep their
+// symbols, and the reel keeps its height. `'keep'` is the default on
+// MultiWays; pass it on any other board. This demo splits off one copy at a
+// time, so each pop squeezes the reel once more.
+
+const REELS = 6;
+const MIN_CELLS = 2;
+const MAX_CELLS = 8;
+const REEL_H = 300;
+const CW = 72;
+const GAP = 4;
+const WIN_IDS = ['A', 'K', 'Q'];
+const FILL = { 7: 5, 8: 5, 9: 5, 10: 4, J: 4 };
+const GOLD = 0xffc94a;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .multiways({ minCells: MIN_CELLS, maxCells: MAX_CELLS, reelExtent: REEL_H })
+  // Every reel starts at MAX_CELLS: size the cell so they and their gaps fill REEL_H.
+  .symbolSize(CW, (REEL_H - (MAX_CELLS - 1) * GAP) / MAX_CELLS)
+  .symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARD_DECK) r.register(c.id, CardSymbol, { color: c.color, label: c.label });
+  })
+  .weights({ ...FILL, A: 1, K: 1, Q: 1 })
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+// --- Readout -----------------------------------------------------------
+const WIDTH = reelSet.viewport.maskWidth;
+const stage = new PIXI.Container();
+stage.addChild(reelSet);
+const lines = new WinLines(reelSet, { width: 4 });
+const hud = new DebugPlaque({ rows: ['press spin', ''], minWidth: WIDTH, maxWidth: WIDTH, reserveRows: 2 });
+hud.position.set(0, REEL_H + 12);
+stage.addChild(hud);
+
+// The winning symbol on each reel from the left, cell by cell.
+function waysOf(id) {
+  const perReel = [];
+  for (const column of reelSet.getVisibleGrid()) {
+    const cells = column.flatMap((symbol, cell) => (symbol === id ? [cell] : []));
+    if (cells.length === 0) break;
+    perReel.push(cells);
+  }
+  return perReel;
+}
+
+function showWays(id, note) {
+  const perReel = waysOf(id);
+  const counts = perReel.map((cells) => cells.length);
+  const ways = perReel.length >= 3 ? counts.reduce((a, n) => a * n, 1) : 0;
+  lines.clear();
+  if (ways > 0) lines.ways(perReel, { color: GOLD });
+  hud.setRows([
+    `${id}  ${counts.join(' x ')} = ${ways.toLocaleString()} ways`,
+    note ? { text: note, color: GOLD } : '',
+  ]);
+}
+
+// --- The split, on screen ----------------------------------------------
+// `splitSymbol()` only places cells; the motion is this demo's. The cell
+// glows, then copies pop out of it one by one. Each pop is one more
+// `splitSymbol()`, and every cell on the reel slides and shrinks from where
+// it stood into its new cell.
+const STEP = 0.22; // seconds a pop takes to make room
+let running = null; // the timeline in flight, for cleanup
+
+// Effects for one reel, above the reel masks so a glow is not clipped.
+function overlayFor(reelIndex) {
+  const box = new PIXI.Container();
+  const c = reelSet.reels[reelIndex].container;
+  box.position.set(c.x, c.y);
+  reelSet.addChild(box);
+  return box;
+}
+
+// Every cell starts where it stood; the new one unfolds from the bottom edge
+// of the cell it split from. `before` is each row's { y, h } before the split.
+function reflow(tl, reel, before, inserted) {
+  for (let row = 0; row < reel.visibleCells; row++) {
+    const view = reel.getSymbolAt(row).view;
+    const y = view.y;
+    const above = before[row - 1];
+    const from = row < inserted ? before[row] : row === inserted ? { y: above.y + above.h, h: 0 } : above;
+    view.y = from.y;
+    view.scale.y = Math.max(0.02, from.h / reel.cellMain);
+    tl.to(view, { y, duration: STEP, ease: 'power2.out' }, 0);
+    tl.to(view.scale, { y: 1, duration: STEP, ease: 'back.out(1.7)' }, 0);
+  }
+}
+
+// A white flash over the new cell and a few sparks off it.
+function pop(tl, box, y, h) {
+  const flash = new SilkGraphics();
+  flash.roundRect(0, y, CW, h, 4).fill({ color: 0xffffff });
+  flash.alpha = 0;
+  box.addChild(flash);
+  tl.fromTo(flash, { alpha: 0.8 }, { alpha: 0, duration: 0.3, ease: 'power2.out', immediateRender: false }, 0.05);
+  for (let k = 0; k < 5; k++) {
+    const spark = new SilkGraphics();
+    spark.circle(0, 0, 2.5).fill({ color: GOLD });
+    spark.position.set(CW / 2, y + h / 2);
+    spark.alpha = 0;
+    box.addChild(spark);
+    const angle = (k / 5) * Math.PI * 2 + Math.random();
+    tl.fromTo(spark, { alpha: 1 }, {
+      x: CW / 2 + Math.cos(angle) * 44,
+      y: y + h / 2 + Math.sin(angle) * 22,
+      alpha: 0,
+      duration: 0.35,
+      ease: 'power2.out',
+      immediateRender: false,
+    }, 0.05);
+  }
+}
+
+async function splitInPlace(r, cell, count, id) {
+  const reel = reelSet.reels[r];
+  const box = overlayFor(r);
+  lines.clear();
+
+  // 1. The cell glows.
+  const y0 = reel.getSymbolAt(cell).view.y;
+  const glow = new SilkGraphics();
+  glow.roundRect(-3, y0 - 3, CW + 6, reel.cellMain + 6, 6).stroke({ color: 0xffa436, width: 12, alpha: 0.5, blur: 10 });
+  glow.roundRect(-3, y0 - 3, CW + 6, reel.cellMain + 6, 6).stroke({ color: GOLD, width: 3 });
+  box.addChild(glow);
+  running = gsap.fromTo(glow, { alpha: 0 }, { alpha: 1, duration: 0.25 });
+  await running;
+  running = gsap.to(glow, { alpha: 0, duration: 0.2 });
+
+  // 2. Pop, pop: one more copy at a time, below the ones before it.
+  for (let k = 1; k < count; k++) {
+    const before = Array.from({ length: reel.visibleCells }, (_, row) => ({
+      y: reel.getSymbolAt(row).view.y,
+      h: reel.cellMain,
+    }));
+    reelSet.splitSymbol(r, cell + k - 1, [id, id], { height: 'keep' });
+    const tl = gsap.timeline();
+    running = tl;
+    pop(tl, box, reel.getSymbolAt(cell + k).view.y, reel.cellMain);
+    reflow(tl, reel, before, cell + k);
+    await tl;
+    // Every tween ended on the engine's own positions; snap to be exact.
+    reel.motion.snapToGrid();
+  }
+  running = null;
+  box.destroy({ children: true });
+  showWays(id, `${id} on reel ${r + 1} splits into ${count}`);
+}
+
+// --- Server stand-in ----------------------------------------------------
+// The winning symbol runs three reels or more from the left. One to three of
+// its cells split, into two or three copies, while their reel has room under
+// MAX_CELLS.
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+function serverSpin() {
+  const shape = Array.from({ length: REELS }, () => MIN_CELLS + Math.floor(Math.random() * 4));
+  const win = WIN_IDS[Math.floor(Math.random() * WIN_IDS.length)];
+  const reach = 3 + Math.floor(Math.random() * (REELS - 2));
+  const columns = shape.map((cells, r) => {
+    const column = Array.from({ length: cells }, () => pickWeighted(FILL));
+    if (r < reach) {
+      column[Math.floor(Math.random() * cells)] = win;
+      if (Math.random() < 0.3) column[Math.floor(Math.random() * cells)] = win;
+    }
+    return column;
+  });
+  const winning = [];
+  columns.forEach((column, r) => column.forEach((id, cell) => {
+    if (r < reach && id === win) winning.push({ reel: r, cell });
+  }));
+  const room = shape.map((cells) => MAX_CELLS - cells);
+  const splits = [];
+  for (const at of shuffle(winning).slice(0, 1 + Math.floor(Math.random() * 3))) {
+    const count = Math.min(2 + Math.floor(Math.random() * 2), room[at.reel] + 1);
+    if (count < 2) continue;
+    room[at.reel] -= count - 1;
+    splits.push({ ...at, count });
+  }
+  // The lower cell first on a reel, so the cells above keep their index.
+  splits.sort((a, b) => a.reel - b.reel || b.cell - a.cell);
+  return { shape, columns, win, splits };
+}
+
+// --- The round ------------------------------------------------------------
+async function onSpin() {
+  lines.clear();
+  hud.setRows(['spinning', '']);
+  const res = serverSpin();
+  const spin = reelSet.spin();
+  await new Promise((r) => setTimeout(r, 150));
+  reelSet.setShape(res.shape);
+  reelSet.setResult(res.columns.map((visible) => ({ visible })));
+  await spin;
+  showWays(res.win, '');
+  for (const split of res.splits) {
+    await new Promise((r) => setTimeout(r, 250));
+    await splitInPlace(split.reel, split.cell, split.count, res.win);
+  }
+}
+
+// A demo scrolled away mid-split unmounts with the tweens still running.
+return {
+  reelSet,
+  stage,
+  onSpin,
+  cleanup: () => {
+    running?.kill();
+    for (const reel of reelSet.reels) {
+      for (const symbol of reel.symbols) {
+        gsap.killTweensOf(symbol.view);
+        gsap.killTweensOf(symbol.view.scale);
+      }
+    }
+  },
+};
+```
+
+### split-modes
+URL: https://pixi-reels.schmooky.dev/recipes/split-modes/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, gsap, app, pickWeighted, DebugPlaque, SilkGraphics
+//
+// One split, two ways to make room. Both boards land the same result and
+// split the same cells, one copy at a time:
+//   - left, `height: 'grow'`: the cells keep their size and the reel grows;
+//   - right, `height: 'keep'`: the reel keeps its height and its cells shrink.
+// Any symbol one reel wide splits, in any slot:
+//
+//   reelSet.splitSymbol(reel, cell, ids, { height: 'grow' }); // or 'keep'
+//
+// These boards anchor their reels at the top (`reelAnchor('start')`), so a
+// reel grows downward and nothing else moves. With the default `'center'` it
+// grows both ways and the board re-centres around it; the infinity reels
+// split demo holds the other reels still with its camera.
+
+const REELS = 5;
+const ROWS = 3;
+const SIZE = 56;
+const GAP = 4;
+const FRAME_W = REELS * (SIZE + GAP) - GAP;
+const FRAME_H = 300;
+const GUTTER = 40;
+const TITLE_H = 48;
+const MAX_EXTRA = 3; // cells a reel may gain in one round
+const FILL = { 7: 4, 8: 4, 9: 4, 10: 3, J: 3, Q: 2, K: 2, A: 2 };
+const GOLD = 0xffc94a;
+const STEP = 0.22; // seconds a pop takes to make room
+
+function makeBoard() {
+  return new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCells(ROWS)
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(GAP, GAP)
+    .reelAnchor('start')
+    .symbols((r) => {
+      for (const c of CARD_DECK) r.register(c.id, CardSymbol, { color: c.color, label: c.label });
+    })
+    .weights(FILL)
+    .speed('normal', SpeedPresets.NORMAL)
+    .ticker(app.ticker)
+    .build();
+}
+
+// --- Two panels: a title, and a window the board zooms out inside --------
+const stage = new PIXI.Container();
+// Fixed bounds, so the runner fits the pair once and a board can grow. The
+// extra width on the right keeps the runner's spin button off the boards.
+const BUTTON_ROOM = 64;
+stage.addChild(
+  new PIXI.Graphics().rect(0, 0, FRAME_W * 2 + GUTTER + BUTTON_ROOM, TITLE_H + FRAME_H).fill({ color: 0, alpha: 0 }),
+);
+
+function panel(x, mode) {
+  const reelSet = makeBoard();
+  const camera = new PIXI.Container();
+  camera.position.set(x, TITLE_H);
+  camera.addChild(reelSet);
+  const frame = new PIXI.Graphics().rect(x - 4, TITLE_H - 4, FRAME_W + 8, FRAME_H + 8).fill(0xffffff);
+  camera.mask = frame;
+  const title = new DebugPlaque({
+    title: `height: '${mode}'`,
+    rows: [`${ROWS} cells a reel, ${reelSet.reels[0].extent}px tall`],
+    minWidth: FRAME_W,
+    maxWidth: FRAME_W,
+    reserveRows: 1,
+  });
+  title.position.set(x, 0);
+  stage.addChild(camera, frame, title);
+  return { reelSet, camera, title, mode, x };
+}
+const panels = [panel(0, 'grow'), panel(FRAME_W + GUTTER, 'keep')];
+
+// A board taller than its window zooms out, centred across it. A later fit
+// overwrites this one, which then settles too.
+function fit(p, duration = 0.3) {
+  const scale = Math.min(1, FRAME_H / p.reelSet.viewport.maskHeight);
+  const x = p.x + (FRAME_W - FRAME_W * scale) / 2;
+  return new Promise((resolve) => {
+    gsap.to(p.camera.scale, { x: scale, y: scale, duration, ease: 'power2.inOut', overwrite: 'auto' });
+    gsap.to(p.camera, { x, duration, ease: 'power2.inOut', overwrite: 'auto', onComplete: resolve, onInterrupt: resolve });
+  });
+}
+
+// --- The split, on screen ----------------------------------------------
+// `splitSymbol()` only places cells; the motion is this demo's. Each pop is
+// one more `splitSymbol()`, and every cell on the reel slides from where it
+// stood into its new cell. The new one unfolds from the bottom edge of the
+// cell it split from.
+const running = new Set(); // timelines in flight, for cleanup
+
+function reflow(tl, reel, before, inserted) {
+  for (let row = 0; row < reel.visibleCells; row++) {
+    const view = reel.getSymbolAt(row).view;
+    const y = view.y;
+    const above = before[row - 1];
+    const from = row < inserted ? before[row] : row === inserted ? { y: above.y + above.h, h: 0 } : above;
+    view.y = from.y;
+    view.scale.y = Math.max(0.02, from.h / reel.cellMain);
+    tl.to(view, { y, duration: STEP, ease: 'power2.out' }, 0);
+    tl.to(view.scale, { y: 1, duration: STEP, ease: 'back.out(1.7)' }, 0);
+  }
+}
+
+// A white flash over the new cell, above the reel masks.
+function flash(tl, reelSet, reel, row) {
+  const g = new SilkGraphics();
+  g.roundRect(0, reel.getSymbolAt(row).view.y, SIZE, reel.cellMain, 4).fill({ color: 0xffffff });
+  g.position.set(reel.container.x, reel.container.y);
+  g.alpha = 0;
+  reelSet.addChild(g);
+  tl.fromTo(g, { alpha: 0.8 }, { alpha: 0, duration: 0.3, ease: 'power2.out', immediateRender: false }, 0.05);
+  tl.call(() => g.destroy(), null, 0.4);
+}
+
+async function splitOn(p, { reel: r, cell, count }) {
+  const { reelSet } = p;
+  const reel = reelSet.reels[r];
+  const id = reelSet.getVisibleGrid()[r][cell];
+  const fromCells = reel.visibleCells;
+  for (let k = 1; k < count; k++) {
+    const before = Array.from({ length: reel.visibleCells }, (_, row) => ({
+      y: reel.getSymbolAt(row).view.y,
+      h: reel.cellMain,
+    }));
+    reelSet.splitSymbol(r, cell + k - 1, [id, id], { height: p.mode });
+    const tl = gsap.timeline();
+    running.add(tl);
+    flash(tl, reelSet, reel, cell + k);
+    reflow(tl, reel, before, cell + k);
+    await Promise.all([tl, fit(p, STEP)]);
+    running.delete(tl);
+    // Every tween ended on the engine's own positions; snap to be exact.
+    reel.motion.snapToGrid();
+  }
+  p.title.setRows([
+    { text: `reel ${r + 1}: ${fromCells} -> ${reel.visibleCells} cells, ${Math.round(reel.extent)}px tall`, color: GOLD },
+  ]);
+}
+
+// --- Server stand-in ----------------------------------------------------
+// Two or three cells anywhere split, each into two or three of its own
+// symbol, while their reel has gained fewer than MAX_EXTRA cells.
+function serverSpin() {
+  const columns = Array.from({ length: REELS }, () => Array.from({ length: ROWS }, () => pickWeighted(FILL)));
+  const cells = [];
+  for (let reel = 0; reel < REELS; reel++) for (let cell = 0; cell < ROWS; cell++) cells.push({ reel, cell });
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  const room = new Array(REELS).fill(MAX_EXTRA);
+  const splits = [];
+  for (const at of cells.slice(0, 2 + Math.floor(Math.random() * 2))) {
+    const count = Math.min(2 + Math.floor(Math.random() * 2), room[at.reel] + 1);
+    if (count < 2) continue;
+    room[at.reel] -= count - 1;
+    splits.push({ ...at, count });
+  }
+  // The lower cell first on a reel, so the cells above keep their index.
+  splits.sort((a, b) => a.reel - b.reel || b.cell - a.cell);
+  return { columns, splits };
+}
+
+// --- The round ------------------------------------------------------------
+async function onSpin() {
+  for (const p of panels) {
+    p.reelSet.resetColumns(); // back to 5 x 3, at the builder's cell size
+    p.title.setRows([`${ROWS} cells a reel, ${p.reelSet.reels[0].extent}px tall`]);
+  }
+  await Promise.all(panels.map((p) => fit(p)));
+  const res = serverSpin();
+  const spins = panels.map((p) => p.reelSet.spin());
+  await new Promise((r) => setTimeout(r, 150));
+  for (const p of panels) p.reelSet.setResult(res.columns.map((visible) => ({ visible })));
+  await Promise.all(spins);
+  for (const split of res.splits) {
+    await new Promise((r) => setTimeout(r, 250));
+    await Promise.all(panels.map((p) => splitOn(p, split)));
+  }
+}
+
+return {
+  reelSet: panels[0].reelSet,
+  stage,
+  onSpin,
+  // One press lands both boards.
+  onSkip: () => {
+    for (const p of panels) p.reelSet.requestSkip();
+  },
+  cleanup: () => {
+    for (const tl of running) tl.kill();
+    for (const p of panels) {
+      gsap.killTweensOf(p.camera);
+      gsap.killTweensOf(p.camera.scale);
+      for (const reel of p.reelSet.reels) {
+        for (const symbol of reel.symbols) {
+          gsap.killTweensOf(symbol.view);
+          gsap.killTweensOf(symbol.view.scale);
+        }
+      }
+    }
+    // The runner destroys the set it was handed; the other one is ours.
+    panels[1].reelSet.destroy();
+  },
+};
+```
+
+### split-tap
+URL: https://pixi-reels.schmooky.dev/recipes/split-tap/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, gsap, app, pickWeighted, DebugPlaque, SilkGraphics
+//
+// Tap any cell to split it in two. The readout prints the call each tap
+// makes; pick `grow` or `keep` above the board for what gives:
+//   - `grow`: the cells keep their size and the reel grows;
+//   - `keep`: the reel keeps its height and its cells shrink.
+// Spin to start over: `resetColumns()` puts every reel back to the cells it
+// was built with, at their size.
+//
+// The board anchors its reels at the top (`reelAnchor('start')`), so a reel
+// grows downward and nothing else moves.
+
+const REELS = 5;
+const ROWS = 4;
+const SIZE = 64;
+const GAP = 6;
+const FRAME_W = REELS * (SIZE + GAP) - GAP;
+const FRAME_H = 330;
+const TOP_H = 40; // the mode toggle
+const MAX_CELLS = 8; // this demo's cap, so a kept cell stays readable
+const FILL = { 7: 4, 8: 4, 9: 4, 10: 3, J: 3, Q: 2, K: 2, A: 2 };
+const GOLD = 0xffc94a;
+const MUTED = 0x8a8f98;
+const STEP = 0.22; // seconds a pop takes to make room
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .reelAnchor('start')
+  .symbols((r) => {
+    for (const c of CARD_DECK) r.register(c.id, CardSymbol, { color: c.color, label: c.label });
+  })
+  .weights(FILL)
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+// --- Layout: toggle, a window the board zooms out inside, readout ---------
+const stage = new PIXI.Container();
+// Fixed bounds, so the runner fits the window once and the board can grow.
+stage.addChild(new PIXI.Graphics().rect(0, 0, FRAME_W, TOP_H + FRAME_H + 64).fill({ color: 0, alpha: 0 }));
+const camera = new PIXI.Container();
+camera.position.set(0, TOP_H);
+camera.addChild(reelSet);
+const frame = new PIXI.Graphics().rect(-4, TOP_H - 4, FRAME_W + 8, FRAME_H + 8).fill(0xffffff);
+camera.mask = frame;
+stage.addChild(camera, frame);
+
+const hud = new DebugPlaque({
+  rows: ['tap a cell to split it', ''],
+  minWidth: FRAME_W,
+  maxWidth: FRAME_W,
+  reserveRows: 2,
+});
+hud.position.set(0, TOP_H + FRAME_H + 12);
+stage.addChild(hud);
+
+// A board taller than its window zooms out, centred across it. A later fit
+// overwrites this one, which then settles too.
+function fit(duration = 0.3) {
+  const scale = Math.min(1, FRAME_H / reelSet.viewport.maskHeight);
+  return new Promise((resolve) => {
+    gsap.to(camera.scale, { x: scale, y: scale, duration, ease: 'power2.inOut', overwrite: 'auto' });
+    gsap.to(camera, {
+      x: (FRAME_W - FRAME_W * scale) / 2,
+      duration,
+      ease: 'power2.inOut',
+      overwrite: 'auto',
+      onComplete: resolve,
+      onInterrupt: resolve,
+    });
+  });
+}
+
+// --- grow / keep toggle ----------------------------------------------------
+let mode = 'grow';
+const toggles = ['grow', 'keep'].map((name, i) => {
+  const button = new DebugPlaque({ rows: [name], radius: 'pill', align: 'center', minWidth: 76, fontSize: 12 });
+  button.position.set(i * 86, 0);
+  button.eventMode = 'static';
+  button.cursor = 'pointer';
+  button.on('pointertap', () => {
+    mode = name;
+    paintToggles();
+  });
+  stage.addChild(button);
+  return { name, button };
+});
+function paintToggles() {
+  for (const { name, button } of toggles) {
+    button.setRows([{ text: name, color: name === mode ? GOLD : MUTED }]);
+  }
+}
+paintToggles();
+
+// --- The split, on screen ----------------------------------------------
+// `splitSymbol()` only places cells; the motion is this demo's. Every cell
+// on the reel slides from where it stood into its new cell, and the new one
+// unfolds from the bottom edge of the cell it split from.
+let running = null; // the timeline in flight, for cleanup
+
+function reflow(tl, reel, before, inserted) {
+  for (let row = 0; row < reel.visibleCells; row++) {
+    const view = reel.getSymbolAt(row).view;
+    const y = view.y;
+    const above = before[row - 1];
+    const from = row < inserted ? before[row] : row === inserted ? { y: above.y + above.h, h: 0 } : above;
+    view.y = from.y;
+    view.scale.y = Math.max(0.02, from.h / reel.cellMain);
+    tl.to(view, { y, duration: STEP, ease: 'power2.out' }, 0);
+    tl.to(view.scale, { y: 1, duration: STEP, ease: 'back.out(1.7)' }, 0);
+  }
+}
+
+// A white flash over the new cell, above the reel masks.
+function flash(tl, reel, row) {
+  const g = new SilkGraphics();
+  g.roundRect(0, reel.getSymbolAt(row).view.y, SIZE, reel.cellMain, 4).fill({ color: 0xffffff });
+  g.position.set(reel.container.x, reel.container.y);
+  g.alpha = 0;
+  reelSet.addChild(g);
+  tl.fromTo(g, { alpha: 0.8 }, { alpha: 0, duration: 0.3, ease: 'power2.out', immediateRender: false }, 0.05);
+  tl.call(() => g.destroy(), null, 0.4);
+}
+
+async function split(r, cell) {
+  const reel = reelSet.reels[r];
+  if (reel.visibleCells >= MAX_CELLS) {
+    hud.setRows([`reel ${r + 1} is full (${MAX_CELLS} cells in this demo)`, 'spin to start over']);
+    return;
+  }
+  const id = reelSet.getVisibleGrid()[r][cell];
+  const before = Array.from({ length: reel.visibleCells }, (_, row) => ({
+    y: reel.getSymbolAt(row).view.y,
+    h: reel.cellMain,
+  }));
+  reelSet.splitSymbol(r, cell, [id, id], { height: mode });
+  hud.setRows([
+    { text: `splitSymbol(${r}, ${cell}, ['${id}', '${id}'], { height: '${mode}' })`, color: GOLD },
+    `reel ${r + 1}: ${reel.visibleCells} cells of ${reel.cellMain.toFixed(1)}px, ${Math.round(reel.extent)}px tall`,
+  ]);
+  const tl = gsap.timeline();
+  running = tl;
+  flash(tl, reel, cell + 1);
+  reflow(tl, reel, before, cell + 1);
+  await Promise.all([tl, fit(STEP)]);
+  running = null;
+  // Every tween ended on the engine's own positions; snap to be exact.
+  reel.motion.snapToGrid();
+}
+
+// --- Taps: one hit area over the window, resolved to a cell ---------------
+let busy = false; // a tap's split in flight
+let inRound = false; // a spin and its reset in flight
+const hit = new PIXI.Graphics().rect(0, TOP_H, FRAME_W, FRAME_H).fill({ color: 0xffffff, alpha: 0 });
+hit.eventMode = 'static';
+hit.cursor = 'pointer';
+hit.on('pointertap', async (event) => {
+  if (busy || inRound) return;
+  const at = event.getLocalPosition(reelSet);
+  for (let r = 0; r < reelSet.reels.length; r++) {
+    for (let cell = 0; cell < reelSet.reels[r].visibleCells; cell++) {
+      const b = reelSet.getCellBounds(r, cell);
+      if (at.x < b.x || at.x > b.x + b.width || at.y < b.y || at.y > b.y + b.height) continue;
+      busy = true;
+      try {
+        await split(r, cell);
+      } finally {
+        busy = false;
+      }
+      return;
+    }
+  }
+});
+stage.addChild(hit);
+
+// --- The round ------------------------------------------------------------
+async function onSpin() {
+  inRound = true;
+  try {
+    running?.progress(1); // a split still unfolding ends where it was going
+    reelSet.resetColumns(); // back to 5 x 4, at the builder's cell size
+    await fit();
+    hud.setRows(['tap a cell to split it', '']);
+    const spin = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 150));
+    reelSet.setResult(
+      Array.from({ length: REELS }, () => ({ visible: Array.from({ length: ROWS }, () => pickWeighted(FILL)) })),
+    );
+    await spin;
+  } finally {
+    inRound = false;
+  }
+}
+
+return {
+  reelSet,
+  stage,
+  onSpin,
+  cleanup: () => {
+    running?.kill();
+    gsap.killTweensOf(camera);
+    gsap.killTweensOf(camera.scale);
+    for (const reel of reelSet.reels) {
+      for (const symbol of reel.symbols) {
+        gsap.killTweensOf(symbol.view);
+        gsap.killTweensOf(symbol.view.scale);
+      }
+    }
+  },
 };
 ```
 
