@@ -26,7 +26,7 @@ Both emitters' `on(name, cb)` returns the emitter, for chaining. Unsubscribe wit
 | Wins | `win:start` · `win:group` · `win:symbol` · `win:end` | `WinPresenter.show(...)` |
 | Pins | `pin:placed` · `pin:moved` · `pin:expired` · `pin:migrated` · `pin:overlayCreated` · `pin:overlayDestroyed` | `pin()` · `unpin()` · `movePin()` · MultiWays reshape |
 | MultiWays | `shape:changed` · `adjust:start` · `adjust:complete` | `setShape()` |
-| Growing the board | `reels:added` · `reels:removed` · `rows:added` · `rows:removed` · `expand:start` · `expand:stepAdded` · `expand:stepLanded` · `expand:complete` · `expand:end` | `addReels()` · `removeReels()` · `addRows()` · `removeRows()` · `expand()` |
+| Growing the board | `reels:added` · `reels:removed` · `rows:added` · `rows:removed` · `column:set` · `expand:start` · `expand:stepAdded` · `expand:stepLanded` · `expand:complete` · `expand:end` | `addReels()` · `removeReels()` · `addRows()` · `removeRows()` · `setColumn()` · `splitSymbol()` · `resetColumns()` · `expand()` |
 | Lifecycle | `destroyed` | `destroy()` |
 
 Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Scopes are `chain` (one stage inside the runCascade loop), `fall` / `place` / `dropIn` / `gravity` (phase-level animation), `destroy` (one batch of destroySymbols). Steps are `start` / `symbol` / `end`. `:symbol` appears only on the per-cell variants of fall, dropIn, and gravity. `:place` has only `:end` because placement is a single-moment swap with no animation. The runCascade chain itself is delimited by the returned `Promise`. `await` the call to know when it's done.
@@ -249,6 +249,7 @@ Emitted by `WinPresenter` only. listeners are dead weight if you don't use it.
 | `reels:removed` | `({ from: number, count: number })` | `removeReels()` destroyed reels `from .. from + count - 1`. |
 | `rows:added` | `({ count: number, rows: number[] })` | `addRows()` grew every reel by `count` rows below the last one. `rows` is each reel's row count now; the viewport covers them (`reelSet.viewport.maskHeight` is the new height). |
 | `rows:removed` | `({ count: number, rows: number[] })` | `removeRows()` took `count` rows off every reel. |
+| `column:set` | `({ reelIndex: number, fromCells: number, toCells: number })` | One reel changed its cells at rest: `setColumn()`, `splitSymbol()` (a symbol split into more cells) or `resetColumns()`. Under `height: 'keep'` the reel's height does not change; read its `cellMain` for the new cell size. The viewport already covers it. |
 | `expand:start` | `({ from: number, to: number, steps: number })` | `expand()` validated its columns and is about to add the first step. |
 | `expand:stepAdded` | `(step: ExpandStep)` | A step's reels are on the board; they spin next. Fires before `onStepAdded`. |
 | `expand:stepLanded` | `(step: ExpandStepLanded)` | A step's reels landed. Fires before `onStepLanded`. |

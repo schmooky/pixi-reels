@@ -735,7 +735,7 @@ export class SpinController implements Disposable {
       const pendingShape = this._hooks.peekTargetShape();
       return pendingShape ? pendingShape[i] : this._reels[i].visibleCells;
     };
-    this._coordinateBigSymbols(symbols, visibleCellsForReel);
+    this._warnMisalignedBlocks(this._coordinateBigSymbols(symbols, visibleCellsForReel));
     this._resultSymbols = symbols;
     this._tryBeginStopSequence();
     if (this._skipPending) {
@@ -2798,6 +2798,34 @@ export class SpinController implements Disposable {
    * The big-symbol coordinator (`coordinateBigSymbols`) on this set's reels:
    * buffer geometry from reel 0, symbol sizes from the builder's data.
    */
+  /**
+   * A block wider than one reel is drawn from its anchor's reel, so it lines
+   * up only where every reel it spans has that reel's cell size and offset.
+   * A reel resized by `setColumn()` and not reset yet, or a pyramid, breaks
+   * that: warn, once, instead of drawing it out of line in silence.
+   */
+  private _warnMisalignedBlocks(grid: ColumnTarget[]): void {
+    const data = this._hooks.symbolsData;
+    grid.forEach((column, r) => {
+      column.visible.forEach((id, cell) => {
+        const size = data[id]?.size;
+        if (!size || size.reels < 2) return;
+        const anchor = this._reels[r];
+        for (let k = 1; k < size.reels && r + k < this._reels.length; k++) {
+          const other = this._reels[r + k];
+          if (Math.abs(other.cellMain - anchor.cellMain) < 1e-6 && Math.abs(other.mainOffset - anchor.mainOffset) < 1e-6) continue;
+          noticeWarnOnce(
+            'wide-block-misaligned',
+            `setResult: '${id}' (${size.reels}x${size.cells}) at (reel ${r}, cell ${cell}) spans reels whose cells ` +
+              'do not line up (a different cell size or offset), so it draws out of line with them. Land it on ' +
+              'reels of one geometry: call resetColumns() before a spin that can land it.',
+          );
+          return;
+        }
+      });
+    });
+  }
+
   private _coordinateBigSymbols(
     grid: ColumnTarget[],
     visibleCellsForReel: (i: number) => number,

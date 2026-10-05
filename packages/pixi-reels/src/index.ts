@@ -313,6 +313,7 @@ export type {
   ExpandResult,
   ExpandStep,
   ExpandStepLanded,
+  SetColumnOptions,
 } from './core/expand.js';
 
 // Events

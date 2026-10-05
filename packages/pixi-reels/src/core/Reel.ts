@@ -667,6 +667,8 @@ export class Reel implements Disposable {
     if (offset === this._mainOffset) return;
     this._mainOffset = offset;
     this._axis.setMain(this.container, offset);
+    // A warped reel is drawn by its warp, not its container: move both.
+    if (this._warp) this._axis.setMain(this._warp, offset);
     // An unmasked view lives in viewport space and carries the reel's offset:
     // put it back at its reel-local place, then add the new offset.
     this.motion.snapToGrid();
@@ -1699,6 +1701,58 @@ export class Reel implements Disposable {
   }
 
   /**
+   * @internal `ReelSet.setColumn()` only, at rest. Show `frame` (a full strip,
+   * as `placeStrip()` takes it) at `visibleCells` cells of `cellMain`, the
+   * reel `extent` long when given.
+   *
+   * Unlike `placeStrip()`, only the slots between the strip's unchanged head
+   * and tail are replaced. Every other symbol keeps its instance, and
+   * whatever it is animating, and only moves to its new cell. An `undefined`
+   * entry keeps the symbol in its slot, or random-fills a new one.
+   */
+  editStrip(
+    frame: ReadonlyArray<string | undefined>,
+    visibleCells: number,
+    cellMain: number,
+    extent?: number,
+  ): void {
+    // Read before the splice: the buffer below is derived from the strip's length.
+    const bufferEnd = this.bufferEnd;
+    const total = this._bufferStart + visibleCells + bufferEnd;
+    const old = this.symbols;
+    const keeps = (i: number, j: number): boolean => frame[j] === undefined || frame[j] === old[i].symbolId;
+    let head = 0;
+    while (head < old.length && head < total && keeps(head, head)) head++;
+    let tail = 0;
+    while (tail < old.length - head && tail < total - head && keeps(old.length - 1 - tail, total - 1 - tail)) tail++;
+
+    // Stubs hold the new slots while the reel takes its new geometry; the
+    // symbols are made after it, since their size and their unmask lift
+    // read it.
+    const added = total - head - tail;
+    const holders: OccupiedStub[] = [];
+    for (let k = 0; k < added; k++) {
+      const stub = this._acquireOccupiedStub();
+      stub.view.alpha = 0;
+      this.container.addChild(stub.view);
+      holders.push(stub);
+    }
+    const gone = old.splice(head, old.length - head - tail, ...holders);
+    for (const sym of gone) {
+      if (sym instanceof OccupiedStub) this._releaseOccupiedStub(sym);
+      else this._symbolFactory.release(sym);
+    }
+    this.reshape(visibleCells, cellMain, this._bufferStart, bufferEnd, extent);
+    for (let j = head; j < head + added; j++) {
+      this._replaceSymbol(j, frame[j] ?? this._randomProvider.next(this._slotKind(j), this.reelIndex));
+    }
+    this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
+    this._finalizeFrame();
+    this.refreshZIndex();
+  }
+
+  /**
    * @internal. MultiWays orchestration only.
    *
    * Commit a new visible-cell count and per-reel cell height. Resizes every
@@ -1719,6 +1773,7 @@ export class Reel implements Disposable {
     newCellSize: number,
     bufferStart: number,
     bufferEnd: number,
+    extent?: number,
   ): void {
     const newTotal = bufferStart + newVisibleCells + bufferEnd;
     const newSize = this._screenSize(newCellSize, this._cellCross);
@@ -1761,8 +1816,9 @@ export class Reel implements Disposable {
     // `multiways.reelExtent` by construction; for any non-MultiWays caller it
     // matches what the builder set at construction. Keeps `extent` from going
     // stale across reshape.
-    this._extent =
-      newVisibleCells * newCellSize + (newVisibleCells - 1) * this._mainGap;
+    // A caller that keeps the reel's height passes it, so it does not drift
+    // by rounding through the cell size.
+    this._extent = extent ?? newVisibleCells * newCellSize + (newVisibleCells - 1) * this._mainGap;
 
     // Resize every kept symbol to the new cell extent.
     for (const sym of this.symbols) {

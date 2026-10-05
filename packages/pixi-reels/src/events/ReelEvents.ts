@@ -264,6 +264,13 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'rows:added': [info: { count: number; rows: number[] }];
   /** The board got shorter: `removeRows()` took `count` rows off every reel. `rows` is each reel's count now. */
   'rows:removed': [info: { count: number; rows: number[] }];
+  /**
+   * One reel changed its cells at rest: `setColumn()`, `splitSymbol()` (a
+   * symbol split into more cells) or `resetColumns()`. Under
+   * `height: 'keep'` the count changes and the reel's height does not; read
+   * the reel's `cellMain` for its new cell size.
+   */
+  'column:set': [info: { reelIndex: number; fromCells: number; toCells: number }];
   /** `expand()` started: the board grows from `from` reels to `to`, in `steps` steps. */
   'expand:start': [info: { from: number; to: number; steps: number }];
   /** An `expand()` step added its reels; they spin next. Fires before the step's `onStepAdded`. */

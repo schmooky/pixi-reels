@@ -37,6 +37,16 @@ A wild on a new reel unlocks a row: `addRows(1, { cells })` in `onStepLanded` ma
 
 <RecipeDemo code="infinity-reels-rows" height={440} />
 
+<a id="infinity-reels-split"></a>
+
+## Stacked symbols that split
+
+Q lands one cell tall or stacked two to four cells. When Q wins on every reel, each stack splits into more single Qs than it had cells, and its reel grows past the frame both ways. `reelSet.splitSymbol(reel, cell, ids)` places the server's split: the stack covering `(reel, cell)` becomes `ids`, one per cell, the cells above and below keep their symbols, and the board re-centres around the taller reel. While the win reaches the last reel, `expand()` adds another and the multiplier goes up by one. The next round goes back with `removeReels()` and `resetColumns()`. A reel that keeps its height instead, splits on MultiWays and a tap-to-split playground are on [Splitting symbols](/recipes/split-symbols/).
+
+**Gotcha:** a split changes one reel's height, so the board re-centres around it. Hold the other reels still on screen (this demo moves its camera by their shift) and let the camera ease out, or they jump.
+
+<RecipeDemo code="infinity-reels-split" height={480} />
+
 <a id="infinity-reels-multiways"></a>
 
 ## MultiWays: millions of ways

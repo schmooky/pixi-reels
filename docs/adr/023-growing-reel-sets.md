@@ -82,6 +82,31 @@ board never makes them throw: one cut at the right edge by `removeReels()`
 stays cut, and one that no longer fits a shorter strip is random-filled: no
 slots lie under its overhang, which a reel travelling up would scroll into view.
 
+**One reel's cells, at rest.** Symbols that split when they win change one
+reel, not every reel: a 1x3 stack becoming six single cells, its reel growing
+past the frame, or one symbol becoming two inside a reel that keeps its
+height. `setColumn(reel, column, { height })` is the primitive: one reel shows
+a column of any length. Under `height: 'grow'` (the default) the cells keep
+their size and the board re-anchors around the reel through the builder's
+`reelAnchor`, whose default `'center'` grows it both ways. Under `'keep'` the
+reel keeps its height and its cells share it, the same reshape a MultiWays
+landing does, so on MultiWays it is the default and the only mode, within
+`[minCells, maxCells]`. `splitSymbol(reel, cell, ids)` builds the column for
+the common case, from the symbol covering a cell (any symbol one reel wide)
+and the server's ids, and moves the pins below it down with their symbols.
+`resetColumns()` goes back to each reel's built or added cells and cell size.
+Only new content is held to a landing's fit rule, so a reset never throws on a
+board that is already on screen. Only the cells that change are replaced: the
+changed reel splices its new cells in between the symbols it keeps, and the
+other reels are not re-placed, so every animation that is not on a replaced
+cell carries on. A pin keeps its cell and its symbol, so a column that would
+show something else there throws; a pinned symbol does not split. A block
+wider than one reel spans reels that share one cell size and offset, so
+neither call touches a reel such a block covers, and a landing that puts one
+across reels of different geometry warns. A shared mask cannot clip reels of different heights, so the
+builder now auto-picks one only for blocks wider than a reel, and `setColumn()`
+warns once if one is in use.
+
 **Win math stays out (ADR 007).** The pay-ways evaluator the recipes use lives
 in `@pixi-reels/cheats/ways` beside the other server stand-ins. The library
 only draws: `WinLines` in `pixi-reels/debug` strokes the cells it is handed.
@@ -89,8 +114,9 @@ only draws: `WinLines` in `pixi-reels/debug` strokes the cells it is handed.
 ## Consequences
 
 - New public API: `addReels()`, `removeReels()`, `addRows()`, `removeRows()`,
+  `setColumn()`, `splitSymbol()`, `resetColumns()`,
   `expand()`, `isExpanding`, and the events `reels:added`, `reels:removed`,
-  `rows:added`, `rows:removed`, `expand:start`, `expand:stepAdded`,
+  `rows:added`, `rows:removed`, `column:set`, `expand:start`, `expand:stepAdded`,
   `expand:stepLanded`, `expand:complete`, `expand:end`. Additive.
 - A fast-forward (an aborted `signal`) lands every reel still to come in one
   step at the board's height then, so it cannot cross a row that grows during
