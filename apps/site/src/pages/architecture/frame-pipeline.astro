@@ -1,0 +1,322 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
+import Cell from '../../components/arch/Cell.astro';
+import Legend from '../../components/arch/Legend.astro';
+
+const rows = [
+  { cell: '-2', kind: 'buffer', slot: 'bufferStart[1]', from: 'bufferStart[-1 - cell]' },
+  { cell: '-1', kind: 'buffer', slot: 'bufferStart[0]', from: 'bufferStart[-1 - cell]' },
+  { cell: '0', kind: 'plain', slot: 'visible[0]', from: 'visible[cell]' },
+  { cell: '1', kind: 'plain', slot: 'visible[1]', from: 'visible[cell]' },
+  { cell: '2', kind: 'plain', slot: 'visible[2]', from: 'visible[cell]' },
+  { cell: '3', kind: 'buffer', slot: 'bufferEnd[0]', from: 'bufferEnd[cell - visible.length]' },
+  { cell: '4', kind: 'buffer', slot: 'bufferEnd[1]', from: 'bufferEnd[cell - visible.length]' },
+] as const;
+
+const layers = [
+  ['base weights', 'symbolData[id].weight, from builder.weights()'],
+  ['global spinning', "randomSymbols(pool) or set(pool, { slots: 'spinning' })"],
+  ['per-reel spinning', '{ reel: i }'],
+  ['global buffer', "{ slots: 'buffer' }: both off-window sides"],
+  ['per-reel buffer', "{ reel: i, slots: 'buffer' }"],
+  ['global side', "{ slots: 'bufferStart' } or { slots: 'bufferEnd' }"],
+  ['per-reel side', "{ reel: i, slots: 'bufferStart' | 'bufferEnd' }"],
+];
+---
+<Architecture
+  title="The frame pipeline"
+  subtitle="How a result grid becomes the symbols that land, wrap by wrap."
+  eyebrow="Identity"
+>
+  <p>
+    The <a href="/architecture/motion/">motion layer</a> decides <em>where</em>
+    every symbol is. This page is about <em>which</em> symbol sits in each
+    seat. A result arrives as one <code>ColumnTarget</code> per reel, the
+    <code>FrameBuilder</code> turns each into a full strip of ids (buffers
+    included) through a middleware chain, the strip is cached and loaded into
+    the reel's <code>StopSequencer</code>, and the reel consumes it one id per
+    wrap while it spins out. Everything the server did not specify is drawn by
+    the <code>RandomSymbolProvider</code>. All of it lives under
+    <code>packages/pixi-reels/src/frame/</code>.
+  </p>
+
+  <h2>ColumnTarget: one column, visible-relative</h2>
+
+  <Diagram width={880} height={440} caption="One ColumnTarget addressed three ways: by cell coordinate (0 is the first visible cell), by field, and in strip form, where index 0 is the furthest buffer-above slot.">
+    <Label x={60} y={40} text="cell" size={10.5} weight={600} anchor="middle" tone="fg" />
+    <Label x={120} y={40} text="ColumnTarget field" size={10.5} weight={600} tone="fg" />
+    <Label x={330} y={40} text="strip form, bufferStart = 2" size={10.5} weight={600} tone="fg" />
+    <Label x={560} y={40} text="getTargetSlot(target, cell) reads" size={10.5} weight={600} tone="fg" />
+    {rows.map((r, i) => (
+      <>
+        <Cell x={40} y={60 + i * 44} size={40} label={r.cell} kind={r.kind} />
+        <Label x={120} y={60 + i * 44 + 25} text={r.slot} size={11} mono tone="fg" />
+        <Label x={330} y={60 + i * 44 + 25} text={`strip[${i}] = getTargetSlot(target, ${i} - 2)`} size={11} mono />
+        <Label x={560} y={60 + i * 44 + 25} text={r.from} size={11} mono />
+      </>
+    ))}
+    <rect x={34} y={142} width={52} height={140} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <Label x={40} y={388} size={10.5} lh={1.45} text={[
+      'Strip length = bufferStart + visible.length + bufferEnd.length. Slots the target does not name come back undefined',
+      'and the engine random-fills them. Target entries past the buffer capacity are dropped by columnTargetToStrip,',
+      'which is why assertBufferCountsInRange rejects them first at every public entry point.',
+    ]} />
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'muted', label: 'buffer slot', note: 'bufferStart[0] is nearest the window top, bufferEnd[0] nearest the bottom' },
+      { kind: 'subtle', label: 'visible slot', note: 'visible[0..visibleCells-1]' },
+      { kind: 'primary', label: 'FrameBuilder', note: 'produces the strip' },
+      { kind: 'accent', label: 'entry points', note: 'setResult, initialFrame, refill' },
+    ]} />
+  </div>
+
+  <p>
+    <code>ColumnTarget</code> (<code>frame/ColumnTarget.ts</code>) is
+    <code>{`{ visible: string[]; bufferStart?: (string | undefined)[]; bufferEnd?: (string | undefined)[] }`}</code>.
+    It is plain data on purpose: it survives <code>structuredClone</code>, JSON
+    and <code>postMessage</code>, so a worker or a server can produce it. The
+    helpers, all public exports:
+  </p>
+  <ul>
+    <li><code>getTargetSlot(target, cell)</code> reads by cell coordinate. Negative cells address <code>bufferStart[-1 - cell]</code>, cells at or past <code>visible.length</code> address <code>bufferEnd[cell - visible.length]</code>, anything unspecified is <code>undefined</code>.</li>
+    <li><code>setTargetSlot(target, cell, id)</code> writes the same coordinate and creates or extends the buffer arrays as needed. It mutates; <code>cloneColumnTarget(target)</code> is the one-level-deep copy to take first. The internal <code>clearTargetSlot</code> writes <code>undefined</code>, meaning "random-fill this".</li>
+    <li><code>columnTargetToStrip(target, bufferStart)</code> produces the strip form above: <code>strip[i] = getTargetSlot(target, i - bufferStart)</code>.</li>
+    <li><code>assertColumnTargets(grid, label)</code> throws a readable <code>TypeError</code> when handed the pre-v2 <code>string[][]</code> ("column 0 is a plain string[] ... wrap each column: <code>grid.map((visible) =&gt; ({`{ visible }`}))</code>"). Without it the first spread of <code>target.visible</code> failed deep inside the pipeline after the reels were already moving, and the spin promise never settled: a reel that spins forever with no clue why. A recipe on this site shipped exactly that.</li>
+    <li><code>assertBufferCountsInRange(grid, bufferStartPerReel, bufferEndPerReel, label)</code> throws a <code>RangeError</code> when the highest <em>defined</em> buffer index is at or beyond the reel's capacity. Sparse arrays are fine; an empty buffer is always in range.</li>
+  </ul>
+  <p>
+    Big symbols use the same shape. The server sends the id at the anchor cell
+    only; <code>coordinateBigSymbols</code> (<code>spin/bigSymbolBlocks.ts</code>)
+    validates that each block fits and paints <code>OCCUPIED_SENTINEL</code>
+    (<code>'__pixi_reels_occupied__'</code>) into every other cell of the block,
+    across reels too. An anchor may sit in <code>bufferStart</code> with its
+    tail reaching into the window (the "tail-visible" partial landing), and a
+    block anchored on the last visible cell spills its stubs into
+    <code>bufferEnd</code>. The <a href="/guides/buffer-indexing/">buffer indexing guide</a>
+    has the worked cases.
+  </p>
+
+  <h2>The middleware chain</h2>
+
+  <Diagram width={900} height={300} caption="FrameBuilder.build runs a next()-style chain sorted by ascending priority. The two built-ins fill every slot and then overwrite the defined target slots; yours goes before, between or after.">
+    <Box x={20} y={40} w={200} h={100} kind="code" title="FrameContext" align="left" size={12} sub={["symbols: ['', '', ...] (M)", 'target?: ColumnTarget', 'metadata: {} fresh per build', 'reelIndex, visibleCells,', 'bufferStart, bufferEnd, isSpinning']} />
+    <Box x={250} y={40} w={200} h={100} title="random-fill" badge="0" size={12} sub={['every empty slot drawn by kind:', "i < bufferStart: 'bufferStart'", "past the window: 'bufferEnd'", "else 'spinning'", 'then next()']} />
+    <Box x={480} y={40} w={200} h={100} title="target-placement" badge="10" size={12} sub={['if target:', 'columnTargetToStrip(target,', 'bufferStart) and overwrite', 'every truthy id, then next()']} />
+    <Box x={710} y={40} w={170} h={100} kind="ghost" title="your middleware" size={12} sub={['> 10: sees the final frame', '< 0: pre-seeds, fill keeps it', '0..10: clobbered wherever', 'the target is defined']} />
+    <Edge from={[220, 90]} to={[250, 90]} />
+    <Edge from={[450, 90]} to={[480, 90]} />
+    <Edge from={[680, 90]} to={[710, 90]} />
+    <Box x={710} y={190} w={170} h={56} kind="primary" title="string[] strip" size={12} sub={['index 0 = furthest', 'buffer-above slot']} />
+    <Edge from={[795, 140]} to={[795, 190]} label="context.symbols" labelDx={-70} />
+    <Label x={20} y={200} size={10.5} lh={1.5} text={[
+      'Sorting is lazy and Array.sort is stable, so equal priorities keep insertion order.',
+      'A middleware that does not call next() short-circuits everything after it.',
+      'Register with builder.frameMiddleware(mw); FrameBuilder.use(mw) / remove(name) / middleware also exist.',
+      'There is no FrameAPI type: FrameContext plus FrameMiddleware { name, priority, process(ctx, next) } is the whole surface.',
+    ]} />
+  </Diagram>
+
+  <p>
+    Two details matter for determinism. First, <strong>random-fill draws one
+    id for every slot, even the ones target-placement overwrites a moment
+    later</strong>. With a seeded rng the draw count per build is therefore
+    <code>M</code> per reel, constant, whatever the result looks like. Second,
+    OCCUPIED sentinels arrive through the target and win by overwrite. The
+    comment in <code>SpinController</code> says random fill "skips them"; by
+    ordering it is the overwrite that wins, and the code is the source of
+    truth here. <code>buildAll(reelCount, ...)</code> maps <code>build</code>
+    over the reels. The <code>randomProvider</code> getter is
+    <code>@internal</code>: a middleware that needs a random id should read the
+    slot it is filling or carry its own provider.
+  </p>
+
+  <h2>When it runs</h2>
+
+  <Diagram width={900} height={470} caption="FrameBuilder is not called per wrap. It runs once per result, after the big-symbol coordinator, and the cached strip feeds the StopSequencer, which hands out one id per wrap.">
+    <Box x={20} y={40} w={220} h={56} title="ReelSetBuilder.build()" size={12} sub={['initial frame per reel', 'seed from .initialFrame()']} />
+    <Box x={20} y={120} w={220} h={56} kind="accent" title="setResult(grid)" size={12} sub={['assertColumnTargets, buffers,', 'pins overlaid, _resultSymbols']} />
+    <Box x={20} y={200} w={220} h={56} title="refill({ grid })" size={12} sub={['cascade: frames built', 'up front from the known grid']} />
+
+    <Box x={280} y={120} w={240} h={56} title="gate" size={12} sub={["every non-held reel in 'spin'", '_tryBeginStopSequence()']} />
+    <Box x={560} y={120} w={240} h={56} title="coordinateBigSymbols" size={12} sub={['validates block fit,', 'paints OCCUPIED (pure)']} />
+    <Edge from={[240, 148]} to={[280, 148]} />
+    <Edge from={[520, 148]} to={[560, 148]} />
+
+    <Box x={280} y={220} w={520} h={56} kind="primary" title="FrameBuilder.build(i, cells, bufferStart, bufferEnd, target)" size={12} sub={['once per reel per result; cells = pending MultiWays shape or reel.visibleCells', 'isSpinning is never passed, so it is always false']} />
+    <Edge from={[680, 176]} to={[680, 220]} />
+    <Edge from={[240, 68]} via={[[260, 68], [260, 248]]} to={[280, 248]} />
+    <Edge from={[240, 228]} via={[[260, 228], [260, 248]]} to={[280, 248]} />
+
+    <Box x={280} y={316} w={180} h={50} title="_cachedFrames[i]" size={12} sub="held reels get []" />
+    <Box x={480} y={316} w={200} h={50} title="StopPhase.targetFrame" size={12} sub="_frameFor(i) at stop time" />
+    <Box x={700} y={316} w={180} h={50} title="Reel.setStopFrame" size={12} sub="spinOut step" />
+    <Edge from={[370, 276]} to={[370, 316]} />
+    <Edge from={[460, 341]} to={[480, 341]} />
+    <Edge from={[680, 341]} to={[700, 341]} />
+
+    <Box x={480} y={400} w={400} h={50} kind="accent" title="StopSequencer.setFrame(frame, axis.feedEdge)" size={12} sub="forward: end-first (cursor M-1, step -1) · reverse: head-first (cursor 0, step +1)" />
+    <Edge from={[790, 366]} to={[790, 400]} />
+    <Label x={20} y={420} size={10.5} lh={1.5} text={['Each wrap: Reel._onSymbolWrapped asks', 'stopSequencer.next() while isStopping and', 'hasRemaining; outside a stop it draws', "randomProvider.next('spinning', reel).", 'See the motion page for the wrap cycle.']} />
+  </Diagram>
+
+  <p>
+    Three callers only: the builder's initial frame
+    (<code>frameBuilder.build(reelIndex, cells, bufferStart, bufferEnd, seed)</code>),
+    the spin result once every non-held reel has entered its spin phase
+    (<code>_tryBeginStopSequence</code> in
+    <code>packages/pixi-reels/src/spin/SpinController.ts</code>), and a cascade
+    refill. The result path uses the pending MultiWays shape for the per-reel
+    cell count so a reshape lands the right number of symbols. The returned
+    <code>string[]</code> is the same format <code>Reel.placeStrip</code>
+    consumes on the skip, turbo and cascade landings; <code>placeStrip</code>
+    random-fills any <code>undefined</code> entry by slot kind. Wraps during a
+    stop consume the sequencer; every other wrap draws from the provider
+    directly. The gating and the phases around it are on the
+    <a href="/architecture/spin-lifecycle/">spin lifecycle page</a>.
+  </p>
+
+  <h2>RandomSymbolProvider: layered pools</h2>
+
+  <Diagram width={880} height={430} caption="One draw resolves the base weights through up to six pool layers, widest first. Weights override per id; exclusions only accumulate. The result is compiled to a cumulative table and binary-searched.">
+    {layers.map(([t, s], i) => (
+      <Box x={40} y={30 + i * 50} w={380} h={40} title={t} size={12} sub={s} mono={false} kind={i === 0 ? 'primary' : i % 2 === 1 ? 'subtle' : 'muted'} />
+    ))}
+    {[0, 1, 2, 3, 4, 5].map((i) => (
+      <Edge from={[230, 70 + i * 50]} to={[230, 80 + i * 50]} />
+    ))}
+    <Label x={436} y={158} text="<- slots 'spinning' stops here" size={10} mono tone="faint" />
+    <Label x={436} y={258} text="<- slots 'buffer' stops here (what both sides inherit)" size={10} mono tone="faint" />
+    <Label x={436} y={358} text="<- a bufferStart / bufferEnd draw runs all seven" size={10} mono tone="faint" />
+    <Box x={470} y={30} w={390} h={100} kind="code" title="_resolve(slots, reel)" align="left" size={12} sub={['weights = { ...base }', 'for each layer: pool.weights override ids present in base', '                pool.exclude adds to a Set', 'finally every excluded id -> 0  (no re-admission)']} />
+    <Box x={470} y={380} w={390} h={40} kind="code" title="next(slot, reel)" align="left" size={12} sub="rand = rng() * total; first cumulative > rand (binary search)" />
+    <Edge from={[420, 350]} to={[470, 395]} curve label="DrawTable { ids, cumulative, total }" at={0.4} labelDy={-24} />
+  </Diagram>
+
+  <p>
+    <code>RandomSymbolProvider</code> (<code>frame/RandomSymbolProvider.ts</code>,
+    internal, implements <code>RandomSymbolControl</code>) is constructed with
+    the symbol data and an <code>rng</code> that defaults to
+    <code>Math.random</code>. Regulated or provably-fair deployments inject a
+    seeded PRNG through <code>builder.rng(fn)</code>; the cheats package ships a
+    Mulberry32 for tests. The constructor throws if there are no symbols or the
+    total weight is not positive. <code>DrawSlot</code> is
+    <code>'spinning' | 'bufferStart' | 'bufferEnd'</code>; <code>'buffer'</code>
+    is a layer you configure, never a slot you draw from. Tables are cached
+    under <code>{"`${slots}:${reel ?? '*'}`"}</code> with zero-weight ids
+    dropped, and the whole cache is cleared on any mutation.
+  </p>
+  <ul>
+    <li><code>set(pool | null, scope)</code> validates every id is registered, stores a copy, clears the tables, then compiles every reachable scope (<code>_assertDrawable</code>). If any scope has nothing left to draw it rolls back and throws "No symbol left to draw for ... cells on reel N".</li>
+    <li><code>setExcludeSpinning(ids)</code> and <code>setExcludeBuffer(ids)</code> are sugar that keep existing weights on the global pool.</li>
+    <li><code>updateWeights(symbolsData)</code> re-reads base weights for a game-mode switch and prunes pool entries that name ids no longer present, so stale exclusions do not linger.</li>
+    <li>Callers: <code>Reel._onSymbolWrapped</code> draws <code>'spinning'</code>; buffer refills in <code>placeStrip</code> and nudge padding draw <code>'bufferStart'</code> / <code>'bufferEnd'</code>; pin backfill draws through <code>ReelSet</code>.</li>
+  </ul>
+
+  <h3>Pool scopes and the public control</h3>
+
+  <p>
+    <code>SymbolPool</code> (<code>frame/SymbolPool.ts</code>) is
+    <code>{`{ weights?: Record<id, number>; exclude?: string[] }`}</code>; a weight
+    of 0 removes an id as completely as excluding it. <code>SymbolPoolScope</code>
+    is <code>{`{ reel?: number; slots?: SymbolPoolSlots }`}</code>, with
+    <code>SymbolPoolSlots = 'spinning' | 'buffer' | 'bufferStart' | 'bufferEnd'</code>
+    and <code>slots</code> defaulting to <code>'spinning'</code>.
+    <code>'bufferStart'</code> is the smaller-coordinate side (above on a
+    vertical set, left on a horizontal one) whatever direction the reel
+    travels. The typical buffer-only pool is <code>{`{ exclude: ['COIN'] }`}</code>
+    so a collectible never peeks in half-visible. These are random-draw pools,
+    a different thing from the object pools on the
+    <a href="/architecture/symbols/">symbols page</a>.
+  </p>
+  <p>
+    <code>reelSet.randomSymbols</code> is the <code>RandomSymbolControl</code>:
+    <code>set(pool | null, scope?)</code> replaces the pool for that scope,
+    <code>clear()</code> drops them all, and <code>weights(scope?)</code>
+    reports the effective weights with excluded ids as 0 (<code>'buffer'</code>
+    reports what both sides inherit). Changes apply to the <strong>next
+    draw</strong>; symbols already on the strip stay until they wrap out, so
+    set pools before <code>spin()</code>. At build time the pools come from
+    <code>builder.randomSymbols(pool, scope)</code>.
+  </p>
+
+  <h2>OffsetCalculator is dead code</h2>
+
+  <p>
+    <code>frame/OffsetCalculator.ts</code> computes a cross-axis offset per
+    <code>[reel][cell]</code> (mode <code>'none'</code>, or a
+    <code>'trapezoid'</code> interpolated from <code>startFactor</code> to
+    <code>endFactor</code>). It is not exported, nothing in the package
+    constructs it, and <code>builder.offsetConfig()</code> stores a value that
+    nothing reads. It plays no part in big symbols, per-reel geometry or
+    curvature; those are <code>Reel._blockSize</code> and
+    <code>_finalizeFrame</code>, <code>mainOffset</code> and
+    <code>reelExtents</code>, and <code>ReelCurve</code>. Do not design against
+    it.
+  </p>
+
+  <h2>Defaults</h2>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Item</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Value</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Where</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['Built-in middleware priorities', 'random-fill 0, target-placement 10', 'frame/FrameBuilder.ts'],
+          ['rng', 'Math.random (inject with builder.rng(fn))', 'frame/RandomSymbolProvider.ts'],
+          ['Symbol weight if unset', '10', 'core/ReelSetBuilder.ts'],
+          ['Pool scope slots', "'spinning'", 'frame/SymbolPool.ts'],
+          ['Buffer symbols per side', '1', 'config/defaults.ts'],
+          ['Big-symbol size', '{ reels: 1, cells: 1 }', 'config/types.ts'],
+          ['OCCUPIED_SENTINEL', "'__pixi_reels_occupied__'", 'core/Reel.ts'],
+          ['isSpinning passed to build()', 'never (always false)', 'spin/SpinController.ts'],
+          ['Table cache key', '`${slots}:${reel ?? "*"}`, cleared on any mutation', 'frame/RandomSymbolProvider.ts'],
+        ].map(([k, v, w]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 text-xs">{k}</td>
+            <td class="px-4 py-2.5 font-mono text-xs text-primary">{v}</td>
+            <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{w}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Where this lives</h2>
+
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/frame/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>ColumnTarget.ts</code> the shape, getTargetSlot, setTargetSlot, columnTargetToStrip, cloneColumnTarget, assertColumnTargets, assertBufferCountsInRange</li>
+        <li><code>FrameBuilder.ts</code> FrameContext, FrameMiddleware, build, buildAll, the two built-ins</li>
+        <li><code>RandomSymbolProvider.ts</code> next, set, tables, layer resolution</li>
+        <li><code>SymbolPool.ts</code> SymbolPool, SymbolPoolSlots, SymbolPoolScope, RandomSymbolControl</li>
+        <li><code>OffsetCalculator.ts</code> dead code</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">callers</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>spin/SpinController.ts</code> _tryBeginStopSequence, _cachedFrames, _frameFor, refill</li>
+        <li><code>spin/bigSymbolBlocks.ts</code> coordinateBigSymbols</li>
+        <li><code>spin/phases/StopPhase.ts</code> setStopFrame in the spinOut step</li>
+        <li><code>core/StopSequencer.ts</code> setFrame(frame, feedEdge), next</li>
+        <li><code>core/Reel.ts</code> _onSymbolWrapped, placeStrip, nudge padding</li>
+        <li><code>core/ReelSetBuilder.ts</code> initialFrame, frameMiddleware, randomSymbols, rng, weights</li>
+      </ul>
+    </div>
+  </div>
+</Architecture>

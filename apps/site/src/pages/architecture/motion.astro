@@ -1,0 +1,512 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
+import Cell from '../../components/arch/Cell.astro';
+import Legend from '../../components/arch/Legend.astro';
+
+const stripKinds = ['buffer', 'buffer', 'plain', 'plain', 'plain', 'buffer', 'buffer'] as const;
+const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
+---
+<Architecture
+  title="Motion"
+  subtitle="The strip, index to position, wrapping, the axis, one tick."
+  eyebrow="Physics"
+>
+  <p>
+    A reel is not a column of three symbols. It is a <strong>strip</strong> of
+    <code>M = bufferStart + visibleCells + bufferEnd</code> symbols that
+    marches along one screen axis and wraps around. Every position on screen
+    is computed from a symbol's <em>array index</em> each frame, nothing is
+    accumulated, and the only state the motion layer keeps is how far the strip
+    has travelled since it was last snapped. This page covers that layer
+    (<code>packages/pixi-reels/src/core/ReelMotion.ts</code>), the axis it is
+    projected through, the drive model, and what happens in one ticker frame.
+  </p>
+
+  <h2>The strip</h2>
+
+  <Diagram width={880} height={430} caption="One reel's symbol array. Index 0 is always the symbol nearest the start edge (top for vertical, left for horizontal), whatever direction the reel travels. The window outline is the mask; buffer cells sit outside it.">
+    <Label x={74} y={24} text="feed edge of a forward reel (polarity +1, feedEdge 'start')" size={10.5} />
+    {stripKinds.map((kind, i) => (
+      <Cell x={80} y={40 + i * 48} size={44} label={stripIds[i]} kind={kind} />
+    ))}
+    {stripKinds.map((_, i) => (
+      <Label x={66} y={40 + i * 48 + 27} text={`i=${i}`} size={10.5} anchor="end" mono />
+    ))}
+    <rect x={74} y={130} width={56} height={152} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <Label x={140} y={68} text="bufferStart (2)" size={10.5} />
+    <Label x={140} y={116} text="i < bufferStart" size={10} mono tone="faint" />
+    <Label x={140} y={212} text="visible (3) = the window" size={10.5} />
+    <Label x={140} y={356} text="bufferEnd (2)" size={10.5} />
+    <Label x={74} y={404} text="exit edge of a forward reel: wraps leave through this buffer" size={10.5} />
+    <Edge from={[310, 52]} to={[310, 372]} kind="primary" label="travel" at={0.62} />
+    <Label x={310} y={268} text="forward" size={10} mono tone="faint" anchor="middle" />
+
+    <Box x={360} y={44} w={500} h={120} kind="code" title="main = (i - bufferStart) * pitch + off" align="left" sub={[
+      'pitch = cellMain + mainGap          (ReelMotion.slotPitch)',
+      'rot   = floor(travel / pitch)        (whole wraps, derived)',
+      'off   = travel - rot * pitch         (sub-slot remainder)',
+      'written to view[mainProp] for EVERY symbol, every advance()',
+    ]} />
+    <Label x={360} y={200} text="Worked example: pitch 100, bufferStart 2, off 0" size={11} weight={600} tone="fg" />
+    <Label x={360} y={222} mono size={10.5} lh={1.5} text={[
+      'i=0  main = -200      i=4  main = 200',
+      'i=1  main = -100      i=5  main = 300',
+      'i=2  main =    0      i=6  main = 400',
+      'i=3  main =  100      window spans 0 .. 3*pitch - gap',
+    ]} />
+    <Label x={360} y={318} size={11} lh={1.45} text={[
+      'getCellMain(cell) = (cell - bufferStart) * pitch is the same formula read',
+      'back by visible cell number. snapToGrid() sets travel = rot = off = 0 and',
+      're-renders, so after a snap every symbol sits exactly on its grid slot.',
+      'Buffers are geometric: bufferStart is the smaller coordinate on every reel,',
+      'forward or reverse (ADR 016 section 3.4).',
+    ]} />
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'muted', label: 'buffer cell', note: 'outside the mask, random-filled by slot kind' },
+      { kind: 'subtle', label: 'visible cell', note: 'inside the window, what getVisibleSymbols() reports' },
+      { kind: 'accent', label: 'Reel', note: 'owns the array and picks ids' },
+      { kind: 'primary', label: 'ReelMotion', note: 'writes every main coordinate' },
+    ]} />
+  </div>
+
+  <h2>Derive from index, never accumulate</h2>
+
+  <p>
+    <code>ReelMotion.advance(delta)</code> does not move symbols by
+    <code>delta</code>. It adds <code>polarity * delta</code> to a single
+    <code>_travel</code> number, derives the whole-wrap count
+    <code>rot = floor(travel / pitch)</code>, rotates the array until the
+    applied count matches, and then writes every symbol's position from scratch
+    with the formula above. ADR 018 (<code>docs/adr/018-motion-contract.md</code>)
+    is the reason: a property suite found that the old accumulate-and-compare
+    model skipped a wrap at exact slot boundaries, which lands the frame one
+    symbol short. Deriving makes the strip's laws true by construction and the
+    suite in <code>packages/pixi-reels/tests/contract/</code> runs them in CI
+    against all four orientation × direction combinations.
+  </p>
+
+  <ul>
+    <li><strong>Rigidity and order.</strong> <code>main(symbols[i+1]) - main(symbols[i]) === pitch</code> and the array is strictly ascending by main coordinate. Array index <em>is</em> screen order. <code>getSymbolAt</code>, <code>getVisibleSymbols</code>, <code>placeSymbols</code> and the z-index formula all index by array position because of this.</li>
+    <li><strong>Any step size is legal.</strong> There is no "at most one wrap per call" precondition. A 3-pitch step applies three rotations in the same <code>advance</code>. The half-slot cap in <code>StandardMode</code> is now only for smoothness.</li>
+    <li><strong>Inverse and additivity.</strong> <code>advance(d); advance(-d)</code> restores the exact state and <code>advance(a); advance(b)</code> equals <code>advance(a+b)</code>, so frame rate cannot change where a reel ends up.</li>
+    <li><strong>Never write a main coordinate outside the motion layer.</strong> <code>Reel</code> reads <code>view[mainProp]</code> back in <code>beginMotion</code>, <code>notifyLanded</code> and <code>_replaceSymbol</code> to recover which slot a view is in. The one documented exception is <code>ReelSymbol.playDestroy</code>, which restores what it touched. Curves hand the symbol a view-local quad instead of moving it.</li>
+    <li><strong>Travel is not facing.</strong> Direction changes which way the strip moves and which edge feeds it; it never rotates or mirrors the art (ADR 017). <code>view.rotation</code> stays 0 in every combination.</li>
+    <li><strong>EPS snap.</strong> <code>travel / pitch</code> is rounded to a whole number when within <code>1e-9</code>, so a travel of exactly N pitches lands on rotation N rather than N-1 when float residue leaves it a hair short. The remainder <code>off</code> is zeroed under the same epsilon.</li>
+  </ul>
+
+  <h2>The wrap cycle</h2>
+
+  <Diagram width={900} height={500} caption="advance() rotates the array once per whole pitch of travel; each rotation asks the Reel for a new identity, and the final _render() writes every position from index.">
+    <Box x={20} y={24} w={200} h={56} title="advance(delta)" kind="primary" sub="delta = 0 returns at once" />
+    <Box x={260} y={24} w={200} h={56} title="travel += pol * delta" sub="odometer += |delta|" />
+    <Box x={500} y={24} w={200} h={56} title="rot = floor(travel/pitch)" sub="q snapped if within 1e-9" size={12} />
+    <Box x={740} y={24} w={140} h={56} title="off = remainder" sub="travel - rot*pitch" size={12} />
+    <Edge from={[220, 52]} to={[260, 52]} />
+    <Edge from={[460, 52]} to={[500, 52]} />
+    <Edge from={[700, 52]} to={[740, 52]} />
+
+    <Box x={140} y={120} w={220} h={76} title="_rotateToStart()" sub={['_rot++ while below target', 'symbols.pop() then unshift()', 'wrapped symbol is now index 0']} size={12} />
+    <Box x={420} y={120} w={220} h={76} title="_rotateToEnd()" sub={['_rot-- while above target', 'symbols.shift() then push()', 'wrapped symbol is now index M-1']} size={12} />
+    <Edge from={[580, 80]} via={[[580, 100], [250, 100]]} to={[250, 120]} label="rot rose (forward travel)" labelDy={-14} />
+    <Edge from={[620, 80]} via={[[620, 100], [530, 100]]} to={[530, 120]} label="rot fell" labelDx={40} labelDy={-14} />
+
+    <Box x={280} y={226} w={320} h={50} title="Reel._onSymbolWrapped(symbol)" kind="accent" sub="picks the id for the wrapped seat" />
+    <Edge from={[250, 196]} via={[[250, 211], [400, 211]]} to={[400, 226]} />
+    <Edge from={[530, 196]} via={[[530, 211], [480, 211]]} to={[480, 226]} />
+
+    <Box x={20} y={306} w={270} h={66} title="1. nudge queue" sub={['while a nudge is in flight', 'pre-built by nudge(), always wins']} size={12} />
+    <Box x={310} y={306} w={270} h={66} title="2. StopSequencer.next()" sub={['only if isStopping && hasRemaining', 'the cached landing frame']} size={12} />
+    <Box x={600} y={306} w={280} h={66} title="3. RandomSymbolProvider" sub={["next('spinning', reelIndex)", 'layered pools, injected rng']} size={12} />
+    <Edge from={[440, 276]} via={[[440, 291], [155, 291]]} to={[155, 306]} />
+    <Edge from={[440, 276]} to={[445, 306]} label="first match wins" labelDx={70} labelDy={-6} />
+    <Edge from={[440, 276]} via={[[440, 291], [740, 291]]} to={[740, 306]} />
+
+    <Edge from={[155, 372]} to={[155, 392]} arrow="none" />
+    <Edge from={[445, 372]} to={[445, 392]} arrow="none" />
+    <Edge from={[740, 372]} to={[740, 392]} arrow="none" />
+    <path d="M 155 392 L 740 392" class="edge edge-muted" />
+    <Edge from={[155, 392]} to={[155, 410]} />
+
+    <Box x={20} y={410} w={270} h={66} title="_replaceSymbol(index, id)" sub={['index = symbols.indexOf(symbol)', 'release, acquire, resize, place']} size={12} />
+    <Box x={310} y={410} w={270} h={66} title="refreshZIndex()" sub={['every index shifted', 'deferred to snapToGrid in a nudge']} size={12} />
+    <Box x={600} y={410} w={280} h={66} title="_render()" kind="primary" sub={['main = (i - bufferStart)*pitch + off', 'for every view, plus the curve quad']} size={12} />
+    <Edge from={[290, 443]} to={[310, 443]} />
+    <Edge from={[580, 443]} to={[600, 443]} label="then back in advance()" labelDy={42} labelDx={10} />
+  </Diagram>
+
+  <p>
+    The Reel side of that loop lives in
+    <code>packages/pixi-reels/src/core/Reel.ts</code>. <code>_onSymbolWrapped</code>
+    chooses the id in the priority shown, then <code>_replaceSymbol</code>
+    records the old view's reel-local main coordinate, and either installs an
+    OCCUPIED stub (big-symbol tail), reuses the same instance on a same-id fast
+    path (no pool round trip, no <code>symbol:created</code>), or releases the
+    old symbol to the <code>SymbolFactory</code> and acquires the new one. The
+    new view gets <code>resize(symbolWidth, symbolHeight)</code>, alpha 1,
+    scale 1, its position, its z-index, a parent (the reel container, or the
+    unmasked layer at rest) and then <code>symbol:created</code>. The pool
+    mechanics are on the <a href="/architecture/symbols/">symbols page</a>; where
+    the landing ids come from is the <a href="/architecture/frame-pipeline/">frame pipeline</a>.
+  </p>
+
+  <h2>The axis</h2>
+
+  <Diagram width={880} height={470} caption="ReelAxis is a value object built once per reel by reelAxis(orientation, direction). The same ReelMotion code runs all four combinations; only the property key, the polarity and the feed edge differ.">
+    <Label x={290} y={30} text="direction: 'forward'" size={11} weight={600} anchor="middle" mono tone="fg" />
+    <Label x={690} y={30} text="direction: 'reverse'" size={11} weight={600} anchor="middle" mono tone="fg" />
+    <Label x={40} y={145} text="orientation: 'vertical'" size={11} weight={600} anchor="middle" mono tone="fg" rotate={-90} />
+    <Label x={40} y={355} text="orientation: 'horizontal'" size={11} weight={600} anchor="middle" mono tone="fg" rotate={-90} />
+
+    <Group x={100} y={50} w={380} h={190} kind="solid" label="VERTICAL_FORWARD" note="the v1 default" />
+    {[0, 1, 2].map((i) => <Cell x={130} y={80 + i * 40} size={36} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
+    <Label x={148} y={74} text="feed" size={9.5} anchor="middle" mono tone="faint" />
+    <Label x={148} y={210} text="exit" size={9.5} anchor="middle" mono tone="faint" />
+    <Edge from={[190, 84]} to={[190, 192]} kind="primary" />
+    <Label x={240} y={92} mono size={10.5} lh={1.5} text={["mainProp  'y'   crossProp 'x'", 'polarity  +1', "feedEdge  'start' (top)", 'travel: down, new ids enter', 'at the top, wrap out the bottom']} />
+
+    <Group x={500} y={50} w={380} h={190} kind="solid" label="vertical / reverse" note="roll-up" />
+    {[0, 1, 2].map((i) => <Cell x={530} y={80 + i * 40} size={36} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
+    <Label x={548} y={74} text="exit" size={9.5} anchor="middle" mono tone="faint" />
+    <Label x={548} y={210} text="feed" size={9.5} anchor="middle" mono tone="faint" />
+    <Edge from={[590, 192]} to={[590, 84]} kind="primary" />
+    <Label x={640} y={92} mono size={10.5} lh={1.5} text={["mainProp  'y'   crossProp 'x'", 'polarity  -1', "feedEdge  'end' (bottom)", 'travel: up, new ids enter', 'at the bottom, wrap out the top']} />
+
+    <Group x={100} y={260} w={380} h={190} kind="solid" label="horizontal / forward" />
+    {[0, 1, 2].map((i) => <Cell x={130 + i * 40} y={300} size={36} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
+    <Label x={122} y={322} text="feed" size={9.5} anchor="end" mono tone="faint" />
+    <Label x={256} y={322} text="exit" size={9.5} anchor="start" mono tone="faint" />
+    <Edge from={[132, 356]} to={[246, 356]} kind="primary" />
+    <Label x={290} y={302} mono size={10.5} lh={1.5} text={["mainProp  'x'   crossProp 'y'", 'polarity  +1', "feedEdge  'start' (left)", 'travel: right, new ids', 'enter at the left']} />
+
+    <Group x={500} y={260} w={380} h={190} kind="solid" label="horizontal / reverse" />
+    {[0, 1, 2].map((i) => <Cell x={530 + i * 40} y={300} size={36} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
+    <Label x={522} y={322} text="exit" size={9.5} anchor="end" mono tone="faint" />
+    <Label x={656} y={322} text="feed" size={9.5} anchor="start" mono tone="faint" />
+    <Edge from={[646, 356]} to={[532, 356]} kind="primary" />
+    <Label x={690} y={302} mono size={10.5} lh={1.5} text={["mainProp  'x'   crossProp 'y'", 'polarity  -1', "feedEdge  'end' (right)", 'travel: left, new ids', 'enter at the right']} />
+  </Diagram>
+
+  <p>
+    <code>packages/pixi-reels/src/core/ReelAxis.ts</code> is the only place that
+    knows which screen property is "along the strip". It exposes
+    <code>getMain / setMain / addMain</code>, <code>getCross / setCross</code>,
+    and the two projections <code>toLocal(width, height)</code> to
+    <code>{`{ cross, main }`}</code> and <code>toScreen(cross, main)</code> to
+    <code>{`{ x, y }`}</code>. Public geometry stays screen-space
+    (<code>symbolSize(w, h)</code>, <code>resize(w, h)</code>,
+    <code>CellBounds</code>), which is why third-party symbol classes do not
+    care about orientation. The builder constructs one axis per reel from
+    <code>.orientation()</code> and <code>.direction()</code> /
+    <code>.directionPerReel()</code>; there is no per-spin direction override.
+    GSAP tweens in the phases are built from <code>axis.mainProp</code> as a
+    computed key, which is what lets the bounce, the cascade fall and the pin
+    squash work on any axis. Z-stacking is geometric, not travel-relative:
+    <code>cellStacking</code> defaults to <code>'ascending'</code> (larger
+    coordinate draws in front) and a reverse reel does not flip it.
+    See the <a href="/guides/orientation-and-direction/">orientation guide</a>.
+  </p>
+
+  <h2>One tick</h2>
+
+  <Diagram width={820} height={540} caption="The whole per-frame path. Phases never write positions: they set reel.speed or reel.targetSpeed and read isStopping and the sequencer, and the motion layer does the rest.">
+    <Box x={20} y={20} w={200} h={44} title="PIXI.Ticker" kind="code" sub="ticker.deltaMS" />
+    <Box x={20} y={84} w={320} h={52} title="SpinController._onTick(ticker)" kind="accent" sub="returns at once unless _isSpinning" />
+    <Edge from={[120, 64]} to={[120, 84]} />
+
+    <Group x={60} y={156} w={740} h={256} kind="tint" label="for each reel" note="reels.update(deltaMs), in index order" />
+    <Box x={80} y={192} w={280} h={50} title="Reel.update(deltaMs)" sub="dt = min(deltaMs, MAX_TICK_MS = 100)" size={12} />
+    <Edge from={[180, 136]} to={[180, 192]} />
+    <Box x={80} y={266} w={320} h={60} kind="ghost" title="stepDrive(state, targetSpeed, bounds, dt)" size={12} sub={['drive model only; skipped when parked', 'then reel.speed = state.speed']} />
+    <Edge from={[180, 242]} to={[180, 266]} />
+    <Label x={420} y={300} text="speed === 0 ? return (no advance, no wraps)" size={10.5} mono tone="faint" />
+    <Box x={80} y={346} w={340} h={56} title="spinningMode.computeDelta(pitch, speed, dt)" size={12} sub={['StandardMode: pitch * speed * dt / 1000', 'clamped to [-pitch/2, +pitch/2]']} />
+    <Edge from={[180, 326]} to={[180, 346]} />
+    <Box x={470} y={346} w={310} h={56} title="ReelMotion.advance(delta)" kind="primary" size={12} sub={['travel, rot, rotations, _onSymbolWrapped,', '_render() writes every main coordinate']} />
+    <Edge from={[420, 374]} to={[470, 374]} label="delta != 0" labelDy={-16} />
+
+    <Group x={60} y={430} w={740} h={92} kind="tint" label="for each active phase" note="phase.isActive only" />
+    <Box x={80} y={464} w={280} h={44} title="phase.update(deltaMs)" sub="StopPhase: tickSteps() (delay, spinOut, land, bounce)" size={12} />
+    <Edge from={[40, 136]} via={[[40, 486]]} to={[80, 486]} />
+    <Edge from={[40, 136]} via={[[40, 217]]} to={[80, 217]} />
+  </Diagram>
+
+  <p>
+    <code>SpinController</code> registers exactly one ticker callback
+    (<code>packages/pixi-reels/src/spin/SpinController.ts</code>). The clamp to
+    <code>MAX_TICK_MS</code> bounds the displacement when a backgrounded tab
+    refocuses or a custom ticker reports a huge delta. <code>StandardMode</code>
+    (<code>spin/modes/StandardMode.ts</code>) is the default
+    <code>SpinningMode</code>; the sign of its result carries the
+    <code>StartPhase</code> step-back pull (a brief negative speed) through
+    unchanged, so "travel" means relative to the reel's own direction, not
+    always positive. The motion layer also keeps an unsigned
+    <code>odometer</code> that never resets; <code>Reel.travelledCells</code>
+    divides it by the pitch, and <code>AnticipationPhase</code> uses it to end
+    a tease after N cells instead of N milliseconds. <code>speedNormalized</code>
+    is <code>speed / referenceSpeed</code>, where <code>referenceSpeed</code> is
+    set to the active profile's <code>spinSpeed</code> at the start of every
+    spin.
+  </p>
+
+  <h2>ReelDrive: bounded acceleration</h2>
+
+  <p>
+    By default a phase <em>tweens</em> <code>reel.speed</code>. With
+    <code>builder.motionModel('drive', config)</code> the reel instead
+    integrates toward <code>reel.targetSpeed</code> under acceleration bounds
+    (<code>packages/pixi-reels/src/core/ReelDrive.ts</code>). The config comes
+    in two mutually exclusive forms and mixing them throws:
+  </p>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Form</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Keys</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Resolved bounds</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-t border-border/60">
+          <td class="px-4 py-2.5">profile-relative (recommended)</td>
+          <td class="px-4 py-2.5 font-mono text-xs">accelFrames, decelFrames?, jerkFrames?</td>
+          <td class="px-4 py-2.5 text-xs text-foreground/80"><code>accel = spinSpeed / accelFrames</code>, <code>decel = spinSpeed / (decelFrames ?? accelFrames)</code>, <code>jerk = spinSpeed / jerkFrames</code> or 0. Re-resolved whenever <code>referenceSpeed</code> changes, so turbo accelerates harder than normal.</td>
+        </tr>
+        <tr class="border-t border-border/60">
+          <td class="px-4 py-2.5">absolute</td>
+          <td class="px-4 py-2.5 font-mono text-xs">accel, decel?, jerk?</td>
+          <td class="px-4 py-2.5 text-xs text-foreground/80">Used as given, in speed units per frame squared (and cubed for jerk). Only right for a single-profile game: one bound makes super turbo take 53 frames to reach speed where normal takes 20.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    <code>stepDrive(state, target, bounds, deltaMs)</code> runs once per reel
+    per tick and mutates its state object to avoid per-frame garbage. In order:
+    <code>dt = deltaMs / DRIVE_FRAME_MS</code> (a frame is <code>1000/60</code>
+    ms); if the gap to the target is under <code>1e-4</code> it snaps to the
+    target and zeroes acceleration; otherwise it picks <code>accel</code> when
+    <code>|target| &gt; |speed|</code> and <code>decel</code> when slowing (a
+    magnitude comparison, so the negative step-back pull lands on the right
+    bound); with jerk it walks the acceleration toward that bound by at most
+    <code>jerk * dt</code> and starts easing off once the remaining gap is below
+    <code>accel^2 / (2 * jerk)</code>, the S-curve; then it steps the speed and
+    clamps on crossing the target. <code>haltDrive()</code> zeroes speed,
+    target and acceleration together, because <code>speed = 0</code> alone would
+    ramp straight back toward the old target next tick; <code>forceSpeed(v)</code>
+    jumps with no ramp and is what slams use. Under the drive model
+    <code>StopPhase</code> sets <code>targetSpeed</code> for the spin-out instead
+    of forcing it, and <code>land()</code> calls <code>haltDrive()</code>.
+    The builder validates the config's shape at <code>build()</code> so a bad
+    number names the <code>motionModel(...)</code> call.
+  </p>
+
+  <h2>The landing</h2>
+
+  <Diagram width={920} height={500} caption="The animated stop is four steps inside StopPhase. A slam skips the steps, places the full target frame in one tick, and never bounces.">
+    <Box x={20} y={40} w={160} h={66} title="delay" size={12} sub={['stop stagger', 'cut by a quicken']} />
+    <Box x={196} y={40} w={160} h={66} title="spinOut" size={12} sub={['setStopFrame(frame)', 'isStopping = true']} />
+    <Box x={372} y={40} w={160} h={66} title="M wraps" size={12} sub={['one id per wrap', 'until !hasRemaining']} />
+    <Box x={548} y={40} w={160} h={66} title="land()" kind="accent" size={12} sub={['snap, notify,', "raise 'landing'"]} />
+    <Box x={724} y={40} w={160} h={66} title="bounce()" kind="primary" size={12} sub={['overshoot along mainProp', 'by polarity * distance']} />
+    <Edge from={[180, 73]} to={[196, 73]} />
+    <Edge from={[356, 73]} to={[372, 73]} />
+    <Edge from={[532, 73]} to={[548, 73]} />
+    <Edge from={[708, 73]} to={[724, 73]} />
+
+    <Group x={20} y={130} w={512} h={150} kind="dashed" label="land(), in order" note="ReelPhase.land" />
+    <Label x={36} y={166} mono size={10.5} lh={1.55} text={[
+      '1 haltDrive()         speed, targetSpeed, drive state all 0',
+      '2 isStopping = false',
+      '3 snapToGrid()        travel = rot = off = 0, re-render,',
+      '                      _finalizeFrame(), refreshZIndex()',
+      '4 notifySpinEnd()     onReelSpinEnd() on every strip symbol',
+      '5 notifyLanded(cells) onReelLanded(ctx), then reel event',
+      "                      'landing' -> set event spin:reelLanding",
+    ]} />
+    <Group x={548} y={130} w={336} h={150} kind="dashed" label="bounce()" note="ReelPhase.bounce" />
+    <Label x={564} y={166} size={10.5} lh={1.55} text={[
+      'defaultBounce: two legs, half the duration each,',
+      'container[mainProp] to base + polarity*distance,',
+      "then back to base. ease: bounceEase ?? 'power1.out'.",
+      'followLifted shifts unmasked views every frame.',
+      'distance <= 0 returns an already-settled bounce.',
+      'spin:reelLanded fires after it, via _markLanded.',
+    ]} />
+
+    <Group x={20} y={300} w={864} h={180} kind="tint" label="slam path" note="skip(), slamStop(), abort, timeout, a phase chain that threw" />
+    <Box x={36} y={340} w={190} h={66} title="forceComplete(ctx)" size={12} sub={['cancels the running step', 'ignores skippable']} />
+    <Box x={246} y={340} w={190} h={66} title="StopPhase.onSkip" size={12} sub={['haltDrive, isStopping = false', 'placeStrip(targetFrame)']} />
+    <Box x={456} y={340} w={190} h={66} title="rest, then snap" size={12} sub={['container back to base main', 'then reel.snapToGrid()']} />
+    <Box x={666} y={340} w={200} h={66} title="controller lands it" size={12} sub={['placeSymbols, notifySpinEnd,', 'notifyLanded, _markLanded']} />
+    <Edge from={[226, 373]} to={[246, 373]} />
+    <Edge from={[436, 373]} to={[456, 373]} />
+    <Edge from={[646, 373]} to={[666, 373]} />
+    <Label x={36} y={440} size={10.5} text="The full strip is placed, buffers included, so a big-symbol tail parked in bufferStart lands too. The container is rested before the snap so a mid-bounce slam cannot bake the overshoot into a lifted view." />
+  </Diagram>
+
+  <p>
+    <code>Reel.setStopFrame(frame)</code> loads the strip into the
+    <code>StopSequencer</code> (<code>packages/pixi-reels/src/core/StopSequencer.ts</code>)
+    with <code>axis.feedEdge</code>. The frame is always start-to-end order. A
+    forward reel feeds from the start edge, so new symbols are pushed toward the
+    end and the frame is consumed <strong>end-first</strong> (cursor starts at
+    <code>length - 1</code>, step -1). A reverse reel consumes it
+    <strong>head-first</strong> (cursor 0, step +1). Getting this backwards
+    lands a correct-looking frame reversed, which is why the sequencer has a
+    test per combination. <code>next()</code> throws when the frame is
+    exhausted; the only caller gates on <code>hasRemaining</code>. Because the
+    sequencer holds <code>M</code> ids, exactly <code>M</code> wraps happen
+    during the spin-out and then the whole strip, buffers included, matches
+    the frame. The spin-out keeps full <code>spinSpeed</code> unless the stop
+    follows a tease (<code>preserveSpeed</code>): then the current slow speed
+    is kept, floored at <code>8%</code> of <code>spinSpeed</code> and capped at
+    <code>spinSpeed</code>. The stop and skip paths in full are on
+    <a href="/architecture/spin-lifecycle/">spin lifecycle</a> and
+    <a href="/architecture/skipping/">skipping</a>.
+  </p>
+
+  <h2>Big-symbol occupancy</h2>
+
+  <p>
+    A big symbol is one id at its anchor cell plus OCCUPIED stubs in every
+    other cell of its block. Stubs are invisible <code>ReelSymbol</code>s
+    allocated by the reel, never pooled through the factory. The motion layer
+    treats them like any other symbol: they wrap, they get a position, they
+    carry the block's shape through the strip. On every snap
+    <code>_finalizeFrame()</code> rebuilds <code>_occupancy</code>: it scans
+    visible anchors first, then <code>bufferStart</code> anchors whose block
+    reaches into the window, and resizes each anchor to
+    <code>_blockSize(reels, cells)</code>, which includes the gaps (a 2×2 on
+    80px cells with a 4px gap is 164px, not 160). <code>size.reels</code>
+    always spans the cross axis and <code>size.cells</code> the main axis, so
+    the screen width and height it maps to swap under horizontal.
+    <code>getSymbolAt</code> and <code>getVisibleSymbols</code> resolve covered
+    cells to the anchor's id. See <a href="/guides/big-symbols/">big symbols</a>.
+  </p>
+
+  <h2>Nudge: a post-stop reposition</h2>
+
+  <p>
+    <code>Reel.nudge({`{ distance, direction, incoming, duration?, ease?, startDelay?, signal? }`})</code>
+    shifts a reel at rest by whole cells and reveals caller-supplied ids. It
+    throws if the reel is moving, stopping or already nudging; if
+    <code>distance</code> is not a positive integer strictly below
+    <code>M</code> (at <code>M</code> the strip would rotate fully and
+    pre-placed buffer entries would be silently dropped); if
+    <code>incoming.length !== distance</code>; if any incoming id is
+    unregistered or is a big symbol; if a same-reel block would be split by
+    the wrap boundary; or if a visible cell belongs to a cross-reel block.
+    <code>direction</code> is relative to the reel's own axis, so
+    <code>wrapsIntoStart = travelSign * polarity &gt; 0</code> decides which
+    buffer the incoming ids are pre-placed into (up to that buffer's size) and
+    the rest go into <code>_nudgeQueue</code>, padded with
+    <code>'bufferStart'</code> / <code>'bufferEnd'</code> pool draws for wraps
+    that only reach the off-screen buffer. The tween drives a 0..1 progress and
+    feeds <code>motion.advance()</code> in steps of at most
+    <code>0.45 * pitch</code>, clamped to the intended total so an overshooting
+    ease cannot fire a spurious wrap. Default <code>duration</code> is
+    <code>200 * distance</code> ms, default ease <code>'power2.out'</code>. The
+    per-wrap <code>refreshZIndex</code> is deferred to the final
+    <code>snapToGrid()</code>. Events on the set bus: <code>nudge:start</code>,
+    <code>nudge:complete</code>, <code>nudge:cancelled</code>; the reel emits
+    <code>phase:enter</code> / <code>phase:exit</code> with the name
+    <code>'nudge'</code>. <code>skipNudge()</code> jumps to the landed state.
+    See the <a href="/guides/nudge/">nudge guide</a> and the
+    <a href="/recipes/nudge/">nudge recipes</a>.
+  </p>
+
+  <h2>Per-reel geometry</h2>
+
+  <ul>
+    <li><strong><code>extent</code></strong> is the reel box's length along the strip, from <code>reelExtents([...])</code>, <code>multiways({`{ reelExtent }`})</code>, or <code>cells * cellMain + (cells - 1) * mainGap</code>.</li>
+    <li><strong><code>mainOffset</code></strong> places a shorter reel inside the tallest strip by <code>reelAnchor</code>: <code>'start'</code> gives 0, <code>'end'</code> gives <code>tallest - extent</code>, <code>'center'</code> (the default) gives <code>(tallest - extent) / 2</code>. It is written to <code>container[mainProp]</code> and re-baked into any lifted unmask view by <code>_syncUnmaskedViewOffsets</code> after every motion write.</li>
+    <li><strong><code>cellMain</code></strong> is the per-reel cell size along the strip: <code>(extent - (cells - 1) * mainGap) / cells</code> when explicit extents are set, otherwise the symbol size itself. <code>spinCellSize</code> is the cell every MultiWays reel spins on; <code>AdjustPhase</code> reshapes to the landed size afterwards through <code>Reel.reshape</code> → <code>ReelMotion.reshape</code>, which only refreshes pitch and <code>bufferStart</code>.</li>
+    <li><strong><code>symbolWidth</code> / <code>symbolHeight</code></strong> are <code>axis.toScreen(cellCross, cellMain)</code>, the pair every <code>resize()</code> receives.</li>
+  </ul>
+  <p>
+    The <a href="/guides/per-reel-geometry/">per-reel geometry guide</a> shows
+    pyramids and jagged boards built from these.
+  </p>
+
+  <h2>Caveats, from reading the code</h2>
+
+  <ul>
+    <li><strong>Speed units.</strong> The <code>ReelDrive</code> comments call <code>reel.speed</code> "pixels per frame", but <code>StandardMode</code> computes <code>slotPitch * speed * deltaMs / 1000</code>, so <code>spinSpeed: 30</code> moves 30 cell pitches per second (half a pitch per 60 fps frame) regardless of cell size. The drive bounds are in the same unit per frame. The code is the source of truth here.</li>
+    <li><strong>Vertical-only wording.</strong> <code>ReelMotion</code>'s constructor still names its parameters <code>symbolHeight</code> and <code>symbolGapY</code>, <code>Reel.update</code> calls its result <code>deltaY</code>, and the <code>StandardMode</code> and <code>StopSequencer</code> headers describe a strip "scrolling downward". The behaviour is axis-generic; the names are v1 leftovers.</li>
+  </ul>
+
+  <h2>Defaults</h2>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Item</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Value</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Where</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['Axis', "vertical / forward (VERTICAL_FORWARD)", 'core/ReelAxis.ts'],
+          ['Buffer symbols per side', '1', 'config/defaults.ts'],
+          ['symbolGap', '{ x: 0, y: 0 }', 'config/defaults.ts'],
+          ['reelAnchor', "'center'", 'config/types.ts'],
+          ['cellStacking / reelStacking', "'ascending'", 'config/types.ts'],
+          ['MAX_TICK_MS / EPS / DRIVE_EPS', '100 ms / 1e-9 / 1e-4', 'core/Reel.ts, ReelMotion.ts, ReelDrive.ts'],
+          ['StandardMode cap', 'pitch / 2 either direction', 'spin/modes/StandardMode.ts'],
+          ['DRIVE_FRAME_MS', '1000 / 60', 'core/ReelDrive.ts'],
+          ['accelFrames (suggested)', '20 (~330 ms at 60 fps); decelFrames = accelFrames; jerk 0', 'core/ReelDrive.ts'],
+          ['spinSpeed normal / turbo / super', '30 / 50 / 80', 'config/SpeedPresets.ts'],
+          ['bounceDistance, bounceDuration', "56 px 600 ms / 42 px 200 ms / 14 px 120 ms; ease 'power1.out'", 'config/SpeedPresets.ts, ReelPhase.ts'],
+          ['Nudge duration / ease / step', "200 * distance ms / 'power2.out' / 0.45 * pitch", 'core/Reel.ts'],
+        ].map(([k, v, w]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 text-xs">{k}</td>
+            <td class="px-4 py-2.5 font-mono text-xs text-primary">{v}</td>
+            <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{w}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Where this lives</h2>
+
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/core/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>ReelMotion.ts</code> advance, snapToGrid, getCellMain, odometer, _render</li>
+        <li><code>ReelAxis.ts</code> ReelAxis, reelAxis(), VERTICAL_FORWARD</li>
+        <li><code>ReelDrive.ts</code> ReelDriveConfig, resolveDriveConfig, stepDrive</li>
+        <li><code>StopSequencer.ts</code> setFrame(frame, feedEdge), next, hasRemaining</li>
+        <li><code>Reel.ts</code> update, _onSymbolWrapped, _replaceSymbol, nudge, _finalizeFrame, geometry getters</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/spin/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>SpinController.ts</code> _onTick</li>
+        <li><code>modes/StandardMode.ts</code> computeDelta and the half-slot cap</li>
+        <li><code>phases/StopPhase.ts</code> delay, spinOut, land, bounce; onSkip</li>
+        <li><code>phases/ReelPhase.ts</code> land(), bounce(), defaultBounce</li>
+      </ul>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">docs/adr/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>016-orientation-axis.md</code>, <code>017-facing-travel-and-the-reel-stage.md</code>, <code>018-motion-contract.md</code></li>
+      </ul>
+    </div>
+  </div>
+</Architecture>

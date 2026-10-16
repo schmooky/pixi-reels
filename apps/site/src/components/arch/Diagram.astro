@@ -1,0 +1,141 @@
+---
+/**
+ * The frame every architecture diagram sits in: one responsive `<svg>` with a
+ * fixed viewBox, the arrow-head markers the `<Edge>` component references,
+ * and a caption. Everything inside is hand-laid-out SVG written with the
+ * sibling primitives (`Box`, `Edge`, `Group`, `Label`, `Cell`), so a diagram
+ * is plain markup you can read in a diff. Colors come from the site's CSS
+ * tokens, so light and dark mode both render correctly with no JS.
+ *
+ * Usage:
+ *   <Diagram width={900} height={420} caption="...">
+ *     <Box x={..} y={..} w={..} h={..} title="ReelSet" />
+ *     <Edge from={[..]} to={[..]} />
+ *   </Diagram>
+ */
+interface Props {
+  width: number;
+  height: number;
+  /** Accessible name for the figure. */
+  title?: string;
+  caption?: string;
+  class?: string;
+  /** Let the SVG grow past its viewBox width (default: cap at viewBox px). */
+  fluid?: boolean;
+}
+const { width, height, title, caption, class: className, fluid = false } = Astro.props as Props;
+const markers = ['muted', 'primary', 'accent'] as const;
+---
+<figure class:list={['arch-diagram not-prose my-8 rounded-2xl border border-border bg-card p-4 sm:p-6', className]}>
+  <svg
+    viewBox={`0 0 ${width} ${height}`}
+    class="arch-svg block h-auto w-full"
+    style={fluid ? undefined : `max-width: ${width}px; margin: 0 auto;`}
+    role="img"
+    aria-label={title ?? caption}
+  >
+    <defs>
+      {markers.map((k) => (
+        <marker
+          id={`arch-arrow-${k}`}
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 0.5 L 10 5 L 0 9.5 z" class={`arch-marker-${k}`} />
+        </marker>
+      ))}
+      <marker id="arch-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5">
+        <circle cx="5" cy="5" r="4" class="arch-marker-muted" />
+      </marker>
+    </defs>
+    <slot />
+  </svg>
+  {caption && <figcaption class="mt-4 text-center text-sm text-muted-foreground">{caption}</figcaption>}
+</figure>
+
+<style is:global>
+  .arch-svg { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  .arch-svg .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; }
+
+  /* Text roles */
+  .arch-svg .t-fg { fill: hsl(var(--foreground)); }
+  .arch-svg .t-muted { fill: hsl(var(--muted-foreground)); }
+  .arch-svg .t-faint { fill: hsl(var(--muted-foreground) / 0.7); }
+  .arch-svg .t-inv { fill: hsl(var(--primary-foreground)); }
+  .arch-svg .t-code { fill: hsl(var(--code-fg)); }
+  .arch-svg .t-code-muted { fill: hsl(var(--code-muted)); }
+
+  /* Boxes */
+  .arch-svg .box-primary .box-bg { fill: hsl(var(--primary)); stroke: hsl(var(--primary)); }
+  .arch-svg .box-primary .box-title, .arch-svg .box-primary .box-sub { fill: hsl(var(--primary-foreground)); }
+  .arch-svg .box-primary .box-sub { opacity: 0.75; }
+  .arch-svg .box-primary .box-badge-bg { fill: hsl(var(--primary-foreground) / 0.18); }
+  .arch-svg .box-primary .box-badge { fill: hsl(var(--primary-foreground)); }
+
+  .arch-svg .box-accent .box-bg { fill: hsl(var(--secondary)); stroke: hsl(var(--foreground) / 0.35); }
+  .arch-svg .box-subtle .box-bg { fill: hsl(var(--card)); stroke: hsl(var(--border)); }
+  .arch-svg .box-muted .box-bg { fill: hsl(var(--muted)); stroke: hsl(var(--border)); }
+  .arch-svg .box-ghost .box-bg { fill: transparent; stroke: hsl(var(--muted-foreground) / 0.55); stroke-dasharray: 4 3; }
+  .arch-svg .box-code .box-bg { fill: hsl(var(--code-bg)); stroke: hsl(var(--code-border)); }
+  .arch-svg .box-code .box-title { fill: hsl(var(--code-fg)); }
+  .arch-svg .box-code .box-sub { fill: hsl(var(--code-muted)); }
+  .arch-svg .box-code .box-badge-bg { fill: hsl(var(--code-fg) / 0.14); }
+  .arch-svg .box-code .box-badge { fill: hsl(var(--code-fg)); }
+
+  .arch-svg .box-accent .box-title, .arch-svg .box-subtle .box-title, .arch-svg .box-muted .box-title, .arch-svg .box-ghost .box-title { fill: hsl(var(--foreground)); }
+  .arch-svg .box-accent .box-sub, .arch-svg .box-subtle .box-sub, .arch-svg .box-muted .box-sub, .arch-svg .box-ghost .box-sub { fill: hsl(var(--muted-foreground)); }
+  .arch-svg .box-accent .box-badge-bg, .arch-svg .box-subtle .box-badge-bg, .arch-svg .box-muted .box-badge-bg, .arch-svg .box-ghost .box-badge-bg { fill: hsl(var(--foreground) / 0.08); }
+  .arch-svg .box-accent .box-badge, .arch-svg .box-subtle .box-badge, .arch-svg .box-muted .box-badge, .arch-svg .box-ghost .box-badge { fill: hsl(var(--foreground)); }
+  .arch-svg .box-bg { stroke-width: 1.25; }
+  .arch-svg a .box-bg { transition: stroke 150ms; }
+  .arch-svg a:hover .box-bg { stroke: hsl(var(--foreground)); }
+
+  /* Groups (clusters) */
+  .arch-svg .group-bg { stroke-width: 1; }
+  .arch-svg .group-dashed .group-bg { fill: hsl(var(--muted) / 0.35); stroke: hsl(var(--border)); stroke-dasharray: 5 4; }
+  .arch-svg .group-solid .group-bg { fill: hsl(var(--muted) / 0.35); stroke: hsl(var(--border)); }
+  .arch-svg .group-tint .group-bg { fill: hsl(var(--foreground) / 0.04); stroke: hsl(var(--foreground) / 0.15); }
+  .arch-svg .group-plain .group-bg { fill: transparent; stroke: hsl(var(--border)); }
+  .arch-svg .group-label { fill: hsl(var(--muted-foreground)); letter-spacing: 0.12em; text-transform: uppercase; }
+
+  /* Edges */
+  .arch-svg .edge { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  .arch-svg .edge-muted { stroke: hsl(var(--muted-foreground) / 0.65); }
+  .arch-svg .edge-primary { stroke: hsl(var(--foreground)); stroke-width: 1.75; }
+  .arch-svg .edge-accent { stroke: hsl(var(--foreground) / 0.45); }
+  .arch-svg .edge-dashed { stroke-dasharray: 5 4; }
+  .arch-svg .edge-dotted { stroke-dasharray: 1.5 4; }
+  .arch-svg .edge-label-bg { fill: hsl(var(--card)); stroke: hsl(var(--border)); }
+  .arch-svg .edge-label { fill: hsl(var(--foreground)); }
+  .arch-marker-muted { fill: hsl(var(--muted-foreground) / 0.8); }
+  .arch-marker-primary { fill: hsl(var(--foreground)); }
+  .arch-marker-accent { fill: hsl(var(--foreground) / 0.5); }
+
+  /* Guide lines, axes, grid cells */
+  .arch-svg .guide { stroke: hsl(var(--border)); stroke-width: 1; fill: none; }
+  .arch-svg .guide-strong { stroke: hsl(var(--muted-foreground) / 0.6); stroke-width: 1; fill: none; }
+  .arch-svg .cell-plain .cell-bg { fill: hsl(var(--card)); stroke: hsl(var(--border)); }
+  .arch-svg .cell-hot .cell-bg { fill: hsl(var(--primary)); stroke: hsl(var(--primary)); }
+  .arch-svg .cell-hot .cell-text { fill: hsl(var(--primary-foreground)); }
+  .arch-svg .cell-new .cell-bg { fill: hsl(var(--secondary)); stroke: hsl(var(--foreground) / 0.45); stroke-dasharray: 3 2; }
+  .arch-svg .cell-empty .cell-bg { fill: transparent; stroke: hsl(var(--border)); stroke-dasharray: 3 2; }
+  .arch-svg .cell-buffer .cell-bg { fill: hsl(var(--muted) / 0.6); stroke: hsl(var(--border)); }
+  .arch-svg .cell-text { fill: hsl(var(--foreground)); }
+  .arch-svg .cell-empty .cell-text, .arch-svg .cell-buffer .cell-text { fill: hsl(var(--muted-foreground)); }
+  .arch-svg .cell-bg { stroke-width: 1.25; }
+
+  /* Lanes for timelines */
+  .arch-svg .lane-bg { fill: hsl(var(--muted) / 0.4); }
+  .arch-svg .span-start { fill: hsl(var(--foreground) / 0.25); }
+  .arch-svg .span-spin { fill: hsl(var(--foreground) / 0.12); }
+  .arch-svg .span-anticipation { fill: hsl(var(--foreground) / 0.4); }
+  .arch-svg .span-stop { fill: hsl(var(--foreground) / 0.7); }
+  .arch-svg .span-rest { fill: transparent; stroke: hsl(var(--border)); }
+  .arch-svg .span-bounce { fill: hsl(var(--foreground)); }
+  .arch-svg .span-text { fill: hsl(var(--foreground)); }
+  .arch-svg .span-stop .span-text, .arch-svg .span-bounce .span-text { fill: hsl(var(--background)); }
+</style>

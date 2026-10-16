@@ -1,321 +1,240 @@
 ---
 import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
-import Mermaid from '../../components/Mermaid.astro';
+
+// ReelSet.destroy() in source order (core/ReelSet.ts:3702-3721).
+const TEARDOWN: [string, string][] = [
+  ['_spotlight.destroy()', 'spotlight tweens and overlay containers go first'],
+  ['_spinController.destroy()', 'its TickerRef removes every ticker callback it added'],
+  ['reel.destroy() for each reel', 'motion, sequencer, symbols and the reel container'],
+  ['_destroyAllPinOverlays()', 'pin:overlayDestroyed per overlay, removed from unmaskedContainer, released to the pool'],
+  ['_symbolFactory.destroy()', 'the ObjectPool disposes every idle symbol'],
+  ['_viewport.destroy()', 'promotedLayer.detachAll() first, then super.destroy({ children: true })'],
+  ['_pins.clear()', 'the pin map is emptied; no events'],
+  ["_events.emit('destroyed')", 'expand() listens for this to drop its abort listener'],
+  ['_events.removeAllListeners()', 'the bus is gone after this line'],
+  ['super.destroy({ children: true })', 'the PixiJS Container teardown'],
+];
+const TB_X = 110;
+const TB_W = 540;
+const TB_H = 48;
+const TB_PITCH = 60;
+const TB_Y0 = 16;
+
+const CARDS: [string, string, string][] = [
+  ['ReelSetBuilder', 'builder', 'A fluent, chainable configurator. You call .reels(5).visibleCells(3)... and end with .build(). Every required piece of setup is forced into one place: forget .ticker(app.ticker) and build() throws before the game boots. The builder page walks build() step by step.'],
+  ['ReelSet', 'scene graph root', 'The thing you app.stage.addChild(reelSet). A PixiJS Container that owns every reel, the spin controller, the speed manager, the win spotlight and the symbol pool. The public verbs live here: spin(), setResult(), setAnticipation(), skipSpin(), destroy(). Its only display child is the ReelViewport.'],
+  ['Reel', 'one strip', 'One strip of symbols, longer than the window by the buffer cells on each end. It spins along whichever axis the set uses (vertical or horizontal, forward or reverse). A Reel owns its symbols, its container, its motion, its stop queue and its own event bus. You rarely touch one directly; you drive the ReelSet and let it fan out.'],
+  ['ReelViewport', 'clip and layers', 'The window you look through. Holds one mask Graphics for the whole masked container, plus the layers above the mask (unmasked, dim, spotlight, promoted) that presentation uses to break out of it. The viewport page has the five layers.'],
+  ['ReelAxis', 'orientation', 'The small object that turns main-axis and cross-axis numbers into screen x and y. reelAxis(orientation, direction) gives each reel its own, so a horizontal or reversed reel runs through exactly the same motion code.'],
+  ['ReelMotion', 'the physics', 'Moves the strip every tick and derives each symbol position from its array index. When a symbol passes the far edge it rotates the array and tells the reel a wrap happened. That callback is where a spinning reel takes on its next identity.'],
+  ['StopSequencer', 'landing queue', 'A queue holding the symbols a reel must land on, in order. The stop phase loads one frame into it; every wrap pops the next id. A forward reel consumes the frame end-first, a reverse reel head-first. When the queue is empty the reel stops.'],
+  ['SpinController', 'conductor', 'Runs each reel through start, spin, optional anticipation and stop, gates stopping on setResult(), turns presses into slams or quickens, fires the spin:* events and resolves the promise you awaited. It owns the one TickerRef in the engine and the active phase per reel. It draws nothing.'],
+  ['ReelPhase', 'state', 'Abstract base for one stage of a reel spin. Stock phases: StartPhase, SpinPhase, AnticipationPhase, StopPhase, AdjustPhase (MultiWays) and the three cascade phases (CascadeFallPhase, CascadePlacePhase, CascadeDropInPhase). The PhaseFactory maps a phase key to a constructor.'],
+  ['SpinningMode', 'strategy', 'What a spin means. StandardMode runs every reel through the phase machine. CascadeMode handles tumble refills. ImmediateMode snaps straight to the result, which tests use. The builder default is new StandardMode().'],
+  ['SpeedManager', 'tempo', 'Named bundles of timings. Ships with SpeedPresets.NORMAL and friends; switch at runtime with reelSet.setSpeed(name), which emits speed:changed. Constructed by the ReelSet from the builder speeds map.'],
+  ['ReelSymbol', 'abstract cell', 'One visible cell. Subclass it to draw anything. Built-ins: SpriteSymbol, AnimatedSpriteSymbol, SpineSymbol, CardSymbol, EmptySymbol. Implement onActivate, onDeactivate, playWin, stopAnimation and resize for a new kind. The symbols page has the lifecycle.'],
+  ['SymbolRegistry / SymbolFactory', 'pool', 'SymbolRegistry records which class and options render which id. SymbolFactory sits on top with an ObjectPool keyed by id, so scrolling a 5x3 set for five seconds allocates no new symbol objects once the pool is warm.'],
+  ['FrameBuilder + middleware', 'pipeline', 'Decides which id fills each slot of a target strip. random-fill is priority 0, target-placement is priority 10, and your own middleware slots in by priority. It runs once per result, not on every wrap.'],
+  ['SymbolSpotlight', 'wins', 'The win primitive. show(positions) dims the losers and runs playWin() on the winners in the spotlight layer; cycle(winLines) steps through lines and emits spotlight:start and spotlight:end.'],
+  ['EventEmitter', 'pub / sub', 'Typed, colon-namespaced events on two buses: reelSet.events (ReelSetEvents) and reel.events (ReelEvents). The ReelSet uses its own emitter so it never collides with the Container events PixiJS itself emits.'],
+  ['TickerRef', 'safe ticker', 'A wrapper around PIXI.Ticker that remembers every callback it adds and removes them all on destroy(). Nobody in the engine calls ticker.add() directly.'],
+  ['Disposable', 'interface', 'The cleanup contract: destroy() plus a readonly isDestroyed. Anything that subscribes to a ticker, creates display objects or holds references implements it, and reelSet.destroy() cascades through the whole tree.'],
+  ['FakeTicker + HeadlessSymbol', 'tests', 'The headless harness from pixi-reels/testing: a ticker you step by hand and a symbol that draws nothing. A full spin runs in Node without a renderer. See the testing page.'],
+];
 ---
 <Architecture
   title="Classes"
-  subtitle="The composition tree. what owns what, and what passes through."
+  subtitle="The ownership tree. Who owns what, who destroys what."
   eyebrow="Objects"
 >
   <p>
-    Every class in pixi-reels lives on one of three layers: the
-    <strong>outer shell</strong> the user builds, the <strong>scene graph</strong>
+    Every class in pixi-reels sits on one of three layers: the
+    <strong>outer shell</strong> you build, the <strong>scene graph</strong>
     PixiJS renders, or the <strong>internals</strong> that exist for the
-    duration of a spin. Ownership reads top-to-bottom: the parent always
-    destroys its children on <code>destroy()</code>.
+    duration of a spin. Ownership reads top to bottom, and the parent always
+    destroys its children on <code>destroy()</code>. The builder constructs
+    the viewport, the symbol factory, the frame builder, the random provider,
+    the phase factory and the reels, then hands them to the ReelSet through
+    one params object; the ReelSet constructs the SpeedManager, the
+    SpinController and the SymbolSpotlight itself.
   </p>
 
-  <h2>What each class does. in plain English</h2>
+  <h2>The ownership tree</h2>
 
-  <p>
-    If a name feels opaque, read its one-liner here first. The SVG after
-    this section shows how the names are wired together.
-  </p>
+  <Diagram width={960} height={540} caption="What the ReelSet owns after build(). Reel containers are display children of the viewport, but the Reel objects belong to the ReelSet, which is why the reels are drawn inside it.">
+    <Box x={20} y={20} w={180} h={52} title="ReelSetBuilder" kind="primary" sub="the only new you write" />
+    <Edge from={[200, 46]} to={[240, 46]} label="build()" kind="primary" labelDy={-16} />
 
-  <div class="not-prose my-6 grid gap-2 text-sm">
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">ReelSetBuilder</code>
-        <span class="text-xs text-muted-foreground">builder</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        A fluent, chainable configurator. You call <code>.reels(5).visibleCells(3)...</code> and end with <code>.build()</code>. It exists so every required piece of setup is forced into one place. Forget <code>.ticker(app.ticker)</code> and <code>.build()</code> throws before your game boots.
-      </p>
-    </div>
+    <Group x={240} y={20} w={700} h={508} kind="tint" label="ReelSet" note="extends PIXI.Container, implements Disposable" />
 
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">ReelSet</code>
-        <span class="text-xs text-muted-foreground">scene graph root</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        The thing you <code>app.stage.addChild(reelSet)</code>. A PixiJS <code>Container</code> that owns every reel, the spin controller, the speed manager, and the win spotlight. All the public methods you'll reach for live here: <code>spin()</code>, <code>setResult()</code>, <code>skipSpin()</code>, <code>destroy()</code>.
-      </p>
-    </div>
+    <Box x={256} y={56} w={160} h={56} title="ReelViewport" sub={['only display child', '5 layers, 1 mask']} />
+    <Box x={430} y={56} w={160} h={56} title="SpinController" kind="accent" sub={['owns the TickerRef', 'active phase per reel']} />
+    <Box x={604} y={56} w={160} h={56} title="SpeedManager" sub={['speeds map', 'built in the ctor']} />
+    <Box x={778} y={56} w={146} h={56} title="SymbolSpotlight" sub={['built in the ctor', 'dim + spotlight']} size={12} />
 
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">Reel</code>
-        <span class="text-xs text-muted-foreground">one column</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        One vertical column of symbols. A Reel owns the symbols currently on screen, their vertical position, and the "what do I land on" queue. You rarely touch a Reel directly. you drive the whole <code>ReelSet</code> and let it fan out.
-      </p>
-    </div>
+    <Box x={256} y={128} w={160} h={56} title="SymbolFactory" sub={['ObjectPool<ReelSymbol>', 'keyed by symbol id']} />
+    <Box x={430} y={128} w={160} h={56} title="FrameBuilder" sub={['RandomSymbolProvider', 'middleware chain']} />
+    <Box x={604} y={128} w={160} h={56} title="EventEmitter" sub={['ReelSetEvents', 'its own bus']} />
+    <Box x={778} y={128} w={146} h={56} title="pins + ReelFactory" sub={['Map<key, CellPin>', 'closure from build()']} size={12} />
 
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">ReelViewport</code>
-        <span class="text-xs text-muted-foreground">clip + layer</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        The clipped window you see through. Holds the mask so symbols scrolling above or below the visible area are hidden, plus a "promoted" layer where winning symbols get temporarily lifted above the mask so their celebration animation isn't clipped.
-      </p>
-    </div>
+    <Group x={256} y={210} w={668} h={302} kind="dashed" label="Reel[]" note="each reel.container is a child of viewport.maskedContainer" />
 
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">ReelMotion</code>
-        <span class="text-xs text-muted-foreground">vertical scroll</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        The physics of one reel. Adds a Y delta every tick and wraps symbols that fall off the bottom back to the top. When a symbol wraps, it fires a callback that tells the reel "time to swap identity". that's how a spinning reel eventually shows the target grid.
-      </p>
-    </div>
+    <Group x={272} y={246} w={420} h={250} kind="solid" label="Reel i" note="implements Disposable" />
+    <Box x={288} y={282} w={190} h={56} title="ReelAxis" kind="code" sub={['reelAxis(orient, dir)', 'toScreen, mainProp']} size={12} />
+    <Box x={494} y={282} w={190} h={56} title="ReelMotion" kind="code" sub={['moves the strip', 'index -> position, wraps']} size={12} />
+    <Box x={288} y={350} w={190} h={56} title="StopSequencer" kind="code" sub={['frame queue', 'next() on every wrap']} size={12} />
+    <Box x={494} y={350} w={190} h={56} title="symbols: ReelSymbol[]" kind="code" sub={['buffer + visible + buffer', 'from the SymbolFactory']} size={12} />
+    <Box x={288} y={418} w={190} h={56} title="container" kind="code" sub={['PIXI.Container', 'zIndex = +/- reelIndex']} size={12} />
+    <Box x={494} y={418} w={190} h={56} title="events" kind="code" sub={['EventEmitter<ReelEvents>', 'phase:*, landed, symbol:created']} size={12} />
 
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">StopSequencer</code>
-        <span class="text-xs text-muted-foreground">landing queue</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        A tiny queue that holds the symbols a reel must land on, in order. On every wrap, the sequencer hands out the next target. When the queue is empty the reel stops.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">SpinController</code>
-        <span class="text-xs text-muted-foreground">conductor</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        The conductor of a spin. Hands every reel its next phase (<code>Start</code> → <code>Spin</code> → optional <code>Anticipation</code> → <code>Stop</code>), coordinates with <code>setResult()</code>, fires the <code>spin:*</code> events, and resolves the promise you awaited on.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">ReelPhase</code>
-        <span class="text-xs text-muted-foreground">state</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        Abstract base for a single stage of a reel's spin. Each stage gets <code>onEnter</code>, <code>update</code> (per-tick), and <code>onSkip</code>. Stock phases: <code>StartPhase</code> (wind-up), <code>SpinPhase</code> (steady-state blur), <code>AnticipationPhase</code> (slow-down for tension), <code>StopPhase</code> (decelerate, snap, bounce).
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">SpinningMode</code>
-        <span class="text-xs text-muted-foreground">strategy</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        The top-level "what does a spin even mean" strategy. <code>StandardMode</code> runs every reel through the phase machine. <code>CascadeMode</code> replaces whole columns atomically for tumble mechanics. <code>ImmediateMode</code> snaps straight to the result. useful in tests.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">SpeedManager</code>
-        <span class="text-xs text-muted-foreground">tempo</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        Named bundles of timings (spin speed, stop delay, bounce distance, easings). Ship with <code>normal</code>, <code>turbo</code>, <code>superTurbo</code> presets. Switch at runtime with <code>reelSet.setSpeed('turbo')</code>; add your own with <code>addProfile()</code>.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">ReelSymbol</code>
-        <span class="text-xs text-muted-foreground">abstract cell</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        One visible cell on a reel. Abstract base class. subclass it to draw whatever you like. Built-in subclasses: <code>SpriteSymbol</code> (plain texture), <code>AnimatedSpriteSymbol</code> (sprite sheet), <code>SpineSymbol</code> (Spine skeleton, optional peer). Implement <code>onActivate</code>, <code>onDeactivate</code>, <code>playWin</code>, <code>stopAnimation</code>, <code>resize</code> for a new kind.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">SymbolRegistry / SymbolFactory</code>
-        <span class="text-xs text-muted-foreground">pool</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        <code>SymbolRegistry</code> records "symbol id X is rendered by class Y with options Z". <code>SymbolFactory</code> is the cache on top. it pools instances so scrolling a 5x3 reel for five seconds allocates zero new symbol objects.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">FrameBuilder + middleware</code>
-        <span class="text-xs text-muted-foreground">pipeline</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        A middleware pipeline that decides which symbol identity fills each new buffer slot when a reel needs another row. Random fill is priority 0, target-frame placement is priority 10. Register your own middleware to implement rules like "no three-in-a-row" or "inject a mystery symbol every 7th spin".
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">SymbolSpotlight</code>
-        <span class="text-xs text-muted-foreground">wins</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        The win-animation primitive. <code>show(positions)</code> dims the losers and runs <code>playWin()</code> on the winners, promoted above the mask. <code>cycle(lines)</code> iterates through multiple lines with a configurable cadence and emits <code>spotlight:start</code> / <code>spotlight:end</code> events.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">EventEmitter</code>
-        <span class="text-xs text-muted-foreground">pub / sub</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        Typed pub/sub. Event names are colon-namespaced (<code>spin:start</code>, <code>spin:reelLanded</code>, <code>speed:changed</code>). Every exit path from a spin fires an event. wire audio and HUD to events, not to method calls, so <code>skipSpin()</code> and <code>destroy()</code> stay correct without your HUD knowing about them.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">TickerRef</code>
-        <span class="text-xs text-muted-foreground">safe ticker</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        A thin wrapper around <code>PIXI.Ticker</code> that tracks every callback it adds and removes them all on <code>destroy()</code>. Nobody in this codebase calls <code>ticker.add()</code> directly. that's how we keep teardown correct.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">Disposable</code>
-        <span class="text-xs text-muted-foreground">interface</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        The cleanup contract. Anything that allocates implements it. <code>reelSet.destroy()</code> cascades through the whole tree. you never have to chase individual pieces yourself.
-      </p>
-    </div>
-
-    <div class="rounded-lg border border-border bg-card px-4 py-3">
-      <div class="flex items-center gap-2">
-        <code class="font-mono text-primary text-sm">FakeTicker + HeadlessSymbol</code>
-        <span class="text-xs text-muted-foreground">tests</span>
-      </div>
-      <p class="mt-1 text-foreground/80">
-        The headless harness. A manual ticker you step frame by frame, plus a symbol class that draws nothing. With these you can run an entire spin lifecycle in Node, assert on the final grid, and never load PixiJS's renderer.
-      </p>
-    </div>
-  </div>
-
-  <Mermaid chart={`
-flowchart TB
-  Builder["ReelSetBuilder<br/><i>.reels() · .symbols() · .build()</i>"]
-  ReelSet["ReelSet<br/><i>extends PIXI.Container · implements Disposable</i>"]
-
-  Builder -.->|creates| ReelSet
-
-  ReelSet --> SpinController["SpinController<br/><i>phase orchestrator</i>"]
-  ReelSet --> SpeedManager["SpeedManager<br/><i>named profiles</i>"]
-  ReelSet --> SymbolSpotlight["SymbolSpotlight<br/><i>win cycle</i>"]
-  ReelSet --> SymbolFactory["SymbolFactory<br/><i>pool owner</i>"]
-  ReelSet --> FrameBuilder["FrameBuilder<br/><i>middleware pipeline</i>"]
-
-  subgraph ReelsGroup["Reels[]"]
-    direction LR
-    Reel0["Reel #0"]
-    Reel1["Reel #1"]
-    Reel2["Reel #2"]
-    Reel3["Reel #3"]
-    Reel4["Reel #4"]
-  end
-
-  ReelSet --> Reel0
-
-  subgraph PerReel["Per reel (one Reel contains)"]
-    direction TB
-    Container["container: PIXI.Container<br/><i>child of ReelViewport.maskedContainer</i>"]
-    Symbols["symbols: ReelSymbol[]<br/><i>buffer + visible + buffer · pooled by SymbolFactory</i>"]
-    Events["events: EventEmitter&lt;ReelEvents&gt;<br/><i>phase:enter · phase:exit · landed · symbol:created</i>"]
-    Motion["motion: ReelMotion<br/><i>displace · wrap · snapToGrid</i>"]
-    StopSequencer["stopSequencer: StopSequencer<br/><i>target frame queue · next() pops each wrap</i>"]
-    SpinningMode["spinningMode: SpinningMode<br/><i>Standard · Cascade · Immediate · computeDeltaY()</i>"]
-  end
-
-  ReelsGroup -.->|one reel contains| PerReel
-  `} caption="One reel contains the boxes inside the lower group." />
+    <Box x={708} y={246} w={200} h={56} title="Reel i + 1" kind="ghost" sub="same shape" />
+    <Box x={708} y={316} w={200} h={56} title="..." kind="ghost" sub="one per reels(n)" />
+    <Box x={708} y={386} w={200} h={56} title="Reel n - 1" kind="ghost" sub="plus any addReels()" />
+  </Diagram>
 
   <div class="not-prose my-8">
     <Legend items={[
-      { kind: 'primary', label: 'Public API', note: 'Builder. you construct this' },
-      { kind: 'accent', label: 'Scene graph', note: 'ReelSet and its reels' },
-      { kind: 'subtle', label: 'Internals', note: 'Subsystems, motion, sequencer' },
-      { kind: 'muted', label: 'Grouping', note: 'conceptual, not a class' },
+      { kind: 'primary', label: 'Public API', note: 'the builder; you construct this' },
+      { kind: 'accent', label: 'Conductor', note: 'SpinController drives every reel' },
+      { kind: 'subtle', label: 'Subsystems', note: 'owned by the ReelSet, destroyed with it' },
+      { kind: 'muted', label: 'Per reel', note: 'dark boxes are owned by one Reel' },
     ]} />
   </div>
 
-  <h2>Reading the ownership chain</h2>
+  <h2>What each class does, in plain English</h2>
+
+  <p>
+    If a name feels opaque, read its one-liner here first.
+  </p>
+
+  <div class="not-prose my-6 grid gap-2 text-sm">
+    {CARDS.map(([name, role, text]) => (
+      <div class="rounded-lg border border-border bg-card px-4 py-3">
+        <div class="flex items-center gap-2">
+          <code class="font-mono text-primary text-sm">{name}</code>
+          <span class="text-xs text-muted-foreground">{role}</span>
+        </div>
+        <p class="mt-1 text-foreground/80">{text}</p>
+      </div>
+    ))}
+  </div>
+
+  <h2>Teardown order</h2>
 
   <p>
     <code>ReelSet.destroy()</code> is the single source of truth for teardown.
-    Internally it:
+    It guards against a second call, sets <code>isDestroyed</code>, and then
+    runs these ten lines in this order. The order matters: the controller goes
+    before the reels so no tick lands on a dead reel, the pool goes before the
+    viewport so released views are detached from the promoted layer before the
+    layer dies, and the <code>destroyed</code> event fires before the
+    listeners are dropped so anyone waiting on it still hears it.
   </p>
 
-  <ol>
-    <li>Destroys the <code>SymbolSpotlight</code> (releases its tween handles).</li>
-    <li>Destroys the <code>SpinController</code>, which removes the <code>TickerRef</code> callback.</li>
-    <li>For each <code>Reel</code>: releases every pooled symbol back to the <code>SymbolFactory</code>, removes event listeners, destroys the PixiJS container tree.</li>
-    <li>Destroys the <code>SymbolFactory</code>, which disposes every class instance in its pool.</li>
-    <li>Destroys the <code>ReelViewport</code> (masked container).</li>
-    <li>Emits <code>destroyed</code>, removes every listener, calls <code>{'super.destroy({ children: true })'}</code>.</li>
-  </ol>
+  <Diagram width={760} height={TB_Y0 + (TEARDOWN.length - 1) * TB_PITCH + TB_H + 16} caption="ReelSet.destroy(), one box per line of source. Each step only touches things the previous steps have not freed yet.">
+    {TEARDOWN.map(([title, note], i) => (
+      <Box x={TB_X} y={TB_Y0 + i * TB_PITCH} w={TB_W} h={TB_H} title={title} sub={note} badge={String(i + 1)} align="left" size={12} kind={i === TEARDOWN.length - 1 ? 'primary' : i === 5 ? 'accent' : 'subtle'} />
+    ))}
+    {TEARDOWN.map((_, i) => i < TEARDOWN.length - 1 && (
+      <Edge from={[TB_X + TB_W / 2, TB_Y0 + i * TB_PITCH + TB_H]} to={[TB_X + TB_W / 2, TB_Y0 + (i + 1) * TB_PITCH]} />
+    ))}
+  </Diagram>
 
   <p>
-    If you extend pixi-reels with a new subsystem that holds resources, it
-    must implement the <code>Disposable</code> interface and be destroyed
-    from this chain. there's no hidden GC to catch you.
+    Two details from the code. The reel loop at step 3 runs before the pin
+    overlays at step 4 because overlays are pooled symbols too, and they are
+    released to the pool that step 5 then destroys. And the <code>nudge()</code>
+    catch block checks <code>isDestroyed</code> before emitting
+    <code>nudge:cancelled</code>, because after step 9 the bus is gone.
   </p>
 
-  <h2>Disposable everywhere</h2>
+  <h2>The Disposable contract</h2>
+
+  <pre><code>{`export interface Disposable {
+  destroy(): void;
+  readonly isDestroyed: boolean;
+}`}</code></pre>
+
+  <p>
+    Anything that subscribes to a ticker, creates display objects or holds
+    references implements it. Every <code>destroy()</code> in the engine is
+    idempotent: it returns early when <code>isDestroyed</code> is already set.
+    There is no hidden garbage collection. If you add a subsystem that holds
+    resources, it must implement <code>Disposable</code> and be destroyed from
+    the chain above, or it leaks.
+  </p>
 
   <div class="not-prose my-4 grid gap-2 text-sm">
-    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <code class="font-mono text-primary text-sm min-w-[180px]">ReelSet</code>
-      <span class="text-muted-foreground text-xs">owns: viewport · reels · factory · subsystems</span>
-    </div>
-    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <code class="font-mono text-primary text-sm min-w-[180px]">Reel</code>
-      <span class="text-muted-foreground text-xs">owns: motion · stopSequencer · events · container</span>
-    </div>
-    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <code class="font-mono text-primary text-sm min-w-[180px]">SpinController</code>
-      <span class="text-muted-foreground text-xs">owns: TickerRef · active phases</span>
-    </div>
-    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <code class="font-mono text-primary text-sm min-w-[180px]">SymbolSpotlight</code>
-      <span class="text-muted-foreground text-xs">owns: gsap timelines · overlay containers</span>
-    </div>
-    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <code class="font-mono text-primary text-sm min-w-[180px]">SymbolFactory</code>
-      <span class="text-muted-foreground text-xs">owns: ObjectPool&lt;ReelSymbol&gt;</span>
-    </div>
-    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <code class="font-mono text-primary text-sm min-w-[180px]">TickerRef</code>
-      <span class="text-muted-foreground text-xs">owns: registered ticker callbacks</span>
-    </div>
-    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <code class="font-mono text-primary text-sm min-w-[180px]">ReelSymbol</code>
-      <span class="text-muted-foreground text-xs">owns: view container · subclass resources</span>
-    </div>
+    {[
+      ['ReelSet', 'viewport, reels, symbol factory, frame builder, spin controller, speed manager, spotlight, pins, events'],
+      ['Reel', 'axis, motion, stopSequencer, symbols, container, events, occupied stubs'],
+      ['SpinController', 'TickerRef, the active phase per reel, cached frames'],
+      ['SymbolSpotlight', 'gsap timelines, the dim request, reparented winner views'],
+      ['SymbolFactory', 'ObjectPool<ReelSymbol>; pool.destroy() disposes every idle symbol'],
+      ['ReelViewport', 'masked, unmasked, dim, spotlight and promoted layers; the mask Graphics'],
+      ['TickerRef', 'every ticker callback it registered'],
+      ['ReelSymbol', 'its view container and whatever the subclass allocates in onDestroy()'],
+    ].map(([k, v]) => (
+      <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+        <code class="font-mono text-primary text-sm min-w-[160px]">{k}</code>
+        <span class="text-muted-foreground text-xs">owns: {v}</span>
+      </div>
+    ))}
   </div>
+
+  <h2>The TickerRef rule</h2>
+
+  <p>
+    <code>packages/pixi-reels/src/utils/TickerRef.ts</code> wraps a
+    <code>PIXI.Ticker</code>. <code>add(fn)</code> records the callback and
+    forwards it to the ticker; <code>destroy()</code> removes every recorded
+    callback at once. Its header calls dangling ticker callbacks the number one
+    memory leak in the original library, and the rule that follows is simple:
+    nobody in the engine calls <code>ticker.add()</code> directly. The
+    SpinController constructs the one TickerRef and adds its
+    <code>_onTick</code> to it; <code>SpinController.destroy()</code> destroys
+    it, which is why the controller is the second thing the ReelSet tears down.
+    The testing subpath swaps in a <code>FakeTicker</code> at the same seam.
+  </p>
 
   <h2>Extension points</h2>
 
-  <p>
-    The classes on the outer edges are where you plug in custom code:
-  </p>
-
   <ul>
-    <li>Extend <code>ReelSymbol</code> for a new rendering style (Spine, animated sprite, custom Graphics).</li>
-    <li>Extend <code>ReelPhase&lt;TConfig&gt;</code> for a new spin phase, register it via <code>builder.phases(f =&gt; f.register(...))</code>.</li>
-    <li>Implement <code>SpinningMode</code> for a different motion model (cascade, hover, immediate).</li>
-    <li>Implement <code>FrameMiddleware</code> to hook into per-frame symbol generation. random fill and target placement are themselves just middleware.</li>
+    <li><strong><code>ReelSymbol</code></strong> for a new rendering style. Subclass it, implement the five required members, register it in <code>builder.symbols(r =&gt; r.register(id, Class, opts))</code>. The <a href="/architecture/symbols/">symbols page</a> has the lifecycle and every optional hook.</li>
+    <li><strong><code>ReelPhase&lt;TConfig&gt;</code></strong> for a new spin stage. Register a factory with <code>builder.phases(f =&gt; f.register(...))</code>; your configurators always run after the tumble and MultiWays defaults. See <a href="/architecture/spin-lifecycle/">spin lifecycle</a>.</li>
+    <li><strong><code>SpinningMode</code></strong> for a different motion model. Pass an instance to <code>builder.spinningMode(mode)</code>.</li>
+    <li><strong><code>FrameMiddleware</code></strong> to hook into per-result frame generation. <code>{'{ name, priority, process(ctx, next) }'}</code>; lower priority runs first, and a middleware that does not call <code>next()</code> short-circuits the rest. Random fill and target placement are themselves middleware. See <a href="/architecture/frame-pipeline/">the frame pipeline</a>.</li>
+    <li><strong><code>MaskStrategy</code></strong> for a custom clip shape. <code>{'{ version: 2, build(ctx), update(g, ctx) }'}</code>, or a <code>DrawableMaskStrategy</code> with <code>draw(g, ctx)</code> so it composes. See <a href="/architecture/viewport-and-masks/">viewport and masks</a>.</li>
   </ul>
+
+  <h2>Where this lives</h2>
+
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/core/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>ReelSetBuilder.ts</code> the builder and <code>build()</code></li>
+        <li><code>ReelSet.ts</code> the set, its constructor order and <code>destroy()</code></li>
+        <li><code>Reel.ts</code> one strip, plus the internal <code>OccupiedStub</code></li>
+        <li><code>ReelViewport.ts</code> the layers and the mask contract</li>
+        <li><code>ReelAxis.ts</code>, <code>ReelMotion.ts</code>, <code>StopSequencer.ts</code></li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">elsewhere</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>spin/SpinController.ts</code>, <code>spin/phases/</code>, <code>spin/modes/</code></li>
+        <li><code>symbols/ReelSymbol.ts</code>, <code>SymbolRegistry.ts</code>, <code>SymbolFactory.ts</code>; <code>pool/ObjectPool.ts</code></li>
+        <li><code>frame/FrameBuilder.ts</code>, <code>RandomSymbolProvider.ts</code></li>
+        <li><code>speed/SpeedManager.ts</code>, <code>spotlight/SymbolSpotlight.ts</code></li>
+        <li><code>events/EventEmitter.ts</code>, <code>utils/Disposable.ts</code>, <code>utils/TickerRef.ts</code></li>
+      </ul>
+    </div>
+  </div>
 </Architecture>

@@ -1,0 +1,37 @@
+---
+/**
+ * Free text inside a `<Diagram>`. One line or several (array). Use for
+ * annotations, axis names, formula callouts.
+ */
+interface Props {
+  x: number;
+  y: number;
+  text: string | string[];
+  size?: number;
+  anchor?: 'start' | 'middle' | 'end';
+  mono?: boolean;
+  tone?: 'fg' | 'muted' | 'faint' | 'inv' | 'code' | 'code-muted';
+  weight?: 400 | 500 | 600 | 700;
+  /** Line height multiplier for multi-line text. */
+  lh?: number;
+  rotate?: number;
+  class?: string;
+}
+const {
+  x, y, text, size = 11, anchor = 'start', mono = false, tone = 'muted', weight = 400, lh = 1.35, rotate, class: className,
+} = Astro.props as Props;
+const lines = Array.isArray(text) ? text : [text];
+---
+<text
+  x={x}
+  y={y}
+  font-size={size}
+  font-weight={weight}
+  text-anchor={anchor}
+  transform={rotate ? `rotate(${rotate} ${x} ${y})` : undefined}
+  class:list={[`t-${tone}`, { mono }, className]}
+>
+  {lines.map((line, i) => (
+    <tspan x={x} dy={i === 0 ? 0 : size * lh}>{line}</tspan>
+  ))}
+</text>

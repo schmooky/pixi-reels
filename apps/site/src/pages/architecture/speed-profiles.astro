@@ -1,0 +1,321 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
+import Legend from '../../components/arch/Legend.astro';
+
+const presets = [
+  ['name', "'normal'", "'turbo'", "'superTurbo'"],
+  ['spinDelay', '100', '30', '0'],
+  ['spinSpeed', '30', '50', '80'],
+  ['stopDelay', '140', '0', '0'],
+  ['anticipationDelay', '450', '250', '0'],
+  ['bounceDistance', '56', '42', '14'],
+  ['bounceDuration', '600', '200', '120'],
+  ['bounceEase', 'unset (power1.out)', 'unset (power1.out)', 'unset (power1.out)'],
+  ['accelerationEase', 'power2.in', 'power2.in', 'power1.in'],
+  ['decelerationEase', 'power2.out (unused)', 'power2.out (unused)', 'power1.out (unused)'],
+  ['accelerationDuration', '300', '200', '50'],
+  ['minimumSpinTime', '500', '300', '100'],
+  ['tumble', 'none', 'none', 'none'],
+  ['phase sections', 'none', 'none', 'none'],
+];
+
+// (c) mapping: settings on the left, steps on the right.
+const left = [
+  ['spinDelay', 'x stagger index', 0],
+  ['start.steps.delay.duration', 'replaces the stagger', 1],
+  ['pull defaults', '50 ms, power1.out, speed -2', 2],
+  ['accelerationDuration / Ease', '300 ms, power2.in', 3],
+  ['spinSpeed', 'target of accelerate', 4],
+  ['minimumSpinTime', '500 ms', 5],
+  ['anticipationDelay', 'the hold; step.duration wins', 6],
+  ['stopDelay', 'x stagger index', 7],
+  ['stop.steps.delay.duration', 'replaces the stop stagger', 8],
+  ['bounceDistance / Duration / Ease', '56 px, 600 ms, power1.out', 9],
+] as const;
+const right = [
+  ['start.delay', 'cut', 0],
+  ['start.pull', 'only if bounceDistance > 0', 1],
+  ['start.accelerate', '', 2],
+  ['spin (wait)', 'minimum, from spin entry', 3],
+  ['anticipation.tease', 'cut', 4],
+  ['stop.delay', 'cut', 5],
+  ['stop.bounce', 'two legs', 6],
+] as const;
+const ly = (i: number) => 40 + i * 48;
+const ry = (i: number) => 40 + i * 70;
+const links: [number, number][] = [[0, 0], [1, 0], [2, 1], [3, 2], [4, 2], [5, 3], [6, 4], [7, 5], [8, 5], [9, 6]];
+---
+<Architecture
+  title="Speed profiles"
+  subtitle="Flat fields, phase sections, step timings, whenAnticipated, tune()."
+  eyebrow="Timing"
+>
+  <p>
+    A speed profile is the one object that fixes every number a spin uses: stagger, speed,
+    minimum spin time, tease hold, bounce. It has two layers. The flat fields are the v1
+    shape and are enough for most games. On top of them, optional per-phase sections can
+    override those fields for one phase, set per-step timings, and carry a
+    <code>whenAnticipated</code> variant that only applies to reels that teased. Types are in
+    <code>packages/pixi-reels/src/config/types.ts</code>, the merge rules in
+    <code>packages/pixi-reels/src/config/phaseProfile.ts</code>, the presets in
+    <code>packages/pixi-reels/src/config/SpeedPresets.ts</code>, and the runtime holder is
+    <code>packages/pixi-reels/src/speed/SpeedManager.ts</code>. ADR 021
+    (<code>docs/adr/021-phase-sections-on-speed-profiles.md</code>) is the design record.
+  </p>
+
+  <Diagram width={940} height={430} caption="The shape of one profile. The flat SpeedProfileBase fields sit next to eight optional phase sections; a section may re-set any timing field, give each step one or more StepTiming entries, and carry a whenAnticipated variant of both.">
+    <Group x={10} y={10} w={920} h={410} kind="tint" label="SpeedProfile" note="SpeedProfileBase & PhaseSections (types.ts:537)" />
+    <Box x={26} y={50} w={250} h={350} title="SpeedProfileBase" kind="code" align="left" sub={[
+      'name',
+      'spinDelay            ms between starts',
+      'spinSpeed            see motion page',
+      'stopDelay            ms between stops',
+      'anticipationDelay    tease hold ms',
+      'bounceDistance       px',
+      'bounceDuration       ms, both legs',
+      'bounceEase?          power1.out',
+      'accelerationEase?    power2.in',
+      'accelerationDuration? 300',
+      'minimumSpinTime?     500',
+      'decelerationEase?    deprecated',
+      'tumble?              TumbleConfig',
+    ]} size={13} />
+
+    <Group x={296} y={50} w={618} h={350} kind="dashed" label="PhaseSections" note="all optional; games add phases by declaration merging" />
+    {['start', 'spin', 'anticipation', 'stop', 'adjust', 'cascade:fall', 'cascade:place', 'cascade:dropIn'].map((n, i) => (
+      <Box x={312 + (i % 4) * 148} y={86 + Math.floor(i / 4) * 44} w={136} h={34} title={n} kind={n === 'stop' ? 'accent' : 'subtle'} size={12} />
+    ))}
+
+    <Group x={312} y={186} w={586} h={200} kind="solid" label="stop: PhaseSection<StopSteps>" note="one section, opened up" />
+    <Box x={328} y={222} w={170} h={54} title="PhaseTiming" sub={['any base field again,', 'without name and tumble']} size={12} />
+    <Box x={514} y={222} w={190} h={54} title="steps" sub={['delay, spinOut, land, bounce', 'StepTiming | StepTiming[]']} size={12} />
+    <Box x={720} y={222} w={162} h={54} title="whenAnticipated" sub={['timing + steps again,', 'cannot nest']} size={12} />
+    <Box x={328} y={300} w={554} h={70} title="StepTiming" kind="code" align="left" sub={[
+      "{ ease?: string, duration?: number }   built-in steps read step[0]; an array is for multi-leg steps",
+      "stop: { stopDelay: 0, steps: { bounce: { duration: 400, ease: 'back.out' } }, whenAnticipated: { steps: { bounce: { duration: 900 } } } }",
+    ]} size={12} />
+    <Edge from={[380, 120]} via={[[380, 160], [605, 160]]} to={[605, 186]} kind="accent" label="opened up" labelDx={0} labelDy={-14} />
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'primary', label: 'code', note: 'the literal field list' },
+      { kind: 'accent', label: 'section', note: 'the one phase section the lower panel expands' },
+      { kind: 'subtle', label: 'phase name', note: 'keys of PhaseProfiles' },
+    ]} />
+  </div>
+
+  <h2>The flat fields</h2>
+  <p>
+    <code>SpeedProfileBase</code> is <code>name</code>, <code>spinDelay</code>,
+    <code>spinSpeed</code>, <code>stopDelay</code>, <code>anticipationDelay</code>,
+    <code>bounceDistance</code>, <code>bounceDuration</code>, and the optional
+    <code>bounceEase</code> (default <code>'power1.out'</code>), <code>accelerationEase</code>
+    (default <code>'power2.in'</code>), <code>accelerationDuration</code> (default 300),
+    <code>minimumSpinTime</code> (default 500), <code>decelerationEase</code> and
+    <code>tumble</code>. All fields are readonly. <code>decelerationEase</code> is deprecated and no
+    phase reads it; the presets still carry a value for compatibility. <code>tumble</code> is a
+    per-speed <code>TumbleConfig</code>, deep-merged over the builder's base when a cascade phase
+    enters, so a turbo profile can shorten <code>fall.duration</code> and
+    <code>dropIn.duration</code> (both at 0 snaps the cascade). <code>spinSpeed</code> is documented
+    as pixels per frame; from reading the code, <code>StandardMode</code> computes
+    <code>slotPitch * speed * deltaMs / 1000</code> with a half-cell cap per frame, so treat the
+    unit note with care and see the <a href="/architecture/motion/">motion page</a>.
+  </p>
+
+  <h2>The presets</h2>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            {['Key', 'NORMAL', 'TURBO', 'SUPER_TURBO'].map((h) => (
+              <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {presets.map(([k, a, b, c]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{a}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{b}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{c}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p>
+    Three things fall out of the numbers. TURBO still teases (250 ms); SUPER_TURBO does not
+    unless <code>setAnticipation({'{ duration }'})</code> gives a positive hold. All three have
+    <code>bounceDistance &gt; 0</code>, so all three run the start phase's <code>pull</code> step.
+    And none of them has a phase section or a <code>tumble</code> block, so every preset resolves
+    to its flat fields alone. The bounce values are tuned for symbols of about 120 to 200 px.
+  </p>
+
+  <h2>Phase sections</h2>
+  <p>
+    <code>PhaseTiming</code> is <code>Partial&lt;Omit&lt;SpeedProfileBase, 'name' | 'tumble'&gt;&gt;</code>,
+    so any base field can be set again inside a section. A
+    <code>PhaseSection&lt;TSteps, TExtra&gt;</code> is <code>PhaseTiming &amp; TExtra &amp; {'{ steps?, whenAnticipated? }'}</code>,
+    where <code>steps</code> maps a step name to a <code>StepTiming</code> or a
+    <code>StepTiming[]</code>, and <code>whenAnticipated</code> is the same body without another
+    <code>whenAnticipated</code> inside. The <code>PhaseProfiles</code> registry names
+    <code>start</code>, <code>spin</code>, <code>anticipation</code>, <code>stop</code>,
+    <code>adjust</code>, <code>cascade:fall</code>, <code>cascade:place</code> and
+    <code>cascade:dropIn</code>; the step-name interfaces are <code>StartSteps</code> (delay,
+    launch, pull, accelerate, announce), <code>AnticipationSteps</code> (tease) and
+    <code>StopSteps</code> (delay, spinOut, land, bounce). A game with its own phase or its own
+    inserted step extends these interfaces with declaration merging and gets typed sections for
+    free:
+  </p>
+  <pre><code>{`declare module 'pixi-reels' {
+  interface PhaseProfiles { 'my:flourish': PhaseSection<{ sparkle: StepTiming }> }
+  interface StopSteps { settle: StepTiming }
+}`}</code></pre>
+
+  <h2>Resolution order</h2>
+
+  <Diagram width={820} height={330} caption="How a number is resolved for one phase of one reel. Later layers override earlier ones; the tune is merged into the section before resolution, so a tuned whenAnticipated still only reaches reels that teased to the end.">
+    {[
+      ['flat field', 'profile.bounceDuration, profile.minimumSpinTime, ...', 'subtle'],
+      ['profile[phase]', 'the phase section: PhaseTiming fields and steps', 'subtle'],
+      ['whenAnticipated', 'only if context.anticipated: the reel played a tease to its end this spin', 'accent'],
+      ['speed.tune(phase, section)', 'runtime layer over whichever profile is active; merged into the section first', 'primary'],
+    ].map(([t, s, k], i) => (
+      <Box x={20} y={250 - i * 72} w={420} h={60} title={t} kind={k as 'subtle' | 'accent' | 'primary'} sub={s} size={12} />
+    ))}
+    {[0, 1, 2].map((i) => (
+      <Edge from={[230, 250 - i * 72]} to={[230, 250 - (i + 1) * 72 + 60]} arrow="end" />
+    ))}
+    <Label x={458} y={48} text="overrides" size={10} mono tone="faint" rotate={90} />
+
+    <Box x={490} y={40} w={310} h={78} title="resolvePhaseProfile(p, phase, anticipated)" kind="code" size={11.5} sub={['{ ...p, ...timingOf(section), ...timingOf(section.whenAnticipated) }', 'no section: returns the same object, nothing allocated', 'timingOf drops steps, whenAnticipated and undefined values']} />
+    <Box x={490} y={134} w={310} h={66} title="resolveStepTiming(p, phase, step, anticipated)" kind="code" size={11.5} sub={['the step\'s StepTiming[] with whenAnticipated', 'merged over it position by position']} />
+    <Box x={490} y={216} w={310} h={66} title="mergeSection / mergeBody / tuneProfile" kind="code" size={11.5} sub={['flat fields replace, steps merge by position,', 'whenAnticipated merges the same way']} />
+    <Label x={490} y={306} text="phase.timing = resolvePhaseProfile(speed, context.phase || name, context.anticipated)" size={10} mono />
+  </Diagram>
+
+  <p>
+    <code>resolvePhaseProfile(profile, phase, anticipated)</code> returns
+    <code>{'{ ...profile, ...timingOf(section), ...timingOf(section.whenAnticipated if anticipated) }'}</code>.
+    With no section it returns the very same object, so a plain preset allocates nothing per
+    phase. <code>timingOf</code> drops <code>steps</code>, <code>whenAnticipated</code> and any key
+    whose value is <code>undefined</code>, so a section cannot blank out a field the profile set.
+    <code>resolveStepTiming(profile, phase, step, anticipated)</code> returns the step's list of
+    segments with the <code>whenAnticipated</code> entries merged over it position by position;
+    that list is what a step sees as <code>ctx.step</code>, and the built-in steps read
+    <code>step[0]</code>. <code>mergeSection</code> and <code>mergeBody</code> implement the same
+    rule for whole sections, and <code>tuneProfile</code> uses them to fold runtime tunes into each
+    phase's section. <code>configuredStepNames</code> backs the one-time warning a phase emits when
+    the profile configures a step name the phase's list does not have. The effective order ADR 021
+    states is flat field, then <code>profile[phase]</code>, then <code>whenAnticipated</code> (only
+    for a reel that teased), then <code>speed.tune()</code>; in the code the tune is merged into the
+    section before resolution, which gives the same answer and keeps a tuned
+    <code>whenAnticipated</code> restricted to reels that teased.
+  </p>
+
+  <h2>Which step reads which setting</h2>
+
+  <Diagram width={900} height={540} caption="The profile settings each built-in step consults. A step-level duration in start.steps.delay or stop.steps.delay replaces the per-reel stagger, it is not added to it. spinOut, land, launch and announce read nothing.">
+    {left.map(([t, s, i]) => (
+      <Box x={20} y={ly(i)} w={320} h={40} title={t} sub={s} size={11.5} align="left" kind={t.includes('steps') ? 'accent' : 'subtle'} />
+    ))}
+    {right.map(([t, s, i]) => (
+      <Box x={560} y={ry(i)} w={320} h={54} title={t} sub={s || undefined} size={12} badge={s === 'cut' ? 'cut' : undefined} kind="primary" />
+    ))}
+    {links.map(([a, b]) => (
+      <Edge from={[340, ly(a) + 20]} to={[560, ry(b) + 27]} curve />
+    ))}
+  </Diagram>
+
+  <ul>
+    <li><code>start.delay</code> waits <code>step[0].duration ?? config.delay ?? 0</code>, and <code>config.delay</code> is <code>_staggerIndex(i) * spinDelay</code>. A profile that sets <code>start.steps.delay.duration</code> therefore gives every reel the same delay.</li>
+    <li><code>start.pull</code> exists only when the resolved <code>bounceDistance &gt; 0</code>; it reads <code>step[0].duration ?? 50</code> and <code>step[0].ease ?? 'power1.out'</code>.</li>
+    <li><code>start.accelerate</code> reads <code>step[0].duration ?? accelerationDuration ?? 300</code> and <code>step[0].ease ?? accelerationEase ?? 'power2.in'</code>, and targets <code>spinSpeed</code>.</li>
+    <li><code>spin</code> reads <code>config.minimumSpinTime ?? timing.minimumSpinTime ?? 500</code>; the config value comes from <code>setMinimumSpinTime</code>.</li>
+    <li><code>anticipation.tease</code> reads <code>config.duration ?? step[0].duration ?? anticipationDelay</code>: a <code>duration</code> passed to <code>setAnticipation</code> wins over the step, which wins over the flat field.</li>
+    <li><code>stop.delay</code> waits <code>step[0].duration ?? config.delay ?? 0</code>, where <code>config.delay</code> comes from <code>_stopDelayFor</code>.</li>
+    <li><code>stop.bounce</code> passes <code>step.ease</code> and <code>step.duration</code> to <code>ReelPhase.bounce</code>, which falls back to <code>bounceDistance</code>, <code>bounceDuration</code> and <code>bounceEase ?? 'power1.out'</code>.</li>
+  </ul>
+
+  <h2>SpeedManager</h2>
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">API</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>new SpeedManager(profiles: Map, initialSpeed)</code>: throws on an unknown initial name</li>
+        <li><code>active</code>: the active profile with tunes merged in, cached in <code>_tuned</code></li>
+        <li><code>activeName</code></li>
+        <li><code>set(name)</code>: returns <code>{'{ previous, current }'}</code>, throws on an unknown name</li>
+        <li><code>tune(phase, section)</code>: layers over whichever profile is active and survives <code>set()</code></li>
+        <li><code>clearTune(phase?)</code>: one phase or all</li>
+        <li><code>addProfile(name, profile)</code>, <code>getProfile(name)</code>, <code>profileNames</code></li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">What it does not do</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li>It emits nothing. <code>speed:changed(current, previous)</code> comes from <code>ReelSet.setSpeed</code>, which also calls <code>notifyManualSpeedChange()</code> on the controller.</li>
+        <li>It does not affect a running spin. <code>spin()</code> reads <code>active</code> once into <code>_activeSpinSpeed</code> and every phase of that spin gets the same object, so a <code>set()</code> or <code>tune()</code> takes effect on the next spin.</li>
+        <li>It does not know about skips. The round-ending skip boost calls <code>set()</code> directly, which is why that boost emits <code>skip:boosted</code> and not <code>speed:changed</code>, and why the restore on the next <code>spin()</code> is silent. A <code>setSpeed()</code> in between cancels the restore.</li>
+      </ul>
+    </div>
+  </div>
+  <pre><code>{`reelSet.speed.tune('stop', { steps: { bounce: { duration: 900 } } }); // next spin, and after setSpeed('turbo') too
+reelSet.setSpeed('turbo');            // emits speed:changed; the tune above still applies
+reelSet.speed.clearTune('stop');`}</code></pre>
+
+  <h2>Defaults</h2>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Setting</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Default</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Read by</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['initialSpeed', "'normal'", 'ReelSetBuilder via DEFAULTS'],
+            ['bounceEase', "'power1.out'", 'ReelPhase.bounce'],
+            ['accelerationEase', "'power2.in'", 'StartPhase accelerate'],
+            ['accelerationDuration', '300', 'StartPhase accelerate'],
+            ['minimumSpinTime', '500', 'SpinPhase'],
+            ['pull duration / ease / speed', "50 ms / 'power1.out' / -2", 'StartPhase pull'],
+            ['curve segment ease', "'power2.inOut'", 'AnticipationPhase'],
+            ['tumble fall', "300 ms, 'sine.in', cellStagger 0", 'CascadeFallPhase, overridable per profile'],
+            ['tumble dropIn', "600 ms, 'power2.out', cellStagger 60, distance 'perHole'", 'CascadeDropInPhase, overridable per profile'],
+            ['setDropOrder step', 'max(active.stopDelay, 150)', 'ReelSet.setDropOrder'],
+          ].map(([k, v, w]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{v}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{w}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card p-4">
+    <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Where this lives</div>
+    <ul class="text-sm space-y-1 text-foreground/80">
+      <li><code>packages/pixi-reels/src/config/types.ts</code>: SpeedProfileBase, PhaseTiming, StepTiming, PhaseSection, PhaseProfiles, the step-name interfaces</li>
+      <li><code>packages/pixi-reels/src/config/phaseProfile.ts</code>: resolvePhaseProfile, resolveStepTiming, mergeSection, tuneProfile, configuredStepNames</li>
+      <li><code>packages/pixi-reels/src/config/SpeedPresets.ts</code>: NORMAL, TURBO, SUPER_TURBO</li>
+      <li><code>packages/pixi-reels/src/speed/SpeedManager.ts</code>; <code>ReelSet.setSpeed</code> in <code>packages/pixi-reels/src/core/ReelSet.ts</code></li>
+      <li><code>docs/adr/021-phase-sections-on-speed-profiles.md</code>. Guide: <a href="/guides/speed-modes/">speed modes</a>. Recipes: <a href="/recipes/feel/">feel</a>. Related: <a href="/architecture/timeline/">a spin in milliseconds</a>, <a href="/architecture/anticipation/">anticipation</a></li>
+    </ul>
+  </div>
+</Architecture>

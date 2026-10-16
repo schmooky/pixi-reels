@@ -1,0 +1,367 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Label from '../../components/arch/Label.astro';
+
+// Lane chart geometry. Time maps linearly onto x between X0 and X1.
+const X0 = 96;
+const X1 = 920;
+const LANE_H = 36;
+const LANE_GAP = 14;
+const LANE_Y0 = 76;
+const SPAN_H = 22;
+const SPIN_OUT = 167; // estimate: 5 wraps at about half a cell per frame at 60 fps
+const BOUNCE = 600;
+
+type Lane = {
+  i: number;
+  delay: number;
+  spinIn: number;
+  spinDone: number;
+  teaseStart?: number;
+  teaseEnd?: number;
+  spinOutAt: number;
+  land: number;
+  landed: number;
+};
+
+// NORMAL profile, 5 reels, setResult at t = 1000.
+const normal: Lane[] = [0, 1, 2, 3, 4].map((i) => {
+  const delay = i * 100;
+  const spinIn = delay + 350;
+  const spinDone = Math.max(1000, spinIn + 500);
+  const spinOutAt = spinDone + i * 140;
+  const land = spinOutAt + SPIN_OUT;
+  return { i, delay, spinIn, spinDone, spinOutAt, land, landed: land + BOUNCE };
+});
+
+// Same spin with setAnticipation([3, 4]): legacy tease, 450 ms, 30% speed.
+const teased: Lane[] = normal.map((l) => {
+  if (l.i < 3) return l;
+  const teaseStart = l.spinDone;
+  const teaseEnd = teaseStart + 450;
+  const spinOutAt = teaseEnd + l.i * 140;
+  const land = spinOutAt + 555; // spin-out at speed 9, about 33 frames
+  return { ...l, teaseStart, teaseEnd, spinOutAt, land, landed: land + BOUNCE };
+});
+
+const laneY = (i: number) => LANE_Y0 + i * (LANE_H + LANE_GAP);
+const spanY = (i: number) => laneY(i) + (LANE_H - SPAN_H) / 2;
+const scale = (T: number) => (t: number) => X0 + (t / T) * (X1 - X0);
+---
+<Architecture
+  title="A spin in milliseconds"
+  subtitle="Five reels on the normal profile, stamped from spin() to spin:complete."
+  eyebrow="Milliseconds"
+>
+  <p>
+    This page runs one spin through the rules on the <a href="/architecture/spin-lifecycle/">lifecycle page</a>
+    with real numbers. Five reels, the <code>NORMAL</code> profile, the tween motion model at
+    60 fps (16.7 ms frames), three visible cells plus one buffer cell on each side so every
+    result frame is five symbols long, no reel groups, no stop-delay override, and
+    <code>setResult()</code> arriving at <code>t = 1000</code>. One number is an estimate: the
+    spin-out. Five symbol wraps at about half a cell per frame take about 10 frames, roughly
+    167 ms, but it depends on where in the cell the reel happens to be when the frame is
+    queued. Everything else is arithmetic on the profile.
+  </p>
+
+  <Diagram width={960} height={400} caption="NORMAL, result at t = 1000. Start phases stagger by 100 ms, the stop gate opens at 1000, and the stop delays stack on top of each reel's own minimum spin time, so landings spread 240 ms apart from reel 2 on.">
+    {(() => {
+      const T = 2700;
+      const X = scale(T);
+      return (
+        <>
+          {/* time axis */}
+          {[0, 500, 1000, 1500, 2000, 2500].map((t) => (
+            <>
+              <line x1={X(t)} y1={56} x2={X(t)} y2={laneY(4) + LANE_H + 8} class="guide" />
+              <Label x={X(t)} y={50} text={`${t}`} size={10} anchor="middle" mono tone="faint" />
+            </>
+          ))}
+          <Label x={X1} y={50} text="ms" size={10} anchor="start" tone="faint" />
+
+          {/* lanes */}
+          {normal.map((l) => (
+            <>
+              <rect x={X0} y={laneY(l.i)} width={X1 - X0} height={LANE_H} rx={6} class="lane-bg" />
+              <Label x={20} y={laneY(l.i) + 22} text={`reel ${l.i}`} size={12} mono tone="fg" weight={600} />
+              <rect x={X(l.delay)} y={spanY(l.i)} width={X(l.spinIn) - X(l.delay)} height={SPAN_H} rx={4} class="span-start" />
+              <rect x={X(l.spinIn)} y={spanY(l.i)} width={X(l.spinDone) - X(l.spinIn)} height={SPAN_H} rx={4} class="span-spin" />
+              {l.spinOutAt > l.spinDone && (
+                <rect x={X(l.spinDone)} y={spanY(l.i)} width={X(l.spinOutAt) - X(l.spinDone)} height={SPAN_H} rx={4} class="span-rest" />
+              )}
+              <rect x={X(l.spinOutAt)} y={spanY(l.i)} width={X(l.land) - X(l.spinOutAt)} height={SPAN_H} rx={4} class="span-stop" />
+              <rect x={X(l.land)} y={spanY(l.i)} width={X(l.landed) - X(l.land)} height={SPAN_H} rx={4} class="span-bounce" />
+              {/* event ticks: spin:stopping, spin:reelLanding, spin:reelLanded */}
+              <line x1={X(l.spinDone)} y1={laneY(l.i) - 3} x2={X(l.spinDone)} y2={laneY(l.i) + 4} class="guide-strong" />
+              <line x1={X(l.land)} y1={laneY(l.i) - 3} x2={X(l.land)} y2={laneY(l.i) + 4} class="guide-strong" />
+              <line x1={X(l.landed)} y1={laneY(l.i) - 3} x2={X(l.landed)} y2={laneY(l.i) + 4} class="guide-strong" />
+              <Label x={X(l.landed) + 4} y={laneY(l.i) + 22} text={`${l.landed}`} size={9.5} mono tone="faint" />
+            </>
+          ))}
+
+          {/* global events */}
+          <line x1={X(750)} y1={62} x2={X(750)} y2={laneY(4) + LANE_H + 8} class="edge edge-accent edge-dashed" />
+          <line x1={X(1000)} y1={62} x2={X(1000)} y2={laneY(4) + LANE_H + 8} class="edge edge-primary" />
+          <line x1={X(2577)} y1={62} x2={X(2577)} y2={laneY(4) + LANE_H + 8} class="edge edge-primary edge-dashed" />
+          <Label x={X(750)} y={laneY(4) + LANE_H + 22} text="spin:allStarted 750" size={10} anchor="middle" mono />
+          <Label x={X(1000)} y={laneY(4) + LANE_H + 36} text="setResult 1000" size={10} anchor="middle" mono tone="fg" weight={600} />
+          <Label x={X(2577)} y={laneY(4) + LANE_H + 22} text="spin:complete 2577" size={10} anchor="end" mono tone="fg" weight={600} />
+          <Label x={X(0)} y={laneY(4) + LANE_H + 22} text="spin:start 0" size={10} anchor="start" mono />
+
+          {/* key */}
+          {[
+            ['span-start', 'start (pull + accelerate)'],
+            ['span-spin', 'spin'],
+            ['span-rest', 'stop delay'],
+            ['span-stop', 'spin-out'],
+            ['span-bounce', 'bounce'],
+          ].map(([cls, label], k) => (
+            <>
+              <rect x={96 + k * 165} y={372} width={14} height={12} rx={3} class={cls} />
+              <Label x={116 + k * 165} y={382} text={label} size={10} />
+            </>
+          ))}
+        </>
+      );
+    })()}
+  </Diagram>
+
+  <h2>The timeline, stamp by stamp</h2>
+  <p>
+    Every reel's chain starts in the same tick. The stagger you see is each start phase's
+    <code>delay</code> step, <code>_staggerIndex(i) * spinDelay</code>, which on NORMAL is
+    <code>i * 100</code>.
+  </p>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">t (ms)</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">What happens</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Events</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['0', 'spin() captures the active profile, creates five chains. Reel 0\'s delay step is instant: launch, then pull (speed to -2 over 50 ms, power1.out), then accelerate (to 30 over 300 ms, power2.in), then announce.', 'spin:start; reel 0 phase:enter start'],
+            ['100, 200, 300, 400', 'Reels 1 to 4 finish their delay step and run the same launch, pull, accelerate, announce sequence.', 'per-reel phase:step delay end, launch, pull...'],
+            ['350', 'Reel 0 completes start and enters spin. Its 500 ms minimum starts counting now, from ticker deltas.', 'reel 0 phase:exit start, phase:enter spin; spinStart on the reel'],
+            ['450, 550, 650', 'Reels 1, 2, 3 enter spin.', 'phase:enter spin'],
+            ['750', 'Reel 4 enters spin. It is the last one, so _announceAllStartedIfReady() fires and _tryBeginStopSequence() runs. No result yet: the gate stays closed.', 'spin:allStarted'],
+            ['1000', 'setResult(). Big symbols coordinated, one frame built and cached per reel, spinPhase.resolve() on all five. Reel 0 has spun 650 ms and reel 1 550 ms, both past 500, so both complete now. Reel 2 has 450, reel 3 350, reel 4 250.', 'reels 0 and 1: phase:exit spin, spin:stopping'],
+            ['1000', 'Reel 0 begins stop with delay 0: spinOut starts at once with setStopFrame(frame). Reel 1 begins stop with delay 140.', 'phase:enter stop'],
+            ['1050, 1150, 1250', 'Reels 2, 3, 4 reach their minimum and complete spin. Their stop delays (280, 420, 560) start now, not at 1000.', 'spin:stopping(2), (3), (4)'],
+            ['about 1167', 'Reel 0 drains its StopSequencer and lands: haltDrive, snapToGrid, notifySpinEnd, notifyLanded. The bounce starts (56 px, 600 ms, power1.out).', 'spin:reelLanding(0)'],
+            ['1140, 1330, 1570, 1810', 'Reels 1 to 4 finish their stop delay and start spinning out.', 'phase:step spinOut start'],
+            ['about 1307, 1497, 1737, 1977', 'Reels 1 to 4 land and start bouncing.', 'spin:reelLanding(1..4)'],
+            ['about 1767', 'Reel 0\'s bounce ends, the stop phase completes, _markLanded(0).', 'phase:exit stop, spin:reelLanded(0)'],
+            ['about 1907, 2097, 2337', 'Reels 1, 2, 3 finish their bounce.', 'spin:reelLanded(1..3)'],
+            ['about 2577', 'Reel 4 finishes its bounce. _markLanded(4) sees every reel down and calls _finishSpin().', 'spin:reelLanded(4), spin:allLanded, spin:complete; the promise resolves'],
+          ].map(([t, what, ev]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs whitespace-nowrap">{t}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{what}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{ev}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p>
+    The promise resolves with
+    <code>{'{ wasSkipped: false, skipMode: null, skipContext: null, duration: about 2577 }'}</code>.
+    Per reel, the stop stamps are:
+  </p>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            {['Reel', 'spin:stopping', 'Stop delay', 'Spin-out starts', 'Land (spin:reelLanding)', 'Bounce done (spin:reelLanded)'].map((h) => (
+              <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {normal.map((l) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{l.i}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{l.spinDone}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{l.i * 140}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{l.spinOutAt}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">about {l.land}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">about {l.landed}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>Why 240 ms apart, not 140</h2>
+  <p>
+    The stop delay is a step inside the stop phase, and the stop phase only begins when the
+    spin phase has completed. With an early result, reels 2 to 4 are still inside their
+    minimum spin time at <code>t = 1000</code>, and that minimum is itself staggered by the
+    start delay (reel 2 entered spin at 550, reel 3 at 650, reel 4 at 750). So reel 3's clock
+    reads: minimum reached at 1150, plus its 420 ms stop delay, spin-out at 1570. Reel 2's
+    reads 1050 + 280 = 1330. The two staggers add: 100 ms from the start side and 140 ms from
+    the stop side, 240 ms between landings. Reels 0 and 1 are the exception because both had
+    already passed 500 ms when the result came, so only the 140 ms stop stagger separates them.
+  </p>
+  <p>
+    A late result removes the first term. With <code>setResult()</code> at <code>t = 3000</code>
+    every reel completes spin at 3000, the stop delays run from the same instant, reel 4 starts
+    its spin-out at 3560, lands at about 3727 and finishes bouncing at about 4327, which is when
+    <code>spin:complete</code> fires. Landings are then exactly 140 ms apart.
+  </p>
+
+  <h2>With anticipation on reels 3 and 4</h2>
+  <p>
+    Same spin, but <code>setAnticipation([3, 4])</code> is called after <code>spin()</code> and
+    before the result, with the default stagger of 0 and the legacy shape. Reels 0 to 2 are
+    untouched.
+  </p>
+
+  <Diagram width={960} height={400} caption="setAnticipation([3, 4]) on NORMAL. Each tease is 450 ms, then the stop delay runs at the slow tease speed, and the spin-out crawls onto the frame at speed 9 with preserveSpeed. The spin ends about 840 ms later than without the tease.">
+    {(() => {
+      const T = 3500;
+      const X = scale(T);
+      return (
+        <>
+          {[0, 500, 1000, 1500, 2000, 2500, 3000, 3500].map((t) => (
+            <>
+              <line x1={X(t)} y1={56} x2={X(t)} y2={laneY(4) + LANE_H + 8} class="guide" />
+              <Label x={X(t)} y={50} text={`${t}`} size={10} anchor="middle" mono tone="faint" />
+            </>
+          ))}
+          {teased.map((l) => (
+            <>
+              <rect x={X0} y={laneY(l.i)} width={X1 - X0} height={LANE_H} rx={6} class="lane-bg" />
+              <Label x={20} y={laneY(l.i) + 22} text={`reel ${l.i}`} size={12} mono tone="fg" weight={600} />
+              <rect x={X(l.delay)} y={spanY(l.i)} width={X(l.spinIn) - X(l.delay)} height={SPAN_H} rx={4} class="span-start" />
+              <rect x={X(l.spinIn)} y={spanY(l.i)} width={X(l.spinDone) - X(l.spinIn)} height={SPAN_H} rx={4} class="span-spin" />
+              {l.teaseStart !== undefined && l.teaseEnd !== undefined && (
+                <rect x={X(l.teaseStart)} y={spanY(l.i)} width={X(l.teaseEnd) - X(l.teaseStart)} height={SPAN_H} rx={4} class="span-anticipation" />
+              )}
+              {(() => {
+                const from = l.teaseEnd ?? l.spinDone;
+                return l.spinOutAt > from ? (
+                  <rect x={X(from)} y={spanY(l.i)} width={X(l.spinOutAt) - X(from)} height={SPAN_H} rx={4} class="span-rest" />
+                ) : null;
+              })()}
+              <rect x={X(l.spinOutAt)} y={spanY(l.i)} width={X(l.land) - X(l.spinOutAt)} height={SPAN_H} rx={4} class="span-stop" />
+              <rect x={X(l.land)} y={spanY(l.i)} width={X(l.landed) - X(l.land)} height={SPAN_H} rx={4} class="span-bounce" />
+              <line x1={X(l.spinDone)} y1={laneY(l.i) - 3} x2={X(l.spinDone)} y2={laneY(l.i) + 4} class="guide-strong" />
+              <line x1={X(l.land)} y1={laneY(l.i) - 3} x2={X(l.land)} y2={laneY(l.i) + 4} class="guide-strong" />
+              <Label x={X(l.landed) + 4} y={laneY(l.i) + 22} text={`${l.landed}`} size={9.5} mono tone="faint" />
+            </>
+          ))}
+          <line x1={X(1000)} y1={62} x2={X(1000)} y2={laneY(4) + LANE_H + 8} class="edge edge-primary" />
+          <line x1={X(3415)} y1={62} x2={X(3415)} y2={laneY(4) + LANE_H + 8} class="edge edge-primary edge-dashed" />
+          <Label x={X(1000)} y={laneY(4) + LANE_H + 22} text="setResult 1000" size={10} anchor="middle" mono tone="fg" weight={600} />
+          <Label x={X(1150)} y={laneY(3) - 6} text="anticipation:reel(3) 1150" size={9.5} anchor="start" mono />
+          <Label x={X(1250)} y={laneY(4) - 6} text="anticipation:reel(4) 1250" size={9.5} anchor="start" mono />
+          <Label x={X(3415)} y={laneY(4) + LANE_H + 22} text="spin:complete 3415" size={10} anchor="end" mono tone="fg" weight={600} />
+          {[
+            ['span-start', 'start'],
+            ['span-spin', 'spin'],
+            ['span-anticipation', 'tease (30% speed)'],
+            ['span-rest', 'stop delay at tease speed'],
+            ['span-stop', 'spin-out (preserveSpeed)'],
+            ['span-bounce', 'bounce'],
+          ].map(([cls, label], k) => (
+            <>
+              <rect x={96 + k * 140} y={372} width={14} height={12} rx={3} class={cls} />
+              <Label x={116 + k * 140} y={382} text={label} size={10} />
+            </>
+          ))}
+        </>
+      );
+    })()}
+  </Diagram>
+
+  <ul>
+    <li><strong>t = 1150, reel 3.</strong> Its spin phase completes. It is in the tease list and the hold (<code>anticipationDelay</code> 450) is positive, so it awaits the stagger offset (0 for tease order 0), joins <code>_teasingReels</code>, calls <code>notifyAnticipationStart()</code>, emits <code>anticipation:reel {'{ reelIndex: 3, order: 0, total: 2 }'}</code> and then <code>spin:stopping(3)</code>. The legacy tease tweens speed from 30 to 9 over 157.5 ms (35% of 450, <code>power2.out</code>) and holds 292.5 ms. The tease ends at 1600 and reel 3 joins <code>_anticipatedReels</code>.</li>
+    <li><strong>1600 to 2020, reel 3.</strong> The stop phase's <code>delay</code> step (420 ms) runs while the reel keeps creeping at 9. The spin-out starts at 2020 with <code>preserveSpeed</code>: speed stays at <code>min(max(9, 30 * 0.08), 30) = 9</code>. At 0.15 cell per frame, five wraps take about 33 frames, roughly 555 ms. The reel lands at about 2575 (<code>spin:reelLanding(3)</code>), bounces 600 ms, and at about 3175 <code>anticipation:reelEnd {'{ reelIndex: 3 }'}</code> fires followed by <code>spin:reelLanded(3)</code>.</li>
+    <li><strong>t = 1250, reel 4.</strong> <code>anticipation:reel {'{ 4, 1, 2 }'}</code>, tease to 1700, stop delay 560 to 2260, spin-out to about 2815, bounce to about 3415. Then <code>anticipation:reelEnd(4)</code>, <code>spin:reelLanded(4)</code>, <code>spin:allLanded</code>, <code>spin:complete</code>.</li>
+    <li>With <code>stagger: 'sequential'</code> instead, reel 4's tease would wait for reel 3's landing promise (about 3175) before starting, and the spin would end at about 4.9 s.</li>
+  </ul>
+
+  <h2>A press at t = 1800</h2>
+  <p>
+    Suppose the game calls <code>skip()</code> at <code>t = 1800</code> in the teased variant,
+    with <code>protect: 'once'</code>. Reels 0 to 2 are still up (reel 2 lands at about 1497 but
+    is bouncing until about 2097, and a reel counts as landed only after <code>_markLanded</code>),
+    and reels 3 and 4 are teasing. <code>_pressSkip</code> finds protected tease reels, so the
+    freed group is everything except reels 3 and 4: those three get <code>forceComplete</code>,
+    are placed on their frames and land in the same tick. Something is still spinning, so
+    <code>_skipStage</code> becomes 1 and the speed boost waits. The next press finds the
+    <code>'once'</code> protection spent, slams reels 3 and 4, sets stage 2 and applies the
+    boost, emitting <code>skip:boosted</code>. Every variant of this is on the
+    <a href="/architecture/skipping/">skipping page</a>.
+  </p>
+
+  <h2>What TURBO and SUPER_TURBO change</h2>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            {['Key', 'NORMAL', 'TURBO', 'SUPER_TURBO', 'Where it lands on this timeline'].map((h) => (
+              <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['spinDelay', '100', '30', '0', 'start.delay per reel: i x value'],
+            ['accelerationDuration', '300', '200', '50', 'start.accelerate; plus the 50 ms pull'],
+            ['spinSpeed', '30', '50', '80', 'target of accelerate; spin-out and tease speeds derive from it'],
+            ['minimumSpinTime', '500', '300', '100', 'per reel, from its own spin entry'],
+            ['stopDelay', '140', '0', '0', 'stop.delay per reel: i x value'],
+            ['anticipationDelay', '450', '250', '0', 'tease hold; 0 means no tease at all'],
+            ['bounceDistance / bounceDuration', '56 / 600', '42 / 200', '14 / 120', 'stop.bounce'],
+            ['accelerationEase', 'power2.in', 'power2.in', 'power1.in', 'start.accelerate'],
+          ].map(([k, n, t, s, w]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{n}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{t}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{s}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{w}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p>
+    On TURBO the five reels enter spin at 250, 280, 310, 340 and 370 (30 ms stagger, 50 ms pull,
+    200 ms accelerate); with a result at 1000 every reel is past its 300 ms minimum, so all five
+    complete spin at 1000, and because <code>stopDelay</code> is 0 all five start spinning out in
+    the same tick and bounce for 200 ms. The 250 ms <code>anticipationDelay</code> means TURBO
+    still teases. SUPER_TURBO goes further: no start stagger, a 50 ms acceleration, a 100 ms
+    minimum, no stop stagger, a 120 ms bounce and no tease unless <code>setAnticipation</code> is
+    given a positive <code>duration</code>. All three presets have <code>bounceDistance &gt; 0</code>,
+    so all three run the <code>pull</code> step. The spin-out length is the one thing the profile
+    does not fix: it is however many frames the strip needs to wrap five symbols at the speed
+    the reel is doing, and <code>StandardMode</code> caps that at half a cell per frame. The
+    full preset table is on the <a href="/architecture/speed-profiles/">speed profiles page</a>;
+    the <a href="/guides/speed-modes/">speed modes guide</a> shows how to switch between them.
+  </p>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card p-4">
+    <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Where this lives</div>
+    <ul class="text-sm space-y-1 text-foreground/80">
+      <li><code>packages/pixi-reels/src/config/SpeedPresets.ts</code>: the three presets</li>
+      <li><code>packages/pixi-reels/src/spin/SpinController.ts</code>: <code>_startReel</code>, <code>_stopDelayFor</code>, <code>_tryBeginStopSequence</code>, <code>_markLanded</code></li>
+      <li><code>packages/pixi-reels/src/spin/phases/SpinPhase.ts</code>: the minimum spin time, counted in ticker deltas</li>
+      <li><code>packages/pixi-reels/src/spin/phases/StopPhase.ts</code>: the delay, spin-out, land and bounce steps</li>
+      <li>Next: <a href="/architecture/skipping/">skipping</a>, <a href="/architecture/anticipation/">anticipation</a>, <a href="/architecture/events/">events</a></li>
+    </ul>
+  </div>
+</Architecture>

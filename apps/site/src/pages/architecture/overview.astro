@@ -1,113 +1,105 @@
 ---
 import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
-import Mermaid from '../../components/Mermaid.astro';
 ---
 <Architecture
   title="Overview"
-  subtitle="The ten-thousand-foot view of every moving piece in pixi-reels."
+  subtitle="Every moving piece of pixi-reels on one page, and how they are wired."
   eyebrow="Start here"
 >
   <p>
-    pixi-reels splits into three concentric rings: the <strong>builder</strong>
-    wires things, the <strong>reel set</strong> owns the scene graph and the spin
-    controller, and the <strong>test harness + cheats</strong> let you drive it
-    headlessly. Every line of the diagram below maps to a file you can click
-    through to in the <a href="/docs/">API reference</a>.
+    pixi-reels is three rings. The <strong>builder</strong> validates your
+    configuration and constructs everything in one <code>build()</code> call.
+    The <strong>reel set</strong> is the PixiJS container you add to the stage:
+    it owns the reels, the spin controller, the speed profiles and the win
+    spotlight. Around that sit two optional subpaths, <strong>testing</strong>
+    and <strong>debug</strong>, which never ship in a production bundle unless
+    you import them.
   </p>
 
-  <Mermaid chart={`
-flowchart TB
-  Builder["ReelSetBuilder<br/><i>fluent config · .build()</i>"]
+  <Diagram width={960} height={600} caption="The object graph after build(). Solid arrows are calls, dashed arrows are optional tooling that attaches from outside.">
+    <Box x={20} y={20} w={200} h={60} title="Your game" kind="ghost" sub={['spin() · setResult()', 'events.on(…)']} mono={false} />
+    <Box x={20} y={120} w={200} h={64} title="ReelSetBuilder" kind="primary" sub={['.reels(5).visibleCells(3)…', '.build()']} />
+    <Box x={20} y={224} w={200} h={56} title="PIXI.Ticker" kind="code" sub="app.ticker, wrapped in TickerRef" />
+    <Box x={20} y={320} w={200} h={56} title="gsap" kind="code" sub="per set, via .gsap(instance)" />
 
-  subgraph Tests["Tests & Tooling"]
-    direction TB
-    subgraph ReelSet["ReelSet (PIXI Container)"]
-      direction TB
-      SpinController["SpinController<br/><i>orchestrates phases</i>"]
-      SpeedManager["SpeedManager<br/><i>normal · turbo · super</i>"]
-      SymbolSpotlight["SymbolSpotlight<br/><i>win animations</i>"]
-      ReelViewport["ReelViewport<br/><i>masked container</i>"]
+    <Edge from={[120, 80]} to={[120, 120]} />
+    <Edge from={[220, 50]} to={[260, 50]} label="methods" />
+    <Edge from={[220, 152]} to={[260, 152]} label="build()" kind="primary" />
+    <Edge from={[220, 252]} via={[[244, 252], [244, 86]]} to={[276, 86]} label="tick" />
+    <Edge from={[220, 348]} via={[[244, 348], [244, 430]]} to={[276, 430]} label="tweens" style="dotted" at={0.5} />
 
-      subgraph Reels["Reels[]"]
-        direction LR
-        Reel0["Reel 0"]
-        Reel1["Reel 1"]
-        Reel2["Reel 2"]
-        Reel3["Reel 3"]
-        Reel4["Reel 4"]
-      end
+    <Group x={260} y={20} w={470} h={564} kind="tint" label="ReelSet" note="extends PIXI.Container, implements Disposable" />
 
-      subgraph PerReel["Per reel"]
-        direction LR
-        Symbols["ReelSymbol[]<br/><i>sprite · spine · headless</i>"]
-        Motion["ReelMotion<br/><i>wrap + displace</i>"]
-        Sequencer["StopSequencer<br/><i>target frame queue</i>"]
-        FrameBuilder["FrameBuilder<br/><i>middleware pipeline</i>"]
-      end
-    end
+    <Box x={276} y={56} w={140} h={60} title="SpinController" kind="accent" sub={['per-reel phase chain', 'skip · hold · groups']} />
+    <Box x={424} y={56} w={140} h={60} title="SpeedManager" sub={['normal · turbo · super', 'tune() per phase']} />
+    <Box x={572} y={56} w={142} h={60} title="SymbolSpotlight" sub={['dim losers', 'promote winners']} />
 
-    subgraph TestingModule["Testing module"]
-      direction LR
-      FakeTicker["FakeTicker"]
-      HeadlessSymbol["HeadlessSymbol"]
-      CreateTest["createTestReelSet"]
-      SpinAndLand["spinAndLand"]
-      ExpectGrid["expectGrid"]
-    end
-  end
+    <Box x={276} y={130} w={140} h={60} title="FrameBuilder" sub={['middleware pipeline', 'strip per reel']} />
+    <Box x={424} y={130} w={140} h={60} title="SymbolFactory" sub={['ObjectPool per id', 'acquire · release']} />
+    <Box x={572} y={130} w={142} h={60} title="EventEmitter" sub={['ReelSetEvents', 'spin:* skip:* pin:* …']} />
 
-  Builder --> SpinController
-  Reel0 -.-> Symbols
-  `} />
+    <Group x={276} y={212} w={438} h={356} kind="dashed" label="ReelViewport" note="masked · unmasked · dim · spotlight · promoted" />
+
+    {[0, 1, 2, 3, 4].map((i) => (
+      <Box
+        x={292 + i * 84}
+        y={252}
+        w={72}
+        h={280}
+        title={`Reel ${i}`}
+        kind="code"
+        sub={['ReelAxis', 'ReelMotion', 'StopSeq.', 'Symbol[]', '', 'container', 'zIndex=i']}
+        size={12}
+      />
+    ))}
+    <rect x={284} y={330} width={422} height={120} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <Label x={495} y={544} text="visible window = the mask; buffer cells sit above and below it" anchor="middle" size={10.5} />
+
+    <Edge from={[346, 116]} to={[346, 252]} label="runs phases" at={0.3} labelDx={52} />
+
+    <Group x={750} y={20} w={190} h={210} kind="solid" label="pixi-reels/testing" />
+    <Box x={765} y={56} w={160} h={44} title="FakeTicker" sub="tick(ms) by hand" />
+    <Box x={765} y={110} w={160} h={44} title="HeadlessSymbol" sub="draws nothing" />
+    <Box x={765} y={164} w={160} h={44} title="createTestReelSet" sub="spinAndLand · expectGrid" size={12} />
+
+    <Group x={750} y={260} w={190} h={210} kind="solid" label="pixi-reels/debug" />
+    <Box x={765} y={296} w={160} h={44} title="debugOverlay" sub="12 drawable layers" />
+    <Box x={765} y={350} w={160} h={44} title="SpinMetrics" sub="rounds · phases · skips" />
+    <Box x={765} y={404} w={160} h={44} title="DebugPlaque" sub="text on a silk plate" />
+
+    <Group x={750} y={500} w={190} h={84} kind="solid" label="main entry" />
+    <Box x={765} y={530} w={160} h={44} title="enableDebug" sub="window.__PIXI_REELS_DEBUG" size={12} />
+
+    <Edge from={[750, 125]} to={[730, 125]} style="dashed" label="swaps in" labelDx={-4} labelDy={-16} />
+    <Edge from={[750, 365]} to={[730, 365]} style="dashed" label="reads" labelDx={-4} labelDy={-16} />
+    <Edge from={[750, 552]} to={[730, 552]} style="dashed" />
+  </Diagram>
 
   <div class="not-prose my-8">
     <Legend items={[
-      { kind: 'primary', label: 'Entry points', note: 'ReelSetBuilder, the API you actually call' },
-      { kind: 'accent', label: 'Subsystems', note: 'SpinController, SpeedManager, Spotlight' },
-      { kind: 'subtle', label: 'Internals', note: 'Motion, StopSequencer, FrameBuilder' },
-      { kind: 'muted', label: 'Test-time only', note: 'FakeTicker, harness' },
+      { kind: 'primary', label: 'Entry point', note: 'the one class you construct yourself' },
+      { kind: 'accent', label: 'Conductor', note: 'SpinController drives every reel' },
+      { kind: 'subtle', label: 'Subsystems', note: 'owned by the ReelSet, destroyed with it' },
+      { kind: 'muted', label: 'Optional subpaths', note: 'testing and debug attach from outside' },
     ]} />
   </div>
 
-  <h2>How the pieces talk to each other</h2>
-
-  <p>
-    <code>ReelSetBuilder</code> is the only class a consumer ever instantiates
-    directly. Its <code>.build()</code> method constructs the <code>ReelSet</code>
-    and every subsystem it needs. you never <code>new</code> a <code>SpinController</code>
-    or a <code>Reel</code> yourself.
-  </p>
-
-  <p>
-    Inside the reel set:
-  </p>
+  <h2>Reading the diagram</h2>
 
   <ul>
-    <li><strong><code>SpinController</code></strong> orchestrates the spin lifecycle across all reels. It listens to the PixiJS ticker (via a <code>TickerRef</code>) and drives each reel's phase machine.</li>
-    <li><strong><code>SpeedManager</code></strong> holds named speed profiles (<code>normal</code>, <code>turbo</code>, <code>super-turbo</code>) and emits <code>speed:changed</code> when the active one swaps.</li>
-    <li><strong><code>SymbolSpotlight</code></strong> handles post-spin win animations: dim losers, promote winners, cycle through multiple pay lines.</li>
-    <li><strong><code>ReelViewport</code></strong> is the PixiJS <code>Container</code> that masks each reel column to the visible rows.</li>
+    <li><strong>You construct exactly one class.</strong> <code>ReelSetBuilder</code> is the only <code>new</code> in a typical game. Its <code>build()</code> validates every setting, then constructs the viewport, the symbol pool, the frame pipeline, the reels, and finally the <code>ReelSet</code> that owns them. The <a href="/architecture/builder/">builder page</a> walks that call line by line.</li>
+    <li><strong>The ReelSet is a PixiJS container.</strong> <code>app.stage.addChild(reelSet)</code> and it renders. Its only display child is the <code>ReelViewport</code>, which holds the five reel containers under one mask plus the layers above the mask that win presentation uses. See <a href="/architecture/viewport-and-masks/">viewport and masks</a>.</li>
+    <li><strong>Each reel is a strip, not a column.</strong> A <code>Reel</code> owns an array of symbols longer than the window (buffer cells on both ends), a <code>ReelMotion</code> that derives every symbol's position from its array index, and a <code>StopSequencer</code> that hands out the landing symbols one wrap at a time. See <a href="/architecture/motion/">motion</a>.</li>
+    <li><strong>The SpinController only does timing.</strong> It runs each reel through <code>start → spin → [anticipation] → stop</code>, gates stopping on <code>setResult()</code>, and turns button presses into slams or quickens. It draws nothing and decides no outcome. See <a href="/architecture/spin-lifecycle/">spin lifecycle</a> and <a href="/architecture/timeline/">a spin in milliseconds</a>.</li>
+    <li><strong>Everything talks through typed events.</strong> Two buses: <code>reelSet.events</code> (59 set-level events) and <code>reel.events</code> (7 per-reel events). The full map is on the <a href="/architecture/events/">events page</a>.</li>
+    <li><strong>Testing swaps two things.</strong> A <code>FakeTicker</code> for the Pixi ticker and <code>HeadlessSymbol</code> for the art. Nothing else changes, which is why a full spin runs in Node in milliseconds. See <a href="/architecture/testing/">testing model</a>.</li>
   </ul>
-
-  <p>
-    Each <code>Reel</code> is a scene node that owns its <code>ReelSymbol[]</code>
-    (pooled, swappable), a <code>ReelMotion</code> handler, and a <code>StopSequencer</code>
-    for landing on specific frames. Spin phases (<code>START</code>, <code>SPIN</code>,
-    <code>ANTICIPATION</code>, <code>STOP</code>) are per-reel, which is how
-    anticipation can slow a single reel while the others land normally.
-  </p>
-
-  <h2>The dotted outer ring</h2>
-
-  <p>
-    Everything under <code>src/testing/</code> is tree-shakeable: it exports
-    <code>FakeTicker</code>, <code>HeadlessSymbol</code>, and the
-    <code>createTestReelSet</code> harness. You can build a working 5×3 reel
-    set in Node with no renderer, run a full spin synchronously, and assert
-    the landed grid. see <a href="/architecture/testing/">Testing model</a>
-    for how it hangs together.
-  </p>
 
   <h2>What lives where</h2>
 
@@ -115,45 +107,62 @@ flowchart TB
     <div class="rounded-xl border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>core/</code>. ReelSet, Builder, Reel, Viewport, Motion, StopSequencer</li>
-        <li><code>spin/</code>. SpinController, phases, spinning modes</li>
-        <li><code>symbols/</code>. ReelSymbol + Sprite/AnimatedSprite/Spine/Headless</li>
-        <li><code>speed/</code>. SpeedManager + profiles</li>
-        <li><code>frame/</code>. FrameBuilder, middleware, RNG</li>
-        <li><code>spotlight/</code>. win animations</li>
-        <li><code>events/</code>. typed EventEmitter, event types</li>
-        <li><code>testing/</code>. FakeTicker, HeadlessSymbol, harness</li>
-        <li><code>debug/</code>. debugSnapshot, debugGrid, enableDebug; <code>pixi-reels/debug</code>: debugOverlay, DebugPlaque, SpinMetrics</li>
+        <li><code>core/</code> ReelSet, ReelSetBuilder, Reel, ReelViewport, ReelMotion, ReelAxis, ReelDrive, ReelCurve, ReelWarp, StopSequencer, maskStrategies</li>
+        <li><code>spin/</code> SpinController, phases (Start, Spin, Anticipation, Stop, Adjust, Cascade*), steps, modes</li>
+        <li><code>symbols/</code> ReelSymbol and the Sprite, AnimatedSprite, Spine, Card, Empty subclasses; SymbolRegistry, SymbolFactory</li>
+        <li><code>frame/</code> FrameBuilder, ColumnTarget, RandomSymbolProvider, SymbolPool</li>
+        <li><code>config/</code> types, defaults, SpeedPresets, phaseProfile</li>
+        <li><code>speed/</code> SpeedManager · <code>spotlight/</code> SymbolSpotlight · <code>wins/</code> WinPresenter</li>
+        <li><code>cascade/</code> tumbleAlgorithm, TumbleConfig · <code>board/</code> BoardGrid, Hold &amp; Win · <code>pins/</code> CellPin</li>
+        <li><code>events/</code> EventEmitter, ReelEvents · <code>utils/</code> Disposable, TickerRef, gsap, notify</li>
+        <li><code>debug/</code> enableDebug (main) and the <code>pixi-reels/debug</code> subpath · <code>testing/</code> the <code>pixi-reels/testing</code> subpath</li>
       </ul>
     </div>
     <div class="rounded-xl border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">apps/site/src/runtime/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>BlurSpriteSymbol.ts</code>. sprite symbol with motion-blur swap</li>
-        <li><code>CoinSymbol.ts</code>. Graphics-drawn coin symbol</li>
-        <li><code>holdAndWinFx.ts</code>. coin waves + bezier collect flights</li>
-        <li><code>prototypeSpriteLoader.ts</code>. prototype-symbols atlas loader</li>
-        <li><code>spineSets.ts</code>. the bundled Spine sets behind one interface</li>
+        <li><code>BlurSpriteSymbol.ts</code> sprite symbol with a motion-blur texture swap</li>
+        <li><code>CoinSymbol.ts</code> Graphics-drawn coin symbol for Hold &amp; Win</li>
+        <li><code>holdAndWinFx.ts</code> coin waves and bezier collect flights</li>
+        <li><code>prototypeSpriteLoader.ts</code> the prototype-symbols atlas loader</li>
+        <li><code>spineSets.ts</code> the bundled Spine sets behind one interface</li>
       </ul>
-    </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/cheats/src/</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">packages/cheats/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>cheats.ts</code>. CheatEngine + built-in cheats</li>
-        <li><code>seededRng.ts</code>. Mulberry32 PRNG</li>
+        <li><code>cheats.ts</code> CheatEngine and the built-in forced results</li>
+        <li><code>seededRng.ts</code> Mulberry32 PRNG · <code>ways.ts</code> countWays, evaluateWays</li>
       </ul>
     </div>
   </div>
 
   <p>
-    Neither of those last two is library API. the recipe runtime and the
-    cheats package are reference code you copy, which is why they sit
-    outside <code>packages/pixi-reels/</code>.
+    Neither the recipe runtime nor the cheats package is library API. They are
+    reference code you copy into your game, which is why they live outside
+    <code>packages/pixi-reels/</code> (ADR 009).
   </p>
 
+  <h2>Dependency direction</h2>
+
+  <Diagram width={960} height={200} caption="Imports only point downward. There are no cycles, which is what keeps the testing subpath tree-shakeable.">
+    {[
+      ['config · events · utils', 'types, DEFAULTS, EventEmitter, TickerRef, gsap'],
+      ['pool · symbols · frame', 'ObjectPool, ReelSymbol, FrameBuilder'],
+      ['core (per reel)', 'Reel, ReelMotion, ReelAxis, ReelViewport'],
+      ['spin', 'phases, modes, SpinController'],
+      ['core (set)', 'ReelSet, ReelSetBuilder'],
+      ['spotlight · wins · board', 'presentation on top'],
+    ].map(([t, s], i) => (
+      <Box x={16 + i * 158} y={60} w={146} h={70} title={t} sub={s} size={12} mono={false} kind={i === 4 ? 'primary' : 'subtle'} />
+    ))}
+    {[0, 1, 2, 3, 4].map((i) => (
+      <Edge from={[162 + i * 158, 95]} to={[174 + i * 158, 95]} />
+    ))}
+    <Label x={480} y={160} text="each layer imports only from layers to its left" anchor="middle" size={11} />
+  </Diagram>
+
   <p>
-    Read the next page for the class composition tree in detail, or skip
-    ahead to <a href="/architecture/events/">Events</a> for the full event
-    choreography.
+    Read on in order for the full tour, or jump to the page that answers your
+    question. Every page has one hand-laid-out diagram per idea and cites the
+    file it describes.
   </p>
 </Architecture>

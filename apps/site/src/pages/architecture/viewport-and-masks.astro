@@ -1,0 +1,349 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
+import Legend from '../../components/arch/Legend.astro';
+
+// A small pyramid set (3,4,5,4,3 cells, one buffer cell each side) drawn
+// eight times, once per mask strategy. All numbers are SVG px.
+const CM = 18; // main-axis cell size
+const BUF = 18; // one buffer cell per side
+type Layout = { xs: number[]; offsets: number[]; extents: number[]; tallest: number; width: number; cross: number };
+function layout(cells: number[], cross: number, gap: number): Layout {
+  const extents = cells.map((c) => c * CM);
+  const tallest = Math.max(...extents);
+  const offsets = extents.map((e) => (tallest - e) / 2);
+  const xs = cells.map((_, i) => i * (cross + gap));
+  return { xs, offsets, extents, tallest, width: cells.length * cross + (cells.length - 1) * gap, cross };
+}
+type Pt = [number, number];
+/** Closed polygon with a quadratic rounding at each vertex; radii per vertex. */
+function roundedPath(pts: Pt[], radii: number | number[]): string {
+  const n = pts.length;
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const r = Array.isArray(radii) ? radii[i] : radii;
+    const p = pts[i];
+    const prev = pts[(i - 1 + n) % n];
+    const next = pts[(i + 1) % n];
+    const lin = Math.hypot(p[0] - prev[0], p[1] - prev[1]);
+    const lout = Math.hypot(next[0] - p[0], next[1] - p[1]);
+    const vin = [(p[0] - prev[0]) / lin, (p[1] - prev[1]) / lin];
+    const vout = [(next[0] - p[0]) / lout, (next[1] - p[1]) / lout];
+    const a = [p[0] - vin[0] * r, p[1] - vin[1] * r];
+    const b = [p[0] + vout[0] * r, p[1] + vout[1] * r];
+    d += `${i === 0 ? 'M' : 'L'} ${a[0]} ${a[1]} Q ${p[0]} ${p[1]} ${b[0]} ${b[1]} `;
+  }
+  return d + 'Z';
+}
+function rectPts(x: number, y: number, w: number, h: number): Pt[] {
+  return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+}
+/** The rectilinear union outline of contiguous reels: leading edge across, trailing edge back. */
+function staircase(L: Layout, ox: number, oy: number): Pt[] {
+  const top: Pt[] = [];
+  const bottom: Pt[] = [];
+  L.xs.forEach((x, i) => {
+    top.push([ox + x, oy + L.offsets[i]], [ox + x + L.cross, oy + L.offsets[i]]);
+    bottom.unshift([ox + x + L.cross, oy + L.offsets[i] + L.extents[i]], [ox + x, oy + L.offsets[i] + L.extents[i]]);
+  });
+  return [...top, ...bottom];
+}
+const PYRAMID = [3, 4, 5, 4, 3];
+const UNIFORM = [5, 5, 5, 5, 5];
+const PANEL_W = 220;
+const PANEL_H = 190;
+const PX = [16, 250, 484, 718];
+const PY = [16, 222];
+const panel = (i: number) => ({ px: PX[i % 4], py: PY[Math.floor(i / 4)], ox: PX[i % 4] + 30, oy: PY[Math.floor(i / 4)] + 44 });
+const gapped = layout(PYRAMID, 28, 5);
+const flush = layout(PYRAMID, 32, 0);
+const uniform = layout(UNIFORM, 28, 5);
+const small = layout(PYRAMID, 24, 4);
+---
+<Architecture
+  title="Viewport and masks"
+  subtitle="The five layers under and above the mask, and every mask strategy."
+  eyebrow="Scene graph"
+>
+  <p>
+    The <code>ReelViewport</code> is the looking-glass. It is a PixiJS
+    Container the size of the visible grid, with one mask so the buffer cells
+    beyond the window stay hidden, and four more layers stacked above the mask
+    so presentation can break out of it. The ReelSet owns it and it is the
+    ReelSet's only display child. Each Reel holds a reference to it and adds
+    its own container to the masked layer. The class lives in
+    <code>packages/pixi-reels/src/core/ReelViewport.ts</code>; the strategies
+    beyond the two basic ones live in <code>core/maskStrategies.ts</code>.
+  </p>
+
+  <h2>The layer stack</h2>
+
+  <Diagram width={960} height={500} caption="The viewport's children in child order, drawn bottom to top. Later children render on top, so the promoted layer beats an active spotlight and the dim overlay never darkens a winner.">
+    <Edge from={[26, 470]} to={[26, 30]} kind="primary" />
+    <Label x={14} y={250} text="later child, drawn on top" size={10} anchor="middle" rotate={-90} />
+
+    <Box x={40} y={20} w={600} h={64} title="promotedLayer" kind="accent" sub={['RenderLayer({ sortableChildren: true })', 'promote() attaches views here; no reparenting, no transform re-bake']} />
+    <Box x={40} y={100} w={600} h={64} title="spotlightContainer" sub={['sortable Container', 'SymbolSpotlight reparents winning views here and restores them after']} />
+    <Box x={40} y={180} w={600} h={64} title="dimOverlay" kind="muted" sub={['Graphics: black rect of viewport size, fill alpha 0.5', 'visible = false until showDim()']} />
+
+    <Group x={40} y={260} w={600} h={96} kind="solid" label="unmaskedContainer" note="sortable; same local space as maskedContainer" />
+    <Box x={56} y={296} w={180} h={44} title="unmask symbols" size={12} sub="lifted here at rest only" />
+    <Box x={250} y={296} w={180} h={44} title="pin overlays" size={12} sub="zIndex 10000, while in motion" />
+    <Box x={444} y={296} w={180} h={44} title="movePin flights" size={12} sub="the travelling symbol" />
+
+    <Group x={40} y={372} w={600} h={110} kind="solid" label="maskedContainer" note="sortable; .mask = the Graphics, which is also a child" />
+    <Box x={56} y={408} w={100} h={48} title="mask" kind="ghost" size={12} sub="Graphics" />
+    {[0, 1, 2, 3, 4].map((i) => (
+      <Box x={168 + i * 88} y={408} w={80} h={48} title={`Reel ${i}`} kind="code" size={11} sub={`zIndex = ${i}`} />
+    ))}
+
+    <Label x={660} y={40} size={10.5} text={['Last child, so it draws above', 'everything, an active spotlight', 'included. Sorted by the zIndex the', 'symbol already carries.']} />
+    <Label x={660} y={120} size={10.5} text={['Winners live here during show().', 'Above the dim, so they stay bright.']} />
+    <Label x={660} y={200} size={10.5} text={['Darkens the reels and the unmasked', 'layer, nothing above it. Reference', 'counted: showDim(alpha) / hideDim().']} />
+    <Label x={660} y={284} size={10.5} text={['Rendered above the mask, so a lifted', 'symbol may overhang its reel and', 'cross into a neighbour. Warp mode', 'does not bend anything up here.']} />
+    <Label x={660} y={392} size={10.5} text={['One mask for all reels. A Reel', 'container has zIndex +reelIndex', '(ascending) or -reelIndex (descending).', 'In warp mode a ReelWarp replaces it', 'and copies that zIndex.']} />
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'accent', label: 'promotedLayer', note: 'render order only; a view keeps its parent' },
+      { kind: 'subtle', label: 'Containers', note: 'ordinary children, sortable' },
+      { kind: 'muted', label: 'dimOverlay', note: 'hidden until a dim request' },
+    ]} />
+  </div>
+
+  <p>
+    Constructor defaults: position <code>{'{0, 0}'}</code>, strategy
+    <code>new RectMaskStrategy()</code>, axis <code>VERTICAL_FORWARD</code>, bleed
+    <code>0</code>. The builder passes its own axis, its chosen strategy and, in
+    warp mode only, the <code>curveBleed</code>. The class comment says "three
+    stacking layers" and lists four; the code is the source of truth here, and
+    there are five children.
+  </p>
+
+  <h2>One mask, per-reel geometry</h2>
+
+  <p>
+    There is exactly one mask Graphics per viewport, applied to
+    <code>maskedContainer</code> as a whole. Masks are never applied per reel
+    container. "Per-reel" masking means drawing one rectangle per reel into
+    that single Graphics: a PixiJS mask is the union of every filled shape, so
+    the default strategy gets a jagged-but-rectangular clip with no shader.
+    Strategies receive a <code>MaskContext</code>:
+  </p>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Field</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['rects', 'one ReelMaskRect per reel, screen space, viewport-local, in reel order; empty before the builder supplies them'],
+          ['width, height', 'the viewport box'],
+          ['axis', 'the set axis, so a strategy can tell main from cross'],
+          ['bleed', 'cross-axis curve bleed; 0 unless warp mode with curveBleed'],
+          ['origin', 'optional; set only by inset(), shifts where the box starts'],
+        ].map(([f, m]) => (
+          <tr class="border-t border-border">
+            <td class="px-4 py-2 font-mono text-xs">{f}</td>
+            <td class="px-4 py-2 text-foreground/80">{m}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    The contract is <code>{'interface MaskStrategy { readonly version: 2; build(ctx): Graphics; update(g, ctx): void }'}</code>.
+    <code>MASK_STRATEGY_VERSION = 2</code> exists because a v1 positional
+    strategy handed to the v2 builder would silently draw a full-bleed mask,
+    which is a no-op, and the board would show its buffer cells. The version
+    check turns that into a named throw in <code>builder.maskStrategy()</code>.
+    A <code>DrawableMaskStrategy</code> adds <code>draw(g, ctx)</code>, which
+    must not call <code>clear()</code>, so several can draw into one Graphics.
+    All fills are white; the colour is never rendered because a mask is a stencil.
+  </p>
+
+  <h2>Every strategy</h2>
+
+  <Diagram width={954} height={428} caption="The same pyramid set (3, 4, 5, 4, 3 cells, one buffer cell per side) under each strategy. The shaded shape is what the mask lets through; the grey strips are the full reels including buffer cells.">
+    {[
+      { i: 0, L: gapped, label: 'Rect', note: 'default: one rect per reel', shapes: (ox: number, oy: number) => gapped.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + gapped.offsets[k], gapped.cross, gapped.extents[k]), 0)) },
+      { i: 1, L: gapped, label: 'SharedRect', note: 'bounding box; buffer peek on short reels', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 0)] },
+      { i: 2, L: gapped, label: "RoundedRect 'set'", note: 'one rounded union box', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 8)] },
+      { i: 3, L: gapped, label: "RoundedRect 'reel'", note: 'each reel rounded; needs a gap', shapes: (ox: number, oy: number) => gapped.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + gapped.offsets[k], gapped.cross, gapped.extents[k]), 5)) },
+      { i: 4, L: uniform, label: "RoundedRect 'outer'", note: 'union-box corners only (uniform set)', shapes: (ox: number, oy: number) => uniform.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + uniform.offsets[k], uniform.cross, uniform.extents[k]), k === 0 ? [8, 0, 0, 8] : k === 4 ? [0, 8, 8, 0] : 0)) },
+      { i: 5, L: flush, label: 'Silhouette', note: 'staircase outline; cross gap must be 0', shapes: (ox: number, oy: number) => [roundedPath(staircase(flush, ox, oy), 4)] },
+      { i: 6, L: gapped, label: 'Path', note: 'your function: fill() first, then cut()', shapes: (ox: number, oy: number) => [`${roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 6)} M ${ox + gapped.width / 2 - 16} ${oy + gapped.tallest / 2} a 16 16 0 1 0 32 0 a 16 16 0 1 0 -32 0 Z`] },
+      { i: 7, L: small, label: 'inset + compose', note: 'inset(s, 8) unioned with a banner mask', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox + 8, oy + 8, small.width - 16, small.tallest - 16), 0), roundedPath(rectPts(ox + small.width + 12, oy + 20, 36, 50), 4)] },
+    ].map(({ i, L, label, note, shapes }) => {
+      const { px, py, ox, oy } = panel(i);
+      return (
+        <g>
+          <Group x={px} y={py} w={PANEL_W} h={PANEL_H} kind="plain" label={label} />
+          <Label x={px + PANEL_W / 2} y={py + PANEL_H - 8} text={note} size={9.5} anchor="middle" />
+          {L.xs.map((x, k) => (
+            <g>
+              <rect x={ox + x} y={oy + L.offsets[k] - BUF} width={L.cross} height={L.extents[k] + 2 * BUF} rx="3" class="lane-bg" />
+              {Array.from({ length: L.extents[k] / CM + 1 }, (_, t) => (
+                <line x1={ox + x} x2={ox + x + L.cross} y1={oy + L.offsets[k] - BUF + (t + 1) * CM} y2={oy + L.offsets[k] - BUF + (t + 1) * CM} class="guide" />
+              ))}
+            </g>
+          ))}
+          {shapes(ox, oy).map((d) => (
+            <g>
+              <path d={d} class="span-spin" fill-rule="evenodd" />
+              <path d={d} class="edge edge-primary" />
+            </g>
+          ))}
+          {i === 7 && <rect x={ox} y={oy} width={small.width} height={small.tallest} class="guide-strong" style="stroke-dasharray: 4 3" />}
+          {i === 7 && <Label x={ox + small.width + 30} y={oy + 86} text="banner" size={9.5} anchor="middle" />}
+        </g>
+      );
+    })}
+  </Diagram>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Strategy</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Draws</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Rules and caveats</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['RectMaskStrategy', 'one rect per ctx.rects entry, each inflated on the cross axis by bleed on both sides; with no rects, a single viewport-sized rect', 'the default. No buffer peek past short reels. With a cross gap, a block spanning reels is clipped in the gap.'],
+          ['SharedRectMaskStrategy', 'one bounding rect from origin to width x height, bleed-inflated on the cross axis', 'for blocks across a gap, unmask symbols and curve lean. On pyramids it shows buffer cells past short reels (the pyramid peek, usually behind frame art). bleed ?? 0 guards third-party contexts, otherwise the rect is NaN and clips everything.'],
+          ["RoundedRectMaskStrategy { radius, scope = 'set', corners }", "'set': one rounded union box. 'reel': every reel rect rounded on its own. 'outer': per-reel rects where a corner rounds only if it coincides with a union-box corner (CORNER_EPS 0.5 px)", "throws on a negative or non-finite radius or a non-object corners. 'reel' at gap 0 warns once (mask-rounded-touching) because the seams notch; it warns rather than throws because a MultiWays reshape can legally pass through a touching layout. 'outer' may round nothing on a jagged set. Hold & Win uses corners per cell."],
+          ['SilhouetteMaskStrategy { radius, concaveRadius = radius }', 'the rectilinear union outline of the reel rects: leading main edge in cross order, then the trailing edge back; convex corners get radius, concave corners get concaveRadius', 'needs a zero cross gap. Disjoint reels warn once (mask-silhouette-disjoint) and fall back to RoundedRect scope reel. Duplicate and collinear vertices are dropped (RING_EPS 0.5), so a uniform set yields four corners. Bleed applies only to the two outermost cross edges, with !== 0 so a negative bleed from inset() still applies. Under 3 ring points: a plain rect.'],
+          ['PathMaskStrategy(fn)', 'whatever (g, ctx) => void draws; clear() is already handled', 'throws if the argument is not a function. cut() subtracts from the last filled shape, so fill first and cut second or the mask is empty and the board invisible.'],
+          ['inset(strategy, px | { top, right, bottom, left })', 'the wrapped strategy, shrunk (positive) or grown (negative); sides are screen sides in every orientation', 'cross-axis inset goes through a negated bleed plus an origin shift; main-axis inset shrinks rect sizes and the box and shifts origin. Mixing the two forms double-counts. A custom strategy that ignores ctx.origin insets in size but not position. Throws inset(): expected a finite number... on bad input.'],
+          ['composeMasks(...strategies)', 'the union of every member; drawable members share one Graphics, others get a nested child Graphics cached per host in a WeakMap', 'union only; PixiJS cannot intersect or subtract across strategies. Throws on an empty list. The motivating case is a reel set plus a detached banner or side cell.'],
+        ].map(([s, d, r]) => (
+          <tr class="border-t border-border align-top">
+            <td class="px-4 py-2 font-mono text-xs">{s}</td>
+            <td class="px-4 py-2 text-foreground/80">{d}</td>
+            <td class="px-4 py-2 text-foreground/80">{r}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Every strategy and combinator is exported from the package entry, with
+    <code>MASK_STRATEGY_VERSION</code>, <code>isDrawableMaskStrategy</code> and the
+    types <code>ReelMaskRect</code>, <code>MaskStrategy</code>, <code>MaskContext</code>,
+    <code>DrawableMaskStrategy</code>, <code>MaskCorners</code>, <code>MaskPathFn</code>,
+    <code>RoundedMaskScope</code>, <code>RoundedRectMaskOptions</code>,
+    <code>SilhouetteMaskOptions</code> and <code>InsetSides</code>. <code>bleedOutset</code>
+    is not re-exported from <code>index.ts</code>. Recipes: <a href="/recipes/masks/">masks</a>.
+  </p>
+
+  <h2>Which strategy you get without asking</h2>
+
+  <p>
+    The builder picks for you unless you called <code>.maskStrategy()</code>,
+    which always wins. In order:
+  </p>
+
+  <ol>
+    <li>If any registered symbol has <code>size.reels &gt; 1</code> or <code>unmask: true</code>, and the cross-axis gap is greater than 0, the set gets <code>SharedRectMaskStrategy</code> and logs the info notice <code>mask-auto-shared</code> with the reason. A tall <code>1 x N</code> stack does not trigger this, because it never crosses a gap.</li>
+    <li>If <code>curveFocus</code> is not <code>'reel'</code> and a <code>curve</code> or <code>curvePerReel</code> is set, the set gets <code>SharedRectMaskStrategy</code>, same notice. This needs no gap: the lean crosses the column edge regardless.</li>
+    <li>Otherwise the default <code>RectMaskStrategy</code>.</li>
+  </ol>
+
+  <p>
+    At runtime <code>ReelSet._setColumn</code> warns once
+    (<code>shared-mask-jagged</code>) when reels now differ in height and the
+    mask covers buffer cells; it finds out by hit-testing the mask Graphics
+    with <code>containsPoint</code> just past each short reel's ends. The
+    decision diagram is on the <a href="/architecture/builder/">builder page</a>.
+  </p>
+
+  <h2>The per-reel rects</h2>
+
+  <p>
+    The builder computes one <code>ReelMaskRect</code> per reel after the
+    reels exist, with cross position marching the reels, main position equal
+    to the reel's own offset inside the tallest strip, cross size one cell and
+    main size the reel's extent:
+  </p>
+
+  <pre><code>{`position = setAxis.toScreen(reelIndex * (crossCell + crossGap), mainOffsetFor(extent, tallest))
+size     = setAxis.toScreen(crossCell, extent)
+
+mainOffsetFor: 'start' -> 0   'end' -> tallest - extent   'center' -> (tallest - extent) / 2`}</code></pre>
+
+  <p>
+    <code>updateMaskSize(width, height, rects = [])</code> stores the three values, calls
+    <code>strategy.update(mask, ctx)</code>, and redraws <code>dimOverlay</code> at the new size so a
+    spotlight never dims a stale rectangle. It is called from three places: the builder, right after
+    the reel loop; <code>ReelSet._afterBoardChange()</code>, which every <code>addReels</code>,
+    <code>removeReels</code>, <code>addRows</code>, <code>removeRows</code>, <code>setColumn</code>,
+    <code>splitSymbol</code>, <code>resetColumns</code> and <code>expand</code> step goes through; and
+    MultiWays reshapes. Before the first call the viewport has no rects, so the mask draws its
+    bounding-box fallback. Getters: <code>maskWidth</code>, <code>maskHeight</code>, <code>maskRects</code>,
+    <code>maskGraphics</code> (used by debug code and the jagged check above), <code>axis</code>, <code>isDestroyed</code>.
+  </p>
+
+  <h2>The dim reference count</h2>
+
+  <Diagram width={820} height={150} caption="Two users of the dim overlay overlap. Neither can hide the other's dim, because the overlay only hides when the count returns to zero.">
+    {[
+      ['count 0', 'hidden', 'muted'],
+      ['count 1', 'visible, alpha 0.5', 'accent'],
+      ['count 2', 'visible, alpha 0.35', 'accent'],
+      ['count 1', 'still visible', 'accent'],
+      ['count 0', 'hidden again', 'muted'],
+    ].map(([t, s, k], i) => (
+      <Box x={16 + i * 164} y={50} w={130} h={64} title={t} sub={s} kind={k as 'muted' | 'accent'} mono={false} size={12} />
+    ))}
+    {['spotlight: showDim(0.5)', 'destroySymbols: showDim(0.35)', 'hideDim()', 'hideDim()'].map((l, i) => (
+      <Edge from={[146 + i * 164, 82]} to={[180 + i * 164, 82]} label={l} labelDy={i % 2 === 0 ? -26 : 26} />
+    ))}
+  </Diagram>
+
+  <p>
+    <code>showDim(alpha = 0.5)</code> increments <code>_dimCount</code>, sets
+    <code>dimOverlay.alpha</code> and makes it visible. <code>hideDim()</code>
+    decrements and hides only when the count reaches 0. The spotlight and
+    <code>destroySymbols({'{ dim: true }'})</code> (which uses alpha 0.35) share
+    it. From reading the code: the Graphics fill is drawn at alpha 0.5 and
+    <code>showDim</code> sets the container alpha on top of that, so the
+    effective darkness is <code>0.5 x alpha</code>.
+  </p>
+
+  <h2>Warp mode skips the unmasked layer</h2>
+
+  <p>
+    <code>curveMode('warp')</code> renders each reel through a texture.
+    Anything the engine lifts out of a reel container is not in that texture
+    and is not bent: <code>unmask: true</code> symbols, the spotlight and pin
+    overlays all render flat over a curved board. When warp mode, a curve and
+    an <code>unmask</code> symbol are combined, <code>build()</code> logs the
+    info notice <code>warp-skips-unmask</code> and suggests
+    <code>curveMode('symbol')</code> if those have to follow the drum. See
+    <a href="/architecture/curvature/">curvature</a>.
+  </p>
+
+  <h2>Destroy</h2>
+
+  <p>
+    <code>ReelViewport.destroy()</code> runs <code>promotedLayer.detachAll()</code>
+    first, so pooled views that outlive the viewport do not keep a reference to
+    a dead render layer, then <code>super.destroy({'{ children: true }'})</code>.
+    The ReelSet calls it after the symbol pool and before clearing pins; the
+    full order is on the <a href="/architecture/classes/">classes page</a>.
+  </p>
+</Architecture>

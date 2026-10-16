@@ -1,3 +1,5 @@
+import { ARCH_PAGES } from './architectureNav.ts';
+
 export interface NavItem {
   label: string;
   href: string;
@@ -69,14 +71,7 @@ export const WIKI_NAV: NavSection[] = [
   },
   {
     title: 'Architecture',
-    items: [
-      { label: 'Overview', href: '/architecture/overview/' },
-      { label: 'Classes', href: '/architecture/classes/' },
-      { label: 'Events', href: '/architecture/events/' },
-      { label: 'Spin lifecycle', href: '/architecture/spin-lifecycle/' },
-      { label: 'Cascade physics', href: '/architecture/cascade/' },
-      { label: 'Testing model', href: '/architecture/testing/' },
-    ],
+    items: ARCH_PAGES.map((p) => ({ label: p.title, href: `/architecture/${p.slug}/` })),
   },
 ];
 
