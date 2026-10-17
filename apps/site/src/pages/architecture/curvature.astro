@@ -8,18 +8,18 @@ import Label from '../../components/arch/Label.astro';
 import Cell from '../../components/arch/Cell.astro';
 import Legend from '../../components/arch/Legend.astro';
 
-// Side view of the drum: centre (640, 210), radius 160, window = 2 * arc with arc = 1 rad.
-const R = 160;
-const CX = 640;
+// Side view of the drum: centre (CX, CY), radius R, window = 2 * arc with arc = 1 rad.
+const R = 130;
+const CX = 450;
 const CY = 210;
 const onArc = (phi: number) => [CX - R * Math.cos(phi), CY + R * Math.sin(phi)] as const;
 const ticks = [-1, -1 / 3, 1 / 3, 1].map(onArc);
 
-// Three mini boards for the focus modes.
+// Three mini boards for the focus modes, three reels each.
 const focusModes: [string, number, string][] = [
-  ["'reel'", 0, 'every reel its own drum'],
-  ["'set-lean'", 0.5, 'halfway, the 5-wide sweet spot'],
-  ["'set'", 1, 'one wide cylinder'],
+  ["'reel'", 0, 'weight 0: own centreline'],
+  ["'set-lean'", 0.5, 'weight 0.5: halfway'],
+  ["'set'", 1, 'weight 1: board centre'],
 ];
 ---
 <Architecture
@@ -40,44 +40,46 @@ const focusModes: [string, number, string][] = [
 
   <h2>The drum</h2>
 
-  <Diagram width={900} height={420} caption="Side view. The window's half extent is wrapped onto a cylinder of radius halfExtent / arc; the middle cell is drawn 1:1 and everything else is pushed through a perspective divide that shrinks it by how far it has receded.">
-    <Label x={40} y={34} text="flat strip (reel-local main)" size={10.5} weight={600} tone="fg" />
+  <Diagram height={400} caption="Side view. The window's half extent is wrapped onto a cylinder; the middle cell (phi = 0) is drawn 1:1 and everything else is pushed through a perspective divide that shrinks it by how far it has receded. On the right, the keystone you see: far edges narrower, edge cells shorter along the strip; the buffers past the window continue on a straight line.">
+    <Label x={64} y={42} text="flat strip" anchor="middle" weight={600} tone="fg" />
     {[0, 1, 2, 3, 4].map((i) => (
-      <Cell x={60} y={60 + i * 56} size={50} label={['buf', 'A', 'B', 'C', 'buf'][i]} kind={i === 0 || i === 4 ? 'buffer' : 'plain'} />
+      <Cell x={40} y={70 + i * 54} size={48} label={['buf', 'A', 'B', 'C', 'buf'][i]} kind={i === 0 || i === 4 ? 'buffer' : 'plain'} />
     ))}
-    <rect x={54} y={110} width={62} height={174} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
-    <Label x={126} y={200} text="halfExtent = (visibleCells * pitch - (pitch - cellMain)) / 2" size={10} mono tone="faint" />
+    <rect x={34} y={118} width={60} height={162} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
 
-    <Box x={250} y={190} w={70} h={40} kind="ghost" title="camera" mono={false} size={11} />
+    <Label x={CX - 40} y={42} text="side view" anchor="middle" weight={600} tone="fg" />
+    <Box x={130} y={188} w={90} h={44} kind="ghost" title="camera" mono={false} />
     <path d={`M ${ticks[0][0]} ${ticks[0][1]} A ${R} ${R} 0 0 0 ${ticks[3][0]} ${ticks[3][1]}`} class="guide-strong" style="stroke-width: 2" />
-    <line x1={ticks[0][0]} y1={ticks[0][1]} x2={ticks[0][0] + 26} y2={ticks[0][1] - 40} class="guide" style="stroke-dasharray: 3 3" />
-    <line x1={ticks[3][0]} y1={ticks[3][1]} x2={ticks[3][0] + 26} y2={ticks[3][1] + 40} class="guide" style="stroke-dasharray: 3 3" />
-    {ticks.map(([x, y]) => <circle cx={x} cy={y} r="3.5" class="arch-marker-primary" />)}
-    <circle cx={CX} cy={CY} r="3" class="arch-marker-muted" />
+    <line x1={ticks[0][0]} y1={ticks[0][1]} x2={ticks[0][0] + 22} y2={ticks[0][1] - 34} class="guide" style="stroke-dasharray: 3 3" />
+    <line x1={ticks[3][0]} y1={ticks[3][1]} x2={ticks[3][0] + 22} y2={ticks[3][1] + 34} class="guide" style="stroke-dasharray: 3 3" />
+    {ticks.map(([x, y]) => <circle cx={x} cy={y} r="4" class="arch-marker-primary" />)}
+    <circle cx={CX} cy={CY} r="3.5" class="arch-marker-muted" />
     <line x1={CX} y1={CY} x2={CX - R} y2={CY} class="guide" />
-    <Label x={CX - R / 2} y={CY - 6} text="radius = halfExtent / arc" size={10} mono anchor="middle" />
-    <line x1={CX} y1={CY} x2={ticks[0][0]} y2={ticks[0][1]} class="guide" style="stroke-dasharray: 3 3" />
-    <Label x={CX - 60} y={CY - 56} text="phi = arc" size={10} mono tone="faint" />
-    <Label x={CX - R - 18} y={CY - 70} text="phi = +-1/3" size={9.5} mono tone="faint" anchor="end" />
-    <Label x={CX - R - 10} y={CY + 4} text="phi = 0: 1:1" size={9.5} mono tone="faint" anchor="end" />
-    <Label x={ticks[0][0] + 30} y={ticks[0][1] - 44} text="buffers continue on a straight line" size={9.5} tone="faint" />
-    <line x1={320} y1={210} x2={ticks[0][0]} y2={ticks[0][1]} class="guide" style="stroke-dasharray: 2 4" />
-    <line x1={320} y1={210} x2={ticks[3][0]} y2={ticks[3][1]} class="guide" style="stroke-dasharray: 2 4" />
+    <line x1={CX} y1={CY} x2={ticks[3][0]} y2={ticks[3][1]} class="guide" style="stroke-dasharray: 3 3" />
+    <line x1={220} y1={210} x2={ticks[0][0]} y2={ticks[0][1]} class="guide" style="stroke-dasharray: 2 4" />
+    <line x1={220} y1={210} x2={ticks[3][0]} y2={ticks[3][1]} class="guide" style="stroke-dasharray: 2 4" />
+    <Label x={CX - R + 14} y={CY + 22} text="phi = 0" mono tone="faint" />
+    <Label x={ticks[3][0] + 16} y={ticks[3][1] + 12} text="phi = -arc" mono tone="faint" />
+    <Label x={CX - R + 14} y={CY - 16} text="r = halfExtent / arc" size={14} mono tone="fg" />
 
-    <Label x={40} y={336} mono size={10.5} lh={1.55} text={[
-      'arc   = amount * MAX_ARC (1.0 rad, ~57 degrees)',
-      'k     = depth / (1 - cos arc)',
-      'scale(phi) = 1 / (1 + k * (1 - cos phi))     1 at the middle, 1 / (1 + depth) at the edge',
-      'main(phi)  = h + h * sin(phi) * scale(phi) / arc  inside the window; straight past it',
-    ]} />
-    <Label x={700} y={60} text="what you see" size={10.5} weight={600} tone="fg" />
-    <g class="cell cell-buffer"><polygon points="788,72 832,72 834,118 786,118" class="cell-bg" /></g>
-    <g class="cell cell-plain"><polygon points="786,122 834,122 840,174 780,174" class="cell-bg" /><text x="810" y="152" text-anchor="middle" font-size="12" font-weight="600" class="cell-text mono">A</text></g>
-    <g class="cell cell-plain"><polygon points="780,178 840,178 840,242 780,242" class="cell-bg" /><text x="810" y="214" text-anchor="middle" font-size="13" font-weight="600" class="cell-text mono">B</text></g>
-    <g class="cell cell-plain"><polygon points="780,246 840,246 834,298 786,298" class="cell-bg" /><text x="810" y="276" text-anchor="middle" font-size="12" font-weight="600" class="cell-text mono">C</text></g>
-    <g class="cell cell-buffer"><polygon points="786,302 834,302 832,348 788,348" class="cell-bg" /></g>
-    <Label x={700} y={372} text="keystone: the far edge is narrower, and the edge cells are shorter along the strip" size={9.5} tone="faint" />
+    <Label x={630} y={42} text="what you see" anchor="middle" weight={600} tone="fg" />
+    <g class="cell cell-buffer"><polygon points="608,70 652,70 654,116 606,116" class="cell-bg" /></g>
+    <g class="cell cell-plain"><polygon points="606,120 654,120 660,172 600,172" class="cell-bg" /><text x="630" y="151" text-anchor="middle" font-size="14" font-weight="600" class="cell-text mono">A</text></g>
+    <g class="cell cell-plain"><polygon points="600,176 660,176 660,240 600,240" class="cell-bg" /><text x="630" y="213" text-anchor="middle" font-size="15" font-weight="600" class="cell-text mono">B</text></g>
+    <g class="cell cell-plain"><polygon points="600,244 660,244 654,296 606,296" class="cell-bg" /><text x="630" y="275" text-anchor="middle" font-size="14" font-weight="600" class="cell-text mono">C</text></g>
+    <g class="cell cell-buffer"><polygon points="606,300 654,300 652,346 608,346" class="cell-bg" /></g>
   </Diagram>
+
+  <p>
+    The numbers behind the picture:
+    <code>halfExtent = (visibleCells * pitch - (pitch - cellMain)) / 2</code>,
+    <code>arc = amount * MAX_ARC</code> (1.0 rad, about 57 degrees),
+    <code>k = depth / (1 - cos arc)</code>,
+    <code>scale(phi) = 1 / (1 + k * (1 - cos phi))</code>, which is 1 at the
+    middle and <code>1 / (1 + depth)</code> at the window edge, and
+    <code>main(phi) = h + h * sin(phi) * scale(phi) / arc</code> inside the
+    window, a straight line past it.
+  </p>
 
   <div class="not-prose my-8">
     <Legend items={[
@@ -145,28 +147,28 @@ const focusModes: [string, number, string][] = [
 
   <h2>Two ways to draw it</h2>
 
-  <Diagram width={900} height={430} caption="Symbol mode projects each cell on its own and costs nothing extra; warp mode renders the whole reel to a texture and bends the texture, so everything inside follows, at one render pass per reel per frame.">
-    <Group x={20} y={20} w={420} h={390} kind="solid" label="curveMode('symbol')" note="the default" />
-    <Box x={40} y={56} w={380} h={48} title="ReelMotion._render / _placeSymbolView" size={12} sub="flat main written first, as always" />
-    <Box x={40} y={124} w={380} h={48} title="curve.quadFor(main, symbol.cellInset)" size={12} sub="trimmed-frame aware, view-local, null when flat" />
-    <Box x={40} y={192} w={380} h={48} kind="accent" title="symbol.applyCellQuad(quad)" size={12} sub="SpriteSymbol / AnimatedSpriteSymbol -> PerspectiveCell.apply" />
-    <Box x={40} y={272} w={180} h={110} kind="primary" title="PerspectiveCell" size={12} sub={['PerspectiveMesh 10 x 10', 'setCorners(quad), UVs from', 'texture.uvs, pivot on centre', 'flat sprite hidden meanwhile']} />
-    <Box x={240} y={272} w={180} h={110} kind="muted" title="affine fallback" size={12} sub={['canProjectTexture false:', 'atlas sub-frames, Spine,', 'Graphics, composites', 'contain-fit via pivot, no bend']} />
-    <Edge from={[230, 104]} to={[230, 124]} />
-    <Edge from={[230, 172]} to={[230, 192]} />
-    <Edge from={[160, 240]} to={[130, 272]} label="whole-source texture" labelDx={-40} labelDy={-6} />
-    <Edge from={[300, 240]} to={[330, 272]} label="otherwise" labelDx={46} labelDy={-6} />
+  <Diagram height={410} caption="curveMode('symbol'), the default. Each cell is projected on its own and costs nothing extra: the flat position is written first, the curve hands the symbol a quad, and a texture that owns its whole source is keystoned through a mesh while anything else falls back to an affine fit.">
+    <Box x={180} y={20} w={360} h={60} title="ReelMotion._render()" sub="flat main written first, as always" />
+    <Box x={180} y={104} w={360} h={60} title="curve.quadFor(main, inset)" sub="view-local quad, null when flat" />
+    <Box x={180} y={188} w={360} h={60} kind="accent" title="symbol.applyCellQuad(quad)" sub="SpriteSymbol, AnimatedSpriteSymbol" />
+    <Edge from={[360, 80]} to={[360, 104]} />
+    <Edge from={[360, 164]} to={[360, 188]} />
+    <Box x={60} y={308} w={260} h={78} kind="primary" title="PerspectiveCell" sub={['PerspectiveMesh 10 x 10', 'setCorners(quad), own UVs']} />
+    <Box x={400} y={308} w={260} h={78} kind="muted" title="affine fallback" sub={['atlas sub-frames, Spine, Graphics', 'contain-fit via pivot, no bend']} />
+    <Edge from={[360, 248]} via={[[360, 278], [190, 278]]} to={[190, 308]} label="whole-source texture" labelDx={-12} />
+    <Edge from={[360, 248]} via={[[360, 278], [530, 278]]} to={[530, 308]} label="otherwise" />
+  </Diagram>
 
-    <Group x={460} y={20} w={420} h={390} kind="solid" label="curveMode('warp')" note="needs builder.renderer(app.renderer)" />
-    <Box x={480} y={56} w={380} h={48} title="reel.container leaves the scene graph" size={12} sub="ReelWarp takes its place in maskedContainer" />
-    <Box x={480} y={124} w={380} h={48} title="RenderTexture" size={12} sub="reel box + margin (slotPitch) per end + bleed per side" />
-    <Box x={480} y={192} w={380} h={48} kind="accent" title="renderer.render(container -> texture)" size={12} sub="every tick, even at rest; container parked at the shift" />
-    <Box x={480} y={260} w={380} h={48} kind="primary" title="MeshPlane 16 x 16" size={12} sub="vertices displaced once: cross -> focus + (c - focus) * scaleAt, main -> mapMain" />
-    <Box x={480} y={328} w={380} h={60} kind="ghost" title="symbols untouched" size={12} sub={['_warping: no quads handed out, no double bend', 'lifted content (unmask, spotlight, pin overlays) is NOT in', 'the texture and draws flat over the curved board']} />
-    <Edge from={[670, 104]} to={[670, 124]} />
-    <Edge from={[670, 172]} to={[670, 192]} />
-    <Edge from={[670, 240]} to={[670, 260]} />
-    <Edge from={[670, 308]} to={[670, 328]} />
+  <Diagram height={500} caption="curveMode('warp'), which needs builder.renderer(app.renderer). The whole reel is rendered to a texture every tick and the texture is bent, so everything inside follows at one extra render pass per reel per frame; the symbols themselves are never handed a quad.">
+    <Box x={160} y={20} w={400} h={60} title="reel.container leaves the stage" sub="ReelWarp takes its place in maskedContainer" />
+    <Box x={160} y={104} w={400} h={78} title="RenderTexture" sub={['reel box + one slotPitch per strip end', '+ curveBleed per side across it']} />
+    <Box x={160} y={206} w={400} h={60} kind="accent" title="renderer.render(container)" sub="every tick, even at rest" />
+    <Box x={160} y={290} w={400} h={78} kind="primary" title="MeshPlane 16 x 16" sub={['vertices displaced once per geometry', 'cross toward focus, main through mapMain']} />
+    <Box x={160} y={392} w={400} h={78} kind="ghost" title="symbols untouched" sub={['no quads handed out, no double bend', 'lifted content draws flat above the drum']} />
+    <Edge from={[360, 80]} to={[360, 104]} />
+    <Edge from={[360, 182]} to={[360, 206]} />
+    <Edge from={[360, 266]} to={[360, 290]} />
+    <Edge from={[360, 368]} to={[360, 392]} />
   </Diagram>
 
   <p>
@@ -215,37 +217,42 @@ const focusModes: [string, number, string][] = [
 
   <h2>Where the camera sits</h2>
 
-  <Diagram width={900} height={300} caption="curveFocus moves the cross coordinate each reel's cells converge on. At weight 0 it is the reel's own centreline; at 1 it is the middle of the board, so outer reels lean in and the grid reads as one drum.">
+  <Diagram height={300} caption="curveFocus moves the cross coordinate each reel's cells converge on, three reels shown. At weight 0 it is the reel's own centreline; at 1 it is the middle of the board, so the outer reels lean in and the grid reads as one drum.">
     {focusModes.map(([name, w, note], m) => {
-      const gx = 20 + m * 295;
-      const x0 = gx + 70;
-      const y0 = 70;
-      const boardCentre = x0 + 65;
+      const gx = 12 + m * 236;
+      const gw = 224;
+      const y0 = 60;
+      const boardCentre = gx + gw / 2;
       return (
         <>
-          <Group x={gx} y={20} w={270} h={250} kind="solid" label={`curveFocus(${name})`} note={`weight ${w}`} />
-          {[0, 1, 2, 3, 4].map((r) => {
-            const colCentre = x0 + r * 26 + 11;
+          <Group x={gx} y={20} w={gw} h={250} kind="solid" label={`curveFocus(${name})`} />
+          {[-1, 0, 1].map((r) => {
+            const colCentre = boardCentre + r * 56;
             const focus = colCentre + w * (boardCentre - colCentre);
             const lean = (focus - colCentre) * 0.35;
             return (
               <>
-                <g class="cell cell-buffer"><rect x={colCentre - 9 + lean} y={y0} width={18} height={20} rx="4" class="cell-bg" /></g>
-                <Cell x={colCentre - 11} y={y0 + 26} size={22} kind="plain" />
-                <g class="cell cell-buffer"><rect x={colCentre - 9 + lean} y={y0 + 52} width={18} height={20} rx="4" class="cell-bg" /></g>
-                <line x1={colCentre + lean} y1={y0 - 10} x2={colCentre} y2={y0 + 37} class="guide-strong" style="stroke-dasharray: 3 3" />
-                <line x1={colCentre} y1={y0 + 37} x2={colCentre + lean} y2={y0 + 84} class="guide-strong" style="stroke-dasharray: 3 3" />
+                <g class="cell cell-buffer"><rect x={colCentre - 18 + lean} y={y0} width={36} height={44} rx="6" class="cell-bg" /></g>
+                <Cell x={colCentre - 22} y={y0 + 52} size={44} kind="plain" />
+                <g class="cell cell-buffer"><rect x={colCentre - 18 + lean} y={y0 + 104} width={36} height={44} rx="6" class="cell-bg" /></g>
+                <line x1={colCentre + lean} y1={y0 - 8} x2={colCentre} y2={y0 + 74} class="guide-strong" style="stroke-dasharray: 3 3" />
+                <line x1={colCentre} y1={y0 + 74} x2={colCentre + lean} y2={y0 + 156} class="guide-strong" style="stroke-dasharray: 3 3" />
               </>
             );
           })}
-          <line x1={boardCentre} y1={y0 - 18} x2={boardCentre} y2={y0 + 92} class="guide" style="stroke-dasharray: 1.5 4" />
-          <Label x={gx + 135} y={192} text={note} size={10.5} anchor="middle" />
-          <Label x={gx + 135} y={212} text={m === 0 ? 'per-reel RectMaskStrategy is fine' : 'auto-selects SharedRectMaskStrategy'} size={9.5} anchor="middle" tone="faint" />
+          <line x1={boardCentre} y1={y0 - 12} x2={boardCentre} y2={y0 + 160} class="guide" style="stroke-dasharray: 1.5 4" />
+          <Label x={boardCentre} y={y0 + 190} text={note} anchor="middle" />
         </>
       );
     })}
-    <Label x={20} y={288} text="focusCross = cellCross / 2 + weight * (setCentre - reelIndex * (cellCross + crossGap) - cellCross / 2), reel-local; CURVE_FOCUS_WEIGHT = { reel: 0, 'set-lean': 0.5, set: 1 }" size={9.5} mono tone="faint" />
   </Diagram>
+
+  <p>
+    Per reel, <code>focusCross = cellCross / 2 + weight * (setCentre - reelIndex * (cellCross + crossGap) - cellCross / 2)</code>,
+    reel-local, with <code>CURVE_FOCUS_WEIGHT = {`{ reel: 0, 'set-lean': 0.5, set: 1 }`}</code>.
+    Under <code>'reel'</code> the per-reel <code>RectMaskStrategy</code> is
+    fine; the other two auto-select <code>SharedRectMaskStrategy</code>.
+  </p>
 
   <p>
     Leaning cells cross their own column, and the default per-reel

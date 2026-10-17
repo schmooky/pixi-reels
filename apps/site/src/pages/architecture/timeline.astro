@@ -3,13 +3,15 @@ import Architecture from '../../layouts/Architecture.astro';
 import Diagram from '../../components/arch/Diagram.astro';
 import Label from '../../components/arch/Label.astro';
 
-// Lane chart geometry. Time maps linearly onto x between X0 and X1.
-const X0 = 96;
-const X1 = 920;
+// Lane chart geometry. Time maps linearly onto x between X0 and X1; the
+// landed stamp of each lane sits in its own column at STAMP_X.
+const X0 = 80;
+const X1 = 620;
+const STAMP_X = 650;
 const LANE_H = 36;
-const LANE_GAP = 14;
-const LANE_Y0 = 76;
-const SPAN_H = 22;
+const LANE_GAP = 12;
+const LANE_Y0 = 64;
+const SPAN_H = 24;
 const SPIN_OUT = 167; // estimate: 5 wraps at about half a cell per frame at 60 fps
 const BOUNCE = 600;
 
@@ -48,6 +50,7 @@ const teased: Lane[] = normal.map((l) => {
 const laneY = (i: number) => LANE_Y0 + i * (LANE_H + LANE_GAP);
 const spanY = (i: number) => laneY(i) + (LANE_H - SPAN_H) / 2;
 const scale = (T: number) => (t: number) => X0 + (t / T) * (X1 - X0);
+const BOTTOM = laneY(4) + LANE_H;
 ---
 <Architecture
   title="A spin in milliseconds"
@@ -65,7 +68,7 @@ const scale = (T: number) => (t: number) => X0 + (t / T) * (X1 - X0);
     queued. Everything else is arithmetic on the profile.
   </p>
 
-  <Diagram width={960} height={400} caption="NORMAL, result at t = 1000. Start phases stagger by 100 ms, the stop gate opens at 1000, and the stop delays stack on top of each reel's own minimum spin time, so landings spread 240 ms apart from reel 2 on.">
+  <Diagram height={390} caption="NORMAL, result at t = 1000. Start phases stagger by 100 ms, the stop gate opens at 1000, and the stop delays stack on top of each reel's own minimum spin time, so landings spread 240 ms apart from reel 2 on. The right column is each reel's spin:reelLanded stamp.">
     {(() => {
       const T = 2700;
       const X = scale(T);
@@ -74,17 +77,17 @@ const scale = (T: number) => (t: number) => X0 + (t / T) * (X1 - X0);
           {/* time axis */}
           {[0, 500, 1000, 1500, 2000, 2500].map((t) => (
             <>
-              <line x1={X(t)} y1={56} x2={X(t)} y2={laneY(4) + LANE_H + 8} class="guide" />
-              <Label x={X(t)} y={50} text={`${t}`} size={10} anchor="middle" mono tone="faint" />
+              <line x1={X(t)} y1={50} x2={X(t)} y2={BOTTOM + 6} class="guide" />
+              <Label x={X(t)} y={40} text={`${t}`} anchor="middle" mono tone="faint" />
             </>
           ))}
-          <Label x={X1} y={50} text="ms" size={10} anchor="start" tone="faint" />
+          <Label x={STAMP_X} y={40} text="landed" mono tone="faint" />
 
           {/* lanes */}
           {normal.map((l) => (
             <>
               <rect x={X0} y={laneY(l.i)} width={X1 - X0} height={LANE_H} rx={6} class="lane-bg" />
-              <Label x={20} y={laneY(l.i) + 22} text={`reel ${l.i}`} size={12} mono tone="fg" weight={600} />
+              <Label x={20} y={laneY(l.i) + 23} text={`reel ${l.i}`} mono tone="fg" weight={600} />
               <rect x={X(l.delay)} y={spanY(l.i)} width={X(l.spinIn) - X(l.delay)} height={SPAN_H} rx={4} class="span-start" />
               <rect x={X(l.spinIn)} y={spanY(l.i)} width={X(l.spinDone) - X(l.spinIn)} height={SPAN_H} rx={4} class="span-spin" />
               {l.spinOutAt > l.spinDone && (
@@ -96,30 +99,30 @@ const scale = (T: number) => (t: number) => X0 + (t / T) * (X1 - X0);
               <line x1={X(l.spinDone)} y1={laneY(l.i) - 3} x2={X(l.spinDone)} y2={laneY(l.i) + 4} class="guide-strong" />
               <line x1={X(l.land)} y1={laneY(l.i) - 3} x2={X(l.land)} y2={laneY(l.i) + 4} class="guide-strong" />
               <line x1={X(l.landed)} y1={laneY(l.i) - 3} x2={X(l.landed)} y2={laneY(l.i) + 4} class="guide-strong" />
-              <Label x={X(l.landed) + 4} y={laneY(l.i) + 22} text={`${l.landed}`} size={9.5} mono tone="faint" />
+              <Label x={STAMP_X} y={laneY(l.i) + 23} text={`${l.landed}`} mono tone="faint" />
             </>
           ))}
 
           {/* global events */}
-          <line x1={X(750)} y1={62} x2={X(750)} y2={laneY(4) + LANE_H + 8} class="edge edge-accent edge-dashed" />
-          <line x1={X(1000)} y1={62} x2={X(1000)} y2={laneY(4) + LANE_H + 8} class="edge edge-primary" />
-          <line x1={X(2577)} y1={62} x2={X(2577)} y2={laneY(4) + LANE_H + 8} class="edge edge-primary edge-dashed" />
-          <Label x={X(750)} y={laneY(4) + LANE_H + 22} text="spin:allStarted 750" size={10} anchor="middle" mono />
-          <Label x={X(1000)} y={laneY(4) + LANE_H + 36} text="setResult 1000" size={10} anchor="middle" mono tone="fg" weight={600} />
-          <Label x={X(2577)} y={laneY(4) + LANE_H + 22} text="spin:complete 2577" size={10} anchor="end" mono tone="fg" weight={600} />
-          <Label x={X(0)} y={laneY(4) + LANE_H + 22} text="spin:start 0" size={10} anchor="start" mono />
+          <line x1={X(750)} y1={50} x2={X(750)} y2={BOTTOM + 6} class="edge edge-accent edge-dashed" />
+          <line x1={X(1000)} y1={50} x2={X(1000)} y2={BOTTOM + 6} class="edge edge-primary" />
+          <line x1={X(2577)} y1={50} x2={X(2577)} y2={BOTTOM + 6} class="edge edge-primary edge-dashed" />
+          <Label x={X(0)} y={BOTTOM + 26} text="spin:start 0" mono />
+          <Label x={X(1000)} y={BOTTOM + 26} text="setResult 1000" anchor="middle" mono tone="fg" weight={600} />
+          <Label x={X(2577)} y={BOTTOM + 26} text="spin:complete 2577" anchor="end" mono tone="fg" weight={600} />
+          <Label x={X(750)} y={BOTTOM + 48} text="spin:allStarted 750" anchor="middle" mono />
 
           {/* key */}
-          {[
-            ['span-start', 'start (pull + accelerate)'],
-            ['span-spin', 'spin'],
-            ['span-rest', 'stop delay'],
-            ['span-stop', 'spin-out'],
-            ['span-bounce', 'bounce'],
-          ].map(([cls, label], k) => (
+          {([
+            ['span-start', 'start (pull + accelerate)', 80],
+            ['span-spin', 'spin', 300],
+            ['span-rest', 'stop delay', 370],
+            ['span-stop', 'spin-out', 480],
+            ['span-bounce', 'bounce', 580],
+          ] as const).map(([cls, label, x]) => (
             <>
-              <rect x={96 + k * 165} y={372} width={14} height={12} rx={3} class={cls} />
-              <Label x={116 + k * 165} y={382} text={label} size={10} />
+              <rect x={x} y={BOTTOM + 68} width={14} height={13} rx={3} class={cls} />
+              <Label x={x + 20} y={BOTTOM + 79} text={label} />
             </>
           ))}
         </>
@@ -226,7 +229,7 @@ const scale = (T: number) => (t: number) => X0 + (t / T) * (X1 - X0);
     untouched.
   </p>
 
-  <Diagram width={960} height={400} caption="setAnticipation([3, 4]) on NORMAL. Each tease is 450 ms, then the stop delay runs at the slow tease speed, and the spin-out crawls onto the frame at speed 9 with preserveSpeed. The spin ends about 840 ms later than without the tease.">
+  <Diagram height={390} caption="setAnticipation([3, 4]) on NORMAL. Each tease is 450 ms at 30% speed, then the stop delay runs at that tease speed, and the spin-out crawls onto the frame at speed 9 with preserveSpeed. anticipation:reel fires at 1150 for reel 3 and 1250 for reel 4; the spin ends about 840 ms later than without the tease.">
     {(() => {
       const T = 3500;
       const X = scale(T);
@@ -234,14 +237,15 @@ const scale = (T: number) => (t: number) => X0 + (t / T) * (X1 - X0);
         <>
           {[0, 500, 1000, 1500, 2000, 2500, 3000, 3500].map((t) => (
             <>
-              <line x1={X(t)} y1={56} x2={X(t)} y2={laneY(4) + LANE_H + 8} class="guide" />
-              <Label x={X(t)} y={50} text={`${t}`} size={10} anchor="middle" mono tone="faint" />
+              <line x1={X(t)} y1={50} x2={X(t)} y2={BOTTOM + 6} class="guide" />
+              <Label x={X(t)} y={40} text={`${t}`} anchor="middle" mono tone="faint" />
             </>
           ))}
+          <Label x={STAMP_X} y={40} text="landed" mono tone="faint" />
           {teased.map((l) => (
             <>
               <rect x={X0} y={laneY(l.i)} width={X1 - X0} height={LANE_H} rx={6} class="lane-bg" />
-              <Label x={20} y={laneY(l.i) + 22} text={`reel ${l.i}`} size={12} mono tone="fg" weight={600} />
+              <Label x={20} y={laneY(l.i) + 23} text={`reel ${l.i}`} mono tone="fg" weight={600} />
               <rect x={X(l.delay)} y={spanY(l.i)} width={X(l.spinIn) - X(l.delay)} height={SPAN_H} rx={4} class="span-start" />
               <rect x={X(l.spinIn)} y={spanY(l.i)} width={X(l.spinDone) - X(l.spinIn)} height={SPAN_H} rx={4} class="span-spin" />
               {l.teaseStart !== undefined && l.teaseEnd !== undefined && (
@@ -257,26 +261,25 @@ const scale = (T: number) => (t: number) => X0 + (t / T) * (X1 - X0);
               <rect x={X(l.land)} y={spanY(l.i)} width={X(l.landed) - X(l.land)} height={SPAN_H} rx={4} class="span-bounce" />
               <line x1={X(l.spinDone)} y1={laneY(l.i) - 3} x2={X(l.spinDone)} y2={laneY(l.i) + 4} class="guide-strong" />
               <line x1={X(l.land)} y1={laneY(l.i) - 3} x2={X(l.land)} y2={laneY(l.i) + 4} class="guide-strong" />
-              <Label x={X(l.landed) + 4} y={laneY(l.i) + 22} text={`${l.landed}`} size={9.5} mono tone="faint" />
+              <line x1={X(l.landed)} y1={laneY(l.i) - 3} x2={X(l.landed)} y2={laneY(l.i) + 4} class="guide-strong" />
+              <Label x={STAMP_X} y={laneY(l.i) + 23} text={`${l.landed}`} mono tone="faint" />
             </>
           ))}
-          <line x1={X(1000)} y1={62} x2={X(1000)} y2={laneY(4) + LANE_H + 8} class="edge edge-primary" />
-          <line x1={X(3415)} y1={62} x2={X(3415)} y2={laneY(4) + LANE_H + 8} class="edge edge-primary edge-dashed" />
-          <Label x={X(1000)} y={laneY(4) + LANE_H + 22} text="setResult 1000" size={10} anchor="middle" mono tone="fg" weight={600} />
-          <Label x={X(1150)} y={laneY(3) - 6} text="anticipation:reel(3) 1150" size={9.5} anchor="start" mono />
-          <Label x={X(1250)} y={laneY(4) - 6} text="anticipation:reel(4) 1250" size={9.5} anchor="start" mono />
-          <Label x={X(3415)} y={laneY(4) + LANE_H + 22} text="spin:complete 3415" size={10} anchor="end" mono tone="fg" weight={600} />
-          {[
-            ['span-start', 'start'],
-            ['span-spin', 'spin'],
-            ['span-anticipation', 'tease (30% speed)'],
-            ['span-rest', 'stop delay at tease speed'],
-            ['span-stop', 'spin-out (preserveSpeed)'],
-            ['span-bounce', 'bounce'],
-          ].map(([cls, label], k) => (
+          <line x1={X(1000)} y1={50} x2={X(1000)} y2={BOTTOM + 6} class="edge edge-primary" />
+          <line x1={X(3415)} y1={50} x2={X(3415)} y2={BOTTOM + 6} class="edge edge-primary edge-dashed" />
+          <Label x={X(1000)} y={BOTTOM + 26} text="setResult 1000" anchor="middle" mono tone="fg" weight={600} />
+          <Label x={X(3415)} y={BOTTOM + 26} text="spin:complete 3415" anchor="end" mono tone="fg" weight={600} />
+          {([
+            ['span-start', 'start', 80],
+            ['span-spin', 'spin', 155],
+            ['span-anticipation', 'tease', 225],
+            ['span-rest', 'stop delay', 300],
+            ['span-stop', 'spin-out', 410],
+            ['span-bounce', 'bounce', 506],
+          ] as const).map(([cls, label, x]) => (
             <>
-              <rect x={96 + k * 140} y={372} width={14} height={12} rx={3} class={cls} />
-              <Label x={116 + k * 140} y={382} text={label} size={10} />
+              <rect x={x} y={BOTTOM + 68} width={14} height={13} rx={3} class={cls} />
+              <Label x={x + 20} y={BOTTOM + 79} text={label} />
             </>
           ))}
         </>

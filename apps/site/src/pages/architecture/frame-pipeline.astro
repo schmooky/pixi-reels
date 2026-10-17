@@ -9,23 +9,25 @@ import Cell from '../../components/arch/Cell.astro';
 import Legend from '../../components/arch/Legend.astro';
 
 const rows = [
-  { cell: '-2', kind: 'buffer', slot: 'bufferStart[1]', from: 'bufferStart[-1 - cell]' },
-  { cell: '-1', kind: 'buffer', slot: 'bufferStart[0]', from: 'bufferStart[-1 - cell]' },
-  { cell: '0', kind: 'plain', slot: 'visible[0]', from: 'visible[cell]' },
-  { cell: '1', kind: 'plain', slot: 'visible[1]', from: 'visible[cell]' },
-  { cell: '2', kind: 'plain', slot: 'visible[2]', from: 'visible[cell]' },
-  { cell: '3', kind: 'buffer', slot: 'bufferEnd[0]', from: 'bufferEnd[cell - visible.length]' },
-  { cell: '4', kind: 'buffer', slot: 'bufferEnd[1]', from: 'bufferEnd[cell - visible.length]' },
+  { cell: '-2', kind: 'buffer', slot: 'bufferStart[1]' },
+  { cell: '-1', kind: 'buffer', slot: 'bufferStart[0]' },
+  { cell: '0', kind: 'plain', slot: 'visible[0]' },
+  { cell: '1', kind: 'plain', slot: 'visible[1]' },
+  { cell: '2', kind: 'plain', slot: 'visible[2]' },
+  { cell: '3', kind: 'buffer', slot: 'bufferEnd[0]' },
+  { cell: '4', kind: 'buffer', slot: 'bufferEnd[1]' },
 ] as const;
+// Cells of 48 on a 56 pitch, starting at y = 60.
+const ry = (i: number) => 60 + i * 56;
 
 const layers = [
-  ['base weights', 'symbolData[id].weight, from builder.weights()'],
-  ['global spinning', "randomSymbols(pool) or set(pool, { slots: 'spinning' })"],
+  ['base weights', 'symbolData[id].weight'],
+  ['global spinning', "set(pool) or { slots: 'spinning' }"],
   ['per-reel spinning', '{ reel: i }'],
-  ['global buffer', "{ slots: 'buffer' }: both off-window sides"],
+  ['global buffer', "{ slots: 'buffer' }"],
   ['per-reel buffer', "{ reel: i, slots: 'buffer' }"],
-  ['global side', "{ slots: 'bufferStart' } or { slots: 'bufferEnd' }"],
-  ['per-reel side', "{ reel: i, slots: 'bufferStart' | 'bufferEnd' }"],
+  ['global side', "{ slots: 'bufferStart' | 'bufferEnd' }"],
+  ['per-reel side', "{ reel: i, slots: 'bufferStart' | ... }"],
 ];
 ---
 <Architecture
@@ -47,26 +49,33 @@ const layers = [
 
   <h2>ColumnTarget: one column, visible-relative</h2>
 
-  <Diagram width={880} height={440} caption="One ColumnTarget addressed three ways: by cell coordinate (0 is the first visible cell), by field, and in strip form, where index 0 is the furthest buffer-above slot.">
-    <Label x={60} y={40} text="cell" size={10.5} weight={600} anchor="middle" tone="fg" />
-    <Label x={120} y={40} text="ColumnTarget field" size={10.5} weight={600} tone="fg" />
-    <Label x={330} y={40} text="strip form, bufferStart = 2" size={10.5} weight={600} tone="fg" />
-    <Label x={560} y={40} text="getTargetSlot(target, cell) reads" size={10.5} weight={600} tone="fg" />
+  <Diagram height={510} caption="One ColumnTarget addressed three ways, with bufferStart = 2: by strip index (0 is the furthest buffer-above slot), by cell coordinate (0 is the first visible cell, the dashed outline is the window), and by field.">
+    <Label x={90} y={42} text="strip[i]" anchor="end" weight={600} tone="fg" />
+    <Label x={144} y={42} text="cell" anchor="middle" weight={600} tone="fg" />
+    <Label x={200} y={42} text="ColumnTarget field" weight={600} tone="fg" />
+    <Label x={400} y={42} text="getTargetSlot(target, cell)" weight={600} tone="fg" />
     {rows.map((r, i) => (
       <>
-        <Cell x={40} y={60 + i * 44} size={40} label={r.cell} kind={r.kind} />
-        <Label x={120} y={60 + i * 44 + 25} text={r.slot} size={11} mono tone="fg" />
-        <Label x={330} y={60 + i * 44 + 25} text={`strip[${i}] = getTargetSlot(target, ${i} - 2)`} size={11} mono />
-        <Label x={560} y={60 + i * 44 + 25} text={r.from} size={11} mono />
+        <Label x={90} y={ry(i) + 29} text={`${i}`} anchor="end" mono tone="fg" />
+        <Cell x={120} y={ry(i)} size={48} label={r.cell} kind={r.kind} />
+        <Label x={200} y={ry(i) + 29} text={r.slot} mono tone="fg" />
       </>
     ))}
-    <rect x={34} y={142} width={52} height={140} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
-    <Label x={40} y={388} size={10.5} lh={1.45} text={[
-      'Strip length = bufferStart + visible.length + bufferEnd.length. Slots the target does not name come back undefined',
-      'and the engine random-fills them. Target entries past the buffer capacity are dropped by columnTargetToStrip,',
-      'which is why assertBufferCountsInRange rejects them first at every public entry point.',
-    ]} />
+    <rect x={114} y={ry(2) - 6} width={60} height={3 * 56 - 8 + 12} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <Label x={400} y={ry(0) + 57} text="bufferStart[-1 - cell]" mono />
+    <Label x={400} y={ry(3) + 29} text="visible[cell]" mono />
+    <Label x={400} y={ry(5) + 57} text="bufferEnd[cell - visible.length]" mono />
+    <Label x={360} y={492} text="strip[i] = getTargetSlot(target, i - bufferStart)" size={14} mono tone="fg" anchor="middle" />
   </Diagram>
+
+  <p>
+    The strip is <code>bufferStart + visible.length + bufferEnd.length</code>
+    ids long. Slots the target does not name come back <code>undefined</code>
+    and the engine random-fills them. Target entries past the buffer capacity
+    are dropped by <code>columnTargetToStrip</code>, which is why
+    <code>assertBufferCountsInRange</code> rejects them first at every public
+    entry point.
+  </p>
 
   <div class="not-prose my-8">
     <Legend items={[
@@ -105,23 +114,35 @@ const layers = [
 
   <h2>The middleware chain</h2>
 
-  <Diagram width={900} height={300} caption="FrameBuilder.build runs a next()-style chain sorted by ascending priority. The two built-ins fill every slot and then overwrite the defined target slots; yours goes before, between or after.">
-    <Box x={20} y={40} w={200} h={100} kind="code" title="FrameContext" align="left" size={12} sub={["symbols: ['', '', ...] (M)", 'target?: ColumnTarget', 'metadata: {} fresh per build', 'reelIndex, visibleCells,', 'bufferStart, bufferEnd, isSpinning']} />
-    <Box x={250} y={40} w={200} h={100} title="random-fill" badge="0" size={12} sub={['every empty slot drawn by kind:', "i < bufferStart: 'bufferStart'", "past the window: 'bufferEnd'", "else 'spinning'", 'then next()']} />
-    <Box x={480} y={40} w={200} h={100} title="target-placement" badge="10" size={12} sub={['if target:', 'columnTargetToStrip(target,', 'bufferStart) and overwrite', 'every truthy id, then next()']} />
-    <Box x={710} y={40} w={170} h={100} kind="ghost" title="your middleware" size={12} sub={['> 10: sees the final frame', '< 0: pre-seeds, fill keeps it', '0..10: clobbered wherever', 'the target is defined']} />
-    <Edge from={[220, 90]} to={[250, 90]} />
-    <Edge from={[450, 90]} to={[480, 90]} />
-    <Edge from={[680, 90]} to={[710, 90]} />
-    <Box x={710} y={190} w={170} h={56} kind="primary" title="string[] strip" size={12} sub={['index 0 = furthest', 'buffer-above slot']} />
-    <Edge from={[795, 140]} to={[795, 190]} label="context.symbols" labelDx={-70} />
-    <Label x={20} y={200} size={10.5} lh={1.5} text={[
-      'Sorting is lazy and Array.sort is stable, so equal priorities keep insertion order.',
-      'A middleware that does not call next() short-circuits everything after it.',
-      'Register with builder.frameMiddleware(mw); FrameBuilder.use(mw) / remove(name) / middleware also exist.',
-      'There is no FrameAPI type: FrameContext plus FrameMiddleware { name, priority, process(ctx, next) } is the whole surface.',
-    ]} />
+  <Diagram height={520} caption="FrameBuilder.build runs a next()-style chain sorted by ascending priority. The two built-ins fill every slot and then overwrite the defined target slots; yours goes before, between or after them by priority.">
+    <Box x={180} y={20} w={360} h={78} kind="code" title="FrameContext" sub={["symbols: '' x M, target?, metadata", 'reelIndex, visibleCells, buffers']} />
+    <Box x={180} y={124} w={360} h={78} title="random-fill" sub={['priority 0: every slot drawn by kind', "'bufferStart', 'spinning', 'bufferEnd'"]} />
+    <Box x={180} y={228} w={360} h={78} title="target-placement" sub={['priority 10: columnTargetToStrip()', 'overwrites every defined id']} />
+    <Box x={180} y={332} w={360} h={78} kind="ghost" title="your middleware" sub={['any priority; sort is stable', 'no next() stops the chain here']} />
+    <Box x={180} y={436} w={360} h={60} kind="primary" title="string[] strip" sub="index 0 = the furthest buffer-above slot" />
+    <Edge from={[360, 98]} to={[360, 124]} />
+    <Edge from={[360, 202]} to={[360, 228]} />
+    <Edge from={[360, 306]} to={[360, 332]} />
+    <Edge from={[360, 410]} to={[360, 436]} />
   </Diagram>
+
+  <p>
+    <code>FrameContext</code> carries <code>symbols</code> (M empty strings to
+    fill), the optional <code>target</code>, a <code>metadata</code> object
+    fresh per build, and <code>reelIndex</code>, <code>visibleCells</code>,
+    <code>bufferStart</code>, <code>bufferEnd</code>, <code>isSpinning</code>.
+    Random-fill draws by slot kind: <code>'bufferStart'</code> below
+    <code>bufferStart</code>, <code>'bufferEnd'</code> past the window,
+    <code>'spinning'</code> in between. A middleware above priority 10 sees
+    the final frame; below 0 it pre-seeds and the fill keeps what it wrote;
+    between 0 and 10 it is clobbered wherever the target is defined. Sorting
+    is lazy and <code>Array.sort</code> is stable, so equal priorities keep
+    insertion order. Register with <code>builder.frameMiddleware(mw)</code>;
+    <code>FrameBuilder.use(mw)</code>, <code>remove(name)</code> and
+    <code>middleware</code> also exist. There is no <code>FrameAPI</code> type:
+    <code>FrameContext</code> plus <code>FrameMiddleware {`{ name, priority, process(ctx, next) }`}</code>
+    is the whole surface.
+  </p>
 
   <p>
     Two details matter for determinism. First, <strong>random-fill draws one
@@ -139,31 +160,34 @@ const layers = [
 
   <h2>When it runs</h2>
 
-  <Diagram width={900} height={470} caption="FrameBuilder is not called per wrap. It runs once per result, after the big-symbol coordinator, and the cached strip feeds the StopSequencer, which hands out one id per wrap.">
-    <Box x={20} y={40} w={220} h={56} title="ReelSetBuilder.build()" size={12} sub={['initial frame per reel', 'seed from .initialFrame()']} />
-    <Box x={20} y={120} w={220} h={56} kind="accent" title="setResult(grid)" size={12} sub={['assertColumnTargets, buffers,', 'pins overlaid, _resultSymbols']} />
-    <Box x={20} y={200} w={220} h={56} title="refill({ grid })" size={12} sub={['cascade: frames built', 'up front from the known grid']} />
+  <Diagram height={400} caption="Who calls build(). FrameBuilder is not called per wrap: it runs once per reel per result, from three callers, and the spin result passes the gate and the big-symbol coordinator first.">
+    <Box x={16} y={20} w={210} h={78} title="ReelSetBuilder.build()" sub={['the initial frame,', 'seeded by .initialFrame()']} />
+    <Box x={16} y={124} w={210} h={78} kind="accent" title="setResult(grid)" sub={['asserts the grid, overlays', 'pins, then _resultSymbols']} />
+    <Box x={16} y={228} w={210} h={78} title="refill({ grid })" sub={['cascade: frames built', 'up front from the grid']} />
 
-    <Box x={280} y={120} w={240} h={56} title="gate" size={12} sub={["every non-held reel in 'spin'", '_tryBeginStopSequence()']} />
-    <Box x={560} y={120} w={240} h={56} title="coordinateBigSymbols" size={12} sub={['validates block fit,', 'paints OCCUPIED (pure)']} />
-    <Edge from={[240, 148]} to={[280, 148]} />
-    <Edge from={[520, 148]} to={[560, 148]} />
+    <Box x={256} y={124} w={190} h={78} title="gate" sub={["every reel in 'spin'", 'then begin the stop']} />
+    <Box x={476} y={124} w={228} h={78} title="coordinateBigSymbols" sub={['validates block fit,', 'paints OCCUPIED (pure)']} />
+    <Edge from={[226, 163]} to={[256, 163]} />
+    <Edge from={[446, 163]} to={[476, 163]} />
 
-    <Box x={280} y={220} w={520} h={56} kind="primary" title="FrameBuilder.build(i, cells, bufferStart, bufferEnd, target)" size={12} sub={['once per reel per result; cells = pending MultiWays shape or reel.visibleCells', 'isSpinning is never passed, so it is always false']} />
-    <Edge from={[680, 176]} to={[680, 220]} />
-    <Edge from={[240, 68]} via={[[260, 68], [260, 248]]} to={[280, 248]} />
-    <Edge from={[240, 228]} via={[[260, 228], [260, 248]]} to={[280, 248]} />
+    <Box x={256} y={310} w={448} h={78} kind="primary" title="FrameBuilder.build(...)" sub={['(reelIndex, cells, bufferStart, bufferEnd, target)', 'once per reel per result']} />
+    <Edge from={[590, 202]} to={[590, 310]} />
+    <Edge from={[226, 59]} via={[[241, 59], [241, 349]]} to={[256, 349]} />
+    <Edge from={[226, 267]} via={[[241, 267], [241, 349]]} to={[256, 349]} />
+  </Diagram>
 
-    <Box x={280} y={316} w={180} h={50} title="_cachedFrames[i]" size={12} sub="held reels get []" />
-    <Box x={480} y={316} w={200} h={50} title="StopPhase.targetFrame" size={12} sub="_frameFor(i) at stop time" />
-    <Box x={700} y={316} w={180} h={50} title="Reel.setStopFrame" size={12} sub="spinOut step" />
-    <Edge from={[370, 276]} to={[370, 316]} />
-    <Edge from={[460, 341]} to={[480, 341]} />
-    <Edge from={[680, 341]} to={[700, 341]} />
-
-    <Box x={480} y={400} w={400} h={50} kind="accent" title="StopSequencer.setFrame(frame, axis.feedEdge)" size={12} sub="forward: end-first (cursor M-1, step -1) · reverse: head-first (cursor 0, step +1)" />
-    <Edge from={[790, 366]} to={[790, 400]} />
-    <Label x={20} y={420} size={10.5} lh={1.5} text={['Each wrap: Reel._onSymbolWrapped asks', 'stopSequencer.next() while isStopping and', 'hasRemaining; outside a stop it draws', "randomProvider.next('spinning', reel).", 'See the motion page for the wrap cycle.']} />
+  <Diagram height={560} caption="From the cached strip to the sequencer. The strip is cached per reel, read at stop time, loaded into the StopSequencer with the reel's feed edge, and consumed one id per wrap.">
+    <Box x={180} y={20} w={360} h={60} kind="primary" title="FrameBuilder.build(...)" sub="one string[] per reel" />
+    <Box x={180} y={104} w={360} h={60} title="_cachedFrames[i]" sub="held reels get []" />
+    <Box x={180} y={188} w={360} h={60} title="StopPhase.targetFrame" sub="_frameFor(i), at stop time" />
+    <Box x={180} y={272} w={360} h={60} title="Reel.setStopFrame(frame)" sub="the spinOut step" />
+    <Box x={180} y={356} w={360} h={78} kind="accent" title="StopSequencer.setFrame()" sub={['forward: end-first, cursor M-1', 'reverse: head-first, cursor 0']} />
+    <Box x={180} y={458} w={360} h={60} title="Reel._onSymbolWrapped()" sub="next() once per wrap while stopping" />
+    <Edge from={[360, 80]} to={[360, 104]} />
+    <Edge from={[360, 164]} to={[360, 188]} />
+    <Edge from={[360, 248]} to={[360, 272]} />
+    <Edge from={[360, 332]} to={[360, 356]} />
+    <Edge from={[360, 434]} to={[360, 458]} />
   </Diagram>
 
   <p>
@@ -184,19 +208,24 @@ const layers = [
 
   <h2>RandomSymbolProvider: layered pools</h2>
 
-  <Diagram width={880} height={430} caption="One draw resolves the base weights through up to six pool layers, widest first. Weights override per id; exclusions only accumulate. The result is compiled to a cumulative table and binary-searched.">
+  <Diagram height={580} caption="One draw resolves the base weights through up to six pool layers, widest first. A 'spinning' draw stops after the third layer; a 'bufferStart' or 'bufferEnd' draw runs all seven, the 'buffer' layers being what both sides inherit.">
     {layers.map(([t, s], i) => (
-      <Box x={40} y={30 + i * 50} w={380} h={40} title={t} size={12} sub={s} mono={false} kind={i === 0 ? 'primary' : i % 2 === 1 ? 'subtle' : 'muted'} />
+      <Box x={16} y={20 + i * 80} w={380} h={60} title={t} sub={s} mono={false} kind={i === 0 ? 'primary' : i % 2 === 1 ? 'subtle' : 'muted'} />
     ))}
     {[0, 1, 2, 3, 4, 5].map((i) => (
-      <Edge from={[230, 70 + i * 50]} to={[230, 80 + i * 50]} />
+      <Edge from={[206, 80 + i * 80]} to={[206, 100 + i * 80]} />
     ))}
-    <Label x={436} y={158} text="<- slots 'spinning' stops here" size={10} mono tone="faint" />
-    <Label x={436} y={258} text="<- slots 'buffer' stops here (what both sides inherit)" size={10} mono tone="faint" />
-    <Label x={436} y={358} text="<- a bufferStart / bufferEnd draw runs all seven" size={10} mono tone="faint" />
-    <Box x={470} y={30} w={390} h={100} kind="code" title="_resolve(slots, reel)" align="left" size={12} sub={['weights = { ...base }', 'for each layer: pool.weights override ids present in base', '                pool.exclude adds to a Set', 'finally every excluded id -> 0  (no re-admission)']} />
-    <Box x={470} y={380} w={390} h={40} kind="code" title="next(slot, reel)" align="left" size={12} sub="rand = rng() * total; first cumulative > rand (binary search)" />
-    <Edge from={[420, 350]} to={[470, 395]} curve label="DrawTable { ids, cumulative, total }" at={0.4} labelDy={-24} />
+    <Label x={420} y={214} text="'spinning' draws stop here" />
+    <Label x={420} y={374} text="'buffer': both sides inherit" />
+    <Label x={420} y={534} text="side draws run all seven" />
+  </Diagram>
+
+  <Diagram height={180} caption="The compiled table. Weights override per id, exclusions only accumulate, and the result is a cumulative table that next() binary-searches with one rng() call.">
+    <Box x={12} y={30} w={216} h={78} kind="code" title="_resolve(slots, reel)" sub={['layer weights override ids', 'excluded ids end at 0']} />
+    <Box x={252} y={30} w={216} h={78} title="DrawTable" sub={['ids, cumulative, total', 'cached per slots:reel']} />
+    <Box x={492} y={30} w={216} h={78} kind="primary" title="next(slot, reel)" sub={['rand = rng() * total', 'first cumulative > rand']} />
+    <Edge from={[228, 69]} to={[252, 69]} />
+    <Edge from={[468, 69]} to={[492, 69]} />
   </Diagram>
 
   <p>

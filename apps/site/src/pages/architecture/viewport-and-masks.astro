@@ -5,12 +5,13 @@ import Box from '../../components/arch/Box.astro';
 import Edge from '../../components/arch/Edge.astro';
 import Group from '../../components/arch/Group.astro';
 import Label from '../../components/arch/Label.astro';
+import Cell from '../../components/arch/Cell.astro';
 import Legend from '../../components/arch/Legend.astro';
 
 // A small pyramid set (3,4,5,4,3 cells, one buffer cell each side) drawn
 // eight times, once per mask strategy. All numbers are SVG px.
-const CM = 18; // main-axis cell size
-const BUF = 18; // one buffer cell per side
+const CM = 16; // main-axis cell size
+const BUF = 16; // one buffer cell per side
 type Layout = { xs: number[]; offsets: number[]; extents: number[]; tallest: number; width: number; cross: number };
 function layout(cells: number[], cross: number, gap: number): Layout {
   const extents = cells.map((c) => c * CM);
@@ -54,15 +55,30 @@ function staircase(L: Layout, ox: number, oy: number): Pt[] {
 }
 const PYRAMID = [3, 4, 5, 4, 3];
 const UNIFORM = [5, 5, 5, 5, 5];
-const PANEL_W = 220;
-const PANEL_H = 190;
-const PX = [16, 250, 484, 718];
-const PY = [16, 222];
-const panel = (i: number) => ({ px: PX[i % 4], py: PY[Math.floor(i / 4)], ox: PX[i % 4] + 30, oy: PY[Math.floor(i / 4)] + 44 });
-const gapped = layout(PYRAMID, 28, 5);
-const flush = layout(PYRAMID, 32, 0);
-const uniform = layout(UNIFORM, 28, 5);
-const small = layout(PYRAMID, 24, 4);
+const PANEL_W = 164;
+const PANEL_H = 200;
+const PX = [14, 190, 366, 542];
+const PY = [16, 232];
+/** Panel origin plus the drawing origin: the drawing (of total width `dw`) is centred, below the 40 units of label headroom and one buffer cell. */
+const panel = (i: number, dw: number) => ({ px: PX[i % 4], py: PY[Math.floor(i / 4)], ox: PX[i % 4] + (PANEL_W - dw) / 2, oy: PY[Math.floor(i / 4)] + 40 + BUF });
+const gapped = layout(PYRAMID, 22, 4);
+const flush = layout(PYRAMID, 25.2, 0);
+const uniform = layout(UNIFORM, 22, 4);
+const small = layout(PYRAMID, 18, 3);
+const BANNER_GAP = 10;
+const BANNER_W = 24;
+
+// The dim reference count, drawn as a vertical chain.
+const DIM_STEPS: [string, string, 'muted' | 'accent'][] = [
+  ['count 0', 'hidden', 'muted'],
+  ['count 1', 'visible, alpha 0.5', 'accent'],
+  ['count 2', 'visible, alpha 0.35', 'accent'],
+  ['count 1', 'still visible', 'accent'],
+  ['count 0', 'hidden again', 'muted'],
+];
+const DIM_CALLS = ['spotlight: showDim(0.5)', 'destroySymbols: showDim(0.35)', 'hideDim()', 'hideDim()'];
+const DIM_PITCH = 110;
+const pillDx = (label: string) => 20 + (7.6 * label.length + 18) / 2;
 ---
 <Architecture
   title="Viewport and masks"
@@ -82,31 +98,40 @@ const small = layout(PYRAMID, 24, 4);
 
   <h2>The layer stack</h2>
 
-  <Diagram width={960} height={500} caption="The viewport's children in child order, drawn bottom to top. Later children render on top, so the promoted layer beats an active spotlight and the dim overlay never darkens a winner.">
-    <Edge from={[26, 470]} to={[26, 30]} kind="primary" />
-    <Label x={14} y={250} text="later child, drawn on top" size={10} anchor="middle" rotate={-90} />
+  <Diagram height={550} caption="The viewport's five children in child order, drawn bottom to top. A later child renders on top, so the promoted layer beats an active spotlight and the dim overlay never darkens a winner.">
+    <Edge from={[30, 524]} to={[30, 20]} kind="primary" />
+    <Label x={14} y={272} text="later child, drawn on top" anchor="middle" rotate={-90} />
 
-    <Box x={40} y={20} w={600} h={64} title="promotedLayer" kind="accent" sub={['RenderLayer({ sortableChildren: true })', 'promote() attaches views here; no reparenting, no transform re-bake']} />
-    <Box x={40} y={100} w={600} h={64} title="spotlightContainer" sub={['sortable Container', 'SymbolSpotlight reparents winning views here and restores them after']} />
-    <Box x={40} y={180} w={600} h={64} title="dimOverlay" kind="muted" sub={['Graphics: black rect of viewport size, fill alpha 0.5', 'visible = false until showDim()']} />
+    <Box x={60} y={20} w={640} h={60} title="promotedLayer" kind="accent" sub="RenderLayer; promote() attaches a view here without reparenting it" />
+    <Box x={60} y={100} w={640} h={60} title="spotlightContainer" sub="winning views are reparented here during show()" />
+    <Box x={60} y={180} w={640} h={60} title="dimOverlay" kind="muted" sub="a black rect of viewport size, alpha 0.5; hidden until showDim()" />
 
-    <Group x={40} y={260} w={600} h={96} kind="solid" label="unmaskedContainer" note="sortable; same local space as maskedContainer" />
-    <Box x={56} y={296} w={180} h={44} title="unmask symbols" size={12} sub="lifted here at rest only" />
-    <Box x={250} y={296} w={180} h={44} title="pin overlays" size={12} sub="zIndex 10000, while in motion" />
-    <Box x={444} y={296} w={180} h={44} title="movePin flights" size={12} sub="the travelling symbol" />
+    <Group x={60} y={260} w={640} h={124} kind="solid" label="unmaskedContainer" note="above the mask, same local space" />
+    <Box x={84} y={300} w={186} h={60} title="unmask symbols" sub="at rest only" />
+    <Box x={286} y={300} w={186} h={60} title="pin overlays" sub="zIndex 10000, in motion" />
+    <Box x={488} y={300} w={186} h={60} title="movePin flights" sub="the travelling symbol" />
 
-    <Group x={40} y={372} w={600} h={110} kind="solid" label="maskedContainer" note="sortable; .mask = the Graphics, which is also a child" />
-    <Box x={56} y={408} w={100} h={48} title="mask" kind="ghost" size={12} sub="Graphics" />
+    <Group x={60} y={404} w={640} h={120} kind="solid" label="maskedContainer" note=".mask = the Graphics, itself a child" />
+    <Cell x={84} y={444} w={88} h={56} label="mask" sub="Graphics" kind="empty" />
     {[0, 1, 2, 3, 4].map((i) => (
-      <Box x={168 + i * 88} y={408} w={80} h={48} title={`Reel ${i}`} kind="code" size={11} sub={`zIndex = ${i}`} />
+      <Cell x={184 + i * 100} y={444} w={88} h={56} label={`Reel ${i}`} sub={`zIndex ${i}`} kind="plain" />
     ))}
-
-    <Label x={660} y={40} size={10.5} text={['Last child, so it draws above', 'everything, an active spotlight', 'included. Sorted by the zIndex the', 'symbol already carries.']} />
-    <Label x={660} y={120} size={10.5} text={['Winners live here during show().', 'Above the dim, so they stay bright.']} />
-    <Label x={660} y={200} size={10.5} text={['Darkens the reels and the unmasked', 'layer, nothing above it. Reference', 'counted: showDim(alpha) / hideDim().']} />
-    <Label x={660} y={284} size={10.5} text={['Rendered above the mask, so a lifted', 'symbol may overhang its reel and', 'cross into a neighbour. Warp mode', 'does not bend anything up here.']} />
-    <Label x={660} y={392} size={10.5} text={['One mask for all reels. A Reel', 'container has zIndex +reelIndex', '(ascending) or -reelIndex (descending).', 'In warp mode a ReelWarp replaces it', 'and copies that zIndex.']} />
   </Diagram>
+
+  <p>
+    Reading the stack from the top down. The promoted layer is the last child,
+    so it draws above everything, an active spotlight included; it sorts by the
+    zIndex the symbol already carries. Winners live in the spotlight container
+    during <code>show()</code>, above the dim, so they stay bright. The dim
+    overlay darkens the reels and the unmasked layer and nothing above it, and
+    it is reference counted through <code>showDim(alpha)</code> and
+    <code>hideDim()</code>. The unmasked container renders above the mask, so a
+    lifted symbol may overhang its reel and cross into a neighbour; warp mode
+    does not bend anything up here. The masked container holds one mask for
+    all reels, and each Reel container has zIndex <code>+reelIndex</code>
+    (ascending) or <code>-reelIndex</code> (descending). In warp mode a
+    <code>ReelWarp</code> replaces the container and copies that zIndex.
+  </p>
 
   <div class="not-prose my-8">
     <Legend items={[
@@ -174,22 +199,22 @@ const small = layout(PYRAMID, 24, 4);
 
   <h2>Every strategy</h2>
 
-  <Diagram width={954} height={428} caption="The same pyramid set (3, 4, 5, 4, 3 cells, one buffer cell per side) under each strategy. The shaded shape is what the mask lets through; the grey strips are the full reels including buffer cells.">
+  <Diagram height={448} caption="The same pyramid set (3, 4, 5, 4, 3 cells, one buffer cell per side) under each strategy. The shaded shape is what the mask lets through; the grey strips are the full reels, buffer cells included. The table below has every rule and caveat.">
     {[
-      { i: 0, L: gapped, label: 'Rect', note: 'default: one rect per reel', shapes: (ox: number, oy: number) => gapped.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + gapped.offsets[k], gapped.cross, gapped.extents[k]), 0)) },
-      { i: 1, L: gapped, label: 'SharedRect', note: 'bounding box; buffer peek on short reels', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 0)] },
-      { i: 2, L: gapped, label: "RoundedRect 'set'", note: 'one rounded union box', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 8)] },
-      { i: 3, L: gapped, label: "RoundedRect 'reel'", note: 'each reel rounded; needs a gap', shapes: (ox: number, oy: number) => gapped.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + gapped.offsets[k], gapped.cross, gapped.extents[k]), 5)) },
-      { i: 4, L: uniform, label: "RoundedRect 'outer'", note: 'union-box corners only (uniform set)', shapes: (ox: number, oy: number) => uniform.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + uniform.offsets[k], uniform.cross, uniform.extents[k]), k === 0 ? [8, 0, 0, 8] : k === 4 ? [0, 8, 8, 0] : 0)) },
-      { i: 5, L: flush, label: 'Silhouette', note: 'staircase outline; cross gap must be 0', shapes: (ox: number, oy: number) => [roundedPath(staircase(flush, ox, oy), 4)] },
-      { i: 6, L: gapped, label: 'Path', note: 'your function: fill() first, then cut()', shapes: (ox: number, oy: number) => [`${roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 6)} M ${ox + gapped.width / 2 - 16} ${oy + gapped.tallest / 2} a 16 16 0 1 0 32 0 a 16 16 0 1 0 -32 0 Z`] },
-      { i: 7, L: small, label: 'inset + compose', note: 'inset(s, 8) unioned with a banner mask', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox + 8, oy + 8, small.width - 16, small.tallest - 16), 0), roundedPath(rectPts(ox + small.width + 12, oy + 20, 36, 50), 4)] },
+      { i: 0, L: gapped, label: 'Rect', note: 'one rect per reel', shapes: (ox: number, oy: number) => gapped.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + gapped.offsets[k], gapped.cross, gapped.extents[k]), 0)) },
+      { i: 1, L: gapped, label: 'SharedRect', note: 'one bounding box', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 0)] },
+      { i: 2, L: gapped, label: "Rounded 'set'", note: 'one rounded union box', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 8)] },
+      { i: 3, L: gapped, label: "Rounded 'reel'", note: 'each reel rounded', shapes: (ox: number, oy: number) => gapped.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + gapped.offsets[k], gapped.cross, gapped.extents[k]), 5)) },
+      { i: 4, L: uniform, label: "Rounded 'outer'", note: 'union corners only', shapes: (ox: number, oy: number) => uniform.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + uniform.offsets[k], uniform.cross, uniform.extents[k]), k === 0 ? [8, 0, 0, 8] : k === 4 ? [0, 8, 8, 0] : 0)) },
+      { i: 5, L: flush, label: 'Silhouette', note: 'staircase outline', shapes: (ox: number, oy: number) => [roundedPath(staircase(flush, ox, oy), 4)] },
+      { i: 6, L: gapped, label: 'Path', note: 'fill() then cut()', shapes: (ox: number, oy: number) => [`${roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 6)} M ${ox + gapped.width / 2 - 12} ${oy + gapped.tallest / 2} a 12 12 0 1 0 24 0 a 12 12 0 1 0 -24 0 Z`] },
+      { i: 7, L: small, label: 'inset + compose', note: 'inset(s, 8) + banner', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox + 8, oy + 8, small.width - 16, small.tallest - 16), 0), roundedPath(rectPts(ox + small.width + BANNER_GAP, oy + 16, BANNER_W, 40), 4)] },
     ].map(({ i, L, label, note, shapes }) => {
-      const { px, py, ox, oy } = panel(i);
+      const { px, py, ox, oy } = panel(i, i === 7 ? L.width + BANNER_GAP + BANNER_W : L.width);
       return (
         <g>
           <Group x={px} y={py} w={PANEL_W} h={PANEL_H} kind="plain" label={label} />
-          <Label x={px + PANEL_W / 2} y={py + PANEL_H - 8} text={note} size={9.5} anchor="middle" />
+          <Label x={px + PANEL_W / 2} y={py + PANEL_H - 12} text={note} anchor="middle" tone="fg" />
           {L.xs.map((x, k) => (
             <g>
               <rect x={ox + x} y={oy + L.offsets[k] - BUF} width={L.cross} height={L.extents[k] + 2 * BUF} rx="3" class="lane-bg" />
@@ -205,7 +230,6 @@ const small = layout(PYRAMID, 24, 4);
             </g>
           ))}
           {i === 7 && <rect x={ox} y={oy} width={small.width} height={small.tallest} class="guide-strong" style="stroke-dasharray: 4 3" />}
-          {i === 7 && <Label x={ox + small.width + 30} y={oy + 86} text="banner" size={9.5} anchor="middle" />}
         </g>
       );
     })}
@@ -299,18 +323,12 @@ mainOffsetFor: 'start' -> 0   'end' -> tallest - extent   'center' -> (tallest -
 
   <h2>The dim reference count</h2>
 
-  <Diagram width={820} height={150} caption="Two users of the dim overlay overlap. Neither can hide the other's dim, because the overlay only hides when the count returns to zero.">
-    {[
-      ['count 0', 'hidden', 'muted'],
-      ['count 1', 'visible, alpha 0.5', 'accent'],
-      ['count 2', 'visible, alpha 0.35', 'accent'],
-      ['count 1', 'still visible', 'accent'],
-      ['count 0', 'hidden again', 'muted'],
-    ].map(([t, s, k], i) => (
-      <Box x={16 + i * 164} y={50} w={130} h={64} title={t} sub={s} kind={k as 'muted' | 'accent'} mono={false} size={12} />
+  <Diagram height={20 + (DIM_STEPS.length - 1) * DIM_PITCH + 60 + 20} caption="Two users of the dim overlay overlap. Neither can hide the other's dim, because the overlay only hides when the count returns to zero.">
+    {DIM_STEPS.map(([t, s, k], i) => (
+      <Box x={40} y={20 + i * DIM_PITCH} w={220} h={60} title={t} sub={s} kind={k} mono={false} />
     ))}
-    {['spotlight: showDim(0.5)', 'destroySymbols: showDim(0.35)', 'hideDim()', 'hideDim()'].map((l, i) => (
-      <Edge from={[146 + i * 164, 82]} to={[180 + i * 164, 82]} label={l} labelDy={i % 2 === 0 ? -26 : 26} />
+    {DIM_CALLS.map((l, i) => (
+      <Edge from={[150, 80 + i * DIM_PITCH]} to={[150, 20 + (i + 1) * DIM_PITCH]} label={l} labelDx={pillDx(l)} />
     ))}
   </Diagram>
 

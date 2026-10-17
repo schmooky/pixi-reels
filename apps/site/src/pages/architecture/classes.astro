@@ -4,7 +4,6 @@ import Diagram from '../../components/arch/Diagram.astro';
 import Box from '../../components/arch/Box.astro';
 import Edge from '../../components/arch/Edge.astro';
 import Group from '../../components/arch/Group.astro';
-import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
 
 // ReelSet.destroy() in source order (core/ReelSet.ts:3702-3721).
@@ -12,7 +11,7 @@ const TEARDOWN: [string, string][] = [
   ['_spotlight.destroy()', 'spotlight tweens and overlay containers go first'],
   ['_spinController.destroy()', 'its TickerRef removes every ticker callback it added'],
   ['reel.destroy() for each reel', 'motion, sequencer, symbols and the reel container'],
-  ['_destroyAllPinOverlays()', 'pin:overlayDestroyed per overlay, removed from unmaskedContainer, released to the pool'],
+  ['_destroyAllPinOverlays()', 'pin:overlayDestroyed per overlay, then each is released to the pool'],
   ['_symbolFactory.destroy()', 'the ObjectPool disposes every idle symbol'],
   ['_viewport.destroy()', 'promotedLayer.detachAll() first, then super.destroy({ children: true })'],
   ['_pins.clear()', 'the pin map is emptied; no events'],
@@ -20,11 +19,11 @@ const TEARDOWN: [string, string][] = [
   ['_events.removeAllListeners()', 'the bus is gone after this line'],
   ['super.destroy({ children: true })', 'the PixiJS Container teardown'],
 ];
-const TB_X = 110;
-const TB_W = 540;
-const TB_H = 48;
-const TB_PITCH = 60;
-const TB_Y0 = 16;
+const TB_X = 60;
+const TB_W = 600;
+const TB_H = 60;
+const TB_PITCH = 80;
+const TB_Y0 = 20;
 
 const CARDS: [string, string, string][] = [
   ['ReelSetBuilder', 'builder', 'A fluent, chainable configurator. You call .reels(5).visibleCells(3)... and end with .build(). Every required piece of setup is forced into one place: forget .ticker(app.ticker) and build() throws before the game boots. The builder page walks build() step by step.'],
@@ -67,35 +66,31 @@ const CARDS: [string, string, string][] = [
 
   <h2>The ownership tree</h2>
 
-  <Diagram width={960} height={540} caption="What the ReelSet owns after build(). Reel containers are display children of the viewport, but the Reel objects belong to the ReelSet, which is why the reels are drawn inside it.">
-    <Box x={20} y={20} w={180} h={52} title="ReelSetBuilder" kind="primary" sub="the only new you write" />
-    <Edge from={[200, 46]} to={[240, 46]} label="build()" kind="primary" labelDy={-16} />
+  <Diagram height={550} caption="What the ReelSet owns after build(). Eight subsystems plus the reels; the next figure opens one reel.">
+    <Box x={20} y={80} w={200} h={60} title="ReelSetBuilder" kind="primary" sub="the only new you write" />
+    <Edge from={[220, 110]} to={[260, 110]} label="build()" kind="primary" labelDx={-16} labelDy={-58} />
 
-    <Group x={240} y={20} w={700} h={508} kind="tint" label="ReelSet" note="extends PIXI.Container, implements Disposable" />
+    <Group x={260} y={20} w={440} h={510} kind="tint" label="ReelSet" note="a PIXI.Container, Disposable" />
 
-    <Box x={256} y={56} w={160} h={56} title="ReelViewport" sub={['only display child', '5 layers, 1 mask']} />
-    <Box x={430} y={56} w={160} h={56} title="SpinController" kind="accent" sub={['owns the TickerRef', 'active phase per reel']} />
-    <Box x={604} y={56} w={160} h={56} title="SpeedManager" sub={['speeds map', 'built in the ctor']} />
-    <Box x={778} y={56} w={146} h={56} title="SymbolSpotlight" sub={['built in the ctor', 'dim + spotlight']} size={12} />
+    <Box x={276} y={60} w={200} h={78} title="ReelViewport" sub={['the only display child', '5 layers, 1 mask']} />
+    <Box x={488} y={60} w={196} h={78} title="SpinController" kind="accent" sub={['owns the TickerRef', 'active phase per reel']} />
+    <Box x={276} y={154} w={200} h={78} title="SpeedManager" sub={['the speeds map', 'built in the ctor']} />
+    <Box x={488} y={154} w={196} h={78} title="SymbolSpotlight" sub={['dim + spotlight', 'built in the ctor']} />
+    <Box x={276} y={248} w={200} h={78} title="SymbolFactory" sub={['ObjectPool<ReelSymbol>', 'keyed by symbol id']} />
+    <Box x={488} y={248} w={196} h={78} title="FrameBuilder" sub={['RandomSymbolProvider', 'middleware chain']} />
+    <Box x={276} y={342} w={200} h={78} title="EventEmitter" sub={['ReelSetEvents', 'its own bus']} />
+    <Box x={488} y={342} w={196} h={78} title="pins, ReelFactory" sub={['Map<key, CellPin>', 'closure from build()']} />
+    <Box x={276} y={436} w={408} h={78} title="Reel[]" kind="ghost" sub={['one per reels(n), plus addReels()', 'containers sit in the viewport']} />
+  </Diagram>
 
-    <Box x={256} y={128} w={160} h={56} title="SymbolFactory" sub={['ObjectPool<ReelSymbol>', 'keyed by symbol id']} />
-    <Box x={430} y={128} w={160} h={56} title="FrameBuilder" sub={['RandomSymbolProvider', 'middleware chain']} />
-    <Box x={604} y={128} w={160} h={56} title="EventEmitter" sub={['ReelSetEvents', 'its own bus']} />
-    <Box x={778} y={128} w={146} h={56} title="pins + ReelFactory" sub={['Map<key, CellPin>', 'closure from build()']} size={12} />
-
-    <Group x={256} y={210} w={668} h={302} kind="dashed" label="Reel[]" note="each reel.container is a child of viewport.maskedContainer" />
-
-    <Group x={272} y={246} w={420} h={250} kind="solid" label="Reel i" note="implements Disposable" />
-    <Box x={288} y={282} w={190} h={56} title="ReelAxis" kind="code" sub={['reelAxis(orient, dir)', 'toScreen, mainProp']} size={12} />
-    <Box x={494} y={282} w={190} h={56} title="ReelMotion" kind="code" sub={['moves the strip', 'index -> position, wraps']} size={12} />
-    <Box x={288} y={350} w={190} h={56} title="StopSequencer" kind="code" sub={['frame queue', 'next() on every wrap']} size={12} />
-    <Box x={494} y={350} w={190} h={56} title="symbols: ReelSymbol[]" kind="code" sub={['buffer + visible + buffer', 'from the SymbolFactory']} size={12} />
-    <Box x={288} y={418} w={190} h={56} title="container" kind="code" sub={['PIXI.Container', 'zIndex = +/- reelIndex']} size={12} />
-    <Box x={494} y={418} w={190} h={56} title="events" kind="code" sub={['EventEmitter<ReelEvents>', 'phase:*, landed, symbol:created']} size={12} />
-
-    <Box x={708} y={246} w={200} h={56} title="Reel i + 1" kind="ghost" sub="same shape" />
-    <Box x={708} y={316} w={200} h={56} title="..." kind="ghost" sub="one per reels(n)" />
-    <Box x={708} y={386} w={200} h={56} title="Reel n - 1" kind="ghost" sub="plus any addReels()" />
+  <Diagram height={370} caption="What one Reel owns. Its container is a display child of viewport.maskedContainer; the Reel object itself belongs to the ReelSet.">
+    <Group x={20} y={20} w={680} h={330} kind="solid" label="Reel i" note="implements Disposable" />
+    <Box x={44} y={60} w={308} h={78} title="ReelAxis" kind="code" sub={['reelAxis(orientation, dir)', 'toScreen, mainProp']} />
+    <Box x={368} y={60} w={308} h={78} title="ReelMotion" kind="code" sub={['moves the strip every tick', 'index -> position, wraps']} />
+    <Box x={44} y={154} w={308} h={78} title="StopSequencer" kind="code" sub={['the landing queue', 'next() on every wrap']} />
+    <Box x={368} y={154} w={308} h={78} title="symbols: ReelSymbol[]" kind="code" sub={['buffer + visible + buffer', 'from the SymbolFactory']} />
+    <Box x={44} y={248} w={308} h={78} title="container" kind="code" sub={['PIXI.Container', 'zIndex = +/- reelIndex']} />
+    <Box x={368} y={248} w={308} h={78} title="events" kind="code" sub={['EventEmitter<ReelEvents>', 'phase:*, landed, symbol:created']} />
   </Diagram>
 
   <div class="not-prose my-8">
@@ -137,9 +132,9 @@ const CARDS: [string, string, string][] = [
     listeners are dropped so anyone waiting on it still hears it.
   </p>
 
-  <Diagram width={760} height={TB_Y0 + (TEARDOWN.length - 1) * TB_PITCH + TB_H + 16} caption="ReelSet.destroy(), one box per line of source. Each step only touches things the previous steps have not freed yet.">
+  <Diagram height={TB_Y0 + (TEARDOWN.length - 1) * TB_PITCH + TB_H + 20} caption="ReelSet.destroy(), one box per line of source. Each step only touches things the previous steps have not freed yet.">
     {TEARDOWN.map(([title, note], i) => (
-      <Box x={TB_X} y={TB_Y0 + i * TB_PITCH} w={TB_W} h={TB_H} title={title} sub={note} badge={String(i + 1)} align="left" size={12} kind={i === TEARDOWN.length - 1 ? 'primary' : i === 5 ? 'accent' : 'subtle'} />
+      <Box x={TB_X} y={TB_Y0 + i * TB_PITCH} w={TB_W} h={TB_H} title={`${i + 1}. ${title}`} sub={note} align="left" kind={i === TEARDOWN.length - 1 ? 'primary' : i === 5 ? 'accent' : 'subtle'} />
     ))}
     {TEARDOWN.map((_, i) => i < TEARDOWN.length - 1 && (
       <Edge from={[TB_X + TB_W / 2, TB_Y0 + i * TB_PITCH + TB_H]} to={[TB_X + TB_W / 2, TB_Y0 + (i + 1) * TB_PITCH]} />

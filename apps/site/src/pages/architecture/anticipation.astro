@@ -7,18 +7,22 @@ import Group from '../../components/arch/Group.astro';
 import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
 
-// (a) Legacy shape. y: 100% at 50, 0% at 250 (2 px per percent).
-const yOf = (m: number) => 250 - m * 200;
+// (a) Legacy shape. y: 100% at 60, 0% at 240 (1.8 units per percent).
+const yOf = (m: number) => 240 - m * 180;
 const pow2out = (t: number) => 1 - (1 - t) * (1 - t);
+const LX = { spin: 70, drop: 180, dropEnd: 264, hold: 420, delay: 492, out: 594, end: 690 };
 const legacyDrop = Array.from({ length: 11 }, (_, k) => {
   const t = k / 10;
-  return [220 + 105 * t, yOf(1 - 0.7 * pow2out(t))] as [number, number];
+  return [LX.drop + (LX.dropEnd - LX.drop) * t, yOf(1 - 0.7 * pow2out(t))] as [number, number];
 });
-const legacyPts: [number, number][] = [[80, yOf(1)], [220, yOf(1)], ...legacyDrop, [610, yOf(0.3)], [740, yOf(0.3)], [740, yOf(0)], [860, yOf(0)]];
+const legacyPts: [number, number][] = [
+  [LX.spin, yOf(1)], [LX.drop, yOf(1)], ...legacyDrop, [LX.hold, yOf(0.3)], [LX.delay, yOf(0.3)],
+  [LX.out, yOf(0.3)], [LX.out, yOf(0)], [LX.end, yOf(0)],
+];
 const legacyPath = legacyPts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
 
-// (b) Curve shape: three segments at 0.5 px per ms. y: 0% at 250, 100% at 130 (1.2 px per percent).
-const yC = (m: number) => 250 - m * 120;
+// (b) Curve shape: three segments at 0.38 units per ms. y: 0% at 240, 100% at 120.
+const yC = (m: number) => 240 - m * 120;
 const pow2inout = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 type Seg = { name: string; speed: number; duration: number; hold: number };
 const segs: Seg[] = [
@@ -26,10 +30,10 @@ const segs: Seg[] = [
   { name: 'crawl', speed: 0.15, duration: 350, hold: 250 },
   { name: 'final', speed: 0.3, duration: 150, hold: 300 },
 ];
-const PX = 0.5;
-let cx0 = 160;
+const PX = 0.38;
+let cx0 = 140;
 let cur = 1;
-const curvePts: [number, number][] = [[80, yC(1)], [160, yC(1)]];
+const curvePts: [number, number][] = [[70, yC(1)], [140, yC(1)]];
 const segMarks: { x: number; xEnd: number; xHold: number; seg: Seg; from: number }[] = [];
 for (const seg of segs) {
   const from = cur;
@@ -47,15 +51,19 @@ for (const seg of segs) {
 curvePts.push([cx0, yC(0)], [cx0 + 40, yC(0)]);
 const curvePath = curvePts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
 
-// (c) Stagger modes, 0.11 px per ms inside a 250px panel.
-const S = 0.11;
+// (c) Stagger modes: three stacked panels on one time scale, 0.29 units per ms.
+const S = 0.29;
 const TEASE = 450;
 const STOP = 250;
+const LANE_X0 = 70;
+const LANE_W = 614;
 const panels = [
-  { x: 10, title: 'stagger: 200', note: 'order * 200 ms', offsets: [0, 200, 400] },
-  { x: 310, title: 'stagger: [0, 100, 500]', note: 'arr[order] ?? 0', offsets: [0, 100, 500] },
-  { x: 610, title: "stagger: 'sequential'", note: 'waits for the previous tease reel to land', offsets: [0, TEASE + STOP, 2 * (TEASE + STOP)] },
+  { title: 'stagger: 200', note: 'order * 200 ms', offsets: [0, 200, 400] },
+  { title: 'stagger: [0, 100, 500]', note: 'arr[order] ?? 0', offsets: [0, 100, 500] },
+  { title: "stagger: 'sequential'", note: 'waits for the previous tease reel to land', offsets: [0, TEASE + STOP, 2 * (TEASE + STOP)] },
 ];
+const PANEL_H = 164;
+const PANEL_Y = (i: number) => 60 + i * (PANEL_H + 12);
 
 // (d) Slowdown interpolation example.
 const slow = { from: 0.5, to: 0.2, holdFrom: 1, holdTo: 1.6 };
@@ -83,45 +91,40 @@ const orders = [0, 1, 2].map((order) => {
     (<code>docs/adr/020-anticipation-feel.md</code>) records why the curve looks the way it does.
   </p>
 
-  <Diagram width={900} height={330} caption="The legacy shape on NORMAL. Speed drops to 30% over the first 35% of the hold with power2.out, holds for the remaining 65%, keeps that speed through the stop delay, and the spin-out inherits it through preserveSpeed, clamped between 8% and 100% of spinSpeed.">
-    <line x1={80} y1={250} x2={860} y2={250} class="guide-strong" />
-    <line x1={80} y1={40} x2={80} y2={250} class="guide-strong" />
-    <Label x={74} y={yOf(1) + 4} text="100%" size={10} anchor="end" mono tone="faint" />
-    <Label x={74} y={yOf(0.3) + 4} text="30%" size={10} anchor="end" mono tone="faint" />
-    <Label x={74} y={yOf(0.08) + 4} text="8%" size={10} anchor="end" mono tone="faint" />
-    <Label x={74} y={yOf(0) + 4} text="0" size={10} anchor="end" mono tone="faint" />
-    <Label x={30} y={140} text="speed / spinSpeed" size={10} anchor="middle" rotate={-90} />
+  <Diagram height={300} caption="The legacy shape on NORMAL. Speed drops to 30% over the first 35% of the hold with power2.out, holds for the remaining 65%, keeps that speed through the stop delay, and the spin-out inherits it through preserveSpeed, clamped between 8% and 100% of spinSpeed. anticipation:reel fires at the tease start; anticipation:reelEnd fires from _markLanded, just before spin:reelLanded.">
+    <line x1={70} y1={240} x2={690} y2={240} class="guide-strong" />
+    <line x1={70} y1={40} x2={70} y2={240} class="guide-strong" />
+    <Label x={64} y={yOf(1) + 4} text="100%" anchor="end" mono tone="faint" />
+    <Label x={64} y={yOf(0.3) + 4} text="30%" anchor="end" mono tone="faint" />
+    <Label x={64} y={yOf(0.08) + 4} text="8%" anchor="end" mono tone="faint" />
+    <Label x={64} y={yOf(0) + 6} text="0" anchor="end" mono tone="faint" />
+    <Label x={22} y={150} text="speed / spinSpeed" anchor="middle" rotate={-90} />
 
-    <line x1={80} y1={yOf(1)} x2={860} y2={yOf(1)} class="guide" style="stroke-dasharray:4 3" />
-    <line x1={80} y1={yOf(0.08)} x2={860} y2={yOf(0.08)} class="guide" style="stroke-dasharray:4 3" />
-    <Label x={858} y={yOf(1) - 4} text="preserveSpeed cap: spinSpeed" size={9.5} anchor="end" tone="faint" />
-    <Label x={858} y={yOf(0.08) - 4} text="preserveSpeed floor: 0.08 x spinSpeed" size={9.5} anchor="end" tone="faint" />
-
-    {[220, 325, 520, 610, 740].map((x) => (
-      <line x1={x} y1={44} x2={x} y2={250} class="guide" />
+    <line x1={70} y1={yOf(1)} x2={690} y2={yOf(1)} class="guide" style="stroke-dasharray:4 3" />
+    <line x1={70} y1={yOf(0.08)} x2={690} y2={yOf(0.08)} class="guide" style="stroke-dasharray:4 3" />
+    {[LX.drop, LX.hold, LX.delay, LX.out].map((x) => (
+      <line x1={x} y1={58} x2={x} y2={240} class="guide" />
     ))}
     <path d={legacyPath} class="edge edge-primary" />
 
-    <Label x={150} y={60} text={['spin', 'full speed']} size={10} anchor="middle" />
-    <Label x={272} y={60} text={['drop: 35% of hold', 'power2.out']} size={10} anchor="middle" />
-    <Label x={422} y={60} text={['hold: 65% of hold', 'at spinSpeed x 0.3']} size={10} anchor="middle" />
-    <Label x={565} y={60} text={['stop.delay', 'speed kept']} size={10} anchor="middle" />
-    <Label x={675} y={60} text={['spinOut', 'preserveSpeed']} size={10} anchor="middle" />
-    <Label x={800} y={60} text={['land', 'bounce']} size={10} anchor="middle" />
-    <Label x={422} y={100} text="anticipation phase: tease step (cut)" size={10} anchor="middle" mono tone="fg" weight={600} />
-    <Edge from={[220, 110]} to={[520, 110]} arrow="both" />
+    <Label x={222} y={48} text="drop 35%, power2.out" anchor="middle" />
+    <Label x={688} y={52} text="preserveSpeed cap" anchor="end" tone="faint" />
+    <Label x={342} y={174} text="hold 65% at 30%" anchor="middle" tone="fg" weight={600} />
+    <Label x={543} y={174} text="preserveSpeed" anchor="middle" tone="fg" weight={600} />
+    <Label x={272} y={220} text="preserveSpeed floor" tone="faint" />
 
-    {[
-      [80, 220, 'span-spin'],
-      [220, 520, 'span-anticipation'],
-      [520, 610, 'span-rest'],
-      [610, 740, 'span-stop'],
-      [740, 860, 'span-bounce'],
-    ].map(([a, b, cls]) => (
-      <rect x={a as number} y={262} width={(b as number) - (a as number)} height={12} rx={3} class={cls as string} />
+    {([
+      [LX.spin, LX.drop, 'span-spin', 'spin'],
+      [LX.drop, LX.hold, 'span-anticipation', 'tease'],
+      [LX.hold, LX.delay, 'span-rest', 'stop delay'],
+      [LX.delay, LX.out, 'span-stop', 'spin-out'],
+      [LX.out, LX.end, 'span-bounce', 'bounce'],
+    ] as const).map(([a, b, cls, name]) => (
+      <>
+        <rect x={a} y={252} width={b - a} height={14} rx={3} class={cls} />
+        <Label x={(a + b) / 2} y={284} text={name} anchor="middle" />
+      </>
     ))}
-    <Label x={80} y={296} text="anticipation:reel fires at the tease start, spin:stopping right after; anticipation:reelEnd fires from _markLanded, just before spin:reelLanded" size={10} />
-    <Label x={80} y={312} text="speed = min(max(reel.speed, spinSpeed * 0.08), spinSpeed) when the stop phase starts with preserveSpeed" size={10} mono />
   </Diagram>
 
   <div class="not-prose my-8">
@@ -215,29 +218,30 @@ const orders = [0, 1, 2].map((order) => {
     <code>preserveSpeed: didAnticipate &amp;&amp; !quickened</code>.
   </p>
 
-  <Diagram width={900} height={330} caption="A curve shape with three segments. Each leg tweens speed to spinSpeed x seg.speed over seg.duration with power2.inOut and then holds; anticipation:segment fires at each leg start. With cells set, the final hold ends when the odometer has moved that many cells, or when max(hold, backstop) runs out.">
-    <line x1={80} y1={250} x2={860} y2={250} class="guide-strong" />
-    <line x1={80} y1={40} x2={80} y2={250} class="guide-strong" />
+  <Diagram height={296} caption="A curve shape with three segments. Each leg tweens speed to spinSpeed x seg.speed over seg.duration with power2.inOut and then holds; anticipation:segment fires at each leg start. With cells set, the final hold ends when the odometer has moved that many cells, or when max(hold, backstop) runs out.">
+    <line x1={70} y1={240} x2={690} y2={240} class="guide-strong" />
+    <line x1={70} y1={40} x2={70} y2={240} class="guide-strong" />
     {[0, 0.5, 1, 1.5].map((m) => (
       <>
-        <line x1={80} y1={yC(m)} x2={860} y2={yC(m)} class="guide" style="stroke-dasharray:4 3" />
-        <Label x={74} y={yC(m) + 4} text={`${Math.round(m * 100)}%`} size={10} anchor="end" mono tone="faint" />
+        <line x1={70} y1={yC(m)} x2={690} y2={yC(m)} class="guide" style="stroke-dasharray:4 3" />
+        <Label x={64} y={yC(m) + 4} text={`${Math.round(m * 100)}%`} anchor="end" mono tone="faint" />
       </>
     ))}
     <path d={curvePath} class="edge edge-primary" />
     {segMarks.map((m, i) => (
       <>
-        <circle cx={m.x} cy={yC(m.from)} r={4} class="span-bounce" />
-        <Label x={m.x} y={yC(m.from) - 10} text={`anticipation:segment ${i}`} size={9.5} anchor={i === 0 ? 'start' : 'middle'} mono />
-        <Label x={(m.x + m.xHold) / 2} y={272} text={[`${m.seg.name}: speed ${m.seg.speed}`, `${m.seg.duration} ms + hold ${m.seg.hold}`]} size={10} anchor="middle" />
-        <rect x={m.x} y={258} width={m.xEnd - m.x} height={6} rx={2} class="span-anticipation" />
-        <rect x={m.xEnd} y={258} width={m.xHold - m.xEnd} height={6} rx={2} class="span-rest" />
+        <circle cx={m.x} cy={yC(m.from)} r={5} class="span-bounce" />
+        <rect x={m.x} y={252} width={m.xEnd - m.x} height={8} rx={2} class="span-anticipation" />
+        <rect x={m.xEnd} y={252} width={m.xHold - m.xEnd} height={8} rx={2} class="span-rest" />
+        <Label x={(m.x + m.xHold) / 2} y={280} text={`${m.seg.name} ${m.seg.speed}`} anchor="middle" mono />
       </>
     ))}
-    <Edge from={[segMarks[2].xEnd, 120]} to={[segMarks[2].xHold, 120]} arrow="both" />
-    <Label x={(segMarks[2].xEnd + segMarks[2].xHold) / 2} y={110} text={['final leg with cells: hold until travelledCells >= cells', 'or until max(hold, backstop) ms; backstop = duration']} size={9.5} anchor="middle" />
-    <Label x={120} y={60} text="full speed" size={10} anchor="middle" />
-    <Label x={80} y={312} text="drive model: seg.duration is a time budget; if the drive misses the target by more than 0.5 it warns once (anticipation-drive-budget)" size={10} />
+    <Label x={134} y={142} text="segment 0" anchor="end" mono />
+    <Label x={segMarks[1].x} y={48} text="segment 1" anchor="middle" mono />
+    <Label x={segMarks[2].x - 8} y={210} text="segment 2" anchor="end" mono />
+    <Label x={105} y={108} text="full speed" anchor="middle" tone="faint" />
+    <Edge from={[segMarks[2].xEnd, 170]} to={[segMarks[2].xHold, 170]} arrow="both" />
+    <Label x={(segMarks[2].xEnd + segMarks[2].xHold) / 2} y={156} text="cells or backstop" anchor="middle" />
   </Diagram>
 
   <p>
@@ -252,32 +256,51 @@ const orders = [0, 1, 2].map((order) => {
     <code>tickSteps()</code> and then the travel check. <code>onSkip</code>, for a slam or a
     quicken, kills the tween or delayed call and calls <code>forceSpeed(spinSpeed)</code>; under a
     quicken the runner then cuts the <code>tease</code> step, which completes the phase, and the
-    reel does <em>not</em> join <code>_anticipatedReels</code>.
+    reel does <em>not</em> join <code>_anticipatedReels</code>. Under the drive model
+    <code>seg.duration</code> is a time budget rather than a tween length; if the drive
+    misses the target by more than 0.5 it warns once (<code>anticipation-drive-budget</code>).
   </p>
 
   <h2>Stagger</h2>
 
-  <Diagram width={900} height={200} caption="The three stagger forms on three tease reels (tease order 0, 1, 2). The offset is by tease order, the first reel never waits, and a waiting reel spins at full speed. 'sequential' waits for the previous tease reel's landing promise, so it is the slowest.">
-    {panels.map((p) => (
+  <Diagram height={620} caption="The three stagger forms on three tease reels (tease order 0, 1, 2), on one time scale in ms. The offset is by tease order, the first reel never waits, and a waiting reel spins at full speed. 'sequential' waits for the previous tease reel's landing promise, so it is the slowest.">
+    {[0, 500, 1000, 1500, 2000].map((t) => (
+      <Label x={LANE_X0 + t * S} y={40} text={`${t}`} anchor="middle" mono tone="faint" />
+    ))}
+    {panels.map((p, pi) => {
+      const py = PANEL_Y(pi);
+      return (
+        <>
+          <Group x={20} y={py} w={680} h={PANEL_H} label={p.title} note={p.note} />
+          {[0, 500, 1000, 1500, 2000].map((t) => (
+            <line x1={LANE_X0 + t * S} y1={py + 36} x2={LANE_X0 + t * S} y2={py + 156} class="guide" />
+          ))}
+          {p.offsets.map((off, order) => {
+            const y = py + 40 + order * 40;
+            const tStart = off * S;
+            const tEnd = (off + TEASE) * S;
+            const sEnd = (off + TEASE + STOP) * S;
+            return (
+              <>
+                <Label x={36} y={y + 21} text={`#${order}`} mono tone="faint" />
+                <rect x={LANE_X0} y={y} width={LANE_W} height={32} rx={5} class="lane-bg" />
+                {off > 0 && <rect x={LANE_X0} y={y + 4} width={tStart} height={24} rx={3} class="span-spin" />}
+                <rect x={LANE_X0 + tStart} y={y + 4} width={tEnd - tStart} height={24} rx={3} class="span-anticipation" />
+                <rect x={LANE_X0 + tEnd} y={y + 4} width={sEnd - tEnd} height={24} rx={3} class="span-stop" />
+              </>
+            );
+          })}
+        </>
+      );
+    })}
+    {([
+      ['span-spin', 'wait at full speed', 70],
+      ['span-anticipation', 'tease 450 ms', 250],
+      ['span-stop', 'stop delay 250 ms', 390],
+    ] as const).map(([cls, label, x]) => (
       <>
-        <Group x={p.x} y={10} w={280} h={180} label={p.title} note={p.note} />
-        {p.offsets.map((off, order) => {
-          const y = 50 + order * 36;
-          const x0 = p.x + 16;
-          const tStart = off * S;
-          const tEnd = (off + TEASE) * S;
-          const sEnd = (off + TEASE + STOP) * S;
-          return (
-            <>
-              <Label x={x0} y={y + 16} text={`#${order}`} size={10} mono tone="faint" />
-              <rect x={x0 + 24} y={y} width={240} height={24} rx={4} class="lane-bg" />
-              {off > 0 && <rect x={x0 + 24} y={y + 4} width={tStart} height={16} rx={3} class="span-spin" />}
-              <rect x={x0 + 24 + tStart} y={y + 4} width={tEnd - tStart} height={16} rx={3} class="span-anticipation" />
-              <rect x={x0 + 24 + tEnd} y={y + 4} width={sEnd - tEnd} height={16} rx={3} class="span-stop" />
-            </>
-          );
-        })}
-        <Label x={p.x + 40} y={176} text="wait at full speed / tease 450 / stop" size={9.5} tone="faint" />
+        <rect x={x} y={594} width={14} height={13} rx={3} class={cls} />
+        <Label x={x + 20} y={605} text={label} />
       </>
     ))}
   </Diagram>
@@ -295,17 +318,18 @@ const orders = [0, 1, 2].map((order) => {
 
   <h2>Slowdown across tease order</h2>
 
-  <Diagram width={800} height={210} caption="slowdown interpolates linearly across tease order with f = order / (count - 1). This example uses { from: 0.5, to: 0.2, holdFrom: 1, holdTo: 1.6 } on three reels with a 450 ms base hold.">
+  <Diagram height={196} caption="slowdown interpolates linearly across tease order with f = order / (count - 1). This example uses { from: 0.5, to: 0.2, holdFrom: 1, holdTo: 1.6 } on three reels with a 450 ms base hold.">
     {orders.map((o) => (
-      <Box x={20 + o.order * 260} y={20} w={240} h={110} title={`tease order ${o.order}`} mono={false} kind={o.order === 1 ? 'accent' : 'subtle'} sub={[
-        `f = ${o.order} / ${count - 1} = ${o.f.toFixed(2)}`,
-        `speedMultiplier = ${o.mult.toFixed(2)}`,
-        `holdMult = ${o.hold.toFixed(2)}`,
-        `duration = 450 x ${o.hold.toFixed(2)} = ${o.duration} ms`,
+      <Box x={20 + o.order * 232} y={20} w={216} h={78} title={`tease order ${o.order}`} mono={false} kind={o.order === 1 ? 'accent' : 'subtle'} sub={[
+        `f = ${o.f.toFixed(2)}, speed x ${o.mult.toFixed(2)}`,
+        `hold x ${o.hold.toFixed(2)} = ${o.duration} ms`,
       ]} />
     ))}
-    <Label x={20} y={160} text="speedMultiplier = from + (to - from) * f        holdMult = holdFrom + (holdTo - holdFrom) * f        duration = base * holdMult" size={10.5} mono />
-    <Label x={20} y={182} text="base = setAnticipation duration ?? profile anticipationDelay. With one tease reel, f = 0. duration is only written when holdMult differs from 1 or an override exists." size={10} />
+    <Label x={20} y={136} text={[
+      'speedMultiplier = from + (to - from) * f',
+      'holdMult = holdFrom + (holdTo - holdFrom) * f',
+      'duration = base * holdMult',
+    ]} mono tone="fg" />
   </Diagram>
 
   <p>
@@ -315,7 +339,11 @@ const orders = [0, 1, 2].map((order) => {
     no slowdown it passes <code>{'{ duration?, cells?, ... }'}</code> so the phase defaults apply:
     30% speed and an <code>anticipationDelay</code> hold. With a slowdown it computes the two
     multipliers above; <code>from</code> defaults to 0.3 and <code>to</code> to <code>from</code>,
-    <code>holdFrom</code> to 1 and <code>holdTo</code> to <code>holdFrom</code>.
+    <code>holdFrom</code> to 1 and <code>holdTo</code> to <code>holdFrom</code>. The base
+    hold is the <code>setAnticipation</code> <code>duration</code>, else the profile's
+    <code>anticipationDelay</code>; with one tease reel <code>f = 0</code>, and
+    <code>duration</code> is only written into the config when <code>holdMult</code> differs
+    from 1 or an override exists.
   </p>
 
   <h2>Protect, in one paragraph</h2>

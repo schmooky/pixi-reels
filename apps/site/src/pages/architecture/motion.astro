@@ -10,6 +10,18 @@ import Legend from '../../components/arch/Legend.astro';
 
 const stripKinds = ['buffer', 'buffer', 'plain', 'plain', 'plain', 'buffer', 'buffer'] as const;
 const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
+const stripMain = ['-200', '-100', '0', '100', '200', '300', '400'];
+// Strip figure geometry: cells of 48 on a 56 pitch, starting at y = 56.
+const sy = (i: number) => 56 + i * 56;
+
+// Axis figure: one quadrant per orientation x direction.
+type Quad = { x: number; y: number; label: string; note?: string; vertical: boolean; forward: boolean; line: string };
+const quads: Quad[] = [
+  { x: 16, y: 20, label: 'vertical / forward', note: 'the default', vertical: true, forward: true, line: "main 'y', polarity +1, feed 'start'" },
+  { x: 364, y: 20, label: 'vertical / reverse', note: 'roll-up', vertical: true, forward: false, line: "main 'y', polarity -1, feed 'end'" },
+  { x: 16, y: 290, label: 'horizontal / forward', vertical: false, forward: true, line: "main 'x', polarity +1, feed 'start'" },
+  { x: 364, y: 290, label: 'horizontal / reverse', vertical: false, forward: false, line: "main 'x', polarity -1, feed 'end'" },
+];
 ---
 <Architecture
   title="Motion"
@@ -29,43 +41,27 @@ const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
 
   <h2>The strip</h2>
 
-  <Diagram width={880} height={430} caption="One reel's symbol array. Index 0 is always the symbol nearest the start edge (top for vertical, left for horizontal), whatever direction the reel travels. The window outline is the mask; buffer cells sit outside it.">
-    <Label x={74} y={24} text="feed edge of a forward reel (polarity +1, feedEdge 'start')" size={10.5} />
+  <Diagram height={500} caption="One reel's symbol array, with the main coordinate each index gets at pitch 100 and off 0. Index 0 is always the symbol nearest the start edge, whatever direction the reel travels; the dashed outline is the mask.">
+    <Label x={70} y={40} text="i" anchor="end" weight={600} tone="fg" />
+    <Label x={124} y={40} text="strip" anchor="middle" weight={600} tone="fg" />
+    <Label x={470} y={40} text="main" anchor="end" weight={600} tone="fg" />
     {stripKinds.map((kind, i) => (
-      <Cell x={80} y={40 + i * 48} size={44} label={stripIds[i]} kind={kind} />
+      <Cell x={100} y={sy(i)} size={48} label={stripIds[i]} kind={kind} />
     ))}
     {stripKinds.map((_, i) => (
-      <Label x={66} y={40 + i * 48 + 27} text={`i=${i}`} size={10.5} anchor="end" mono />
+      <Label x={70} y={sy(i) + 29} text={`${i}`} anchor="end" mono tone="fg" />
     ))}
-    <rect x={74} y={130} width={56} height={152} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
-    <Label x={140} y={68} text="bufferStart (2)" size={10.5} />
-    <Label x={140} y={116} text="i < bufferStart" size={10} mono tone="faint" />
-    <Label x={140} y={212} text="visible (3) = the window" size={10.5} />
-    <Label x={140} y={356} text="bufferEnd (2)" size={10.5} />
-    <Label x={74} y={404} text="exit edge of a forward reel: wraps leave through this buffer" size={10.5} />
-    <Edge from={[310, 52]} to={[310, 372]} kind="primary" label="travel" at={0.62} />
-    <Label x={310} y={268} text="forward" size={10} mono tone="faint" anchor="middle" />
-
-    <Box x={360} y={44} w={500} h={120} kind="code" title="main = (i - bufferStart) * pitch + off" align="left" sub={[
-      'pitch = cellMain + mainGap          (ReelMotion.slotPitch)',
-      'rot   = floor(travel / pitch)        (whole wraps, derived)',
-      'off   = travel - rot * pitch         (sub-slot remainder)',
-      'written to view[mainProp] for EVERY symbol, every advance()',
-    ]} />
-    <Label x={360} y={200} text="Worked example: pitch 100, bufferStart 2, off 0" size={11} weight={600} tone="fg" />
-    <Label x={360} y={222} mono size={10.5} lh={1.5} text={[
-      'i=0  main = -200      i=4  main = 200',
-      'i=1  main = -100      i=5  main = 300',
-      'i=2  main =    0      i=6  main = 400',
-      'i=3  main =  100      window spans 0 .. 3*pitch - gap',
-    ]} />
-    <Label x={360} y={318} size={11} lh={1.45} text={[
-      'getCellMain(cell) = (cell - bufferStart) * pitch is the same formula read',
-      'back by visible cell number. snapToGrid() sets travel = rot = off = 0 and',
-      're-renders, so after a snap every symbol sits exactly on its grid slot.',
-      'Buffers are geometric: bufferStart is the smaller coordinate on every reel,',
-      'forward or reverse (ADR 016 section 3.4).',
-    ]} />
+    {stripMain.map((m, i) => (
+      <Label x={470} y={sy(i) + 29} text={m} anchor="end" mono tone="fg" />
+    ))}
+    <rect x={94} y={sy(2) - 6} width={60} height={3 * 56 - 8 + 12} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <Label x={176} y={sy(0) + 29} text="bufferStart (2)" />
+    <Label x={176} y={sy(1) + 29} text="feed edge, forward" tone="faint" />
+    <Label x={176} y={sy(3) + 29} text="visible (3): the window" />
+    <Label x={176} y={sy(5) + 29} text="bufferEnd (2)" />
+    <Label x={176} y={sy(6) + 29} text="exit edge, forward" tone="faint" />
+    <Edge from={[560, sy(0) + 8]} to={[560, sy(6) + 40]} kind="primary" label="travel" />
+    <Label x={360} y={482} text="main = (i - bufferStart) * pitch + off" size={14} mono tone="fg" anchor="middle" />
   </Diagram>
 
   <div class="not-prose my-8">
@@ -76,6 +72,19 @@ const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
       { kind: 'primary', label: 'ReelMotion', note: 'writes every main coordinate' },
     ]} />
   </div>
+
+  <p>
+    Read the figure as a table: <code>pitch = cellMain + mainGap</code>
+    (<code>ReelMotion.slotPitch</code>), and with <code>bufferStart = 2</code>
+    index 2 is the first visible cell at main 0, index 0 sits one buffer above
+    the window at -200, and the window spans <code>0 .. 3 * pitch - gap</code>.
+    <code>getCellMain(cell) = (cell - bufferStart) * pitch</code> is the same
+    formula read back by visible cell number. <code>snapToGrid()</code> sets
+    <code>travel = rot = off = 0</code> and re-renders, so after a snap every
+    symbol sits exactly on its grid slot. Buffers are geometric:
+    <code>bufferStart</code> is the smaller coordinate on every reel, forward
+    or reverse (ADR 016 section 3.4).
+  </p>
 
   <h2>Derive from index, never accumulate</h2>
 
@@ -104,42 +113,40 @@ const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
 
   <h2>The wrap cycle</h2>
 
-  <Diagram width={900} height={500} caption="advance() rotates the array once per whole pitch of travel; each rotation asks the Reel for a new identity, and the final _render() writes every position from index.">
-    <Box x={20} y={24} w={200} h={56} title="advance(delta)" kind="primary" sub="delta = 0 returns at once" />
-    <Box x={260} y={24} w={200} h={56} title="travel += pol * delta" sub="odometer += |delta|" />
-    <Box x={500} y={24} w={200} h={56} title="rot = floor(travel/pitch)" sub="q snapped if within 1e-9" size={12} />
-    <Box x={740} y={24} w={140} h={56} title="off = remainder" sub="travel - rot*pitch" size={12} />
-    <Edge from={[220, 52]} to={[260, 52]} />
-    <Edge from={[460, 52]} to={[500, 52]} />
-    <Edge from={[700, 52]} to={[740, 52]} />
+  <Diagram height={560} caption="advance() derives rotation. Travel is one number; the whole-wrap count comes from it, the array is rotated until it matches, and _render() writes every position from index.">
+    <Box x={180} y={20} w={360} h={60} title="advance(delta)" kind="primary" sub="delta = 0 returns at once" />
+    <Box x={180} y={104} w={360} h={60} title="travel += polarity * delta" sub="odometer += |delta|" />
+    <Box x={180} y={188} w={360} h={78} title="rot = floor(travel / pitch)" sub={['off = travel - rot * pitch', 'both snapped within 1e-9']} />
+    <Edge from={[360, 80]} to={[360, 104]} />
+    <Edge from={[360, 164]} to={[360, 188]} />
 
-    <Box x={140} y={120} w={220} h={76} title="_rotateToStart()" sub={['_rot++ while below target', 'symbols.pop() then unshift()', 'wrapped symbol is now index 0']} size={12} />
-    <Box x={420} y={120} w={220} h={76} title="_rotateToEnd()" sub={['_rot-- while above target', 'symbols.shift() then push()', 'wrapped symbol is now index M-1']} size={12} />
-    <Edge from={[580, 80]} via={[[580, 100], [250, 100]]} to={[250, 120]} label="rot rose (forward travel)" labelDy={-14} />
-    <Edge from={[620, 80]} via={[[620, 100], [530, 100]]} to={[530, 120]} label="rot fell" labelDx={40} labelDy={-14} />
+    <Box x={40} y={326} w={300} h={78} title="_rotateToStart()" sub={['symbols.pop(), then unshift()', 'the wrapped symbol is index 0']} />
+    <Box x={380} y={326} w={300} h={78} title="_rotateToEnd()" sub={['symbols.shift(), then push()', 'the wrapped symbol is index M-1']} />
+    <Edge from={[360, 266]} via={[[360, 296], [190, 296]]} to={[190, 326]} label="rot rose" />
+    <Edge from={[360, 266]} via={[[360, 296], [530, 296]]} to={[530, 326]} label="rot fell" />
 
-    <Box x={280} y={226} w={320} h={50} title="Reel._onSymbolWrapped(symbol)" kind="accent" sub="picks the id for the wrapped seat" />
-    <Edge from={[250, 196]} via={[[250, 211], [400, 211]]} to={[400, 226]} />
-    <Edge from={[530, 196]} via={[[530, 211], [480, 211]]} to={[480, 226]} />
+    <Box x={180} y={464} w={360} h={60} title="_render()" kind="primary" sub="every view, plus the curve quad" />
+    <Edge from={[190, 404]} via={[[190, 434], [360, 434]]} to={[360, 464]} />
+    <Edge from={[530, 404]} via={[[530, 434], [360, 434]]} to={[360, 464]} />
+    <Label x={360} y={550} text="main = (i - bufferStart) * pitch + off" size={14} mono tone="fg" anchor="middle" />
+  </Diagram>
 
-    <Box x={20} y={306} w={270} h={66} title="1. nudge queue" sub={['while a nudge is in flight', 'pre-built by nudge(), always wins']} size={12} />
-    <Box x={310} y={306} w={270} h={66} title="2. StopSequencer.next()" sub={['only if isStopping && hasRemaining', 'the cached landing frame']} size={12} />
-    <Box x={600} y={306} w={280} h={66} title="3. RandomSymbolProvider" sub={["next('spinning', reelIndex)", 'layered pools, injected rng']} size={12} />
-    <Edge from={[440, 276]} via={[[440, 291], [155, 291]]} to={[155, 306]} />
-    <Edge from={[440, 276]} to={[445, 306]} label="first match wins" labelDx={70} labelDy={-6} />
-    <Edge from={[440, 276]} via={[[440, 291], [740, 291]]} to={[740, 306]} />
+  <Diagram height={420} caption="The wrap callback picks an id. Each rotation hands the wrapped symbol to the Reel, which asks three sources in order; the first that answers wins, and the seat is refilled before _render() runs.">
+    <Box x={200} y={20} w={320} h={60} title="Reel._onSymbolWrapped()" kind="accent" sub="called once per rotation" />
+    <Box x={10} y={140} w={220} h={78} title="nudge queue" sub={['first: while a nudge', 'is in flight']} />
+    <Box x={250} y={140} w={220} h={78} title="StopSequencer.next()" sub={['then: while isStopping', 'and hasRemaining']} />
+    <Box x={490} y={140} w={220} h={78} title="RandomSymbolProvider" sub={["otherwise: next('spinning')", 'layered pools, injected rng']} />
+    <Edge from={[360, 80]} via={[[360, 110], [120, 110]]} to={[120, 140]} />
+    <Edge from={[360, 80]} to={[360, 140]} />
+    <Edge from={[360, 80]} via={[[360, 110], [600, 110]]} to={[600, 140]} />
 
-    <Edge from={[155, 372]} to={[155, 392]} arrow="none" />
-    <Edge from={[445, 372]} to={[445, 392]} arrow="none" />
-    <Edge from={[740, 372]} to={[740, 392]} arrow="none" />
-    <path d="M 155 392 L 740 392" class="edge edge-muted" />
-    <Edge from={[155, 392]} to={[155, 410]} />
-
-    <Box x={20} y={410} w={270} h={66} title="_replaceSymbol(index, id)" sub={['index = symbols.indexOf(symbol)', 'release, acquire, resize, place']} size={12} />
-    <Box x={310} y={410} w={270} h={66} title="refreshZIndex()" sub={['every index shifted', 'deferred to snapToGrid in a nudge']} size={12} />
-    <Box x={600} y={410} w={280} h={66} title="_render()" kind="primary" sub={['main = (i - bufferStart)*pitch + off', 'for every view, plus the curve quad']} size={12} />
-    <Edge from={[290, 443]} to={[310, 443]} />
-    <Edge from={[580, 443]} to={[600, 443]} label="then back in advance()" labelDy={42} labelDx={10} />
+    <Box x={40} y={278} w={300} h={78} title="_replaceSymbol(index, id)" sub={['release, acquire, resize,', 'place, then symbol:created']} />
+    <Box x={380} y={278} w={300} h={60} title="refreshZIndex()" sub="every index shifted" />
+    <Edge from={[120, 218]} via={[[120, 248], [190, 248]]} to={[190, 278]} />
+    <Edge from={[360, 218]} via={[[360, 248], [190, 248]]} to={[190, 278]} />
+    <Edge from={[600, 218]} via={[[600, 248], [190, 248]]} to={[190, 278]} />
+    <Edge from={[340, 308]} to={[380, 308]} />
+    <Label x={360} y={400} text="id in hand, back to _render()" anchor="middle" />
   </Diagram>
 
   <p>
@@ -159,39 +166,28 @@ const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
 
   <h2>The axis</h2>
 
-  <Diagram width={880} height={470} caption="ReelAxis is a value object built once per reel by reelAxis(orientation, direction). The same ReelMotion code runs all four combinations; only the property key, the polarity and the feed edge differ.">
-    <Label x={290} y={30} text="direction: 'forward'" size={11} weight={600} anchor="middle" mono tone="fg" />
-    <Label x={690} y={30} text="direction: 'reverse'" size={11} weight={600} anchor="middle" mono tone="fg" />
-    <Label x={40} y={145} text="orientation: 'vertical'" size={11} weight={600} anchor="middle" mono tone="fg" rotate={-90} />
-    <Label x={40} y={355} text="orientation: 'horizontal'" size={11} weight={600} anchor="middle" mono tone="fg" rotate={-90} />
-
-    <Group x={100} y={50} w={380} h={190} kind="solid" label="VERTICAL_FORWARD" note="the v1 default" />
-    {[0, 1, 2].map((i) => <Cell x={130} y={80 + i * 40} size={36} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
-    <Label x={148} y={74} text="feed" size={9.5} anchor="middle" mono tone="faint" />
-    <Label x={148} y={210} text="exit" size={9.5} anchor="middle" mono tone="faint" />
-    <Edge from={[190, 84]} to={[190, 192]} kind="primary" />
-    <Label x={240} y={92} mono size={10.5} lh={1.5} text={["mainProp  'y'   crossProp 'x'", 'polarity  +1', "feedEdge  'start' (top)", 'travel: down, new ids enter', 'at the top, wrap out the bottom']} />
-
-    <Group x={500} y={50} w={380} h={190} kind="solid" label="vertical / reverse" note="roll-up" />
-    {[0, 1, 2].map((i) => <Cell x={530} y={80 + i * 40} size={36} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
-    <Label x={548} y={74} text="exit" size={9.5} anchor="middle" mono tone="faint" />
-    <Label x={548} y={210} text="feed" size={9.5} anchor="middle" mono tone="faint" />
-    <Edge from={[590, 192]} to={[590, 84]} kind="primary" />
-    <Label x={640} y={92} mono size={10.5} lh={1.5} text={["mainProp  'y'   crossProp 'x'", 'polarity  -1', "feedEdge  'end' (bottom)", 'travel: up, new ids enter', 'at the bottom, wrap out the top']} />
-
-    <Group x={100} y={260} w={380} h={190} kind="solid" label="horizontal / forward" />
-    {[0, 1, 2].map((i) => <Cell x={130 + i * 40} y={300} size={36} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
-    <Label x={122} y={322} text="feed" size={9.5} anchor="end" mono tone="faint" />
-    <Label x={256} y={322} text="exit" size={9.5} anchor="start" mono tone="faint" />
-    <Edge from={[132, 356]} to={[246, 356]} kind="primary" />
-    <Label x={290} y={302} mono size={10.5} lh={1.5} text={["mainProp  'x'   crossProp 'y'", 'polarity  +1', "feedEdge  'start' (left)", 'travel: right, new ids', 'enter at the left']} />
-
-    <Group x={500} y={260} w={380} h={190} kind="solid" label="horizontal / reverse" />
-    {[0, 1, 2].map((i) => <Cell x={530 + i * 40} y={300} size={36} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
-    <Label x={522} y={322} text="exit" size={9.5} anchor="end" mono tone="faint" />
-    <Label x={656} y={322} text="feed" size={9.5} anchor="start" mono tone="faint" />
-    <Edge from={[646, 356]} to={[532, 356]} kind="primary" />
-    <Label x={690} y={302} mono size={10.5} lh={1.5} text={["mainProp  'x'   crossProp 'y'", 'polarity  -1', "feedEdge  'end' (right)", 'travel: left, new ids', 'enter at the right']} />
+  <Diagram height={560} caption="ReelAxis, built once per reel by reelAxis(orientation, direction). The same ReelMotion code runs all four combinations; only the property key, the polarity and the feed edge differ. The arrow is travel; new ids enter at the feed edge.">
+    {quads.map((q) => (
+      <>
+        <Group x={q.x} y={q.y} w={340} h={250} kind="solid" label={q.label} note={q.note} />
+        {q.vertical ? (
+          <>
+            {[0, 1, 2].map((i) => <Cell x={q.x + 40} y={q.y + 52 + i * 48} size={44} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
+            <Edge from={[q.x + 124, q.forward ? q.y + 56 : q.y + 188]} to={[q.x + 124, q.forward ? q.y + 188 : q.y + 56]} kind="primary" />
+            <Label x={q.x + 144} y={q.y + 66} text={q.forward ? 'feed' : 'exit'} mono tone="faint" />
+            <Label x={q.x + 144} y={q.y + 192} text={q.forward ? 'exit' : 'feed'} mono tone="faint" />
+          </>
+        ) : (
+          <>
+            {[0, 1, 2].map((i) => <Cell x={q.x + 40 + i * 48} y={q.y + 56} size={44} label={['A', 'B', 'C'][i]} kind={i === 1 ? 'plain' : 'buffer'} />)}
+            <Edge from={[q.forward ? q.x + 44 : q.x + 176, q.y + 130]} to={[q.forward ? q.x + 176 : q.x + 44, q.y + 130]} kind="primary" />
+            <Label x={q.x + 40} y={q.y + 164} text={q.forward ? 'feed' : 'exit'} mono tone="faint" />
+            <Label x={q.x + 180} y={q.y + 164} text={q.forward ? 'exit' : 'feed'} mono tone="faint" anchor="end" />
+          </>
+        )}
+        <Label x={q.x + 16} y={q.y + 226} text={q.line} mono tone="fg" />
+      </>
+    ))}
   </Diagram>
 
   <p>
@@ -216,26 +212,24 @@ const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
 
   <h2>One tick</h2>
 
-  <Diagram width={820} height={540} caption="The whole per-frame path. Phases never write positions: they set reel.speed or reel.targetSpeed and read isStopping and the sequencer, and the motion layer does the rest.">
-    <Box x={20} y={20} w={200} h={44} title="PIXI.Ticker" kind="code" sub="ticker.deltaMS" />
-    <Box x={20} y={84} w={320} h={52} title="SpinController._onTick(ticker)" kind="accent" sub="returns at once unless _isSpinning" />
-    <Edge from={[120, 64]} to={[120, 84]} />
+  <Diagram height={760} caption="The whole per-frame path, top to bottom: every reel in index order, then every active phase. Phases never write positions: they set reel.speed or reel.targetSpeed and the motion layer does the rest. A reel at speed 0 returns before computeDelta, so a parked reel never wraps.">
+    <Box x={180} y={20} w={360} h={60} title="PIXI.Ticker" kind="code" sub="ticker.deltaMS" />
+    <Box x={180} y={104} w={360} h={60} title="SpinController._onTick()" kind="accent" sub="returns at once unless _isSpinning" />
+    <Edge from={[360, 80]} to={[360, 104]} />
 
-    <Group x={60} y={156} w={740} h={256} kind="tint" label="for each reel" note="reels.update(deltaMs), in index order" />
-    <Box x={80} y={192} w={280} h={50} title="Reel.update(deltaMs)" sub="dt = min(deltaMs, MAX_TICK_MS = 100)" size={12} />
-    <Edge from={[180, 136]} to={[180, 192]} />
-    <Box x={80} y={266} w={320} h={60} kind="ghost" title="stepDrive(state, targetSpeed, bounds, dt)" size={12} sub={['drive model only; skipped when parked', 'then reel.speed = state.speed']} />
-    <Edge from={[180, 242]} to={[180, 266]} />
-    <Label x={420} y={300} text="speed === 0 ? return (no advance, no wraps)" size={10.5} mono tone="faint" />
-    <Box x={80} y={346} w={340} h={56} title="spinningMode.computeDelta(pitch, speed, dt)" size={12} sub={['StandardMode: pitch * speed * dt / 1000', 'clamped to [-pitch/2, +pitch/2]']} />
-    <Edge from={[180, 326]} to={[180, 346]} />
-    <Box x={470} y={346} w={310} h={56} title="ReelMotion.advance(delta)" kind="primary" size={12} sub={['travel, rot, rotations, _onSymbolWrapped,', '_render() writes every main coordinate']} />
-    <Edge from={[420, 374]} to={[470, 374]} label="delta != 0" labelDy={-16} />
+    <Group x={140} y={192} w={440} h={396} kind="tint" label="for each reel" />
+    <Box x={180} y={232} w={360} h={60} title="Reel.update(deltaMs)" sub="dt = min(deltaMs, MAX_TICK_MS)" />
+    <Box x={180} y={316} w={360} h={60} kind="ghost" title="stepDrive(state, target, dt)" sub="drive model only, then reel.speed" />
+    <Box x={180} y={400} w={360} h={78} title="computeDelta(pitch, speed, dt)" sub={['StandardMode: pitch * speed * dt / 1000', 'clamped to half a pitch either way']} />
+    <Box x={180} y={502} w={360} h={60} title="ReelMotion.advance(delta)" kind="primary" sub="rotations, wraps, then _render()" />
+    <Edge from={[360, 164]} to={[360, 232]} />
+    <Edge from={[360, 292]} to={[360, 316]} />
+    <Edge from={[360, 376]} to={[360, 400]} />
+    <Edge from={[360, 478]} to={[360, 502]} />
 
-    <Group x={60} y={430} w={740} h={92} kind="tint" label="for each active phase" note="phase.isActive only" />
-    <Box x={80} y={464} w={280} h={44} title="phase.update(deltaMs)" sub="StopPhase: tickSteps() (delay, spinOut, land, bounce)" size={12} />
-    <Edge from={[40, 136]} via={[[40, 486]]} to={[80, 486]} />
-    <Edge from={[40, 136]} via={[[40, 217]]} to={[80, 217]} />
+    <Group x={140} y={612} w={440} h={128} kind="tint" label="for each active phase" />
+    <Box x={180} y={652} w={360} h={60} title="phase.update(deltaMs)" sub="StopPhase: tickSteps()" />
+    <Edge from={[360, 588]} to={[360, 652]} />
   </Diagram>
 
   <p>
@@ -313,47 +307,56 @@ const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
 
   <h2>The landing</h2>
 
-  <Diagram width={920} height={500} caption="The animated stop is four steps inside StopPhase. A slam skips the steps, places the full target frame in one tick, and never bounces.">
-    <Box x={20} y={40} w={160} h={66} title="delay" size={12} sub={['stop stagger', 'cut by a quicken']} />
-    <Box x={196} y={40} w={160} h={66} title="spinOut" size={12} sub={['setStopFrame(frame)', 'isStopping = true']} />
-    <Box x={372} y={40} w={160} h={66} title="M wraps" size={12} sub={['one id per wrap', 'until !hasRemaining']} />
-    <Box x={548} y={40} w={160} h={66} title="land()" kind="accent" size={12} sub={['snap, notify,', "raise 'landing'"]} />
-    <Box x={724} y={40} w={160} h={66} title="bounce()" kind="primary" size={12} sub={['overshoot along mainProp', 'by polarity * distance']} />
-    <Edge from={[180, 73]} to={[196, 73]} />
-    <Edge from={[356, 73]} to={[372, 73]} />
-    <Edge from={[532, 73]} to={[548, 73]} />
-    <Edge from={[708, 73]} to={[724, 73]} />
-
-    <Group x={20} y={130} w={512} h={150} kind="dashed" label="land(), in order" note="ReelPhase.land" />
-    <Label x={36} y={166} mono size={10.5} lh={1.55} text={[
-      '1 haltDrive()         speed, targetSpeed, drive state all 0',
-      '2 isStopping = false',
-      '3 snapToGrid()        travel = rot = off = 0, re-render,',
-      '                      _finalizeFrame(), refreshZIndex()',
-      '4 notifySpinEnd()     onReelSpinEnd() on every strip symbol',
-      '5 notifyLanded(cells) onReelLanded(ctx), then reel event',
-      "                      'landing' -> set event spin:reelLanding",
-    ]} />
-    <Group x={548} y={130} w={336} h={150} kind="dashed" label="bounce()" note="ReelPhase.bounce" />
-    <Label x={564} y={166} size={10.5} lh={1.55} text={[
-      'defaultBounce: two legs, half the duration each,',
-      'container[mainProp] to base + polarity*distance,',
-      "then back to base. ease: bounceEase ?? 'power1.out'.",
-      'followLifted shifts unmasked views every frame.',
-      'distance <= 0 returns an already-settled bounce.',
-      'spin:reelLanded fires after it, via _markLanded.',
-    ]} />
-
-    <Group x={20} y={300} w={864} h={180} kind="tint" label="slam path" note="skip(), slamStop(), abort, timeout, a phase chain that threw" />
-    <Box x={36} y={340} w={190} h={66} title="forceComplete(ctx)" size={12} sub={['cancels the running step', 'ignores skippable']} />
-    <Box x={246} y={340} w={190} h={66} title="StopPhase.onSkip" size={12} sub={['haltDrive, isStopping = false', 'placeStrip(targetFrame)']} />
-    <Box x={456} y={340} w={190} h={66} title="rest, then snap" size={12} sub={['container back to base main', 'then reel.snapToGrid()']} />
-    <Box x={666} y={340} w={200} h={66} title="controller lands it" size={12} sub={['placeSymbols, notifySpinEnd,', 'notifyLanded, _markLanded']} />
-    <Edge from={[226, 373]} to={[246, 373]} />
-    <Edge from={[436, 373]} to={[456, 373]} />
-    <Edge from={[646, 373]} to={[666, 373]} />
-    <Label x={36} y={440} size={10.5} text="The full strip is placed, buffers included, so a big-symbol tail parked in bufferStart lands too. The container is rested before the snap so a mid-bounce slam cannot bake the overshoot into a lifted view." />
+  <Diagram height={160} caption="The animated stop is four steps inside StopPhase: wait out the stagger, load the frame and spin out through M wraps, land, bounce.">
+    <Box x={8} y={40} w={128} h={78} title="delay" sub={['stop stagger', 'cut by quicken']} />
+    <Box x={152} y={40} w={128} h={78} title="spinOut" sub={['setStopFrame()', 'isStopping']} />
+    <Box x={296} y={40} w={128} h={78} title="M wraps" sub={['one id per wrap', 'until exhausted']} />
+    <Box x={440} y={40} w={128} h={78} title="land()" kind="accent" sub={['snap, notify,', "'landing'"]} />
+    <Box x={584} y={40} w={128} h={78} title="bounce()" kind="primary" sub={['overshoot,', 'then back']} />
+    <Edge from={[136, 79]} to={[152, 79]} />
+    <Edge from={[280, 79]} to={[296, 79]} />
+    <Edge from={[424, 79]} to={[440, 79]} />
+    <Edge from={[568, 79]} to={[584, 79]} />
   </Diagram>
+
+  <p>
+    <code>land()</code> (<code>ReelPhase.land</code>) runs in a fixed order:
+    <code>haltDrive()</code> zeroes speed, target speed and the drive state;
+    <code>isStopping</code> goes false; <code>snapToGrid()</code> sets
+    <code>travel = rot = off = 0</code>, re-renders, then
+    <code>_finalizeFrame()</code> and <code>refreshZIndex()</code>;
+    <code>notifySpinEnd()</code> calls <code>onReelSpinEnd()</code> on every
+    strip symbol; and <code>notifyLanded(cells)</code> calls
+    <code>onReelLanded(ctx)</code>, raises the reel event <code>'landing'</code>
+    and the set event <code>spin:reelLanding</code>. <code>bounce()</code>
+    (<code>ReelPhase.bounce</code>, <code>defaultBounce</code>) is two legs of
+    half the duration each: <code>container[mainProp]</code> to
+    <code>base + polarity * distance</code>, then back to base, with
+    <code>bounceEase ?? 'power1.out'</code>; <code>followLifted</code> shifts
+    unmasked views every frame; a distance of 0 or less returns an
+    already-settled bounce. <code>spin:reelLanded</code> fires after it, via
+    <code>_markLanded</code>.
+  </p>
+
+  <Diagram height={450} caption="The slam path: skip(), slamStop(), an abort, a timeout or a phase chain that threw. The full target frame is placed in one tick, buffers included, and nothing bounces.">
+    <Group x={140} y={20} w={440} h={410} kind="tint" label="slam path" note="no steps, no bounce" />
+    <Box x={180} y={60} w={360} h={78} title="forceComplete(ctx)" sub={['cancels the running step', 'ignores skippable']} />
+    <Box x={180} y={162} w={360} h={78} title="StopPhase.onSkip" sub={['haltDrive(), isStopping = false', 'placeStrip(targetFrame)']} />
+    <Box x={180} y={264} w={360} h={78} title="rest, then snap" sub={['container back to its base main', 'then reel.snapToGrid()']} />
+    <Box x={180} y={366} w={360} h={44} title="controller lands it" kind="accent" />
+    <Edge from={[360, 138]} to={[360, 162]} />
+    <Edge from={[360, 240]} to={[360, 264]} />
+    <Edge from={[360, 342]} to={[360, 366]} />
+  </Diagram>
+
+  <p>
+    The full strip is placed, buffers included, so a big-symbol tail parked in
+    <code>bufferStart</code> lands too. The container is rested before the snap
+    so a mid-bounce slam cannot bake the overshoot into a lifted view. The
+    controller then does what <code>land()</code> would have:
+    <code>placeSymbols</code>, <code>notifySpinEnd</code>,
+    <code>notifyLanded</code>, <code>_markLanded</code>.
+  </p>
 
   <p>
     <code>Reel.setStopFrame(frame)</code> loads the strip into the

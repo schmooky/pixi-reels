@@ -1,7 +1,7 @@
 ---
 /**
  * One grid cell inside a `<Diagram>`: a square with a short label. Used by
- * the strip / cascade / buffer diagrams.
+ * the strip / cascade / buffer diagrams. Keep cells at least 44 units.
  *
  * Kinds: plain (a symbol at rest), hot (winner / anchor / highlighted),
  * new (just arrived), empty (a hole), buffer (off-screen slot).
@@ -20,18 +20,19 @@ interface Props {
   mono?: boolean;
   class?: string;
 }
-const { x, y, size = 40, w, h, label, sub, kind = 'plain', r = 7, mono = true, class: className } = Astro.props as Props;
+const { x, y, size = 48, w, h, label, sub, kind = 'plain', r = 8, mono = true, class: className } = Astro.props as Props;
 const cw = w ?? size;
 const ch = h ?? size;
-const fs = Math.min(13, Math.max(9, Math.round(Math.min(cw, ch) * 0.3)));
+const fs = Math.min(16, Math.max(13, Math.round(Math.min(cw, ch) * 0.32)));
+const ss = Math.max(12, fs - 3);
 ---
 <g class:list={['cell', `cell-${kind}`, className]}>
   <rect x={x} y={y} width={cw} height={ch} rx={r} class="cell-bg" />
   {label && (
-    <text x={x + cw / 2} y={y + ch / 2 + (sub ? -1 : fs * 0.36)} text-anchor="middle" font-size={fs} font-weight="600" class:list={['cell-text', { mono }]}>{label}</text>
+    <text x={x + cw / 2} y={y + ch / 2 + (sub ? -2 : fs * 0.36)} text-anchor="middle" font-size={fs} font-weight="600" class:list={['cell-text', { mono }]}>{label}</text>
   )}
   {sub && (
-    <text x={x + cw / 2} y={y + ch / 2 + fs * 0.9} text-anchor="middle" font-size={Math.max(8, fs - 3)} class="cell-text mono" opacity="0.75">{sub}</text>
+    <text x={x + cw / 2} y={y + ch / 2 + ss * 1.1} text-anchor="middle" font-size={ss} class="cell-text mono" opacity="0.8">{sub}</text>
   )}
   <slot />
 </g>

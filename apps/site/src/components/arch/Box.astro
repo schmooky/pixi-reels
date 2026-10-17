@@ -1,10 +1,16 @@
 ---
 /**
- * A labelled rectangle inside a `<Diagram>`. Title on one line, optional
- * sub-lines beneath it, optional badge in the top-left, optional link.
+ * A labelled rectangle inside a `<Diagram>`: a title line, up to two short
+ * sub-lines, an optional badge in the top-left corner, an optional link.
  *
  * Kinds: primary (ink), accent (tinted, strong border), subtle (card),
  * muted (soft surface), ghost (dashed outline), code (dark surface).
+ *
+ * Sizing rule of thumb at the default sizes (title 15, sub 13):
+ *   title only   -> h 44
+ *   one sub line -> h 60
+ *   two sub lines-> h 78
+ * Width: ~9 units per title character (mono) plus 24 of padding.
  */
 interface Props {
   x: number;
@@ -12,15 +18,17 @@ interface Props {
   w: number;
   h: number;
   title: string;
-  /** One line, or several. */
+  /** One line, or up to two. Keep each under ~0.14 * w characters. */
   sub?: string | string[];
   kind?: 'primary' | 'accent' | 'subtle' | 'muted' | 'ghost' | 'code';
   badge?: string;
   href?: string;
   /** Corner radius. */
   r?: number;
-  /** Title font size. */
+  /** Title font size (viewBox units). */
   size?: number;
+  /** Sub-line font size. */
+  subSize?: number;
   /** Title in the monospace face (default true: most boxes are class names). */
   mono?: boolean;
   /** Horizontal alignment of the text block. */
@@ -29,30 +37,30 @@ interface Props {
   class?: string;
 }
 const {
-  x, y, w, h, title, sub, kind = 'subtle', badge, href, r = 10, size = 13, mono = true, align = 'center', class: className,
+  x, y, w, h, title, sub, kind = 'subtle', badge, href, r = 10, size = 15, subSize = 13, mono = true, align = 'center', class: className,
 } = Astro.props as Props;
 
 const subLines = sub === undefined ? [] : Array.isArray(sub) ? sub : [sub];
-const subSize = Math.max(10, size - 2.5);
 const lineH = subSize * 1.3;
-const blockH = size + (subLines.length ? 6 + subLines.length * lineH - (lineH - subSize) : 0);
+const blockH = size + (subLines.length ? 4 + subLines.length * lineH : 0);
 const top = y + (h - blockH) / 2;
-const titleY = top + size * 0.85;
+const titleY = top + size * 0.82;
 const tx = align === 'center' ? x + w / 2 : x + 14;
 const anchor = align === 'center' ? 'middle' : 'start';
+const badgeW = badge ? badge.length * 7.6 + 14 : 0;
 ---
 {href ? (
   <a href={href} class:list={['box', `box-${kind}`, className]}>
     <rect x={x} y={y} width={w} height={h} rx={r} class="box-bg" />
     {badge && (
       <g>
-        <rect x={x + 8} y={y + 8} width={badge.length * 6.6 + 10} height="16" rx="5" class="box-badge-bg" />
-        <text x={x + 13} y={y + 19.5} font-size="10" font-weight="600" class="box-badge mono">{badge}</text>
+        <rect x={x + 8} y={y + 8} width={badgeW} height="18" rx="6" class="box-badge-bg" />
+        <text x={x + 8 + badgeW / 2} y={y + 21} text-anchor="middle" font-size="12" font-weight="700" class="box-badge mono">{badge}</text>
       </g>
     )}
     <text x={tx} y={titleY} text-anchor={anchor} font-size={size} font-weight="600" class:list={['box-title', { mono }]}>{title}</text>
     {subLines.map((line, i) => (
-      <text x={tx} y={titleY + 6 + (i + 1) * lineH} text-anchor={anchor} font-size={subSize} class="box-sub">{line}</text>
+      <text x={tx} y={titleY + 4 + (i + 1) * lineH} text-anchor={anchor} font-size={subSize} class="box-sub">{line}</text>
     ))}
     <slot />
   </a>
@@ -61,13 +69,13 @@ const anchor = align === 'center' ? 'middle' : 'start';
     <rect x={x} y={y} width={w} height={h} rx={r} class="box-bg" />
     {badge && (
       <g>
-        <rect x={x + 8} y={y + 8} width={badge.length * 6.6 + 10} height="16" rx="5" class="box-badge-bg" />
-        <text x={x + 13} y={y + 19.5} font-size="10" font-weight="600" class="box-badge mono">{badge}</text>
+        <rect x={x + 8} y={y + 8} width={badgeW} height="18" rx="6" class="box-badge-bg" />
+        <text x={x + 8 + badgeW / 2} y={y + 21} text-anchor="middle" font-size="12" font-weight="700" class="box-badge mono">{badge}</text>
       </g>
     )}
     <text x={tx} y={titleY} text-anchor={anchor} font-size={size} font-weight="600" class:list={['box-title', { mono }]}>{title}</text>
     {subLines.map((line, i) => (
-      <text x={tx} y={titleY + 6 + (i + 1) * lineH} text-anchor={anchor} font-size={subSize} class="box-sub">{line}</text>
+      <text x={tx} y={titleY + 4 + (i + 1) * lineH} text-anchor={anchor} font-size={subSize} class="box-sub">{line}</text>
     ))}
     <slot />
   </g>

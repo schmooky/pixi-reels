@@ -7,10 +7,10 @@ import Group from '../../components/arch/Group.astro';
 import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
 
-// Entry-point columns: 4 columns, 185 wide, 15 gap, starting after a 90px row-label gutter.
-const cx = (c: number) => 90 + c * 200;
-const CW = 185;
-const rows = { name: 20, before: 100, side: 190, protect: 280, route: 370 };
+// Entry-point columns: 3 columns, 190 wide, 16 gap, after an 80 unit row-label gutter.
+const cx = (c: number) => 92 + c * 206;
+const CW = 190;
+const rows = { name: 20, before: 100, side: 198, protect: 296, route: 394 };
 ---
 <Architecture
   title="Skipping"
@@ -28,52 +28,40 @@ const rows = { name: 20, before: 100, side: 190, protect: 280, route: 370 };
     <code>packages/pixi-reels/src/config/types.ts</code>.
   </p>
 
-  <Diagram width={900} height={560} caption="The three public entry points and the internal abortSlam. Only skip() carries the once-per-round side effect; only requestSkip() may be called before the result; only slamStop() walks past tease protection.">
-    <Label x={14} y={rows.before + 28} text={['before', 'setResult']} size={10} mono />
-    <Label x={14} y={rows.side + 28} text={['round', 'side effect']} size={10} mono />
-    <Label x={14} y={rows.protect + 28} text={['tease', 'protect']} size={10} mono />
-    <Label x={14} y={rows.route + 28} text={['routes', 'through']} size={10} mono />
+  <Diagram height={492} caption="The three public entry points, row by row. Only skip() carries the once-per-round side effect; only requestSkip() may be called before the result; only slamStop() walks past tease protection. Every column ends in _slamTargets or _quicken.">
+    <Label x={16} y={rows.before + 34} text={['before', 'setResult']} mono />
+    <Label x={16} y={rows.side + 34} text={['side', 'effect']} mono />
+    <Label x={16} y={rows.protect + 34} text={['tease', 'protect']} mono />
+    <Label x={16} y={rows.route + 34} text={['routes', 'through']} mono />
 
-    <Box x={cx(0)} y={rows.name} w={CW} h={56} title="skip(options?)" kind="primary" sub="ReelSet.skipSpin()" />
-    <Box x={cx(1)} y={rows.name} w={CW} h={56} title="requestSkip(opts?)" kind="primary" sub="ReelSet.requestSkip()" />
-    <Box x={cx(2)} y={rows.name} w={CW} h={56} title="slamStop(opts?)" kind="primary" sub="{ reels } or { except }" />
-    <Box x={cx(3)} y={rows.name} w={CW} h={56} title="abortSlam()" kind="code" sub="internal" />
+    <Box x={cx(0)} y={rows.name} w={CW} h={60} title="skip(options?)" kind="primary" sub="ReelSet.skipSpin()" />
+    <Box x={cx(1)} y={rows.name} w={CW} h={60} title="requestSkip(opts?)" kind="primary" sub="ReelSet.requestSkip()" />
+    <Box x={cx(2)} y={rows.name} w={CW} h={60} title="slamStop(opts?)" kind="primary" sub="{ reels } or { except }" />
 
-    <Box x={cx(0)} y={rows.before} w={CW} h={64} title="throws" mono={false} kind="muted" sub={['the round is not', 'decided yet']} />
-    <Box x={cx(1)} y={rows.before} w={CW} h={64} title="queues" mono={false} kind="accent" sub={['_skipPending, emits', 'skip:queued, fires in setResult']} />
-    <Box x={cx(2)} y={rows.before} w={CW} h={64} title="throws" mono={false} kind="muted" sub={['no result frame', 'to place']} />
-    <Box x={cx(3)} y={rows.before} w={CW} h={64} title="lands anything" mono={false} kind="code" sub={['haltDrive + snapToGrid', 'on whatever is showing']} />
+    <Box x={cx(0)} y={rows.before} w={CW} h={78} title="throws" mono={false} kind="muted" sub={['the round is not', 'decided yet']} />
+    <Box x={cx(1)} y={rows.before} w={CW} h={78} title="queues" mono={false} kind="accent" sub={['_skipPending, skip:queued,', 'fires inside setResult']} />
+    <Box x={cx(2)} y={rows.before} w={CW} h={78} title="throws" mono={false} kind="muted" sub={['no result frame', 'to place']} />
 
-    <Box x={cx(0)} y={rows.side} w={CW} h={64} title="once per round" mono={false} kind="accent" sub={['standard: speed boost,', 'skip:boosted. cascade: auto-slam refills']} size={12} />
-    <Box x={cx(1)} y={rows.side} w={CW} h={64} title="none" mono={false} kind="muted" sub={['presses with', 'withSideEffects = false']} />
-    <Box x={cx(2)} y={rows.side} w={CW} h={64} title="none" mono={false} kind="muted" sub="skipStage only" />
-    <Box x={cx(3)} y={rows.side} w={CW} h={64} title="none" mono={false} kind="code" sub={['abort, timeout and', 'phase-chain-threw use it']} />
+    <Box x={cx(0)} y={rows.side} w={CW} h={78} title="once per round" mono={false} kind="accent" sub={['standard: speed boost', 'cascade: auto-slam refills']} />
+    <Box x={cx(1)} y={rows.side} w={CW} h={78} title="none" mono={false} kind="muted" sub={['presses with', 'withSideEffects = false']} />
+    <Box x={cx(2)} y={rows.side} w={CW} h={78} title="none" mono={false} kind="muted" sub={['skipStage only', 'is touched']} />
 
-    <Box x={cx(0)} y={rows.protect} w={CW} h={64} title="honoured" mono={false} kind="accent" sub={['protected tease reels', 'stay up']} />
-    <Box x={cx(1)} y={rows.protect} w={CW} h={64} title="honoured" mono={false} kind="accent" sub={['a queued press sees the', 'protection set before setResult']} size={12} />
-    <Box x={cx(2)} y={rows.protect} w={CW} h={64} title="ignored" mono={false} kind="muted" sub={['also ignores', 'defaultSkipMode']} />
-    <Box x={cx(3)} y={rows.protect} w={CW} h={64} title="ignored" mono={false} kind="code" sub="full slam, no result" />
+    <Box x={cx(0)} y={rows.protect} w={CW} h={78} title="honoured" mono={false} kind="accent" sub={['protected tease reels', 'stay up']} />
+    <Box x={cx(1)} y={rows.protect} w={CW} h={78} title="honoured" mono={false} kind="accent" sub={['sees protection set', 'before setResult']} />
+    <Box x={cx(2)} y={rows.protect} w={CW} h={78} title="ignored" mono={false} kind="muted" sub={['also ignores', 'defaultSkipMode']} />
 
-    <Box x={cx(0)} y={rows.route} w={CW} h={56} title="_pressSkip(true)" kind="subtle" sub="carried across expand() steps" size={12} />
-    <Box x={cx(1)} y={rows.route} w={CW} h={56} title="_pressSkip(false)" kind="subtle" sub="skipStage waits for the fire" size={12} />
-    <Box x={cx(2)} y={rows.route} w={CW} h={56} title="_slamWithStage" kind="subtle" sub={['no arg: stage 2 + full slam', 'reels/except: partial']} size={12} />
-    <Box x={cx(3)} y={rows.route} w={CW} h={56} title="_slamTargets(all)" kind="code" sub="generation bump" size={12} />
+    <Box x={cx(0)} y={rows.route} w={CW} h={78} title="_pressSkip(true)" kind="subtle" sub={['carried across', 'expand() steps']} />
+    <Box x={cx(1)} y={rows.route} w={CW} h={78} title="_pressSkip(false)" kind="subtle" sub={['skipStage waits', 'for the fire']} />
+    <Box x={cx(2)} y={rows.route} w={CW} h={78} title="_slamWithStage" kind="subtle" sub={['no arg: stage 2, full slam', 'reels/except: partial']} />
 
-    {[0, 1, 2, 3].map((c) => (
+    {[0, 1, 2].map((c) => (
       <>
-        <Edge from={[cx(c) + CW / 2, rows.name + 56]} to={[cx(c) + CW / 2, rows.before]} arrow="none" style="dotted" />
-        <Edge from={[cx(c) + CW / 2, rows.before + 64]} to={[cx(c) + CW / 2, rows.side]} arrow="none" style="dotted" />
-        <Edge from={[cx(c) + CW / 2, rows.side + 64]} to={[cx(c) + CW / 2, rows.protect]} arrow="none" style="dotted" />
-        <Edge from={[cx(c) + CW / 2, rows.protect + 64]} to={[cx(c) + CW / 2, rows.route]} />
+        <Edge from={[cx(c) + CW / 2, rows.name + 60]} to={[cx(c) + CW / 2, rows.before]} arrow="none" style="dotted" />
+        <Edge from={[cx(c) + CW / 2, rows.before + 78]} to={[cx(c) + CW / 2, rows.side]} arrow="none" style="dotted" />
+        <Edge from={[cx(c) + CW / 2, rows.side + 78]} to={[cx(c) + CW / 2, rows.protect]} arrow="none" style="dotted" />
+        <Edge from={[cx(c) + CW / 2, rows.protect + 78]} to={[cx(c) + CW / 2, rows.route]} />
       </>
     ))}
-
-    <Box x={120} y={476} w={260} h={60} title="_slamTargets / _quicken" kind="accent" sub={['skip:requested, then forceComplete', 'or phase.skip(ctx) per freed reel']} size={12} />
-    <Edge from={[cx(0) + CW / 2, rows.route + 56]} via={[[cx(0) + CW / 2, 460], [250, 460]]} to={[250, 476]} />
-    <Edge from={[cx(1) + CW / 2, rows.route + 56]} via={[[cx(1) + CW / 2, 460], [250, 460]]} to={[250, 476]} />
-    <Edge from={[cx(2) + CW / 2, rows.route + 56]} via={[[cx(2) + CW / 2, 460], [380 + 12, 460]]} to={[380, 500]} />
-    <Edge from={[cx(3) + CW / 2, rows.route + 56]} via={[[cx(3) + CW / 2, 460], [380 + 12, 460]]} to={[380, 500]} />
-    <Label x={420} y={500} text={['A full slam bumps _spinGeneration; a partial slam adds reels to _slammedReels instead,', 'then re-runs _announceAllStartedIfReady() and _tryBeginStopSequence() so the stop gate', 'is not left closed by a reel that never reached its spin phase.']} size={10.5} />
   </Diagram>
 
   <div class="not-prose my-8">
@@ -84,6 +72,18 @@ const rows = { name: 20, before: 100, side: 190, protect: 280, route: 370 };
       { kind: 'subtle', label: 'internal method', note: 'where the press goes next' },
     ]} />
   </div>
+
+  <p>
+    A fourth path is internal. <code>abortSlam()</code> is what the abort signal, the
+    timeout and the <code>phase-chain-threw</code> recovery use: it ignores protection and
+    <code>defaultSkipMode</code>, has no side effect, lands whatever is showing
+    (<code>haltDrive</code> plus <code>snapToGrid</code>, no result frame needed) and goes
+    through <code>_slamTargets</code> with every reel, which bumps the generation. A full
+    slam always bumps <code>_spinGeneration</code>; a partial slam adds reels to
+    <code>_slammedReels</code> instead, then re-runs <code>_announceAllStartedIfReady()</code>
+    and <code>_tryBeginStopSequence()</code> so the stop gate is not left closed by a reel
+    that never reached its spin phase.
+  </p>
 
   <h2>Modes and option types</h2>
   <ul>
@@ -103,35 +103,39 @@ const rows = { name: 20, before: 100, side: 190, protect: 280, route: 370 };
     to free, then hands that set to <code>_slamTargets</code> or <code>_quicken</code>.
   </p>
 
-  <Diagram width={780} height={560} caption="_pressSkip and _nextSlamGroup. Groups win over protection; protection only matters while there is an effective hold; and once only tease reels are left, 'stepwise' releases them one by one while 'once' and 'always' return an empty group.">
-    <Box x={270} y={20} w={240} h={50} title="press" mono={false} kind="primary" sub="skip() or requestSkip() after the result" />
-    <Box x={270} y={104} w={240} h={54} title="reel groups set?" mono={false} sub="setReelGroups()" />
-    <Box x={530} y={104} w={230} h={54} title="next unlanded group" mono={false} kind="accent" sub={['non-teasing reels first,', 'then its tease reels']} />
-    <Edge from={[390, 70]} to={[390, 104]} />
-    <Edge from={[510, 131]} to={[530, 131]} label="yes" labelDy={-16} />
+  <Diagram height={544} caption="_pressSkip asks _nextSlamGroup which reels a press frees. Groups win over protection; protection only matters while there is an effective hold; and once only tease reels are left, 'stepwise' releases them one by one while 'once' and 'always' free nothing.">
+    <Box x={200} y={20} w={230} h={60} title="press" mono={false} kind="primary" sub="skip() or queued requestSkip()" />
 
-    <Box x={270} y={196} w={240} h={54} title="protected tease reels?" mono={false} sub="_protectedTeaseReels non-empty" />
-    <Box x={530} y={196} w={230} h={54} title="full slam / quicken" mono={false} kind="accent" sub={['every reel still up,', 'stage 2, side effect now']} />
-    <Edge from={[390, 158]} to={[390, 196]} label="no" labelDx={18} />
-    <Edge from={[510, 223]} to={[530, 223]} label="no" labelDy={-16} />
-    <Box x={20} y={176} w={220} h={94} kind="ghost" title="empty when" mono={false} sub={['protect is false, or', "'once' already spent, or", 'effective hold <= 0 (captured', 'profile), or all tease reels landed']} size={12} />
-    <Edge from={[240, 223]} to={[270, 223]} arrow="none" style="dotted" />
+    <Box x={200} y={130} w={230} h={60} title="reel groups set?" mono={false} sub="setReelGroups()" />
+    <Box x={500} y={121} w={200} h={78} title="next unlanded group" mono={false} kind="accent" sub={['non-teasing reels first,', 'then its tease reels']} />
+    <Edge from={[315, 80]} to={[315, 130]} />
+    <Edge from={[430, 160]} to={[500, 160]} label="yes" />
 
-    <Box x={270} y={288} w={240} h={54} title="non-tease reels still up?" mono={false} />
-    <Box x={530} y={288} w={230} h={54} title="all but protected" mono={false} kind="accent" sub={['stage 1, side effect', 'deferred to the next press']} />
-    <Edge from={[390, 250]} to={[390, 288]} label="yes" labelDx={20} />
-    <Edge from={[510, 315]} to={[530, 315]} label="yes" labelDy={-16} />
+    <Box x={200} y={240} w={230} h={60} title="protected tease reels?" mono={false} sub="_protectedTeaseReels" />
+    <Box x={500} y={231} w={200} h={78} title="full slam / quicken" mono={false} kind="accent" sub={['every reel still up,', 'stage 2, side effect now']} />
+    <Edge from={[315, 190]} to={[315, 240]} label="no" labelDx={36} />
+    <Edge from={[430, 270]} to={[500, 270]} label="no" />
 
-    <Box x={270} y={380} w={240} h={54} title="only tease reels left" mono={false} kind="muted" sub="which protect mode?" />
-    <Edge from={[390, 342]} to={[390, 380]} label="no" labelDx={18} />
-    <Box x={20} y={380} w={220} h={54} title="'stepwise'" kind="accent" sub={['one tease reel per press,', 'in tease order']} />
-    <Box x={530} y={380} w={230} h={54} title="'once' / 'always'" kind="muted" sub={['empty group: the press', 'does nothing']} />
-    <Edge from={[270, 407]} to={[240, 407]} />
-    <Edge from={[510, 407]} to={[530, 407]} />
+    <Box x={200} y={350} w={230} h={60} title="non-tease reels still up?" mono={false} />
+    <Box x={500} y={341} w={200} h={78} title="all but protected" mono={false} kind="accent" sub={['stage 1, side effect', 'waits for the next press']} />
+    <Edge from={[315, 300]} to={[315, 350]} label="yes" labelDx={40} />
+    <Edge from={[430, 380]} to={[500, 380]} label="yes" />
 
-    <Box x={120} y={474} w={540} h={62} title="skipStage" sub={['0 at the round boundary. 1 when a press leaves something spinning (side effect waits).', '2 when the press ends the round: side effect applied, group freed.']} />
-    <Edge from={[390, 434]} to={[390, 474]} />
+    <Box x={200} y={460} w={230} h={60} title="only tease reels left" mono={false} kind="muted" sub="which protect mode?" />
+    <Edge from={[315, 410]} to={[315, 460]} label="no" labelDx={36} />
+    <Box x={20} y={451} w={130} h={78} title="'stepwise'" kind="accent" sub={['one tease reel', 'per press']} />
+    <Box x={500} y={451} w={200} h={78} title="'once' / 'always'" kind="muted" sub={['empty group:', 'the press does nothing']} />
+    <Edge from={[200, 490]} to={[150, 490]} />
+    <Edge from={[430, 490]} to={[500, 490]} />
   </Diagram>
+
+  <p>
+    The protected set is empty when <code>protect</code> is false, when <code>'once'</code>
+    is already spent, when the effective hold is 0 or less (read from the profile captured
+    for this spin), or when every tease reel has landed. <code>skipStage</code> is 0 at the
+    round boundary, 1 when a press leaves something spinning (the side effect waits), and
+    2 when a press ends the round: side effect applied, group freed.
+  </p>
 
   <p>
     Two details on top of the picture. A quicken press counts reels it already quickened as
@@ -142,33 +146,33 @@ const rows = { name: 20, before: 100, side: 190, protect: 280, route: 370 };
 
   <h2>Slam versus quicken on a stop phase</h2>
 
-  <Diagram width={900} height={300} caption="What the two modes do to the same four stop steps. A slam cancels the running step and lets onSkip set the final pose in the same tick; a quicken removes only the cut step and lets the landing play, optionally on another speed profile.">
-    <Group x={10} y={10} w={432} h={280} kind="tint" label="slam" note="forceComplete(ctx)" />
-    {['delay', 'spinOut', 'land', 'bounce'].map((s, i) => (
-      <Box x={26 + i * 102} y={50} w={92} h={44} title={s} kind="ghost" size={12} />
+  <Diagram height={358} caption="A slam on a stop phase that is in its spinOut step. The running step is cancelled (phase:step cancelled), the rest are dropped, and onSkip sets the final pose in the same tick.">
+    <Group x={20} y={20} w={680} h={318} kind="tint" label="slam" note="forceComplete(ctx)" />
+    {(['delay', 'spinOut', 'land', 'bounce'] as const).map((s, i) => (
+      <Box x={44 + i * 162} y={60} w={146} h={44} title={s} kind={s === 'spinOut' ? 'accent' : 'ghost'} />
     ))}
     {[0, 1, 2].map((i) => (
-      <Edge from={[118 + i * 102, 72]} to={[128 + i * 102, 72]} arrow="none" style="dotted" />
+      <Edge from={[44 + i * 162 + 146, 82]} to={[44 + (i + 1) * 162, 82]} arrow="none" style="dotted" />
     ))}
-    <Label x={226} y={118} text="running step cancelled (phase:step cancelled), all steps dropped" size={10.5} anchor="middle" />
-    <Edge from={[226, 126]} to={[226, 150]} kind="primary" />
-    <Box x={46} y={150} w={360} h={70} title="StopPhase.onSkip" kind="primary" sub={['haltDrive, isStopping = false, placeStrip(targetFrame),', 'container back to _baseY, then snapToGrid, stage done']} size={12} />
-    <Edge from={[226, 220]} to={[226, 244]} kind="primary" />
-    <Box x={126} y={244} w={200} h={36} title="landed, same tick" mono={false} kind="accent" size={12} />
+    <Edge from={[279, 104]} to={[279, 150]} kind="primary" />
+    <Box x={160} y={150} w={400} h={78} title="StopPhase.onSkip" kind="primary" sub={['haltDrive, placeStrip(targetFrame),', 'container back to _baseY, snapToGrid']} />
+    <Edge from={[360, 228]} to={[360, 270]} kind="primary" />
+    <Box x={240} y={270} w={240} h={44} title="landed, same tick" mono={false} kind="accent" />
+  </Diagram>
 
-    <Group x={458} y={10} w={432} h={280} kind="tint" label="quicken" note="phase.skip({ mode: 'quicken', speed? })" />
-    <Box x={474} y={50} w={92} h={44} title="delay" sub="cut" kind="muted" size={12} />
-    <Box x={576} y={50} w={92} h={44} title="spinOut" kind="accent" size={12} />
-    <Box x={678} y={50} w={92} h={44} title="land" kind="accent" size={12} />
-    <Box x={780} y={50} w={92} h={44} title="bounce" kind="accent" size={12} />
+  <Diagram height={358} caption="A quicken on the same stop phase. Only the cut step, delay, is skipped or cut short; spinOut, land and bounce still play, optionally on another speed profile named in the press.">
+    <Group x={20} y={20} w={680} h={318} kind="tint" label="quicken" note="phase.skip({ mode: 'quicken', speed? })" />
+    <Box x={44} y={60} w={146} h={44} title="delay" kind="muted" />
+    <Box x={206} y={60} w={146} h={44} title="spinOut" kind="accent" />
+    <Box x={368} y={60} w={146} h={44} title="land" kind="accent" />
+    <Box x={530} y={60} w={146} h={44} title="bounce" kind="accent" />
     {[0, 1, 2].map((i) => (
-      <Edge from={[566 + i * 102, 72]} to={[576 + i * 102, 72]} />
+      <Edge from={[44 + i * 162 + 146, 82]} to={[44 + (i + 1) * 162, 82]} />
     ))}
-    <Label x={674} y={118} text="delay skipped or cut; spinOut, land and bounce still play" size={10.5} anchor="middle" />
-    <Edge from={[674, 126]} to={[674, 150]} kind="primary" />
-    <Box x={494} y={150} w={360} h={70} title="ctx.speed (optional)" kind="subtle" sub={['the named profile\'s spinSpeed drives the spin-out,', 'its bounce settings drive the landing; tease ends first']} size={12} />
-    <Edge from={[674, 220]} to={[674, 244]} kind="primary" />
-    <Box x={574} y={244} w={200} h={36} title="lands after the spin-out" mono={false} kind="accent" size={12} />
+    <Edge from={[279, 104]} to={[279, 150]} kind="primary" />
+    <Box x={160} y={150} w={400} h={78} title="ctx.speed (optional)" kind="subtle" sub={['its spinSpeed drives the spin-out,', 'its bounce settings drive the landing']} />
+    <Edge from={[360, 228]} to={[360, 270]} kind="primary" />
+    <Box x={240} y={270} w={240} h={44} title="lands after the spin-out" mono={false} kind="accent" />
   </Diagram>
 
   <h3>_slamTargets</h3>

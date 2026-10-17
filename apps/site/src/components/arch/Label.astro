@@ -1,7 +1,8 @@
 ---
 /**
- * Free text inside a `<Diagram>`. One line or several (array). Use for
- * annotations, axis names, formula callouts.
+ * Free text inside a `<Diagram>`: a short annotation, an axis name, a
+ * formula. One line or a few (array). Explanations longer than a phrase
+ * belong in the caption or the prose, not in the picture.
  */
 interface Props {
   x: number;
@@ -12,13 +13,12 @@ interface Props {
   mono?: boolean;
   tone?: 'fg' | 'muted' | 'faint' | 'inv' | 'code' | 'code-muted';
   weight?: 400 | 500 | 600 | 700;
-  /** Line height multiplier for multi-line text. */
   lh?: number;
   rotate?: number;
   class?: string;
 }
 const {
-  x, y, text, size = 11, anchor = 'start', mono = false, tone = 'muted', weight = 400, lh = 1.35, rotate, class: className,
+  x, y, text, size = 13, anchor = 'start', mono = false, tone = 'muted', weight = 400, lh = 1.35, rotate, class: className,
 } = Astro.props as Props;
 const lines = Array.isArray(text) ? text : [text];
 ---

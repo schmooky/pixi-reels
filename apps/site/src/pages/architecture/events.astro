@@ -6,17 +6,23 @@ import Edge from '../../components/arch/Edge.astro';
 import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
 
-// Swimlane geometry for the landing-order diagram. Three vertical lanes,
-// time flows down, one row per step.
-const LANE_X = [36, 330, 624];
-const LANE_W = 260;
-const BW = 240;
-const BH = 36;
-const STEP = 46;
+// Swimlane geometry for the two landing-order figures. Three vertical lanes,
+// time flows down, one row per step. Boxes carry the event name only; the
+// payloads are in the tables below.
+const LANE_X = [20, 250, 480];
+const LANE_W = 220;
+const LANES = ['Caller', 'reelSet.events', 'reel.events'];
+const BW = 204;
+const BH = 44;
+const STEP = 60;
 const row = (i: number) => 64 + i * STEP;
 const bx = (lane: number) => LANE_X[lane] + (LANE_W - BW) / 2;
 const mid = (i: number) => row(i) + BH / 2;
-const H = row(15) + BH + 24;
+const figH = (rows: number) => row(rows - 1) + BH + 20;
+const H1 = figH(9);
+const H2 = figH(8);
+// Corridor x between two adjacent lanes, for the polyline connectors.
+const gapX = (lane: number) => (bx(lane) + BW + bx(lane + 1)) / 2;
 
 type Row = [string, string, string, string];
 const SET_EVENTS: [string, Row[]][] = [
@@ -149,50 +155,63 @@ const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider t
   <p>
     Read top to bottom. The Caller lane is you, the middle lane is
     <code>reelSet.events</code>, the right lane is one reel's
-    <code>reel.events</code>. The dashed window is the part that repeats for
-    every reel, in stop order, and again on every cascade stage.
+    <code>reel.events</code>. The first figure runs from <code>spin()</code>
+    to the result; the second from the first stop to <code>spin:complete</code>.
+    Its dashed window is the part that repeats for every reel, in stop order,
+    and again on every cascade stage. Payloads are in the tables further down.
   </p>
 
-  <Diagram width={900} height={H} caption="The landing order of one spin. spin:reelLanding fires on the result frame before the bounce; spin:reelLanded fires after it. Held reels skip the whole window.">
+  <Diagram height={H1} caption="From spin() to the result. phase:exit 'start' is followed at once by phase:enter 'spin', and phase:exit 'spin' by phase:enter 'anticipation' on a teasing reel. spin:start fires again on every cascade refill.">
     {LANE_X.map((x, i) => (
       <>
-        <rect x={x} y={48} width={LANE_W} height={H - 60} rx="12" class="lane-bg" />
-        <line x1={x + LANE_W / 2} y1={56} x2={x + LANE_W / 2} y2={H - 20} class="guide-strong" style="stroke-dasharray: 2 5" />
-        <Label x={x + LANE_W / 2} y={36} text={['Caller', 'reelSet.events', 'reel.events'][i]} anchor="middle" mono tone="fg" weight={600} size={12} />
+        <rect x={x} y={48} width={LANE_W} height={H1 - 60} rx="12" class="lane-bg" />
+        <Label x={x + LANE_W / 2} y={36} text={LANES[i]} anchor="middle" mono tone="fg" weight={600} size={14} />
       </>
     ))}
-    <Edge from={[16, 60]} to={[16, H - 20]} />
-    <Label x={10} y={H / 2} text="time" size={10} anchor="middle" rotate={-90} />
 
-    <rect x={LANE_X[0] - 8} y={row(8) - 8} width={LANE_X[2] + LANE_W + 8 - (LANE_X[0] - 8)} height={row(13) + BH + 8 - (row(8) - 8)} rx="12" class="guide-strong" style="stroke-dasharray: 4 3" />
-    <Label x={bx(0) + 8} y={row(9) + 12} size={10.5} text={['per reel, in stop order', 'spin:reelLanding = before the bounce', 'spin:reelLanded = after the bounce', '(same tick on a slam)', 'repeats on every cascade stage', 'held reels: none of these']} />
+    <Box x={bx(0)} y={row(0)} w={BW} h={BH} title="spin()" kind="ghost" />
+    <Box x={bx(1)} y={row(1)} w={BW} h={BH} title="spin:start" kind="primary" />
+    <Box x={bx(2)} y={row(2)} w={BW} h={BH} title="phase:enter 'start'" kind="accent" />
+    <Box x={bx(2)} y={row(3)} w={BW} h={BH} title="phase:exit 'start'" kind="accent" />
+    <Box x={bx(0)} y={row(3)} w={BW} h={BH} title="skip() · slamStop()" kind="ghost" />
+    <Label x={bx(0) + BW / 2} y={row(3) + BH + 20} text="any time after spin:start" anchor="middle" />
+    <Box x={bx(1)} y={row(4)} w={BW} h={BH} title="spin:allStarted" kind="primary" />
+    <Box x={bx(2)} y={row(5)} w={BW} h={BH} title="symbol:created" kind="accent" />
+    <Label x={bx(2) + BW / 2} y={row(5) + BH + 20} text="one per wrap" anchor="middle" />
+    <Box x={bx(0)} y={row(6)} w={BW} h={BH} title="setResult(grid)" kind="ghost" />
+    <Label x={bx(0) + BW / 2} y={row(6) + BH + 20} text="gates the stop" anchor="middle" tone="fg" />
+    <Box x={bx(1)} y={row(7)} w={BW} h={BH} title="anticipation:reel" kind="primary" />
+    <Box x={bx(2)} y={row(8)} w={BW} h={BH} title="phase:exit 'spin'" kind="accent" />
 
-    <Box x={bx(0)} y={row(0)} w={BW} h={BH} title="spin()" kind="ghost" size={12} sub="returns the spin promise" />
-    <Box x={bx(1)} y={row(1)} w={BW} h={BH} title="spin:start" kind="primary" size={12} sub="also on every refill()" />
-    <Box x={bx(2)} y={row(2)} w={BW} h={BH} title="phase:enter 'start'" kind="accent" size={12} />
-    <Box x={bx(2)} y={row(3)} w={BW} h={BH} title="phase:exit 'start'" kind="accent" size={12} sub="then phase:enter 'spin'" />
-    <Box x={bx(0)} y={row(3)} w={BW} h={BH} title="skip() · slamStop()" kind="ghost" size={12} sub="any time after spin:start" />
-    <Box x={bx(1)} y={row(4)} w={BW} h={BH} title="spin:allStarted" kind="primary" size={12} sub="every non-held reel started" />
-    <Box x={bx(2)} y={row(5)} w={BW} h={BH} title="symbol:created" kind="accent" size={12} sub="many: one per wrap (id, stripIndex)" />
-    <Box x={bx(0)} y={row(6)} w={BW} h={BH} title="setResult(grid)" kind="ghost" size={12} sub="and setAnticipation([...])" />
-    <Box x={bx(1)} y={row(7)} w={BW} h={BH} title="anticipation:reel" kind="primary" size={12} sub="{ reelIndex, order, total }" />
-    <Box x={bx(2)} y={row(7)} w={BW} h={BH} title="phase:exit 'spin'" kind="accent" size={12} sub="then phase:enter 'anticipation'" />
-    <Box x={bx(1)} y={row(8)} w={BW} h={BH} title="spin:stopping" kind="primary" size={12} sub="[reelIndex]" />
-    <Box x={bx(2)} y={row(9)} w={BW} h={BH} title="phase:enter 'stop'" kind="accent" size={12} />
-    <Box x={bx(2)} y={row(10)} w={BW} h={BH} title="phase:step" kind="accent" size={12} sub="delay · spinOut · land · bounce" />
-    <Box x={bx(2)} y={row(11)} w={BW} h={BH} title="landing" kind="accent" size={12} sub="on the result frame" />
-    <Box x={bx(1)} y={row(11)} w={BW} h={BH} title="spin:reelLanding" kind="primary" size={12} sub="[reelIndex, symbols]" />
-    <Box x={bx(1)} y={row(12)} w={BW} h={BH} title="anticipation:reelEnd" kind="primary" size={12} sub="teasing reels only" />
-    <Box x={bx(2)} y={row(13)} w={BW} h={BH} title="phase:exit 'stop'" kind="accent" size={12} sub="then landed" />
-    <Box x={bx(1)} y={row(13)} w={BW} h={BH} title="spin:reelLanded" kind="primary" size={12} sub="[reelIndex, symbols]" />
-    <Box x={bx(1)} y={row(14)} w={BW} h={BH} title="spin:allLanded" kind="primary" size={12} sub="[result: SpinResult]" />
-    <Box x={bx(1)} y={row(15)} w={BW} h={BH} title="spin:complete" kind="primary" size={12} sub="right after allLanded" />
+    <Edge from={[bx(0) + BW, mid(0)]} via={[[gapX(0), mid(0)], [gapX(0), mid(1)]]} to={[bx(1), mid(1)]} />
+    <Edge from={[bx(1) + BW, mid(1)]} via={[[gapX(1), mid(1)], [gapX(1), mid(2)]]} to={[bx(2), mid(2)]} />
+    <Edge from={[bx(0) + BW, mid(6)]} via={[[gapX(0), mid(6)], [gapX(0), mid(7)]]} to={[bx(1), mid(7)]} />
+  </Diagram>
 
-    <Edge from={[bx(0) + BW, mid(0)]} via={[[bx(1) - 14, mid(0)], [bx(1) - 14, mid(1)]]} to={[bx(1), mid(1)]} />
-    <Edge from={[bx(1) + BW, mid(1)]} via={[[bx(2) - 14, mid(1)], [bx(2) - 14, mid(2)]]} to={[bx(2), mid(2)]} />
-    <Edge from={[bx(0) + BW, mid(6)]} via={[[bx(1) - 14, mid(6)], [bx(1) - 14, mid(7)]]} to={[bx(1), mid(7)]} label="gates the stop" labelDx={0} labelDy={-16} />
-    <Edge from={[bx(2), mid(11)]} to={[bx(1) + BW, mid(11)]} kind="primary" label="attachReel relay" labelDy={-20} />
-    <Edge from={[bx(2), mid(13)]} to={[bx(1) + BW, mid(13)]} style="dashed" />
+  <Diagram height={H2} caption="From the first stop to spin:complete. The dashed window repeats per reel in stop order and on every cascade stage; held reels skip it. The solid arrow is SpinController.attachReel() relaying landing as spin:reelLanding on the result frame, before the bounce; spin:reelLanded follows the reel's landed one bounce later (same tick on a slam), right after phase:exit 'stop'.">
+    {LANE_X.map((x, i) => (
+      <>
+        <rect x={x} y={48} width={LANE_W} height={H2 - 60} rx="12" class="lane-bg" />
+        <Label x={x + LANE_W / 2} y={36} text={LANES[i]} anchor="middle" mono tone="fg" weight={600} size={14} />
+      </>
+    ))}
+    <rect x={LANE_X[1] - 6} y={row(0) - 10} width={LANE_X[2] + LANE_W + 6 - (LANE_X[1] - 6)} height={row(5) + BH + 10 - (row(0) - 10)} rx="12" class="guide-strong" style="stroke-dasharray: 5 4" />
+    <Label x={bx(0)} y={row(2)} text={['dashed window:', 'per reel, in stop order,', 'again per cascade stage']} tone="fg" />
+
+    <Box x={bx(1)} y={row(0)} w={BW} h={BH} title="spin:stopping" kind="primary" />
+    <Box x={bx(2)} y={row(1)} w={BW} h={BH} title="phase:enter 'stop'" kind="accent" />
+    <Box x={bx(2)} y={row(2)} w={BW} h={BH} title="phase:step" kind="accent" />
+    <Box x={bx(2)} y={row(3)} w={BW} h={BH} title="landing" kind="accent" />
+    <Box x={bx(1)} y={row(3)} w={BW} h={BH} title="spin:reelLanding" kind="primary" />
+    <Box x={bx(1)} y={row(4)} w={BW} h={BH} title="anticipation:reelEnd" kind="primary" />
+    <Box x={bx(2)} y={row(5)} w={BW} h={BH} title="landed" kind="accent" />
+    <Box x={bx(1)} y={row(5)} w={BW} h={BH} title="spin:reelLanded" kind="primary" />
+    <Box x={bx(1)} y={row(6)} w={BW} h={BH} title="spin:allLanded" kind="primary" />
+    <Box x={bx(1)} y={row(7)} w={BW} h={BH} title="spin:complete" kind="primary" />
+
+    <Edge from={[bx(1) + BW, mid(0)]} via={[[gapX(1), mid(0)], [gapX(1), mid(1)]]} to={[bx(2), mid(1)]} />
+    <Edge from={[bx(2), mid(3)]} to={[bx(1) + BW, mid(3)]} kind="primary" />
+    <Edge from={[bx(2), mid(5)]} to={[bx(1) + BW, mid(5)]} style="dashed" />
   </Diagram>
 
   <div class="not-prose my-8">
@@ -205,13 +224,12 @@ const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider t
 
   <h2>Three buses</h2>
 
-  <Diagram width={900} height={230} caption="The per-reel bus feeds the set bus in exactly one place: SpinController.attachReel() re-emits each reel's landing as spin:reelLanding with the reel index added.">
-    <Box x={30} y={50} w={260} h={120} title="ReelSetEvents" kind="primary" sub={['reelSet.events', '59 events, 13 prefixes', 'spin · anticipation · skip · speed', 'spotlight · win · pin · shape · adjust', 'reels · rows · column · expand · cascade · nudge']} size={13} />
-    <Box x={340} y={50} w={220} h={120} title="ReelEvents" kind="accent" sub={['reel.events, one per reel', '7 events', 'phase:enter · phase:exit · phase:step', 'symbol:created · landing', 'landed · destroyed']} />
-    <Box x={610} y={50} w={260} h={120} title="HoldAndWinBoardEvents" kind="subtle" sub={['board.events, its own emitter', '13 events, one object payload', 'feature:* · respin:* · cell:landed', 'coin:locked · coin:released · board:full', 'not relayed to any ReelSet']} />
-    <Edge from={[340, 92]} to={[290, 92]} kind="primary" label="landing → spin:reelLanding" labelDy={-22} labelDx={-10} />
-    <Edge from={[340, 132]} to={[290, 132]} label="landed → spin:reelLanded" labelDy={22} labelDx={-10} />
-    <Label x={450} y={205} text="a BoardGrid cell is a 1x1 ReelSet, so each cell also has the two buses on the left" anchor="middle" size={10.5} />
+  <Diagram height={340} caption="The per-reel bus feeds the set bus in exactly one place: SpinController.attachReel() re-emits each reel's landing and landed as spin:reelLanding and spin:reelLanded with the reel index added. The Hold & Win board bus is its own emitter and is never relayed; a BoardGrid cell is a 1x1 ReelSet, so each cell also has the two buses on the left.">
+    <Box x={60} y={30} w={300} h={78} title="ReelEvents" kind="accent" sub={['reel.events, one per reel', '7 events, phase:* and landing']} />
+    <Box x={60} y={240} w={300} h={78} title="ReelSetEvents" kind="primary" sub={['reelSet.events', '59 events, 13 prefixes']} />
+    <Box x={440} y={135} w={240} h={78} title="HoldAndWinBoardEvents" kind="subtle" sub={['board.events, its own bus', '13 events, one object each']} />
+    <Edge from={[140, 108]} to={[140, 240]} kind="primary" label="landing → spin:reelLanding" labelDy={-20} />
+    <Edge from={[280, 108]} to={[280, 240]} style="dashed" label="landed → spin:reelLanded" labelDy={20} />
   </Diagram>
 
   <h2>Every ReelSet event</h2>

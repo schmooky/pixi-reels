@@ -3,15 +3,14 @@ import Architecture from '../../layouts/Architecture.astro';
 import Diagram from '../../components/arch/Diagram.astro';
 import Box from '../../components/arch/Box.astro';
 import Edge from '../../components/arch/Edge.astro';
-import Label from '../../components/arch/Label.astro';
 import Cell from '../../components/arch/Cell.astro';
 import Legend from '../../components/arch/Legend.astro';
 
-// Big-symbol grid: 5 reels across, 3 cells down, 56px cells, 6px gap.
-const CS = 56;
+// Big-symbol grid: 5 reels across, 3 cells down, 68-unit cells, 6-unit gap.
+const CS = 68;
 const GAP = 6;
 const GX0 = 60;
-const GY0 = 60;
+const GY0 = 90;
 const cx = (reel: number) => GX0 + reel * (CS + GAP);
 const cy = (cell: number) => GY0 + cell * (CS + GAP);
 const inBlock = (r: number, c: number) => r >= 1 && r <= 2 && c >= 0 && c <= 1;
@@ -32,21 +31,20 @@ const inBlock = (r: number, c: number) => r >= 1 && r <= 2 && c >= 0 && c <= 1;
 
   <h2>The lifecycle</h2>
 
-  <Diagram width={900} height={470} caption="One instance, one identity, many trips around the ring. The pool is keyed by symbol id, so a recycled 'cherry' only ever comes back as 'cherry'; destroy() is the only way out.">
-    <Box x={30} y={30} w={160} h={64} title="create" kind="code" mono={false} sub={['new Class(options)', 'registry.create(id)']} />
-    <Box x={330} y={30} w={240} h={64} title="activate(id)" kind="primary" sub={['view reset: visible, alpha 1, scale 1,', 'rotation 0, filters, tint, zIndex 0; onActivate(id)']} />
-    <Box x={700} y={140} w={180} h={140} title="on the reel" kind="accent" mono={false} sub={['resize(w, h)', 'onReelSpinStart(joined?)', 'onReelAnticipationStart()', 'onReelSpinEnd()', 'onReelLanded(ctx)', 'playWin() / playDestroy()']} />
-    <Box x={330} y={330} w={240} h={64} title="deactivate()" kind="primary" sub={['stopAnimation(); onDeactivate();', "id = '', landing = null, view hidden + reset"]} />
-    <Box x={30} y={180} w={160} h={64} title="pooled" kind="muted" mono={false} sub={["symbolId is ''", 'LIFO stack per id']} />
-    <Box x={700} y={410} w={180} h={52} title="destroy()" kind="code" sub={['onDestroy(); view.destroy()', 'pool full, or set teardown']} />
+  <Diagram height={540} caption="One instance, one identity, many trips around the ring. The registry creates and activates in one go; the pool is keyed by symbol id, so a recycled 'cherry' only ever comes back as 'cherry'; destroy() is the only way out.">
+    <Box x={20} y={30} w={180} h={60} title="create" kind="code" mono={false} sub="registry.create(id)" />
+    <Box x={255} y={30} w={230} h={78} title="activate(id)" kind="primary" sub={['view reset to defaults', 'then onActivate(id)']} />
+    <Box x={510} y={200} w={190} h={78} title="on the reel" kind="accent" mono={false} sub={['resize(w, h), reel hooks', 'playWin() / playDestroy()']} />
+    <Box x={20} y={200} w={180} h={78} title="pooled" kind="muted" mono={false} sub={["symbolId is ''", 'LIFO stack per id']} />
+    <Box x={255} y={360} w={230} h={78} title="deactivate()" kind="primary" sub={['stopAnimation(); onDeactivate()', "id = '', view hidden + reset"]} />
+    <Box x={510} y={460} w={190} h={60} title="destroy()" kind="code" sub="pool full, or teardown" />
 
-    <Edge from={[190, 50]} to={[330, 50]} label="immediately" labelDy={-16} />
-    <Edge from={[110, 180]} via={[[110, 140], [250, 140], [250, 80]]} to={[330, 80]} label="acquire hit: pop + reset()" labelDy={-14} />
-    <Edge from={[570, 62]} via={[[640, 62], [640, 210]]} to={[700, 210]} label="installed on the strip" labelDx={-2} />
-    <Edge from={[790, 280]} via={[[790, 362]]} to={[570, 362]} label="SymbolFactory.release()" labelDy={-14} />
-    <Edge from={[330, 362]} via={[[110, 362]]} to={[110, 244]} label="pool.release(id)" labelDy={-14} />
-    <Edge from={[450, 394]} via={[[450, 436]]} to={[700, 436]} label="past maxPerKey" style="dashed" labelDy={-14} />
-    <Label x={790} y={300} text={['same-id wrap: fast path,', 'stopAnimation() only, no pool trip']} size={10} anchor="middle" />
+    <Edge from={[200, 60]} to={[255, 60]} />
+    <Edge from={[485, 69]} via={[[605, 69]]} to={[605, 200]} label="installed on the strip" labelDx={-105} labelDy={19.5} />
+    <Edge from={[605, 278]} via={[[605, 399]]} to={[485, 399]} label="SymbolFactory.release()" labelDx={-109} labelDy={-8.5} />
+    <Edge from={[255, 399]} via={[[110, 399]]} to={[110, 278]} label="pool.release(id)" labelDx={-10.5} labelDy={30} />
+    <Edge from={[110, 200]} via={[[110, 150], [330, 150]]} to={[330, 108]} label="hit: pop + reset()" labelDy={-18} />
+    <Edge from={[330, 438]} via={[[330, 490]]} to={[510, 490]} label="past maxPerKey" style="dashed" labelDx={-10} labelDy={-28} />
   </Diagram>
 
   <div class="not-prose my-8">
@@ -67,7 +65,9 @@ const inBlock = (r: number, c: number) => r >= 1 && r <= 2 && c >= 0 && c <= 1;
     symbol is deactivated twice: in <code>release</code> and again on the way out of the pool.
     <code>destroy()</code> returns early if already destroyed, runs <code>stopAnimation()</code> and
     <code>onDeactivate()</code> if the view is still alive (a game can destroy a container that holds
-    it), then <code>onDestroy()</code> and <code>view.destroy({'{ children: true }'})</code>.
+    it), then <code>onDestroy()</code> and <code>view.destroy({'{ children: true }'})</code>. A
+    same-id wrap takes a fast path around the whole ring: <code>stopAnimation()</code> only, no trip
+    through the pool.
   </p>
 
   <h2>What a subclass implements</h2>
@@ -116,23 +116,16 @@ const inBlock = (r: number, c: number) => r >= 1 && r <= 2 && c >= 0 && c <= 1;
 
   <h2>Registry, factory, pool</h2>
 
-  <Diagram width={960} height={300} caption="acquire() flows left to right; release() comes back underneath. The registry creates and activates; the factory binds gsap and the axis; the pool only remembers idle instances.">
-    <Box x={20} y={40} w={200} h={64} title="Reel" sub={['resize, place, zIndex', "emits symbol:created"]} />
-    <Box x={270} y={40} w={200} h={64} title="SymbolFactory" kind="accent" sub={['acquire(id) / release(sym)', 'bindGsap, bindMainAxis']} />
-    <Box x={520} y={40} w={200} h={64} title="ObjectPool" kind="code" sub={['Map<id, T[]>, LIFO', 'maxPerKey = capacity']} />
-    <Box x={770} y={40} w={170} h={64} title="SymbolRegistry" sub={['register(id, Class, opts)', 'create = new + activate']} size={12} />
+  <Diagram height={360} caption="acquire() flows left to right and release() comes back underneath. The registry creates and activates; the factory binds gsap and the axis; the pool only remembers idle instances.">
+    <Box x={20} y={70} w={180} h={78} title="Reel" sub={['resize, place, zIndex', 'emits symbol:created']} />
+    <Box x={270} y={70} w={200} h={78} title="SymbolFactory" kind="accent" sub={['acquire(id) / release()', 'binds gsap and the axis']} />
+    <Box x={530} y={70} w={170} h={78} title="ObjectPool" kind="code" sub={['Map<id, T[]>, LIFO', 'hit: pop + reset()']} />
+    <Box x={530} y={230} w={170} h={78} title="SymbolRegistry" sub={['register(id, Class)', 'create: new + activate']} />
 
-    <Edge from={[220, 72]} to={[270, 72]} label="acquire(id)" labelDy={-18} />
-    <Edge from={[470, 72]} to={[520, 72]} label="pool.acquire(id)" labelDy={-18} />
-    <Edge from={[720, 72]} to={[770, 72]} label="miss: create(id)" style="dashed" labelDy={-18} />
-
-    <Box x={520} y={150} w={200} h={52} title="hit: pop + reset()" kind="muted" mono={false} size={12} sub="reset() is deactivate()" />
-    <Edge from={[620, 104]} to={[620, 150]} />
-    <Label x={370} y={130} text={['then activate(id), but only if', "symbol.symbolId !== id (fresh ones", 'were activated by the registry)']} size={10} anchor="middle" />
-
-    <Edge from={[105, 104]} via={[[105, 240], [370, 240]]} to={[370, 104]} label="release(symbol)" labelDy={14} />
-    <Label x={612} y={262} text="release = deactivate(), view.parentRenderLayer?.detach(view), view.removeFromParent(), pool.release(id, symbol)" size={10} anchor="middle" />
-    <Label x={612} y={280} text="pool.release pushes, or disposes with destroy() when the id's stack already holds maxPerKey" size={10} anchor="middle" />
+    <Edge from={[200, 109]} to={[270, 109]} label="acquire(id)" labelDy={-63} />
+    <Edge from={[470, 109]} to={[530, 109]} label="pool.acquire(id)" labelDy={-63} />
+    <Edge from={[615, 148]} to={[615, 230]} label="miss: create(id)" style="dashed" labelDx={-94} />
+    <Edge from={[110, 148]} via={[[110, 300], [370, 300]]} to={[370, 148]} label="release(symbol)" labelDy={28} />
   </Diagram>
 
   <p>
@@ -148,7 +141,13 @@ const inBlock = (r: number, c: number) => r >= 1 && r <= 2 && c >= 0 && c <= 1;
     <code>(registry, maxPoolPerKey = 20, gsap = DEFAULT_GSAP, mainAxis = 'y')</code>. Its pool
     factory is <code>registry.create(key)</code> followed by <code>bindGsap</code> and
     <code>bindMainAxis</code>, bound at create time because a pooled symbol never crosses reel
-    sets. Because the pool is keyed by id, a recycled instance never changes identity in reel use;
+    sets. <code>acquire(id)</code> asks the pool, then calls <code>activate(id)</code> only if
+    <code>symbol.symbolId !== id</code>, because a fresh instance was already activated by the
+    registry. <code>release(symbol)</code> is <code>deactivate()</code>, then
+    <code>view.parentRenderLayer?.detach(view)</code>, <code>view.removeFromParent()</code> and
+    <code>pool.release(id, symbol)</code>, which pushes the instance or disposes it with
+    <code>destroy()</code> when the id's stack already holds <code>maxPerKey</code>.
+    Because the pool is keyed by id, a recycled instance never changes identity in reel use;
     that is why <code>CardSymbol</code> can have a no-op <code>onActivate</code> and why
     <code>SpineReelSymbol</code>'s per-id Spine map only ever holds one entry. Identity swaps
     happen only on the <code>prewarmSpinTextures</code> scratch symbol and inside <code>StaticSpinSymbol</code>.
@@ -196,20 +195,24 @@ poolCapacity = builder.poolCapacity(n) ?? max(20, sum over reels of (visible + b
 
   <h2>Big symbols</h2>
 
-  <Diagram width={760} height={300} caption="A 2 x 2 block anchored at reel 1, cell 0. The server sends the id at the anchor only; the other three cells become OCCUPIED stubs, and the anchor's view is resized to cover the whole block, gaps included.">
+  <Diagram height={330} caption="A 2 x 2 block anchored at reel 1, cell 0. The server sends 'bonus' at the anchor only; the other three cells become invisible OCCUPIED stubs, and the anchor's view is resized to cover the whole block, gap included.">
     {[0, 1, 2, 3, 4].map((r) => [0, 1, 2].map((c) => {
       if (r === 1 && c === 0) return null;
       return <Cell x={cx(r)} y={cy(c)} size={CS} label={inBlock(r, c) ? 'stub' : `${r},${c}`} sub={inBlock(r, c) ? 'OCCUPIED' : undefined} kind={inBlock(r, c) ? 'empty' : 'plain'} />;
     }))}
     <Cell x={cx(1)} y={cy(0)} size={CS} label="anchor" sub="'bonus'" kind="hot" />
-    <rect x={cx(1) - 3} y={cy(0) - 3} width={2 * CS + GAP + 6} height={2 * CS + GAP + 6} rx="9" class="guide-strong" style="stroke-dasharray: 4 3" />
-    <Edge from={[cx(1), 36]} to={[cx(2) + CS, 36]} arrow="both" label="size.reels = 2 (cross axis)" labelDy={-14} />
-    <Edge from={[cx(4) + CS + 14, cy(0)]} to={[cx(4) + CS + 14, cy(1) + CS]} arrow="both" label="size.cells = 2 (main axis)" labelDx={104} />
-    <Label x={400} y={170} size={10.5} text={['anchor view resized to _blockSize(w, h):', `2 * ${CS} + ${GAP} = ${2 * CS + GAP} px on each axis here`, 'stubs are invisible; getVisibleGrid() reports', "'bonus' in all four cells"]} />
-    <Label x={60} y={270} size={10.5} text={['Declared on the builder, not the registry: symbolData({ bonus: { size: { reels: 2, cells: 2 }, zIndex: 5 } }).', 'Weight must be 0: random fill never places blocks. coordinateBigSymbols() validates and paints the stubs.']} />
+    <rect x={cx(1) - 4} y={cy(0) - 4} width={2 * CS + GAP + 8} height={2 * CS + GAP + 8} rx="10" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <Edge from={[cx(1), 60]} to={[cx(2) + CS, 60]} arrow="both" label="size.reels = 2" labelDy={-30} />
+    <Edge from={[cx(4) + CS + 20, cy(0)]} to={[cx(4) + CS + 20, cy(1) + CS]} arrow="both" label="size.cells = 2" labelDx={86} />
   </Diagram>
 
   <p>
+    The block is declared on the builder, not the registry:
+    <code>symbolData({'{ bonus: { size: { reels: 2, cells: 2 }, zIndex: 5 } }'})</code>. Its weight
+    must be 0, because random fill never places blocks; <code>coordinateBigSymbols()</code> validates
+    the placement and paints the stubs. The anchor view is resized to
+    <code>_blockSize(w, h)</code>, here <code>2 * cell + gap</code> on each axis, and
+    <code>getVisibleGrid()</code> reports <code>'bonus'</code> in all four cells.
     <code>size.reels</code> runs along the cross axis and <code>size.cells</code> along the main axis
     whatever the orientation. <code>coordinateBigSymbols</code> (<code>spin/bigSymbolBlocks.ts</code>) is
     pure, runs in the SpinController before any per-reel <code>FrameBuilder.build()</code>, throws with

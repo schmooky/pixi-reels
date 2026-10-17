@@ -22,63 +22,57 @@ import Legend from '../../components/arch/Legend.astro';
     you import them.
   </p>
 
-  <Diagram width={960} height={600} caption="The object graph after build(). Solid arrows are calls, dashed arrows are optional tooling that attaches from outside.">
-    <Box x={20} y={20} w={200} h={60} title="Your game" kind="ghost" sub={['spin() · setResult()', 'events.on(…)']} mono={false} />
-    <Box x={20} y={120} w={200} h={64} title="ReelSetBuilder" kind="primary" sub={['.reels(5).visibleCells(3)…', '.build()']} />
-    <Box x={20} y={224} w={200} h={56} title="PIXI.Ticker" kind="code" sub="app.ticker, wrapped in TickerRef" />
-    <Box x={20} y={320} w={200} h={56} title="gsap" kind="code" sub="per set, via .gsap(instance)" />
+  <Diagram height={430} caption="What you construct, and what build() hands back. The ReelSet owns six subsystems and one display child, the viewport.">
+    <Box x={20} y={20} w={200} h={60} title="Your game" kind="ghost" sub="spin(), setResult(), events" mono={false} />
+    <Box x={20} y={120} w={200} h={78} title="ReelSetBuilder" kind="primary" sub={['.reels(5).visibleCells(3)', '.symbols(...).build()']} />
+    <Box x={20} y={240} w={200} h={60} title="PIXI.Ticker" kind="code" sub="app.ticker, via TickerRef" />
+    <Box x={20} y={330} w={200} h={60} title="gsap" kind="code" sub="per set, via .gsap(instance)" />
 
     <Edge from={[120, 80]} to={[120, 120]} />
-    <Edge from={[220, 50]} to={[260, 50]} label="methods" />
-    <Edge from={[220, 152]} to={[260, 152]} label="build()" kind="primary" />
-    <Edge from={[220, 252]} via={[[244, 252], [244, 86]]} to={[276, 86]} label="tick" />
-    <Edge from={[220, 348]} via={[[244, 348], [244, 430]]} to={[276, 430]} label="tweens" style="dotted" at={0.5} />
+    <Edge from={[220, 159]} to={[260, 159]} label="build()" kind="primary" labelDy={-52} />
+    <Edge from={[220, 270]} to={[260, 270]} />
+    <Edge from={[220, 360]} to={[260, 360]} />
 
-    <Group x={260} y={20} w={470} h={564} kind="tint" label="ReelSet" note="extends PIXI.Container, implements Disposable" />
+    <Group x={260} y={20} w={440} h={390} kind="tint" label="ReelSet" note="a PIXI.Container" />
+    <Box x={276} y={60} w={200} h={78} title="SpinController" kind="accent" sub={['runs the phases', 'per reel']} />
+    <Box x={488} y={60} w={196} h={78} title="SpeedManager" sub={['normal, turbo,', 'super turbo']} />
+    <Box x={276} y={154} w={200} h={78} title="FrameBuilder" sub={['which symbols', 'land where']} />
+    <Box x={488} y={154} w={196} h={78} title="SymbolFactory" sub={['one ObjectPool', 'per symbol id']} />
+    <Box x={276} y={248} w={200} h={78} title="SymbolSpotlight" sub={['dim losers,', 'promote winners']} />
+    <Box x={488} y={248} w={196} h={78} title="EventEmitter" sub={['59 typed events', 'spin:*, skip:*, ...']} />
+    <Box x={276} y={342} w={408} h={52} title="ReelViewport" kind="subtle" sub="the only display child: five reels under one mask" />
+  </Diagram>
 
-    <Box x={276} y={56} w={140} h={60} title="SpinController" kind="accent" sub={['per-reel phase chain', 'skip · hold · groups']} />
-    <Box x={424} y={56} w={140} h={60} title="SpeedManager" sub={['normal · turbo · super', 'tune() per phase']} />
-    <Box x={572} y={56} w={142} h={60} title="SymbolSpotlight" sub={['dim losers', 'promote winners']} />
-
-    <Box x={276} y={130} w={140} h={60} title="FrameBuilder" sub={['middleware pipeline', 'strip per reel']} />
-    <Box x={424} y={130} w={140} h={60} title="SymbolFactory" sub={['ObjectPool per id', 'acquire · release']} />
-    <Box x={572} y={130} w={142} h={60} title="EventEmitter" sub={['ReelSetEvents', 'spin:* skip:* pin:* …']} />
-
-    <Group x={276} y={212} w={438} h={356} kind="dashed" label="ReelViewport" note="masked · unmasked · dim · spotlight · promoted" />
-
+  <Diagram height={330} caption="Inside the viewport. Each Reel is a strip longer than the window; the mask hides the buffer cells above and below it.">
+    <Group x={20} y={20} w={680} h={290} kind="dashed" label="ReelViewport" note="maskedContainer" />
     {[0, 1, 2, 3, 4].map((i) => (
       <Box
-        x={292 + i * 84}
-        y={252}
-        w={72}
-        h={280}
+        x={40 + i * 130}
+        y={62}
+        w={120}
+        h={150}
         title={`Reel ${i}`}
         kind="code"
-        sub={['ReelAxis', 'ReelMotion', 'StopSeq.', 'Symbol[]', '', 'container', 'zIndex=i']}
-        size={12}
+        sub={['ReelAxis', 'ReelMotion', 'StopSequencer', 'ReelSymbol[]']}
       />
     ))}
-    <rect x={284} y={330} width={422} height={120} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
-    <Label x={495} y={544} text="visible window = the mask; buffer cells sit above and below it" anchor="middle" size={10.5} />
+    <rect x={30} y={100} width={660} height={74} rx="10" class="guide-strong" style="stroke-dasharray: 6 4" />
+    <Label x={360} y={244} text="dashed = the visible window (the mask)" anchor="middle" tone="fg" />
+    <Label x={360} y={268} text="the symbols above and below it are buffer cells, drawn but clipped" anchor="middle" />
+  </Diagram>
 
-    <Edge from={[346, 116]} to={[346, 252]} label="runs phases" at={0.3} labelDx={52} />
-
-    <Group x={750} y={20} w={190} h={210} kind="solid" label="pixi-reels/testing" />
-    <Box x={765} y={56} w={160} h={44} title="FakeTicker" sub="tick(ms) by hand" />
-    <Box x={765} y={110} w={160} h={44} title="HeadlessSymbol" sub="draws nothing" />
-    <Box x={765} y={164} w={160} h={44} title="createTestReelSet" sub="spinAndLand · expectGrid" size={12} />
-
-    <Group x={750} y={260} w={190} h={210} kind="solid" label="pixi-reels/debug" />
-    <Box x={765} y={296} w={160} h={44} title="debugOverlay" sub="12 drawable layers" />
-    <Box x={765} y={350} w={160} h={44} title="SpinMetrics" sub="rounds · phases · skips" />
-    <Box x={765} y={404} w={160} h={44} title="DebugPlaque" sub="text on a silk plate" />
-
-    <Group x={750} y={500} w={190} h={84} kind="solid" label="main entry" />
-    <Box x={765} y={530} w={160} h={44} title="enableDebug" sub="window.__PIXI_REELS_DEBUG" size={12} />
-
-    <Edge from={[750, 125]} to={[730, 125]} style="dashed" label="swaps in" labelDx={-4} labelDy={-16} />
-    <Edge from={[750, 365]} to={[730, 365]} style="dashed" label="reads" labelDx={-4} labelDy={-16} />
-    <Edge from={[750, 552]} to={[730, 552]} style="dashed" />
+  <Diagram height={300} caption="Two subpaths attach from outside and never ship unless imported. Testing swaps the ticker and the art; debug only reads.">
+    <Box x={250} y={110} w={220} h={78} title="ReelSet" kind="primary" sub={['the thing on', 'your stage']} />
+    <Group x={20} y={20} w={190} h={260} kind="solid" label="pixi-reels/testing" />
+    <Box x={34} y={60} w={162} h={52} title="FakeTicker" sub="tick(ms) by hand" />
+    <Box x={34} y={126} w={162} h={52} title="HeadlessSymbol" sub="draws nothing" />
+    <Box x={34} y={192} w={162} h={66} title="createTestReelSet" size={13} sub={['spinAndLand,', 'expectGrid']} />
+    <Group x={510} y={20} w={190} h={260} kind="solid" label="pixi-reels/debug" />
+    <Box x={524} y={60} w={162} h={52} title="debugOverlay" sub="12 drawn layers" />
+    <Box x={524} y={126} w={162} h={52} title="SpinMetrics" sub="rounds and phases" />
+    <Box x={524} y={192} w={162} h={66} title="enableDebug" sub={['main entry:', 'JSON snapshots']} />
+    <Edge from={[210, 149]} to={[250, 149]} style="dashed" />
+    <Edge from={[510, 149]} to={[470, 149]} style="dashed" />
   </Diagram>
 
   <div class="not-prose my-8">
@@ -143,21 +137,20 @@ import Legend from '../../components/arch/Legend.astro';
 
   <h2>Dependency direction</h2>
 
-  <Diagram width={960} height={200} caption="Imports only point downward. There are no cycles, which is what keeps the testing subpath tree-shakeable.">
+  <Diagram height={470} caption="Imports only point downward. No cycles, which is what keeps the testing subpath tree-shakeable.">
     {[
-      ['config · events · utils', 'types, DEFAULTS, EventEmitter, TickerRef, gsap'],
-      ['pool · symbols · frame', 'ObjectPool, ReelSymbol, FrameBuilder'],
-      ['core (per reel)', 'Reel, ReelMotion, ReelAxis, ReelViewport'],
+      ['config, events, utils', 'types, DEFAULTS, EventEmitter, TickerRef, gsap'],
+      ['pool, symbols, frame', 'ObjectPool, ReelSymbol, FrameBuilder'],
+      ['core, per reel', 'Reel, ReelMotion, ReelAxis, ReelViewport'],
       ['spin', 'phases, modes, SpinController'],
-      ['core (set)', 'ReelSet, ReelSetBuilder'],
-      ['spotlight · wins · board', 'presentation on top'],
-    ].map(([t, s], i) => (
-      <Box x={16 + i * 158} y={60} w={146} h={70} title={t} sub={s} size={12} mono={false} kind={i === 4 ? 'primary' : 'subtle'} />
+      ['core, the set', 'ReelSet, ReelSetBuilder'],
+      ['spotlight, wins, board', 'presentation on top of the set'],
+    ].map(([t, sub], i) => (
+      <Box x={160} y={20 + i * 74} w={400} h={56} title={t} sub={sub} mono={false} kind={i === 4 ? 'primary' : 'subtle'} />
     ))}
     {[0, 1, 2, 3, 4].map((i) => (
-      <Edge from={[162 + i * 158, 95]} to={[174 + i * 158, 95]} />
+      <Edge from={[360, 76 + i * 74]} to={[360, 94 + i * 74]} />
     ))}
-    <Label x={480} y={160} text="each layer imports only from layers to its left" anchor="middle" size={11} />
   </Diagram>
 
   <p>

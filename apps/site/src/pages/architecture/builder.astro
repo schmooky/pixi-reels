@@ -6,40 +6,48 @@ import Edge from '../../components/arch/Edge.astro';
 import Legend from '../../components/arch/Legend.astro';
 
 // The 23 things build() does, in source order (core/ReelSetBuilder.ts:968-1440).
+// Drawn as three figures of eight, eight and seven steps; the step number is
+// part of the title so the table further down can refer to it.
 type Kind = 'primary' | 'accent' | 'subtle' | 'muted' | 'ghost' | 'code';
 const STEPS: [string, string[], Kind][] = [
   ['_validate()', ['every error collected', 'one combined throw'], 'accent'],
   ['single throws', ['direction / curve lengths', 'warp renderer, bufferEnd 0'], 'accent'],
   ['axis projection', ['reelAxis(orientation, fwd)', 'main / cross cell and gap'], 'subtle'],
-  ['per-reel cells, extents', ['maxCells | perReel | uniform', 'tallest = max(extents)'], 'subtle'],
+  ['cells and extents', ['maxCells | perReel | uniform', 'tallest = max(extents)'], 'subtle'],
   ['speed default', ['normal = SpeedPresets.NORMAL', 'only if none registered'], 'subtle'],
   ['symbolsData', ['weight ?? 10, zIndex ?? 1', 'unmask, size per id'], 'subtle'],
-  ['pool capacity', ['?? max(20, sum of strip cells)'], 'subtle'],
+  ['pool capacity', ['?? max(20, strip cells)'], 'subtle'],
   ['new SymbolFactory', ['registry, capacity,', 'gsap, axis mainProp'], 'code'],
-  ['new RandomSymbolProvider', ['symbolsData, rng', 'then set(pool, scope) each'], 'code'],
-  ['new FrameBuilder', ['random provider', 'use(mw) in call order'], 'code'],
-  ['tumble phases', ['cascade:fall / place / dropIn', 'only after .tumble()'], 'subtle'],
+  ['random provider', ['new RandomSymbolProvider', 'then set(pool, scope) each'], 'code'],
+  ['new FrameBuilder', ['over the random provider', 'use(mw) in call order'], 'code'],
+  ['tumble phases', ['cascade:fall/place/dropIn', 'only after .tumble()'], 'subtle'],
   ['MultiWays adjust', ['registerFactory(adjust)', 'AdjustPhase(duration, ease)'], 'subtle'],
-  ['user .phases() LAST', ['override always wins'], 'accent'],
+  ['user .phases()', ['runs last', 'override always wins'], 'accent'],
   ['viewport size', ['crossSpan x tallest', 'through setAxis.toScreen'], 'subtle'],
-  ['mask auto-pick', ['Rect or SharedRect', '+ warp-skips-unmask notice'], 'subtle'],
-  ['curve focus', ['weight reel 0 / lean .5 / set 1', 'setCentreCross = span / 2'], 'subtle'],
-  ['new ReelViewport', ['w, h, strategy, axis, bleed', 'mask = bounding-box fallback'], 'code'],
-  ['initialFrame seeding', ['assertBufferCountsInRange', 'coordinateBigSymbols'], 'subtle'],
+  ['mask auto-pick', ['Rect or SharedRect', 'warp-skips-unmask notice'], 'subtle'],
+  ['curve focus', ['reel 0 / lean .5 / set 1', 'setCentreCross = span / 2'], 'subtle'],
+  ['new ReelViewport', ['w, h, strategy, axis, bleed', 'bounding-box mask for now'], 'code'],
+  ['initial frame', ['assertBufferCountsInRange', 'coordinateBigSymbols()'], 'subtle'],
   ['closure capture', ['builder fields -> consts', 'perReel(), mainOffsetFor()'], 'subtle'],
   ['createReel x N', ['frameBuilder.build(seed)', 'new Reel, referenceSpeed'], 'code'],
-  ['updateMaskSize', ['per-reel maskRectFor(i)'], 'subtle'],
+  ['updateMaskSize', ['one maskRectFor(i) per reel'], 'subtle'],
   ['ReelFactory', ['create, extentFor, maskRect,', 'mainOffset, poolCapacity'], 'subtle'],
   ['new ReelSet', ['config, reels, factory,', 'viewport, pools, modes'], 'primary'],
 ];
-const COLS = 4;
-const BW = 190;
-const BH = 84;
-const GX = 30;
-const PITCH_Y = 112;
-const X0 = 15;
+const COLS = 3;
+const BW = 220;
+const BH = 78;
+const GX = 20;
+const PITCH_Y = 122;
+const X0 = 10;
 const Y0 = 20;
 const pos = (i: number) => ({ x: X0 + (i % COLS) * (BW + GX), y: Y0 + Math.floor(i / COLS) * PITCH_Y });
+const figureHeight = (n: number) => Y0 + Math.ceil(n / COLS) * PITCH_Y - (PITCH_Y - BH) + 20;
+const FIGURES: [number, number, string][] = [
+  [0, 8, 'Steps 1 to 8: the gates, the derived numbers and the first engine object. Validation throws once, before anything is allocated.'],
+  [8, 16, 'Steps 9 to 16: the frame pipeline, the phase factories (your .phases() calls run last) and the viewport geometry.'],
+  [16, 23, 'Steps 17 to 23: the viewport, one reel per index, the factory that addReels() reuses, and finally the ReelSet that owns them all.'],
+];
 ---
 <Architecture
   title="The builder"
@@ -64,22 +72,29 @@ const pos = (i: number) => ({ x: X0 + (i % COLS) * (BW + GX), y: Y0 + Math.floor
 
   <h2>The build() pipeline</h2>
 
-  <Diagram width={900} height={684} caption="build() in source order. Validation comes first and throws once; construction runs left to right, row by row; the ReelSet is the last thing made.">
-    {STEPS.map(([title, sub, kind], i) => {
-      const { x, y } = pos(i);
-      return <Box x={x} y={y} w={BW} h={BH} title={title} sub={sub} kind={kind} badge={String(i + 1)} size={12} />;
-    })}
-    {STEPS.map((_, i) => {
-      if (i === STEPS.length - 1) return null;
-      const a = pos(i);
-      const b = pos(i + 1);
-      if (i % COLS < COLS - 1) {
-        return <Edge from={[a.x + BW, a.y + BH / 2]} to={[b.x, b.y + BH / 2]} />;
-      }
-      const midY = a.y + BH + (PITCH_Y - BH) / 2;
-      return <Edge from={[a.x + BW / 2, a.y + BH]} via={[[a.x + BW / 2, midY], [b.x + BW / 2, midY]]} to={[b.x + BW / 2, b.y]} />;
-    })}
-  </Diagram>
+  <p>
+    Source order, read left to right and row by row. Validation comes first
+    and throws once; the ReelSet is the last thing made.
+  </p>
+
+  {FIGURES.map(([start, end, caption]) => (
+    <Diagram height={figureHeight(end - start)} caption={caption}>
+      {STEPS.slice(start, end).map(([title, sub, kind], j) => {
+        const { x, y } = pos(j);
+        return <Box x={x} y={y} w={BW} h={BH} title={`${start + j + 1}. ${title}`} sub={sub} kind={kind} />;
+      })}
+      {STEPS.slice(start, end).map((_, j) => {
+        if (j === end - start - 1) return null;
+        const a = pos(j);
+        const b = pos(j + 1);
+        if (j % COLS < COLS - 1) {
+          return <Edge from={[a.x + BW, a.y + BH / 2]} to={[b.x, b.y + BH / 2]} />;
+        }
+        const midY = a.y + BH + (PITCH_Y - BH) / 2;
+        return <Edge from={[a.x + BW / 2, a.y + BH]} via={[[a.x + BW / 2, midY], [b.x + BW / 2, midY]]} to={[b.x + BW / 2, b.y]} />;
+      })}
+    </Diagram>
+  ))}
 
   <div class="not-prose my-8">
     <Legend items={[
@@ -120,23 +135,23 @@ const pos = (i: number) => ({ x: X0 + (i % COLS) * (BW + GX), y: Y0 + Math.floor
 
   <h2>Mask auto-pick</h2>
 
-  <Diagram width={960} height={230} caption="How build() chooses the mask. An explicit strategy short-circuits everything; the two auto rules both land on SharedRect; the default is Rect.">
-    <Box x={16} y={30} w={200} h={64} title="explicit strategy set?" kind="ghost" mono={false} size={12} sub={['.maskStrategy(s) called', 's.version must be 2']} />
-    <Box x={256} y={30} w={200} h={64} title="wide block or unmask?" kind="ghost" mono={false} size={12} sub={['size.reels > 1 or unmask: true', 'AND cross gap > 0']} />
-    <Box x={496} y={30} w={200} h={64} title="curve leans?" kind="ghost" mono={false} size={12} sub={["curveFocus !== 'reel'", 'AND a curve is set']} />
-    <Box x={760} y={34} w={180} h={56} title="RectMaskStrategy" size={12} sub="default: one rect per reel" />
+  <Diagram height={490} caption="How build() chooses the mask. Questions are asked top to bottom; an explicit strategy short-circuits everything, both auto rules land on SharedRect, and the default is Rect.">
+    <Box x={20} y={20} w={280} h={78} title="explicit strategy?" kind="ghost" mono={false} sub={['.maskStrategy(s) was called', 's.version must be 2']} />
+    <Box x={20} y={150} w={280} h={78} title="wide block or unmask?" kind="ghost" mono={false} sub={['size.reels > 1 or unmask: true', 'and the cross gap is > 0']} />
+    <Box x={20} y={280} w={280} h={78} title="curve leans?" kind="ghost" mono={false} sub={["curveFocus is not 'reel'", 'and a curve is set']} />
+    <Box x={20} y={410} w={280} h={60} title="RectMaskStrategy" sub="default: one rect per reel" />
 
-    <Edge from={[216, 62]} to={[256, 62]} label="no" labelDy={-16} />
-    <Edge from={[456, 62]} to={[496, 62]} label="no" labelDy={-16} />
-    <Edge from={[696, 62]} to={[760, 62]} label="no" labelDy={-16} />
+    <Edge from={[160, 98]} to={[160, 150]} label="no" labelDx={30} />
+    <Edge from={[160, 228]} to={[160, 280]} label="no" labelDx={30} />
+    <Edge from={[160, 358]} to={[160, 410]} label="no" labelDx={30} />
 
-    <Box x={16} y={150} w={200} h={56} title="your strategy" kind="accent" mono={false} size={12} sub="explicit always wins" />
-    <Box x={256} y={150} w={200} h={56} title="SharedRectMaskStrategy" kind="accent" size={12} sub="notice: mask-auto-shared" />
-    <Box x={496} y={150} w={200} h={56} title="SharedRectMaskStrategy" kind="accent" size={12} sub="notice: mask-auto-shared" />
+    <Box x={420} y={29} w={280} h={60} title="your strategy" kind="accent" mono={false} sub="explicit always wins" />
+    <Box x={420} y={159} w={280} h={60} title="SharedRectMaskStrategy" kind="accent" sub="notice: mask-auto-shared" />
+    <Box x={420} y={289} w={280} h={60} title="SharedRectMaskStrategy" kind="accent" sub="notice: mask-auto-shared" />
 
-    <Edge from={[116, 94]} to={[116, 150]} label="yes" labelDx={28} />
-    <Edge from={[356, 94]} to={[356, 150]} label="yes" labelDx={28} />
-    <Edge from={[596, 94]} to={[596, 150]} label="yes" labelDx={28} />
+    <Edge from={[300, 59]} to={[420, 59]} label="yes" labelDy={-24} />
+    <Edge from={[300, 189]} to={[420, 189]} label="yes" labelDy={-24} />
+    <Edge from={[300, 319]} to={[420, 319]} label="yes" labelDy={-24} />
   </Diagram>
 
   <p>

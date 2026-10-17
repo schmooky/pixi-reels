@@ -23,32 +23,6 @@ const presets = [
   ['tumble', 'none', 'none', 'none'],
   ['phase sections', 'none', 'none', 'none'],
 ];
-
-// (c) mapping: settings on the left, steps on the right.
-const left = [
-  ['spinDelay', 'x stagger index', 0],
-  ['start.steps.delay.duration', 'replaces the stagger', 1],
-  ['pull defaults', '50 ms, power1.out, speed -2', 2],
-  ['accelerationDuration / Ease', '300 ms, power2.in', 3],
-  ['spinSpeed', 'target of accelerate', 4],
-  ['minimumSpinTime', '500 ms', 5],
-  ['anticipationDelay', 'the hold; step.duration wins', 6],
-  ['stopDelay', 'x stagger index', 7],
-  ['stop.steps.delay.duration', 'replaces the stop stagger', 8],
-  ['bounceDistance / Duration / Ease', '56 px, 600 ms, power1.out', 9],
-] as const;
-const right = [
-  ['start.delay', 'cut', 0],
-  ['start.pull', 'only if bounceDistance > 0', 1],
-  ['start.accelerate', '', 2],
-  ['spin (wait)', 'minimum, from spin entry', 3],
-  ['anticipation.tease', 'cut', 4],
-  ['stop.delay', 'cut', 5],
-  ['stop.bounce', 'two legs', 6],
-] as const;
-const ly = (i: number) => 40 + i * 48;
-const ry = (i: number) => 40 + i * 70;
-const links: [number, number][] = [[0, 0], [1, 0], [2, 1], [3, 2], [4, 2], [5, 3], [6, 4], [7, 5], [8, 5], [9, 6]];
 ---
 <Architecture
   title="Speed profiles"
@@ -68,47 +42,38 @@ const links: [number, number][] = [[0, 0], [1, 0], [2, 1], [3, 2], [4, 2], [5, 3
     (<code>docs/adr/021-phase-sections-on-speed-profiles.md</code>) is the design record.
   </p>
 
-  <Diagram width={940} height={430} caption="The shape of one profile. The flat SpeedProfileBase fields sit next to eight optional phase sections; a section may re-set any timing field, give each step one or more StepTiming entries, and carry a whenAnticipated variant of both.">
-    <Group x={10} y={10} w={920} h={410} kind="tint" label="SpeedProfile" note="SpeedProfileBase & PhaseSections (types.ts:537)" />
-    <Box x={26} y={50} w={250} h={350} title="SpeedProfileBase" kind="code" align="left" sub={[
-      'name',
-      'spinDelay            ms between starts',
-      'spinSpeed            see motion page',
-      'stopDelay            ms between stops',
-      'anticipationDelay    tease hold ms',
-      'bounceDistance       px',
-      'bounceDuration       ms, both legs',
-      'bounceEase?          power1.out',
-      'accelerationEase?    power2.in',
-      'accelerationDuration? 300',
-      'minimumSpinTime?     500',
-      'decelerationEase?    deprecated',
-      'tumble?              TumbleConfig',
-    ]} size={13} />
-
-    <Group x={296} y={50} w={618} h={350} kind="dashed" label="PhaseSections" note="all optional; games add phases by declaration merging" />
+  <Diagram height={434} caption="The shape of one profile. The flat SpeedProfileBase fields sit next to eight optional phase sections, one per phase name. The stop section is opened up in the next figure.">
+    <Group x={20} y={20} w={680} h={394} kind="tint" label="SpeedProfile" note="SpeedProfileBase & PhaseSections (types.ts:537)" />
+    <Box x={44} y={60} w={632} h={78} title="SpeedProfileBase" kind="code" sub={['name, spinDelay, spinSpeed, stopDelay, anticipationDelay,', 'bounceDistance, bounceDuration, the ease and duration options, tumble']} />
+    <Group x={44} y={162} w={632} h={228} kind="dashed" label="PhaseSections" note="all optional; games add phases by declaration merging" />
     {['start', 'spin', 'anticipation', 'stop', 'adjust', 'cascade:fall', 'cascade:place', 'cascade:dropIn'].map((n, i) => (
-      <Box x={312 + (i % 4) * 148} y={86 + Math.floor(i / 4) * 44} w={136} h={34} title={n} kind={n === 'stop' ? 'accent' : 'subtle'} size={12} />
+      <Box x={68 + (i % 3) * 200} y={202 + Math.floor(i / 3) * 60} w={184} h={44} title={n} kind={n === 'stop' ? 'accent' : 'subtle'} />
     ))}
+  </Diagram>
 
-    <Group x={312} y={186} w={586} h={200} kind="solid" label="stop: PhaseSection<StopSteps>" note="one section, opened up" />
-    <Box x={328} y={222} w={170} h={54} title="PhaseTiming" sub={['any base field again,', 'without name and tumble']} size={12} />
-    <Box x={514} y={222} w={190} h={54} title="steps" sub={['delay, spinOut, land, bounce', 'StepTiming | StepTiming[]']} size={12} />
-    <Box x={720} y={222} w={162} h={54} title="whenAnticipated" sub={['timing + steps again,', 'cannot nest']} size={12} />
-    <Box x={328} y={300} w={554} h={70} title="StepTiming" kind="code" align="left" sub={[
-      "{ ease?: string, duration?: number }   built-in steps read step[0]; an array is for multi-leg steps",
-      "stop: { stopDelay: 0, steps: { bounce: { duration: 400, ease: 'back.out' } }, whenAnticipated: { steps: { bounce: { duration: 900 } } } }",
-    ]} size={12} />
-    <Edge from={[380, 120]} via={[[380, 160], [605, 160]]} to={[605, 186]} kind="accent" label="opened up" labelDx={0} labelDy={-14} />
+  <Diagram height={274} caption="One section opened up: stop is a PhaseSection<StopSteps>. A section may re-set any timing field, give each step one or more StepTiming entries, and carry a whenAnticipated variant of both.">
+    <Group x={20} y={20} w={680} h={234} kind="solid" label="stop: PhaseSection<StopSteps>" note="one section, opened up" />
+    <Box x={44} y={60} w={192} h={78} title="PhaseTiming" sub={['any base field again,', 'minus name and tumble']} />
+    <Box x={252} y={60} w={208} h={78} title="steps" sub={['delay, spinOut, land, bounce', 'StepTiming | StepTiming[]']} />
+    <Box x={476} y={60} w={192} h={78} title="whenAnticipated" sub={['timing + steps again,', 'cannot nest']} />
+    <Box x={44} y={170} w={624} h={60} title="StepTiming" kind="code" sub="{ ease?: string, duration?: number }; built-in steps read step[0]" />
+    <Edge from={[356, 138]} to={[356, 170]} />
   </Diagram>
 
   <div class="not-prose my-8">
     <Legend items={[
-      { kind: 'primary', label: 'code', note: 'the literal field list' },
-      { kind: 'accent', label: 'section', note: 'the one phase section the lower panel expands' },
+      { kind: 'primary', label: 'code', note: 'the literal field or type' },
+      { kind: 'accent', label: 'section', note: 'the one phase section the second figure opens up' },
       { kind: 'subtle', label: 'phase name', note: 'keys of PhaseProfiles' },
     ]} />
   </div>
+
+  <p>A stop section with every part in use looks like this:</p>
+  <pre><code>{`stop: {
+  stopDelay: 0,
+  steps: { bounce: { duration: 400, ease: 'back.out' } },
+  whenAnticipated: { steps: { bounce: { duration: 900 } } },
+}`}</code></pre>
 
   <h2>The flat fields</h2>
   <p>
@@ -183,24 +148,23 @@ const links: [number, number][] = [[0, 0], [1, 0], [2, 1], [3, 2], [4, 2], [5, 3
 
   <h2>Resolution order</h2>
 
-  <Diagram width={820} height={330} caption="How a number is resolved for one phase of one reel. Later layers override earlier ones; the tune is merged into the section before resolution, so a tuned whenAnticipated still only reaches reels that teased to the end.">
-    {[
-      ['flat field', 'profile.bounceDuration, profile.minimumSpinTime, ...', 'subtle'],
-      ['profile[phase]', 'the phase section: PhaseTiming fields and steps', 'subtle'],
-      ['whenAnticipated', 'only if context.anticipated: the reel played a tease to its end this spin', 'accent'],
-      ['speed.tune(phase, section)', 'runtime layer over whichever profile is active; merged into the section first', 'primary'],
-    ].map(([t, s, k], i) => (
-      <Box x={20} y={250 - i * 72} w={420} h={60} title={t} kind={k as 'subtle' | 'accent' | 'primary'} sub={s} size={12} />
+  <Diagram height={330} caption="How a number is resolved for one phase of one reel: phase.timing is resolvePhaseProfile(speed, phase, context.anticipated). Later layers override earlier ones; the tune is merged into the section before resolution, so a tuned whenAnticipated still only reaches reels that teased to the end.">
+    {([
+      ['speed.tune(phase, section)', 'runtime layer, merged in first', 'primary'],
+      ['whenAnticipated', 'only if context.anticipated', 'accent'],
+      ['profile[phase]', 'PhaseTiming fields and steps', 'subtle'],
+      ['flat field', 'the profile itself', 'subtle'],
+    ] as const).map(([t, s, k], i) => (
+      <Box x={20} y={20 + i * 76} w={300} h={60} title={t} kind={k} sub={s} />
     ))}
     {[0, 1, 2].map((i) => (
-      <Edge from={[230, 250 - i * 72]} to={[230, 250 - (i + 1) * 72 + 60]} arrow="end" />
+      <Edge from={[170, 96 + i * 76]} to={[170, 80 + i * 76]} />
     ))}
-    <Label x={458} y={48} text="overrides" size={10} mono tone="faint" rotate={90} />
+    <Label x={340} y={164} text="overrides" anchor="middle" mono tone="faint" rotate={-90} />
 
-    <Box x={490} y={40} w={310} h={78} title="resolvePhaseProfile(p, phase, anticipated)" kind="code" size={11.5} sub={['{ ...p, ...timingOf(section), ...timingOf(section.whenAnticipated) }', 'no section: returns the same object, nothing allocated', 'timingOf drops steps, whenAnticipated and undefined values']} />
-    <Box x={490} y={134} w={310} h={66} title="resolveStepTiming(p, phase, step, anticipated)" kind="code" size={11.5} sub={['the step\'s StepTiming[] with whenAnticipated', 'merged over it position by position']} />
-    <Box x={490} y={216} w={310} h={66} title="mergeSection / mergeBody / tuneProfile" kind="code" size={11.5} sub={['flat fields replace, steps merge by position,', 'whenAnticipated merges the same way']} />
-    <Label x={490} y={306} text="phase.timing = resolvePhaseProfile(speed, context.phase || name, context.anticipated)" size={10} mono />
+    <Box x={380} y={20} w={320} h={78} title="resolvePhaseProfile()" kind="code" sub={['{ ...p, ...timingOf(section),', '...timingOf(whenAnticipated) }']} />
+    <Box x={380} y={116} w={320} h={78} title="resolveStepTiming()" kind="code" sub={['the step list with whenAnticipated', 'merged over it, position by position']} />
+    <Box x={380} y={212} w={320} h={78} title="mergeSection / tuneProfile" kind="code" sub={['flat fields replace, steps and', 'whenAnticipated merge by position']} />
   </Diagram>
 
   <p>
@@ -224,16 +188,45 @@ const links: [number, number][] = [[0, 0], [1, 0], [2, 1], [3, 2], [4, 2], [5, 3
 
   <h2>Which step reads which setting</h2>
 
-  <Diagram width={900} height={540} caption="The profile settings each built-in step consults. A step-level duration in start.steps.delay or stop.steps.delay replaces the per-reel stagger, it is not added to it. spinOut, land, launch and announce read nothing.">
-    {left.map(([t, s, i]) => (
-      <Box x={20} y={ly(i)} w={320} h={40} title={t} sub={s} size={11.5} align="left" kind={t.includes('steps') ? 'accent' : 'subtle'} />
+  <Diagram height={480} caption="What the start and spin steps read. A step-level duration in start.steps.delay replaces the per-reel stagger, it is not added to it; launch and announce read nothing.">
+    {([
+      ['spinDelay', 'x stagger index', 'subtle'],
+      ['start.steps.delay.duration', 'replaces the stagger', 'accent'],
+      ['pull defaults', '50 ms, power1.out, speed -2', 'subtle'],
+      ['accelerationDuration / Ease', '300 ms, power2.in', 'subtle'],
+      ['spinSpeed', 'target of accelerate', 'subtle'],
+      ['minimumSpinTime', '500 ms', 'subtle'],
+    ] as const).map(([t, s, k], i) => (
+      <Box x={20} y={20 + i * 76} w={320} h={60} title={t} sub={s} kind={k} align="left" />
     ))}
-    {right.map(([t, s, i]) => (
-      <Box x={560} y={ry(i)} w={320} h={54} title={t} sub={s || undefined} size={12} badge={s === 'cut' ? 'cut' : undefined} kind="primary" />
+    <Box x={440} y={58} w={260} h={60} title="start.delay" kind="primary" sub="cut step" />
+    <Box x={440} y={172} w={260} h={60} title="start.pull" kind="primary" sub="only if bounceDistance > 0" />
+    <Box x={440} y={286} w={260} h={60} title="start.accelerate" kind="primary" sub="to spinSpeed" />
+    <Box x={440} y={400} w={260} h={60} title="spin (wait)" kind="primary" sub="minimum, from spin entry" />
+    <Edge from={[340, 50]} via={[[390, 50], [390, 78]]} to={[440, 78]} />
+    <Edge from={[340, 126]} via={[[390, 126], [390, 98]]} to={[440, 98]} />
+    <Edge from={[340, 202]} to={[440, 202]} />
+    <Edge from={[340, 278]} via={[[390, 278], [390, 306]]} to={[440, 306]} />
+    <Edge from={[340, 354]} via={[[390, 354], [390, 326]]} to={[440, 326]} />
+    <Edge from={[340, 430]} to={[440, 430]} />
+  </Diagram>
+
+  <Diagram height={328} caption="What the tease and stop steps read. stop.steps.delay.duration replaces the stop stagger the same way; spinOut and land read nothing from the profile.">
+    {([
+      ['anticipationDelay', 'the hold; step.duration wins', 'subtle'],
+      ['stopDelay', 'x stagger index', 'subtle'],
+      ['stop.steps.delay.duration', 'replaces the stop stagger', 'accent'],
+      ['bounceDistance / Duration / Ease', '56 px, 600 ms, power1.out', 'subtle'],
+    ] as const).map(([t, s, k], i) => (
+      <Box x={20} y={20 + i * 76} w={320} h={60} title={t} sub={s} kind={k} align="left" />
     ))}
-    {links.map(([a, b]) => (
-      <Edge from={[340, ly(a) + 20]} to={[560, ry(b) + 27]} curve />
-    ))}
+    <Box x={440} y={20} w={260} h={60} title="anticipation.tease" kind="primary" sub="cut step" />
+    <Box x={440} y={134} w={260} h={60} title="stop.delay" kind="primary" sub="cut step" />
+    <Box x={440} y={248} w={260} h={60} title="stop.bounce" kind="primary" sub="two legs" />
+    <Edge from={[340, 50]} to={[440, 50]} />
+    <Edge from={[340, 126]} via={[[390, 126], [390, 154]]} to={[440, 154]} />
+    <Edge from={[340, 202]} via={[[390, 202], [390, 174]]} to={[440, 174]} />
+    <Edge from={[340, 278]} to={[440, 278]} />
   </Diagram>
 
   <ul>

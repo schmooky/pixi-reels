@@ -10,17 +10,25 @@ import Legend from '../../components/arch/Legend.astro';
 
 type K = 'plain' | 'hot' | 'new' | 'empty' | 'buffer';
 type Col = { title: string; x: number; cells: [string, K, string?][] };
+// Cells of 48 on a 56 pitch; each stage column is 48 wide with its offsets beside it.
 const forward: Col[] = [
-  { title: '1. before', x: 30, cells: [['A', 'plain'], ['B', 'hot'], ['C', 'plain'], ['D', 'hot'], ['E', 'plain']] },
-  { title: '2. remove winners', x: 170, cells: [['A', 'plain'], ['', 'empty'], ['C', 'plain'], ['', 'empty'], ['E', 'plain']] },
-  { title: '3. gravity', x: 310, cells: [['', 'empty'], ['', 'empty'], ['A', 'plain', 'off 2'], ['C', 'plain', 'off 1'], ['E', 'plain', 'off 0']] },
-  { title: '4. fill', x: 450, cells: [['X', 'new', 'off 2'], ['Y', 'new', 'off 2'], ['A', 'plain', 'off 2'], ['C', 'plain', 'off 1'], ['E', 'plain', 'off 0']] },
+  { title: '1. before', x: 40, cells: [['A', 'plain'], ['B', 'hot'], ['C', 'plain'], ['D', 'hot'], ['E', 'plain']] },
+  { title: '2. remove', x: 210, cells: [['A', 'plain'], ['', 'empty'], ['C', 'plain'], ['', 'empty'], ['E', 'plain']] },
+  { title: '3. gravity', x: 380, cells: [['', 'empty'], ['', 'empty'], ['A', 'plain', '+2'], ['C', 'plain', '+1'], ['E', 'plain', '0']] },
+  { title: '4. fill', x: 550, cells: [['X', 'new', '+2'], ['Y', 'new', '+2'], ['A', 'plain', '+2'], ['C', 'plain', '+1'], ['E', 'plain', '0']] },
 ];
 const reverse: Col[] = [
-  { title: '3. gravity', x: 620, cells: [['A', 'plain', 'off 0'], ['C', 'plain', 'off -1'], ['E', 'plain', 'off -2'], ['', 'empty'], ['', 'empty']] },
-  { title: '4. fill', x: 760, cells: [['A', 'plain', 'off 0'], ['C', 'plain', 'off -1'], ['E', 'plain', 'off -2'], ['X', 'new', 'off -2'], ['Y', 'new', 'off -2']] },
+  { title: '3. gravity', x: 200, cells: [['A', 'plain', '0'], ['C', 'plain', '-1'], ['E', 'plain', '-2'], ['', 'empty'], ['', 'empty']] },
+  { title: '4. fill', x: 400, cells: [['A', 'plain', '0'], ['C', 'plain', '-1'], ['E', 'plain', '-2'], ['X', 'new', '-2'], ['Y', 'new', '-2']] },
 ];
-const cellY = (i: number) => 60 + i * 46;
+const cellY = (i: number) => 70 + i * 56;
+const offsetRows = [
+  ['0', 'X (new)', '-2', '2', '0', 'A', '0', '0'],
+  ['1', 'Y (new)', '-1', '2', '1', 'C', '2', '-1'],
+  ['2', 'A', '0', '2', '2', 'E', '4', '-2'],
+  ['3', 'C', '2', '1', '3', 'X (new)', '5', '-2'],
+  ['4', 'E', '4', '0 (no job)', '4', 'Y (new)', '6', '-2'],
+];
 ---
 <Architecture
   title="Cascade physics"
@@ -42,36 +50,62 @@ const cellY = (i: number) => 60 + i * 46;
 
   <h2>The algorithm, in one column</h2>
 
-  <Diagram width={900} height={420} caption="Five cells, winners [1, 3]. Forward gravity packs survivors toward the end and feeds two new symbols at the start, every new symbol travelling exactly winCount cells. E has no hole below it and is never touched. Reverse gravity is the same arithmetic mirrored.">
-    <Group x={16} y={20} w={490} h={300} kind="tint" label="gravity 'forward'" note="'auto' follows the reel's travel direction" />
-    <Group x={600} y={20} w={290} h={300} kind="tint" label="gravity 'reverse'" note="same winners [1, 3]" />
-    {[...forward, ...reverse].map((col) => (
+  <Diagram height={420} caption="Forward gravity, five cells, winners [1, 3]: winCount 2, survivorCount 3. Survivors pack toward the end and two new symbols enter at the start, every new symbol travelling exactly winCount cells. The number beside a cell is its offsetCells; E has no hole below it and is never touched.">
+    {forward.map((col) => (
       <>
-        <Label x={col.x + 20} y={48} text={col.title} size={10.5} weight={600} anchor="middle" tone="fg" />
-        {col.cells.map(([label, kind, sub], i) => (
-          <Cell x={col.x} y={cellY(i)} size={40} label={label || undefined} sub={sub} kind={kind} />
+        <Label x={col.x + 24} y={46} text={col.title} weight={600} anchor="middle" tone="fg" />
+        {col.cells.map(([label, kind, off], i) => (
+          <>
+            <Cell x={col.x} y={cellY(i)} size={48} label={label || undefined} kind={kind} />
+            {off && <Label x={col.x + 60} y={cellY(i) + 29} text={off} mono tone="fg" />}
+          </>
         ))}
       </>
     ))}
     {[0, 1, 2].map((i) => (
-      <Edge from={[forward[i].x + 44, 172]} to={[forward[i + 1].x - 4, 172]} />
+      <Edge from={[forward[i].x + 100, cellY(2) + 24]} to={[forward[i + 1].x - 16, cellY(2) + 24]} />
     ))}
-    <Edge from={[664, 172]} to={[756, 172]} />
-    <Label x={30} y={296} text="winCount = 2, nonWinnerCells = [0, 2, 4], survivorCount = 3" size={10} mono tone="faint" />
-    <Label x={620} y={296} text="isNew when cell >= survivorCount" size={10} mono tone="faint" />
-    <Label x={30} y={346} mono size={10.5} lh={1.5} text={[
-      'cell 0  isNew  originalCell -2  offsetCells 2       cell 3  C  originalCell 2  offsetCells 1',
-      'cell 1  isNew  originalCell -1  offsetCells 2       cell 4  E  originalCell 4  offsetCells 0  (no job)',
-      'cell 2  A      originalCell  0  offsetCells 2',
-    ]} />
-    <Label x={620} y={346} mono size={10.5} lh={1.5} text={[
-      'cell 0  A  orig 0  off  0',
-      'cell 1  C  orig 2  off -1',
-      'cell 2  E  orig 4  off -2',
-      'cell 3  isNew  orig 5  off -2',
-      'cell 4  isNew  orig 6  off -2',
-    ]} />
+    <Label x={360} y={400} text="offsetCells = cell - originalCell" size={14} mono tone="fg" anchor="middle" />
   </Diagram>
+
+  <Diagram height={380} caption="Reverse gravity, the same winners [1, 3] and the same arithmetic mirrored: survivors pack toward the start, the new symbols enter at the end, and the offsets are negative. Stages 1 and 2 are identical to the forward case.">
+    {reverse.map((col) => (
+      <>
+        <Label x={col.x + 24} y={46} text={col.title} weight={600} anchor="middle" tone="fg" />
+        {col.cells.map(([label, kind, off], i) => (
+          <>
+            <Cell x={col.x} y={cellY(i)} size={48} label={label || undefined} kind={kind} />
+            {off && <Label x={col.x + 60} y={cellY(i) + 29} text={off} mono tone="fg" />}
+          </>
+        ))}
+      </>
+    ))}
+    <Edge from={[reverse[0].x + 100, cellY(2) + 24]} to={[reverse[1].x - 16, cellY(2) + 24]} />
+    <Label x={360} y={366} text="isNew when cell >= survivorCount" size={14} mono tone="fg" anchor="middle" />
+  </Diagram>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground" colspan="4">forward</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground" colspan="4">reverse</th>
+        </tr>
+        <tr>
+          {['cell', 'id', 'originalCell', 'offsetCells', 'cell', 'id', 'originalCell', 'offsetCells'].map((h) => (
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {offsetRows.map((r) => (
+          <tr class="border-t border-border/60">
+            {r.map((v) => <td class="px-4 py-2 font-mono text-xs">{v}</td>)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 
   <div class="not-prose my-8">
     <Legend items={[
@@ -212,30 +246,45 @@ const cellY = (i: number) => 60 + i * 46;
 
   <h2>The three phases, on a spin and on a refill</h2>
 
-  <Diagram width={900} height={350} caption="Every cascade phase is a ReelPhase with skippable and quickenable set; update() does nothing because they are GSAP-timeline driven. A spin drops the old window out and the new one in; a refill reuses place and dropIn with the winners list.">
-    <Group x={20} y={20} w={870} h={92} kind="solid" label="spin() in cascade mode" note="per reel, after an optional early MultiWays adjust" />
-    <Box x={36} y={46} w={160} h={54} title="cascade:fall" size={12} sub={['replaces start', 'delay = stagger * spinDelay']} />
-    <Box x={210} y={46} w={160} h={54} title="spin" size={12} sub={['waits for setResult', 'at speed 0']} />
-    <Box x={384} y={46} w={160} h={54} kind="ghost" title="[anticipation]" size={12} sub={['if teased: haltDrive', 'then snapToGrid']} />
-    <Box x={558} y={46} w={160} h={54} title="cascade:place" size={12} sub={['initial: true, winners []', 'delay = stopDelay']} />
-    <Box x={732} y={46} w={150} h={54} kind="primary" title="cascade:dropIn" size={12} sub={['initial: true', "role 'all'"]} />
-    {[196, 370, 544, 718].map((x) => <Edge from={[x, 73]} to={[x + 14, 73]} />)}
-
-    <Group x={20} y={130} w={870} h={92} kind="solid" label="refill mode 'combined'" note="the default" />
-    <Box x={36} y={156} w={220} h={54} title="cascade:place" size={12} sub={['winnerCells for this reel', "delay = the reel's stop delay"]} />
-    <Box x={290} y={156} w={220} h={54} kind="primary" title="cascade:dropIn" size={12} sub={["role 'all': movers only", 'notifyLanded(moverCells)']} />
-    <Box x={544} y={156} w={160} h={54} title="_markLanded" size={12} sub={['spin:reelLanded', 'then spin:allLanded']} />
-    <Edge from={[256, 183]} to={[290, 183]} />
-    <Edge from={[510, 183]} to={[544, 183]} />
-
-    <Group x={20} y={240} w={870} h={92} kind="solid" label="refill mode 'gravity-then-drop'" note="stage 1 every reel in parallel, then the hold, then stage 2 per reel" />
-    <Box x={36} y={266} w={150} h={54} title="place" size={12} sub="delay 0" />
-    <Box x={200} y={266} w={170} h={54} title="dropIn 'gravity'" size={12} sub={['cascade:gravity:*', 'new ones parked at alpha 0']} />
-    <Box x={384} y={266} w={190} h={54} kind="accent" title="hold" size={12} sub={['gravityHoldMs 250 + gravityHold', 'then await onGravityComplete']} />
-    <Box x={588} y={266} w={130} h={54} title="sleep" size={12} sub="the stop delay" />
-    <Box x={732} y={266} w={150} h={54} kind="primary" title="dropIn 'new'" size={12} sub={['survivors revealed', 'in place']} />
-    {[186, 370, 574, 718].map((x) => <Edge from={[x, 293]} to={[x + 14, 293]} />)}
+  <Diagram height={520} caption="spin() in cascade mode, per reel, after an optional early MultiWays adjust. Every cascade phase is a ReelPhase with skippable and quickenable set; update() does nothing because they are GSAP-timeline driven. The old window drops out, then the new one drops in.">
+    <Box x={180} y={20} w={360} h={78} title="cascade:fall" sub={['replaces start', 'delay = stagger * spinDelay']} />
+    <Box x={180} y={122} w={360} h={78} title="spin" sub={['waits for setResult', 'at speed 0']} />
+    <Box x={180} y={224} w={360} h={78} kind="ghost" title="[anticipation]" sub={['if teased: haltDrive(),', 'then snapToGrid()']} />
+    <Box x={180} y={326} w={360} h={78} title="cascade:place" sub={['initial: true, winners []', 'delay = stopDelay']} />
+    <Box x={180} y={428} w={360} h={78} kind="primary" title="cascade:dropIn" sub={['initial: true', "role 'all'"]} />
+    <Edge from={[360, 98]} to={[360, 122]} />
+    <Edge from={[360, 200]} to={[360, 224]} />
+    <Edge from={[360, 302]} to={[360, 326]} />
+    <Edge from={[360, 404]} to={[360, 428]} />
   </Diagram>
+
+  <Diagram height={320} caption="The two refill modes. 'combined' reuses place and dropIn with the winners list; 'gravity-then-drop' runs stage 1 on every reel in parallel, holds, then runs stage 2 per reel.">
+    <Group x={10} y={20} w={700} h={142} kind="solid" label="refill mode 'combined'" note="the default" />
+    <Box x={34} y={60} w={208} h={78} title="cascade:place" sub={['winnerCells for this reel', 'delay = its stop delay']} />
+    <Box x={262} y={60} w={208} h={78} kind="primary" title="cascade:dropIn" sub={["role 'all': movers only", 'notifyLanded(moverCells)']} />
+    <Box x={490} y={60} w={196} h={78} title="_markLanded" sub={['spin:reelLanded,', 'then spin:allLanded']} />
+    <Edge from={[242, 99]} to={[262, 99]} />
+    <Edge from={[470, 99]} to={[490, 99]} />
+
+    <Group x={10} y={178} w={700} h={122} kind="solid" label="refill mode 'gravity-then-drop'" />
+    <Box x={40} y={218} w={88} h={60} title="place" sub="delay 0" />
+    <Box x={144} y={218} w={166} h={60} title="dropIn 'gravity'" sub="new ones at alpha 0" />
+    <Box x={326} y={218} w={104} h={60} kind="accent" title="hold" sub="gravityHoldMs" />
+    <Box x={446} y={218} w={88} h={60} title="sleep" sub="stop delay" />
+    <Box x={550} y={218} w={130} h={60} kind="primary" title="dropIn 'new'" sub="reveal" />
+    <Edge from={[128, 248]} to={[144, 248]} />
+    <Edge from={[310, 248]} to={[326, 248]} />
+    <Edge from={[430, 248]} to={[446, 248]} />
+    <Edge from={[534, 248]} to={[550, 248]} />
+  </Diagram>
+
+  <p>
+    In <code>'gravity-then-drop'</code> the first drop-in runs with role
+    <code>'gravity'</code> and emits <code>cascade:gravity:*</code>; the hold is
+    <code>gravityHoldMs</code> (250) plus <code>gravityHold</code>, then
+    <code>onGravityComplete</code> is awaited; the second drop-in, role
+    <code>'new'</code>, reveals the survivors in place.
+  </p>
 
   <ul>
     <li><strong><code>CascadeFallPhase</code></strong> (<code>spin/phases/CascadeFallPhase.ts</code>) sets the spinning mode, calls <code>haltDrive()</code> and <code>notifySpinStart()</code>, merges <code>speed.tumble.fall</code>, waits its delay, then emits <code>cascade:fall:start</code> and builds one timeline. The fall distance is <code>(visibleCells + exitBuffer + 1) * slotPitch</code>, where <code>exitBuffer</code> is <code>bufferEnd</code> under forward gravity and <code>bufferStart</code> under reverse. Each cell gets a <code>cascade:fall:symbol</code> call and a tween of the main axis; on completion every view goes to alpha 0 and <code>cascade:fall:end</code> fires. A zero duration skips the per-symbol events. <code>onSkip</code> aborts the signal before <code>:end</code>, and emits <code>:end</code> only if <code>:start</code> already fired.</li>
@@ -245,27 +294,28 @@ const cellY = (i: number) => 60 + i * 46;
 
   <h2>runCascade, the chain</h2>
 
-  <Diagram width={900} height={440} caption="One stage of the chain. detectWinners returning [] or reaching maxChain ends it; a skip anywhere sets wasSkipped and every later refill slams.">
-    <Box x={20} y={40} w={210} h={60} kind="accent" title="detectWinners(grid, chain)" size={12} sub="sync or async; [] ends the chain" />
-    <Box x={260} y={40} w={190} h={60} title="cascade:chain:start" size={12} sub="{ chain, winners, currentGrid }" />
-    <Box x={480} y={40} w={170} h={60} kind="ghost" title="presentWinners?" size={12} sub="winners still on the board" />
-    <Box x={680} y={40} w={200} h={60} title="destroySymbols(winners)" size={12} sub="cascade:destroy:start / :end" />
-    <Edge from={[230, 70]} to={[260, 70]} />
-    <Edge from={[450, 70]} to={[480, 70]} />
-    <Edge from={[650, 70]} to={[680, 70]} />
-    <Box x={680} y={140} w={200} h={56} kind="ghost" title="onCascade?" size={12} sub="after destroy, before refill" />
-    <Box x={680} y={236} w={200} h={56} title="pause" size={12} sub="pauseAfterDestroyMs 250, abortable" />
-    <Box x={680} y={340} w={200} h={60} kind="accent" title="nextGrid(grid, winners, chain)" size={12} sub="then _assertGrid" />
-    <Edge from={[780, 100]} to={[780, 140]} />
-    <Edge from={[780, 196]} to={[780, 236]} />
-    <Edge from={[780, 292]} to={[780, 340]} />
-    <Box x={440} y={340} w={210} h={60} kind="primary" title="refill({ winners, grid })" size={12} sub={['spin:start ... place, dropIn', '... spin:allLanded, spin:complete']} />
-    <Box x={240} y={340} w={170} h={60} title="cascade:chain:end" size={12} sub="{ chain, winners, nextGrid }" />
-    <Edge from={[680, 370]} to={[650, 370]} />
-    <Edge from={[440, 370]} to={[410, 370]} />
-    <Edge from={[240, 370]} via={[[125, 370]]} to={[125, 100]} label="chainLength++, while < maxChain 32 and !wasSkipped" labelDx={140} labelDy={16} />
-    <Box x={20} y={200} w={210} h={70} kind="muted" title="RunCascadeResult" size={12} sub={['{ chainLength, totalWinners,', 'finalGrid, wasSkipped, skipContext }']} />
-    <Edge from={[70, 100]} to={[70, 200]} label="[] or maxChain" labelDx={56} />
+  <Diagram height={600} caption="One stage of the chain, clockwise. detectWinners returning [] or reaching maxChain (32) ends it with a RunCascadeResult; a skip anywhere sets wasSkipped and every later refill slams.">
+    <Box x={16} y={40} w={260} h={60} kind="accent" title="detectWinners(grid, chain)" sub="sync or async" />
+    <Box x={456} y={40} w={248} h={60} title="cascade:chain:start" sub="{ chain, winners, currentGrid }" />
+    <Box x={456} y={124} w={248} h={44} kind="ghost" title="presentWinners?" />
+    <Box x={456} y={192} w={248} h={60} title="destroySymbols(winners)" sub="cascade:destroy:start, :end" />
+    <Box x={456} y={276} w={248} h={44} kind="ghost" title="onCascade?" />
+    <Box x={456} y={344} w={248} h={60} title="pause" sub="pauseAfterDestroyMs, abortable" />
+    <Box x={456} y={428} w={248} h={60} kind="accent" title="nextGrid(grid, winners)" sub="then _assertGrid()" />
+    <Box x={180} y={428} w={252} h={60} kind="primary" title="refill({ winners, grid })" sub="place and dropIn per reel" />
+    <Box x={16} y={520} w={260} h={60} title="cascade:chain:end" sub="{ chain, winners, nextGrid }" />
+    <Box x={70} y={200} w={206} h={78} kind="muted" title="RunCascadeResult" sub={['chainLength, totalWinners,', 'finalGrid, wasSkipped']} />
+
+    <Edge from={[276, 70]} to={[456, 70]} />
+    <Edge from={[580, 100]} to={[580, 124]} />
+    <Edge from={[580, 168]} to={[580, 192]} />
+    <Edge from={[580, 252]} to={[580, 276]} />
+    <Edge from={[580, 320]} to={[580, 344]} />
+    <Edge from={[580, 404]} to={[580, 428]} />
+    <Edge from={[456, 458]} to={[432, 458]} />
+    <Edge from={[306, 488]} via={[[306, 550]]} to={[276, 550]} />
+    <Edge from={[40, 520]} to={[40, 100]} label="chain + 1" labelDx={52} />
+    <Edge from={[173, 100]} to={[173, 200]} label="[] or maxChain" />
   </Diagram>
 
   <p>
