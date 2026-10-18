@@ -49,10 +49,10 @@ const next = currentIdx >= 0 && currentIdx < ARCH_PAGES.length - 1 ? ARCH_PAGES[
   article={{ section: 'Architecture' }}
   jsonLd={jsonLd}
 >
-  <div class="container grid gap-10 py-12 md:grid-cols-[220px_minmax(0,1fr)]">
-    <DocsSidebar nav={WIKI_NAV} pathname={pathname} />
+  <div class="container grid gap-10 py-12 lg:grid-cols-[220px_minmax(0,1fr)]">
+    <DocsSidebar nav={WIKI_NAV} pathname={pathname} breakpoint="lg" />
 
-    <article class="prose-docs min-w-0 animate-fade-in">
+    <article class="prose-docs arch-article min-w-0 animate-fade-in">
       <a href="/docs/" class="mb-6 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors not-prose">
         <ChevronLeft size={14} strokeWidth={2} />
         Docs · Architecture

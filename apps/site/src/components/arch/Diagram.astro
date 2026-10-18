@@ -57,10 +57,21 @@ const minWidth = Math.min(width, 640);
       <slot />
     </svg>
   </div>
-  {caption && <figcaption class="border-t border-border/60 px-5 py-3 text-center text-sm text-muted-foreground">{caption}</figcaption>}
+  {caption && <figcaption class="arch-caption border-t border-border/60 px-5 py-3 text-sm leading-6 text-muted-foreground">{caption}</figcaption>}
 </figure>
 
 <style is:global>
+  /* Figures are numbered per article, so prose can say "figure 3". */
+  .arch-article { counter-reset: archfig; }
+  .arch-diagram { counter-increment: archfig; }
+  .arch-caption::before {
+    content: "Figure " counter(archfig) ". ";
+    font-weight: 600;
+    color: hsl(var(--foreground));
+  }
+  /* A diagram that is wider than its column pans instead of shrinking. */
+  .arch-scroll { scrollbar-width: thin; }
+
   .arch-svg { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
   .arch-svg .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; }
 
