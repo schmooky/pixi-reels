@@ -6,6 +6,7 @@ import Edge from '../../components/arch/Edge.astro';
 import Group from '../../components/arch/Group.astro';
 import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
 
 const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground';
 
@@ -22,6 +23,37 @@ const LAYERS: [string, string, string, string][] = [
   ['hud', 'plaque', 'A DebugPlaque in the mask top-left: one row per reel, r<i> VF feed=... spd=... <phase> cells=..., with a phase swatch and a |speedNormalized| meter.', 'Live per-reel state without a console.'],
   ['metrics', 'plaque, 232px', 'A fixed-width plaque below the mask: title ROUND n profile live|skipped|done [boosted]; rows time (first stop), land order (max gap), tease per reel, skip (mode, reels, partial, @t, ×count or queued), swaps and events, fps/pins/spotlight, wins/chains. Placeholder rows before the first round keep its height fixed.', 'The SpinMetrics round as text.'],
   ['timeline', 'panel', 'Below the mask: a legend of phases seen, a time grid (niceStep), one lane per reel (7px lanes, 4px gaps) with phase spans, an amber tease underline, a speed polyline clamped to 1.25 and downsampled to about a point per pixel, a tick at stoppingAt and a dot at landedAt, dashed skip lines (slam red, quicken yellow) and a live cursor. Minimum span 500 ms.', 'Stagger, tease and skip timing per reel.'],
+];
+
+const SNAPSHOT: [string, string][] = [
+  ['timestamp · isSpinning · currentSpeed · availableSpeeds · spotlightActive', 'When it was taken and the set-level flags: is anything moving, which speed profile is active, which are registered, is a spotlight up.'],
+  ['reelCount · visibleCells: number[]', 'How many reels, and how many cells each one shows. One entry per reel (a breaking change since v0.3), because jagged and MultiWays boards differ per reel.'],
+  ['reels: DebugReelSnapshot[]', 'Per reel: index, speed, isStopping, orientation, direction, allSymbols as { cell, symbolId, main }[] and visibleSymbols. main is the rounded position along the travel axis; it used to be a hard-coded y, which read 0 on horizontal sets.'],
+  ['grid: string[][]', 'The visible board, reel-major, from reelSet.getVisibleGrid(). Cells covered by a big symbol show the anchor\'s id.'],
+];
+
+const GLOBAL: [string, string][] = [
+  ['snapshot()', 'debugSnapshot(reelSet): the JSON above.'],
+  ['grid()', 'debugGrid(reelSet): an ASCII box table with 8-character columns, blank cells for jagged reels, and \'(empty grid)\' for an empty set.'],
+  ['log()', 'Prints the spinning flag, the speed and the grid to the console and returns the snapshot.'],
+  ['trace()', 'Logs every set-bus event through onAny and returns a function that stops the trace.'],
+  ['metrics()', 'SpinMetrics.snapshot(): the rounds recorded since enableDebug() was called.'],
+  ['startRecording() · stopRecording()', 'The frame recorder, below.'],
+];
+
+const ROUND_REEL: [string, string][] = [
+  ['phases[] { phase, start, end | null }', 'Every phase the reel entered, with its span; end is null while the phase is open.'],
+  ['stoppingAt · landingAt · landedAt', 'When the controller asked it to stop, when it reached its result frame, when it came to rest.'],
+  ['tease { start, end, order, total }', 'The anticipation span and where this reel sat in the tease sequence.'],
+  ['symbolSwaps', 'How many times a cell took a new symbol during the round.'],
+  ['speed', 'A flat [t0, v0, t1, v1, ...] array of samples, only when a ticker was given.'],
+];
+
+const ROUND_SET: [string, string][] = [
+  ['index · spin · startedAt · profile', 'The round number, whether a spin() opened it (false for a nudge before any spin), when, and the speed profile in force.'],
+  ['allStartedAt · allLandedAt · completeAt · duration', 'The set-level marks and the total.'],
+  ['wasSkipped · skips[] { at, mode, reels, partial, completedAt } · queuedSkipAt · boosted', 'Every skip press and what it freed. wasSkipped is set at skip:requested, because an aborted spin never reaches spin:complete; skip:completed closes the oldest open mark with the same reels.'],
+  ['landOrder · events · cascadeChains · wins · lastActivityAt', 'The order the reels landed, an event count, cascade and win bookkeeping, and the last time anything happened (round events extend it after a round settles).'],
 ];
 
 const NOTICES: [string, string, string][] = [
@@ -58,27 +90,75 @@ const PLAQUE_OPTS: [string, string][] = [
   eyebrow="Instruments"
 >
   <p>
-    PixiJS draws to a canvas, and a canvas is invisible to an AI agent, to a
-    CI runner and to a log file. ADR 006 therefore made the first debug tools
-    data-only: <code>debugSnapshot()</code> returns plain JSON with no PixiJS
-    types and no cycles, <code>debugGrid()</code> returns an ASCII table, and
-    <code>enableDebug()</code> puts both on <code>window</code> so an agent
-    can <code>eval('__PIXI_REELS_DEBUG.log()')</code> in a console. The
-    drawing tools came later, in a separate subpath on pixi-silk (ADR 022,
-    <code>docs/adr/022-debug-subpath-on-pixi-silk.md</code>), so the
-    main entry never pulls in a renderer-dependent dependency. The
-    <a href="/guides/debugging/">debugging guide</a> shows the tools in use;
-    this page is how they are built.
+    A reel set draws to a canvas, and a canvas keeps its secrets. When a reel lands one
+    cell off, or a tease feels too short, or a symbol pokes out of its mask on one
+    device, the picture tells you something is wrong but not what the engine thinks is
+    happening. Worse, two of the people who most need to know cannot see the canvas at
+    all: a CI runner asserting on a headless spin, and an AI agent working through a
+    console. A QA tester has the opposite problem. They can see the picture but have no
+    way to read the engine's state without opening the source.
+  </p>
+
+  <p>
+    So the debug tooling comes in two halves, built for those two audiences. The first
+    is data only. <code>debugSnapshot()</code> returns plain JSON with no PixiJS types
+    and no cycles, <code>debugGrid()</code> returns an ASCII table,
+    and <code>enableDebug()</code> puts both on <code>window</code> so anyone with a
+    console can type <code>__PIXI_REELS_DEBUG.log()</code> and read the board. That half
+    lives in the main entry and was the first debug tool the library had (ADR 006). The
+    second half draws: an overlay that paints what the engine knows, cells, buffers,
+    axes, phases, a timeline, straight onto the canvas for a human to look at. It lives
+    in a separate subpath, <code>pixi-reels/debug</code>, because it depends on a
+    renderer (ADR 022, <code>docs/adr/022-debug-subpath-on-pixi-silk.md</code>), and the
+    main entry must never pull one in.
+    The <a href="/guides/debugging/">debugging guide</a> shows both in use; this page is
+    how they are built.
+  </p>
+
+  <Callout kind="plain">
+    JSON is for anyone who cannot see: a test, a log, a script, an agent. The overlay is
+    for anyone who can: a developer or a tester looking at the running game. Both read
+    the same facts from the same reel set, and neither one ever writes to it, so you can
+    leave them on without changing what the game does.
+  </Callout>
+
+  <h2>Who needs which half</h2>
+
+  <p>
+    It is worth being concrete about the two audiences, because they shape every design
+    choice below. An AI agent driving a browser, or a Playwright test, cannot interpret
+    pixels reliably and should not try. What it needs is a question it can ask and an
+    answer it can compare: "what is in cell (2, 1) right now?", "is reel 4 still
+    spinning?", "in what order did the reels land?". Plain JSON answers those directly,
+    survives <code>JSON.stringify</code> for a log line, and can be diffed between a
+    good run and a bad one. That is why the snapshot has no PixiJS objects in it:
+    a <code>Sprite</code> in the output would make it circular and useless the moment it
+    left the page. The library's own browser suite asserts through this global rather
+    than through screenshots, for the same reason.
+  </p>
+
+  <p>
+    A QA person or a developer has the opposite need. They are already looking at the
+    game, and what they lack is the engine's version of the picture laid over the real
+    one: where the mask edge actually is, which cells the engine thinks are visible,
+    which way each reel is travelling, how long the tease on reel 5 really lasted
+    compared with reel 4. A painted overlay answers in a glance what would take minutes
+    of reading numbers, and the timeline panel turns "it felt wrong" into "reel 3
+    stopped 120 ms late". The two halves agree by construction: the overlay
+    and <code>describe()</code> compute from the same helpers, so a tester and an agent
+    looking at the same spin see the same facts.
   </p>
 
   <h2>Two halves</h2>
 
   <p>
-    The main entry is JSON and text. The <code>pixi-reels/debug</code>
-    subpath draws with pixi-silk. Both only read from the <code>ReelSet</code>:
-    its events through <code>onAny</code>, and its geometry through
-    <code>getCellBounds</code>, <code>getCellQuad</code>, the reels, the pins
-    and the viewport. Neither writes to it.
+    Figures 1 and 2 show the two halves side by side. Both only read from
+    the <code>ReelSet</code>: its events through the wildcard
+    listener <code>onAny</code>, and its geometry
+    through <code>getCellBounds</code>, <code>getCellQuad</code>, the reels, the pins
+    and the viewport. In figure 1 the dashed "reads" edge is the only connection between
+    the debug global and the set; everything under it is a transformation of what it
+    read.
   </p>
 
   <Diagram height={430} caption="The main entry, data only. enableDebug() installs a global whose methods return plain JSON and ASCII; it is a no-op without window and keeps one SpinMetrics per set.">
@@ -92,6 +172,14 @@ const PLAQUE_OPTS: [string, string][] = [
     <Box x={440} y={116} w={220} h={78} title="ReelSet" kind="primary" sub={['events, via onAny', 'reels · pins · viewport']} />
     <Edge from={[320, 155]} to={[440, 155]} style="dashed" label="reads" />
   </Diagram>
+
+  <p>
+    Figure 2 is the drawing half. <code>debugOverlay()</code> is the entry point; it
+    owns twelve drawn layers and leans on three helpers: <code>SpinMetrics</code> for
+    timing (it creates one, or borrows the one you pass), <code>DebugPlaque</code> for
+    the two text panels, and a pair of small drawing utilities for dashed rounded
+    rectangles and paylines.
+  </p>
 
   <Diagram height={280} caption="The pixi-reels/debug subpath, which needs pixi-silk. debugOverlay() draws twelve layers at zIndex 1e6 with eventMode none, owns a SpinMetrics unless you pass one, and draws its hud and metrics panels on DebugPlaque.">
     <Box x={20} y={29} w={130} h={60} title="ReelSet" kind="primary" sub="read only" />
@@ -116,64 +204,102 @@ const PLAQUE_OPTS: [string, string][] = [
   <h2>The main-entry tools</h2>
 
   <p>
-    <code>debug/debug.ts</code>. <code>DebugSnapshot</code> is
-    <code>{'{ timestamp, isSpinning, currentSpeed, availableSpeeds, spotlightActive, reelCount, visibleCells: number[], reels: DebugReelSnapshot[], grid: string[][] }'}</code>.
-    <code>visibleCells</code> is one entry per reel (a breaking change since
-    v0.3). Each <code>DebugReelSnapshot</code> has <code>index</code>,
-    <code>speed</code>, <code>isStopping</code>, <code>orientation</code>,
-    <code>direction</code>, <code>allSymbols: {'{ cell, symbolId, main }[]'}</code>
-    and <code>visibleSymbols</code>. <code>main</code> is the rounded
-    position along the travel axis; it used to be a hard-coded <code>y</code>,
-    which read 0 on horizontal sets. <code>grid</code> comes from
-    <code>reelSet.getVisibleGrid()</code>, so big-symbol OCCUPIED cells show
-    the anchor's id. <code>debugGrid()</code> returns an ASCII box table with
-    8-character columns, blank cells for jagged reels, and
-    <code>'(empty grid)'</code> for an empty set.
+    The snapshot is the heart of the data half, so here is its shape. Think of it as
+    "everything a test would want to assert on, at one instant", with the visible grid
+    pulled out as a convenience because that is what most assertions compare.
   </p>
 
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>DebugSnapshot field</th><th class={th}>Meaning</th></tr></thead>
+        <tbody>
+          {SNAPSHOT.map(([k, v]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <p>
-    <code>enableDebug(reelSet, key?)</code> installs the surface on
-    <code>window.__PIXI_REELS_DEBUG</code> and on
-    <code>__PIXI_REELS_DEBUG_INSTANCES[key]</code>, where the key defaults to
-    <code>reelset_&lt;n&gt;</code> and the bare global points at the most
-    recently enabled set. It creates one <code>SpinMetrics</code> per set
-    (kept in a WeakMap, so re-enabling reuses it) with no ticker, so rounds
-    are recorded from that moment on. <code>log()</code> prints the spinning
-    flag, speed and grid and returns the snapshot; <code>trace()</code> logs
-    every set-bus event through <code>onAny</code> and returns a stop
-    function; <code>metrics()</code> is <code>SpinMetrics.snapshot()</code>.
-    ADR 022 removed its drawing helpers (<code>showMask()</code>,
-    <code>overlay()</code>), so it is data only. The snapshot is not
-    semver-protected: do not wire telemetry to it.
+    <code>enableDebug(reelSet, key?)</code> is how a page exposes that snapshot to the
+    outside. It installs a small object on <code>window.__PIXI_REELS_DEBUG</code> and,
+    so that pages with several sets can address each one, also
+    under <code>__PIXI_REELS_DEBUG_INSTANCES[key]</code>; the key defaults
+    to <code>reelset_&lt;n&gt;</code> and the bare global always points at the most
+    recently enabled set. Enabling also starts a <code>SpinMetrics</code> recorder for
+    that set (one per set, kept in a WeakMap so a second call reuses it) without a
+    ticker, so rounds are recorded from that moment on but speed is not sampled. These
+    are the global's methods.
   </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>__PIXI_REELS_DEBUG</th><th class={th}>Returns</th></tr></thead>
+        <tbody>
+          {GLOBAL.map(([k, v]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <Callout kind="gotcha">
+    The snapshot and the metrics are debugging aids, not API. Their shape is not
+    protected by semver and has already changed once (<code>visibleCells</code> went
+    from a number to an array). Read them in tests and consoles, but do not wire
+    telemetry or game logic to them. ADR 022 also removed the old drawing helpers from
+    the global (<code>showMask()</code>, <code>overlay()</code>); drawing now lives only
+    in the subpath.
+  </Callout>
 
   <h3>The frame recorder</h3>
 
   <p>
-    <code>startRecording(reelSet, tag = 'default', {'{ maxFrames }'})</code>
-    captures a <code>RecordedFrame {'{ tag, trigger, snapshot }'}</code> on
-    <code>spin:start</code>, <code>spin:reelLanded</code>,
-    <code>spin:allLanded</code> and <code>spin:complete</code>, and detaches
-    itself on <code>destroyed</code>. Calling it again on the same set
-    replaces the recorder. The buffer is one process-wide rolling log with
-    <code>DEFAULT_MAX_FRAMES = 1000</code>; <code>maxFrames</code> changes
-    that cap globally, not per session. <code>stopRecording(reelSet)</code>,
-    <code>getFrames(tag?)</code> (a copy, filtered by tag) and
-    <code>clearFrames()</code> complete the set. Recorders are tracked in a
-    <code>WeakMap&lt;ReelSet&gt;</code>.
+    Sometimes one snapshot is not enough and you want the story of a spin: what the
+    board looked like at each landing. The recorder does that without you writing
+    listeners. <code>startRecording(reelSet, tag, {'{ maxFrames }'})</code> captures a
+    snapshot
+    on <code>spin:start</code>, <code>spin:reelLanded</code>, <code>spin:allLanded</code> and <code>spin:complete</code>,
+    each wrapped as <code>{'{ tag, trigger, snapshot }'}</code>, and detaches itself
+    when the set is destroyed. <code>getFrames(tag?)</code> hands back a copy, filtered
+    by tag if you give
+    one; <code>stopRecording(reelSet)</code> and <code>clearFrames()</code> complete the
+    set. Two things to know: calling <code>startRecording</code> twice on one set
+    replaces the first recorder, and the buffer is a single process-wide rolling log
+    capped at 1000 frames (<code>DEFAULT_MAX_FRAMES</code>),
+    so <code>maxFrames</code> changes that cap for everyone, not per session.
   </p>
 
   <h2>The overlay</h2>
 
   <p>
-    <code>debugOverlay(reelSet, options) → DebugOverlayHandle</code> in
-    <code>debug/debugOverlay.ts</code>. Why pixi-silk: Pixi <code>Graphics</code>
-    tessellates, so 1px lines crawl and corners facet when the set is scaled
-    down. SilkGraphics renders shapes as exact signed distance fields,
-    anti-aliased at any scale, with dashes drawn in the shader and one draw
-    call per object. pixi-silk 0.1 is WebGL2 only; on WebGPU only the plaque
-    text renders, and headless tests need a <code>DOMAdapter</code> canvas
-    without WebGL. The packaging follows <code>pixi-reels/spine</code> (ADR 011).
+    <code>debugOverlay(reelSet, options)</code> in <code>debug/debugOverlay.ts</code> returns
+    a handle and starts drawing. What it draws is organised as twelve layers you can
+    switch on and off independently, listed in the table below in draw order. The first
+    six are geometry (where the mask, cells, buffers, wrap lines, travel axes and feed
+    edges are); the next three follow symbols (their real bounds, big-symbol blocks, pin
+    overlays); the last three are text panels (a per-reel HUD, a metrics plaque and a
+    timeline). The "makes visible" column is the reason each layer exists.
+  </p>
+
+  <p>
+    Three terms from the motion pages, in case you arrived here first.
+    The <strong>pitch</strong> is the distance from one cell to the next along the
+    travel axis. The <strong>wrap lines</strong> (thresholds) are the two positions
+    where a symbol that scrolls past is moved to the other end of the strip.
+    The <strong>feed edge</strong> is the end of the strip where new symbols enter; it
+    is derived from the reel's direction and must agree with the axis arrow, which is
+    why both are drawn.
   </p>
 
   <div class="not-prose my-6">
@@ -194,14 +320,35 @@ const PLAQUE_OPTS: [string, string][] = [
     </div>
   </div>
 
+  <Callout kind="why">
+    The overlay draws with pixi-silk instead of Pixi <code>Graphics</code> because
+    Graphics tessellates: scale a set down and 1px lines crawl and corners facet, which
+    is exactly what you do not want from a measuring tool. SilkGraphics renders shapes
+    as exact signed distance fields, anti-aliased at any scale, with dashes in the
+    shader and one draw call per object. The trade is that pixi-silk 0.1 is WebGL2 only:
+    on WebGPU only the plaque text renders, and headless tests need
+    a <code>DOMAdapter</code> canvas without WebGL. The packaging
+    follows <code>pixi-reels/spine</code> (ADR 011).
+  </Callout>
+
   <p>
-    Options: <code>layers</code> (a <code>DebugOverlayLayer[]</code> or
-    <code>'all'</code>, default <code>'all'</code>), <code>live</code> (default
-    false), <code>ticker</code> (default <code>Ticker.shared</code> when live;
-    pass the set's own ticker or a <code>FakeTicker</code> to stay in
-    lock-step) and <code>metrics</code> (a <code>SpinMetrics</code> you keep
-    ownership of; without one the overlay records its own from now on,
-    sampling speed on the live ticker, and destroys it with itself).
+    The options are few. <code>layers</code> is a list of layer names
+    or <code>'all'</code> (the default). <code>live</code> (default false) makes the
+    symbol-following layers redraw every frame rather than on events; when
+    live, <code>ticker</code> is the clock to redraw on, defaulting
+    to <code>Ticker.shared</code>, and you should pass the set's own ticker or
+    a <code>FakeTicker</code> to stay in lock-step. <code>metrics</code> lets you hand
+    in a <code>SpinMetrics</code> you own; without one the overlay records its own from
+    now on, sampling speed on the live ticker, and destroys it with itself.
+  </p>
+
+  <p>
+    Figure 3 shows when things are redrawn, which matters for cost. The geometry layers
+    only change when the board changes shape, so they are cleared and redrawn together
+    on <code>redraw()</code>, <code>setLayers()</code> and the geometry events. The six
+    on the right are the ones that move: when live they follow the ticker; when not
+    live, the three panels follow every set event and the three symbol layers wait for
+    an explicit <code>redraw()</code>.
   </p>
 
   <Diagram height={304} caption="Two redraw schedules. The static layers are cleared and redrawn together on redraw(), setLayers() and the geometry events (shape:changed, adjust:complete, rows:*, column:set, reels:*). The live layers redraw every tick when live; when not live, the three panels follow every set event and bounds, blocks and pins wait for redraw().">
@@ -228,49 +375,51 @@ const PLAQUE_OPTS: [string, string][] = [
   </Diagram>
 
   <p>
-    Layers switched off by <code>setLayers()</code> are cleared and hidden,
-    and the overlay destroys itself on the set's <code>destroyed</code> event.
-    The handle has <code>setLayers()</code>, <code>redraw()</code>,
-    <code>describe()</code>, <code>metrics</code>, <code>destroy()</code> and
-    <code>isDestroyed</code>. <code>describe()</code> returns a
-    <code>DebugOverlaySnapshot {'{ layers, reels: DebugOverlayReelInfo[], round: DebugRound | null }'}</code>;
-    each reel info has <code>reel</code>, <code>orientation</code>,
-    <code>direction</code>, <code>feedEdge</code>,
-    <code>axisArrow {'{ fromMain, toMain }'}</code> (signed, so it encodes
-    direction), <code>feedMain</code>, <code>thresholds {'{ start, end }'}</code>,
-    <code>visibleCells</code> and <code>phase</code>. The drawing and
-    <code>describe()</code> share the same helpers (<code>_arrowMains</code>,
-    <code>_feedMain</code>), so the picture and the numbers cannot disagree.
-    Each reel's phase is tracked from <code>phase:enter</code> and
-    <code>phase:exit</code>; there is no <code>reel.phase</code> accessor.
-    Nudge draws pink; the other phase colours come from
-    <code>PHASE_CARD_COLORS</code> in <code>symbols/PhaseCardSymbol.ts</code>.
+    The handle you get back
+    has <code>setLayers()</code>, <code>redraw()</code>, <code>describe()</code>, <code>metrics</code>, <code>destroy()</code> and <code>isDestroyed</code>.
+    Layers you switch off are cleared and hidden, and the overlay destroys itself when
+    the set emits <code>destroyed</code>, so there is nothing to clean up in the common
+    case. <code>describe()</code> is the bridge back to the data half: it returns
+    a <code>DebugOverlaySnapshot {'{ layers, reels, round }'}</code> where each reel
+    entry carries
+    its <code>orientation</code>, <code>direction</code>, <code>feedEdge</code>, a
+    signed <code>axisArrow {'{ fromMain, toMain }'}</code>, <code>feedMain</code>, <code>thresholds {'{ start, end }'}</code>, <code>visibleCells</code> and
+    current <code>phase</code>. The drawing code and <code>describe()</code> share the
+    same helpers (<code>_arrowMains</code>, <code>_feedMain</code>), so the picture and
+    the numbers cannot disagree. A reel's phase is tracked from
+    its <code>phase:enter</code> and <code>phase:exit</code> events because there is
+    no <code>reel.phase</code> accessor to read. Nudge draws pink; the other phase
+    colours come
+    from <code>PHASE_CARD_COLORS</code> in <code>symbols/PhaseCardSymbol.ts</code>, so
+    the overlay matches the phase-card demo symbols.
   </p>
 
   <p>
-    The root container sits in the ReelSet at zIndex <code>1_000_000</code>
-    with <code>eventMode 'none'</code>, labelled
-    <code>OVERLAY_LABEL = 'pixi-reels:debugOverlay'</code>; layers are
-    labelled <code>pixi-reels:debugOverlay:&lt;layer&gt;</code> and z-ordered
-    by index × 10. The metrics and timeline panels sit side by side when the
-    mask leaves at least <code>TIMELINE_MIN_WIDTH = 200</code> px beside the
-    232px metrics plaque, otherwise they stack, with <code>PANEL_GAP = 8</code>.
-    Both panels are outside the mask, so they enlarge the reel set's bounds:
-    re-fit the camera after enabling them.
+    Where it sits: the root container is added to the ReelSet at
+    zIndex <code>1_000_000</code> with <code>eventMode 'none'</code>, so it never
+    intercepts a pointer, and it is
+    labelled <code>OVERLAY_LABEL = 'pixi-reels:debugOverlay'</code>; each layer is
+    labelled <code>pixi-reels:debugOverlay:&lt;layer&gt;</code> and z-ordered by its
+    index times 10. The metrics and timeline panels sit side by side when the mask
+    leaves at least <code>TIMELINE_MIN_WIDTH = 200</code> px beside the 232 px metrics
+    plaque, otherwise they stack, with a <code>PANEL_GAP</code> of 8. Both panels are
+    outside the mask, which means they enlarge the reel set's bounds: re-fit your camera
+    after enabling them, or the board will look as if it jumped.
   </p>
 
   <h3>DebugPlaque</h3>
 
   <p>
-    A <code>Container</code> and <code>Disposable</code>: rows of monospace
-    <code>Text</code> on a SilkGraphics plate, in <code>DEBUG_FONT</code>
-    ("Fira Code" with fallbacks). Its size is computed from character count
-    times <code>MONO_ADVANCE = 0.6em</code>, not by measuring text, which
-    keeps it deterministic in headless tests and cheap enough to update every
-    frame. API: <code>update(opts)</code> merges options, <code>setRows()</code>,
-    a <code>text</code> getter and setter, <code>plateWidth</code> and
-    <code>plateHeight</code>. <code>destroy()</code> destroys its children and
-    later writes are ignored.
+    The HUD and metrics panels are both a <code>DebugPlaque</code>: rows of
+    monospace <code>Text</code> on a SilkGraphics plate,
+    in <code>DEBUG_FONT</code> ("Fira Code" with fallbacks). One design choice makes it
+    cheap enough to update every frame and deterministic in headless tests: its size is
+    computed from character count times <code>MONO_ADVANCE = 0.6em</code>, not by
+    measuring rendered text. The API is small: <code>update(opts)</code> merges
+    options, <code>setRows()</code> replaces the rows, a <code>text</code> getter and
+    setter make it a drop-in for a plain <code>Text</code>,
+    and <code>plateWidth</code> and <code>plateHeight</code> report its size.
+    After <code>destroy()</code> later writes are ignored. The options are below.
   </p>
 
   <div class="not-prose my-6">
@@ -290,24 +439,39 @@ const PLAQUE_OPTS: [string, string][] = [
   </div>
 
   <p>
-    <code>roundRectPath(g, x, y, w, h, radius = 0)</code> traces a rounded
-    rectangle as a closed path with quadratic corners because pixi-silk 0.1
-    does not dash <code>rect</code> or <code>roundRect</code> strokes. The
-    radius is clamped to half the width and height, and strokes are centred
-    on the line, so inset by half the stroke width. ADR 022 says it goes once
-    silk dashes rect strokes itself. <code>WinLines</code> draws a payline
-    through one cell per reel, or a payway joining every winning cell to every
-    winning cell on the next reel, at <code>getCellBounds()</code> centres,
-    reading the cells at draw time so a board that grew is drawn where it is.
+    Two small helpers round out the
+    subpath. <code>roundRectPath(g, x, y, w, h, radius = 0)</code> traces a rounded
+    rectangle as a closed path with quadratic corners, which exists only because
+    pixi-silk 0.1 cannot dash a <code>rect</code> or <code>roundRect</code> stroke; the
+    radius is clamped to half the width and height, and since strokes are centred on the
+    line you inset by half the stroke width. ADR 022 says it goes once silk dashes rect
+    strokes itself. <code>WinLines</code> draws a payline through one cell per reel, or
+    a payway joining every winning cell to every winning cell on the next reel, at the
+    cell centres from <code>getCellBounds()</code>; it reads the cells at draw time, so
+    a board that grew is drawn where it is now.
   </p>
 
   <h2>SpinMetrics</h2>
 
   <p>
-    <code>debug/SpinMetrics.ts</code>, a <code>Disposable</code>. It is
-    event-driven: <code>onAny</code> on the set bus and on every reel bus, so
-    it costs nothing between spins. It follows <code>reels:added</code> and
-    <code>reels:removed</code> and destroys itself on <code>destroyed</code>.
+    <code>SpinMetrics</code> is the stopwatch behind the metrics plaque and the
+    timeline, and it is also what <code>metrics()</code> on the global returns. It is
+    purely event-driven: it attaches an <code>onAny</code> listener to the set bus and
+    to every reel bus, stamps the time whenever something happens, and costs nothing
+    between spins. It follows <code>reels:added</code> and <code>reels:removed</code> so
+    an expanding board keeps being measured, and destroys itself
+    on <code>destroyed</code>.
+  </p>
+
+  <p>
+    Its unit of record is the <strong>round</strong>: everything from
+    one <code>spin:start</code> to the next. Because a cascade refill
+    emits <code>spin:start</code> too, every refill stage is its own round, which is
+    usually what you want when you are timing a tumble. Figure 4 is one reel's lane in
+    one round. The coloured spans are the reel's phases, the marks along the top and
+    bottom are the instants the metrics stamp, and all of them are in milliseconds since
+    the round opened. Speed samples ride along the lane at about 30 Hz when a ticker is
+    available.
   </p>
 
   <Diagram height={236} caption="One reel's lane in one round. A round runs from one spin:start to the next, so every cascade refill is its own round; the phase spans and the six marks are stamped in ms since the round opened, and speed samples ride along the lane at about 30 Hz.">
@@ -340,58 +504,86 @@ const PLAQUE_OPTS: [string, string][] = [
   </Diagram>
 
   <p>
-    Per reel a round records <code>phases[] {'{ phase, start, end | null }'}</code>,
-    <code>stoppingAt</code>, <code>landingAt</code>, <code>landedAt</code>,
-    <code>tease {'{ start, end, order, total }'}</code>, <code>symbolSwaps</code>
-    and <code>speed</code> as a flat <code>[t0, v0, t1, v1, ...]</code> array.
-    Per round it keeps <code>index</code>, <code>spin</code>, <code>startedAt</code>,
-    <code>profile</code>, <code>allStartedAt</code>, <code>allLandedAt</code>,
-    <code>completeAt</code>, <code>duration</code>, <code>wasSkipped</code>,
-    <code>skips[] {'{ at, mode, reels, partial, completedAt }'}</code>,
-    <code>queuedSkipAt</code>, <code>boosted</code>, <code>landOrder</code>,
-    <code>events</code>, <code>cascadeChains</code>, <code>wins</code> and
-    <code>lastActivityAt</code>. <code>skip:requested</code> sets
-    <code>wasSkipped</code> at once, because an aborted spin never reaches
-    <code>spin:complete</code>; <code>skip:completed</code> closes the oldest
-    open mark with the same reels. An event with no open round opens one with
-    <code>spin: false</code> (a nudge before any spin), and the round events
-    extend <code>lastActivityAt</code> after a round settles.
+    The two tables are what a round records, per reel and for the set as a whole. The
+    per-reel part is what the timeline draws; the set part is what the metrics plaque
+    prints.
   </p>
 
+  <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>Per reel</th><th class={th}>Meaning</th></tr></thead>
+        <tbody>
+          {ROUND_REEL.map(([k, v]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>Per round</th><th class={th}>Meaning</th></tr></thead>
+        <tbody>
+          {ROUND_SET.map(([k, v]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <p>
-    Options: <code>now</code> (default <code>performance.now</code>),
-    <code>history</code> (20 rounds kept; <code>clear()</code> keeps the
-    counter), <code>ticker</code> (enables speed sampling),
-    <code>sampleMs</code> (33); <code>MAX_SAMPLES</code> is 1800 per reel per
-    round, about 30 seconds. Getters: <code>current</code>, <code>rounds</code>,
-    <code>isActive</code> (a reel has an open phase, or a spin round has not
-    completed while the set is spinning), <code>length</code> (a live clock
-    while active, else <code>lastActivityAt</code>) and
-    <code>totals {'{ rounds, skipped, averageDuration | null }'}</code>, where
-    <code>rounds</code> counts every round ever opened and the other two are
-    over the kept window. <code>snapshot()</code> returns
-    <code>SpinMetricsSnapshot {'{ rounds, totals }'}</code> as a deep JSON copy.
-    Not semver-protected.
+    An event that arrives with no round open opens one with <code>spin: false</code>,
+    which is how a nudge before any spin still gets measured. The options
+    are <code>now</code> (default <code>performance.now</code>), <code>history</code> (20
+    rounds kept; <code>clear()</code> empties them but keeps the
+    counter), <code>ticker</code> (enables speed sampling)
+    and <code>sampleMs</code> (33); <code>MAX_SAMPLES</code> caps speed at 1800 samples
+    per reel per round, about 30 seconds. The getters
+    are <code>current</code>, <code>rounds</code>, <code>isActive</code> (a reel has an
+    open phase, or a spin round has not completed while the set is
+    spinning), <code>length</code> (a live clock while active,
+    else <code>lastActivityAt</code>)
+    and <code>totals {'{ rounds, skipped, averageDuration | null }'}</code>,
+    where <code>rounds</code> counts every round ever opened and the other two are over
+    the kept window. <code>snapshot()</code> returns a deep JSON copy
+    as <code>SpinMetricsSnapshot {'{ rounds, totals }'}</code>. Like the debug snapshot,
+    it is not semver-protected.
   </p>
 
   <h2>Notices</h2>
 
   <p>
-    <code>utils/notify.ts</code> is the library's single console channel.
-    <code>LogLevel</code> is <code>'silent' | 'error' | 'warn' | 'info'</code>,
-    ranked 0 to 3; the default is <code>'info'</code> because the notices this
-    channel replaced were unconditional. <code>setLogLevel()</code> and
-    <code>getLogLevel()</code> change and read it. A
-    <code>Notice</code> is <code>{'{ kind, code, message, detail: unknown[] }'}</code>.
-    <code>onNotice(listener) → unsubscribe</code> hears every notice
-    regardless of level, even at <code>'silent'</code>; the level only gates
-    console output. <code>noticeWarnOnce</code> deduplicates by code in a
-    process-wide set and also skips the listeners on repeats;
-    <code>resetNoticesForTest()</code> clears the set and the listeners.
-    Output goes through <code>console[kind]</code> so devtools filtering and
-    stacks keep working: a styled badge in a browser, <code>[pixi-reels]
-    kind(code) message</code> in Node. Notices are for things a developer
-    should act on, never per-frame state.
+    The library sometimes needs to tell a developer something they should act on: a
+    buffer that had to be clamped, a mask that cannot be rounded, a phase chain that
+    threw and was recovered by a slam. All of that goes through one
+    channel, <code>utils/notify.ts</code>, rather than
+    scattered <code>console.warn</code> calls, so you can turn it down, listen to it, or
+    route it somewhere. A notice is <code>{'{ kind, code, message, detail }'}</code>,
+    and the <code>code</code> is a stable string you can grep for.
+  </p>
+
+  <p>
+    The level, <code>'silent' | 'error' | 'warn' | 'info'</code>, ranked 0 to 3, gates
+    console output only; it defaults to <code>'info'</code> because the messages it
+    replaced were unconditional,
+    and <code>setLogLevel()</code> and <code>getLogLevel()</code> change and read
+    it. <code>onNotice(listener)</code> returns an unsubscribe and hears every notice
+    regardless of level, even at <code>'silent'</code>, which is how a test asserts that
+    a warning fired without cluttering its
+    output. <code>noticeWarnOnce</code> deduplicates by code in a process-wide set and
+    skips the listeners on repeats too; <code>resetNoticesForTest()</code> clears both
+    the set and the listeners. Output goes through <code>console[kind]</code> so
+    devtools filtering and stack traces keep working: a styled badge in a
+    browser, <code>[pixi-reels] kind(code) message</code> in Node. Notices are for
+    things a developer should act on, never for per-frame state. This is every code the
+    library raises today, and where.
   </p>
 
   <div class="not-prose my-6">
@@ -412,6 +604,12 @@ const PLAQUE_OPTS: [string, string][] = [
   </div>
 
   <h2>Tickers, disposal and gsap</h2>
+
+  <p>
+    Three pieces of plumbing underpin everything above, and they are the first things to
+    check when a debug tool, or the game, misbehaves: how objects clean up, which gsap
+    instance the engine is tweening on, and who is driving gsap's clock.
+  </p>
 
   <div class="not-prose my-6 grid gap-3 md:grid-cols-3">
     <div class="rounded-xl border border-border bg-card p-4">
@@ -448,4 +646,12 @@ const PLAQUE_OPTS: [string, string][] = [
       </ul>
     </div>
   </div>
+
+  <Callout kind="remember">
+    Anything that cannot see the canvas reads JSON from <code>__PIXI_REELS_DEBUG</code>;
+    anyone who can see it turns on <code>debugOverlay()</code>. Both only read, both
+    come from the same facts, and neither is API you should build on. If a spin feels
+    wrong, the timeline panel will usually tell you which reel and by how many
+    milliseconds.
+  </Callout>
 </Architecture>

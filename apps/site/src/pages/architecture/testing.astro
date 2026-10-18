@@ -5,6 +5,7 @@ import Box from '../../components/arch/Box.astro';
 import Edge from '../../components/arch/Edge.astro';
 import Group from '../../components/arch/Group.astro';
 import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
 
 const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground';
 
@@ -35,6 +36,14 @@ const OPTS: [string, string, string][] = [
   ['initialFrame', 'random', 'ColumnTarget[], same as ReelSetBuilder.initialFrame'],
   ['gsap', 'the library default', 'a per-set gsap instance, for example a synchronous shim'],
 ];
+
+const HELPERS: [string, string][] = [
+  ['spinAndLand(reelSet, grid: ColumnTarget[])', 'spin(), then setResult(grid), then slamStop(). slamStop() force-completes every active phase including its GSAP timelines, places the target symbols directly and fires the usual landing events, so the promise resolves on a microtask with wasSkipped: true. It is the same internal slam path a player\'s skip uses, minus the speed boost. It takes ColumnTarget[] only; the old string[][] form is gone and setResult throws on it.'],
+  ['captureEvents(reelSet, names)', 'Returns an array of { event, args } that fills up in order as the named events fire. Read it after the act.'],
+  ['expectGrid(reelSet, string[][])', 'Compares debugSnapshot(reelSet).grid with what you expect and throws a readable diff that lists every mismatched reel and cell and ends with the ASCII debugGrid().'],
+  ['countSymbol(reelSet, id)', 'Counts visible occurrences of one id, for scatter-style assertions.'],
+  ['startRecording · stopRecording · getFrames · clearFrames', 'From the main barrel (debug/debug.ts), not the testing subpath. startRecording(reelSet, tag, { maxFrames }) captures a debugSnapshot on spin:start, spin:reelLanded, spin:allLanded and spin:complete; getFrames(tag?) returns a copy. The buffer is process-wide and capped at 1000 frames. See the debug page.'],
+];
 ---
 <Architecture
   title="Testing model"
@@ -42,16 +51,134 @@ const OPTS: [string, string, string][] = [
   eyebrow="Harness"
 >
   <p>
-    pixi-reels was designed so mechanics, not pixels, are what you test.
-    The <code>pixi-reels/testing</code> subpath gives you a real
-    <code>ReelSet</code> running against a fake ticker and headless symbols:
-    no canvas, no DOM, no WebGL. Every test in the library's own suite runs in
-    Node under vitest, and each takes milliseconds. The decision is ADR 008
-    (<code>docs/adr/008-deterministic-testing.md</code>); the user-facing
-    walkthrough is the <a href="/guides/cheats-and-testing/">cheats and testing guide</a>.
+    Slot mechanics are awkward to test. The interesting behaviour, which symbol lands
+    where, whether a sticky wild survived, whether a cascade refilled the right cells,
+    is tangled up with pixels and with time. The obvious approach, spinning a real
+    canvas in a real browser and waiting for it to stop, is slow, flaky and blind: a
+    screenshot cannot tell you that reel 3 holds a wild at cell 1. And nobody wants to
+    wait four seconds of wall-clock time per test to find out.
   </p>
 
+  <p>
+    pixi-reels was designed so that mechanics, not pixels, are what you test.
+    The <code>pixi-reels/testing</code> subpath hands you a real <code>ReelSet</code>,
+    the same class that ships, running against a fake clock and symbols that draw
+    nothing. No canvas, no DOM, no WebGL. You spin it, land it on a grid of your
+    choosing in a single call, and assert on a JSON snapshot. Every test in the
+    library's own suite runs this way in Node under vitest, and each takes milliseconds.
+    The decision is recorded in ADR 008
+    (<code>docs/adr/008-deterministic-testing.md</code>); the user-facing walkthrough is
+    the <a href="/guides/cheats-and-testing/">cheats and testing guide</a>.
+  </p>
+
+  <Callout kind="plain">
+    Only two things are swapped: the clock, so a test can move time by hand, and the
+    symbol art, so nothing needs a renderer. Everything else is the production code. A
+    test that passes here has exercised the real controller, the real reels, the real
+    pool and the real events.
+  </Callout>
+
+  <h2>Your first test</h2>
+
+  <p>
+    Here is a complete test, and then a walk through each line. It builds a five-reel,
+    three-row set with three symbol ids, lands it on a grid the test chose, and checks
+    the grid, a symbol count and the events that fired.
+  </p>
+
+  <pre><code>{`import { it, expect } from 'vitest';
+import { createTestReelSet, expectGrid, captureEvents, countSymbol } from 'pixi-reels/testing';
+
+const cells = [
+  ['a', 'a', 'a'], ['b', 'b', 'b'], ['c', 'c', 'c'], ['a', 'b', 'c'], ['c', 'b', 'a'],
+];
+
+it('lands the grid it was given and fires the round events', async () => {
+  const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+  try {
+    const log = captureEvents(h.reelSet, ['spin:start', 'spin:complete']);
+    // spinAndLand and setResult take ColumnTarget[]; expectGrid takes string[][].
+    const result = await h.spinAndLand(cells.map((visible) => ({ visible })));
+    expect(result.wasSkipped).toBe(true);
+    expectGrid(h.reelSet, cells);
+    expect(countSymbol(h.reelSet, 'a')).toBe(5);
+    expect(log.map((e) => e.event)).toEqual(['spin:start', 'spin:complete']);
+  } finally {
+    h.destroy();
+  }
+});`}</code></pre>
+
+  <p>
+    <strong>Build.</strong> <code>createTestReelSet(opts)</code> is the one line that
+    replaces the builder, the ticker and the symbol registration. It returns a
+    handle, <code>h</code>, that holds the set (<code>h.reelSet</code>), the fake clock
+    (<code>h.ticker</code>) and the two shortcuts you will use most. The options are the
+    same vocabulary as the builder, with defaults chosen for tests; the full list is in
+    the table further down. The <code>cells</code> array is written reel by reel: the
+    first inner array is reel 0 top to bottom, and so on.
+  </p>
+
+  <p>
+    <strong>Listen.</strong> <code>captureEvents</code> is a recorder. Give it the set
+    and the event names you care about, and it returns an array that fills up in order
+    as they fire. You set it up before you act and read it after, which is why it comes
+    first.
+  </p>
+
+  <p>
+    <strong>Act.</strong> <code>h.spinAndLand(grid)</code> does what a whole round does
+    in production: it starts the spin, hands in the result, and then slams every reel
+    onto it immediately. Note
+    the <code>map</code>: <code>spinAndLand</code> and <code>setResult</code> take
+    a <code>ColumnTarget[]</code>, an object per reel with a <code>visible</code> array
+    (and optional buffer cells), while <code>expectGrid</code> takes a
+    plain <code>string[][]</code>. The returned result
+    reports <code>wasSkipped: true</code>, because a slam is, to the engine, a skip.
+  </p>
+
+  <p>
+    <strong>Assert.</strong> <code>expectGrid</code> compares the visible board with
+    your <code>cells</code> and, if they differ, throws a message that lists every
+    mismatched reel and cell and ends with an ASCII drawing of the board, so you can see
+    the failure without a debugger. <code>countSymbol</code> counts one id across the
+    visible grid. The captured log should hold exactly the two events, in order.
+  </p>
+
+  <p>
+    <strong>Destroy.</strong> <code>h.destroy()</code> in a <code>finally</code> tears
+    down the set and then the ticker. Do not skip this: the engine registers ticker
+    callbacks and the fake ticker counts them, so a leak shows up as a
+    non-zero <code>listenerCount</code> after <code>destroy()</code>.
+  </p>
+
+  <p>
+    That is the shape every mechanic test
+    in <code>packages/pixi-reels/tests/integration/mechanics.test.ts</code> follows:
+    build, act through the public API, assert on the snapshot, destroy
+    in <code>finally</code>. One variation covers most of the rest. A test that needs
+    time to pass, a watchdog, a nudge tween with a synchronous gsap shim, a pin overlay
+    mid-spin, calls <code>h.advance(ms)</code> between the act and the assertion instead
+    of <code>spinAndLand</code>. <code>advance</code> moves the fake clock forward in 16
+    ms frames, so the engine sees exactly the frames you give it and nothing else.
+  </p>
+
+  <Callout kind="gotcha">
+    <code>spinAndLand</code> is all-or-nothing: the reels are in motion for the same
+    tick and then they are down. It cannot show you a reel halfway through a spin at
+    real timing, and it is not meant to. A check like "the tease on reel 5 lasted 1.1
+    seconds" belongs in the browser suite; a check like "after the tease, reel 5 shows a
+    scatter" belongs here.
+  </Callout>
+
   <h2>The data flow</h2>
+
+  <p>
+    Figure 1 is the test above as a picture, top to bottom. Your test file imports three
+    things from the testing subpath; <code>build()</code> produces a real reel set with
+    every subsystem intact; <code>spinAndLand</code> drives it; and your assertions read
+    the snapshot. Notice that the whole middle band is the same classes production runs.
+    Nothing below the testing module is a mock.
+  </p>
 
   <Diagram height={696} caption="A test imports three primitives, gets a real ReelSet back, lands it synchronously, and asserts on JSON. Nothing below the testing module is a mock. spinAndLand() lands in the same tick; its promise resolves on a microtask with wasSkipped: true.">
     <Box x={230} y={20} w={260} h={60} title="my-spin.test.ts" kind="ghost" sub="vitest, node environment" />
@@ -85,6 +212,13 @@ const OPTS: [string, string, string][] = [
 
   <h2>What is swapped, what is real</h2>
 
+  <p>
+    Figure 2 draws the line. On the left are the only two substitutions. On the right is
+    everything that is not substituted, and the list is longer than it looks: the axis
+    and curve maths, the symbol factory and its pool, the speed manager, the masks,
+    pins, cascade and expand all run their shipping code in a test.
+  </p>
+
   <Diagram height={312} caption="Exactly two things are replaced: the ticker, because wall-clock time is the enemy of a deterministic test, and the symbol art, because Node has no renderer. Everything else is the shipping class, including ReelAxis, ReelCurve, SymbolFactory and its pool, SpeedManager, the masks, pins, cascade and expand.">
     <Group x={20} y={20} w={300} h={272} kind="dashed" label="swapped" note="2 things" />
     <Box x={44} y={68} w={252} h={78} title="FakeTicker" kind="code" sub={['stands in for PIXI.Ticker', 'builder.ticker(ticker)']} />
@@ -102,11 +236,15 @@ const OPTS: [string, string, string][] = [
   </Diagram>
 
   <p>
-    <code>FakeTicker</code> is duck-compatible with <code>PIXI.Ticker</code>.
-    The engine only ever reaches a ticker through <code>TickerRef</code>
-    (ADR 004), which calls <code>add</code>, <code>remove</code> and reads
-    <code>deltaMS</code>, so the fake needs no more than that plus a way to
-    move time by hand.
+    The <strong>fake ticker</strong> stands in for <code>PIXI.Ticker</code>. It can be
+    that small because the engine never touches a ticker directly: every subscription
+    goes through a wrapper called <code>TickerRef</code> (ADR 004), which only ever
+    calls <code>add</code> and <code>remove</code> and reads <code>deltaMS</code>. So
+    the fake needs those, the handful of fields that make it look like a ticker to
+    TypeScript, and a way to move time by hand. That last part
+    is <code>tick()</code> and <code>tickFor()</code>, and it is the whole reason the
+    harness is deterministic: no <code>requestAnimationFrame</code>, no wall clock, only
+    the frames you ask for. The table lists what it implements.
   </p>
 
   <div class="not-prose my-6">
@@ -126,28 +264,38 @@ const OPTS: [string, string, string][] = [
   </div>
 
   <p>
-    <code>HeadlessSymbol</code> is not a mock. It extends <code>ReelSymbol</code>,
-    creates a <code>Container</code> for <code>view</code> so the reel's
-    child-tree code works, and implements the hooks as no-ops:
-    <code>onActivate</code> and <code>onDeactivate</code> do nothing,
-    <code>playWin</code> resolves immediately, <code>stopAnimation</code> is
-    empty, and <code>resize(width, height)</code> stores the two numbers so
-    <code>width</code> and <code>height</code> read back. <code>Reel</code>
-    cannot tell it from a <code>SpriteSymbol</code>, so tests exercise the
-    real pool lifecycle (acquire, activate, resize, deactivate, release). If a
-    change broke that lifecycle, the testing module would fail first.
+    The <strong>headless symbol</strong> is not a mock, and the distinction matters. It
+    is a real subclass of <code>ReelSymbol</code>, the same base class the sprite,
+    animated, Spine and card symbols extend. It creates an
+    empty <code>Container</code> for its <code>view</code> so the reel's child-tree code
+    has something to attach, and it implements the lifecycle hooks as
+    no-ops: <code>onActivate</code> and <code>onDeactivate</code> do
+    nothing, <code>playWin</code> resolves immediately, <code>stopAnimation</code> is
+    empty, and <code>resize(width, height)</code> stores the two numbers
+    so <code>width</code> and <code>height</code> read back. A <code>Reel</code> cannot
+    tell it from a <code>SpriteSymbol</code>. That means a test exercises the real pool
+    lifecycle, acquire, activate, resize, deactivate, release, and if a change broke
+    that lifecycle, the testing module would be the first thing to fail.
   </p>
+
+  <Callout kind="why">
+    Mocking the controller or the reels would make tests fast but meaningless, because
+    the thing you want to know is whether the real controller landed the real reels
+    correctly. Swapping only the two leaves that depend on a browser keeps the test
+    honest while still removing every source of non-determinism. That is also why the
+    harness is public API: your game's mechanics get the same guarantee.
+  </Callout>
 
   <h2>createTestReelSet</h2>
 
   <p>
-    <code>testing/testHarness.ts</code>. The one-liner builds a
-    <code>ReelSetBuilder</code> with a fresh <code>FakeTicker</code> and
-    registers every id as a <code>HeadlessSymbol</code>, then forwards the
-    options below. It returns a <code>TestReelSetHandle</code>:
-    <code>{'{ reelSet, ticker, advance(ms, stepMs = 16), spinAndLand(grid), destroy() }'}</code>.
-    <code>advance</code> is <code>ticker.tickFor</code>; <code>destroy</code>
-    destroys the set and then the ticker.
+    The one-liner lives in <code>testing/testHarness.ts</code>. It builds
+    a <code>ReelSetBuilder</code> with a fresh <code>FakeTicker</code>, registers every
+    id you list as a <code>HeadlessSymbol</code>, forwards the options below, and
+    returns
+    a <code>TestReelSetHandle</code>: <code>{'{ reelSet, ticker, advance(ms, stepMs = 16), spinAndLand(grid), destroy() }'}</code>. <code>advance</code> is <code>ticker.tickFor</code>; <code>destroy</code> destroys
+    the set and then the ticker. The options mirror the builder, so anything you can
+    build in production you can build in a test.
   </p>
 
   <div class="not-prose my-6">
@@ -169,15 +317,36 @@ const OPTS: [string, string, string][] = [
 
   <h3>The helpers</h3>
 
-  <ul>
-    <li><strong><code>spinAndLand(reelSet, grid: ColumnTarget[])</code></strong> is <code>spin()</code>, <code>setResult(grid)</code>, <code>slamStop()</code>. <code>slamStop()</code> force-completes every active phase including its GSAP timelines, places the target symbols directly and fires the usual landing events, so the promise resolves on a microtask with <code>wasSkipped: true</code>. It shares the internal slam path a player's skip uses, minus the speed boost. It takes <code>ColumnTarget[]</code> only; the old <code>string[][]</code> form is gone and <code>setResult</code> throws on it.</li>
-    <li><strong><code>captureEvents(reelSet, names)</code></strong> returns a <code>{'{ event, args }[]'}</code> that fills up in order.</li>
-    <li><strong><code>expectGrid(reelSet, string[][])</code></strong> compares <code>debugSnapshot(reelSet).grid</code> and throws a readable diff that lists every mismatched reel and cell and ends with <code>debugGrid()</code>.</li>
-    <li><strong><code>countSymbol(reelSet, id)</code></strong> counts visible occurrences, for scatter-style assertions.</li>
-    <li><strong>Recording</strong>, from the main barrel (<code>debug/debug.ts</code>): <code>startRecording(reelSet, tag, {'{ maxFrames }'})</code> captures a <code>debugSnapshot</code> on <code>spin:start</code>, <code>spin:reelLanded</code>, <code>spin:allLanded</code> and <code>spin:complete</code>; <code>stopRecording</code>, <code>getFrames(tag?)</code> (a copy) and <code>clearFrames</code>. The buffer is process-wide and capped at 1000 frames. See the <a href="/architecture/debug/">debug page</a>.</li>
-  </ul>
+  <p>
+    These are the five helpers the first test used, plus the frame recorder, with the
+    exact rules each one follows.
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>Helper</th><th class={th}>Behaviour</th></tr></thead>
+        <tbody>
+          {HELPERS.map(([k, v]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <h2>The deterministic surface</h2>
+
+  <p>
+    A test is only useful if it fails for the same reason every time. Figure 3 shows the
+    four knobs that make a run repeatable. The seeded random generator fixes the filler
+    symbols between results. The fake ticker fixes time. The non-square default cell
+    makes a whole class of bug impossible to miss. And the cheats package gives you
+    forced outcomes with a name.
+  </p>
 
   <Diagram height={228} caption="Four knobs that make a run repeatable. The non-square default cell is the cheapest of them (ADR 018, section 10.2): with a square cell, swapping width for height passes every assertion.">
     <Box x={20} y={20} w={320} h={78} title="builder.rng(fn)" sub={['seeded PRNG for the random fill', 'same seed, same strips and wraps']} />
@@ -187,26 +356,40 @@ const OPTS: [string, string, string][] = [
   </Diagram>
 
   <p>
-    <code>ReelSetBuilder.rng(fn)</code> takes any <code>() => number</code>
-    and hands it to the random symbol provider, so the strips between results
-    are reproducible. The cheats package is deliberately outside the library
-    (ADR 009). Its built-in cheats are <code>forceGrid</code>,
-    <code>forceLine</code>, <code>forceScatters</code>, <code>forceNearMiss</code>,
-    <code>forceCell</code>, <code>forceAnticipation</code>,
-    <code>holdAndWinProgress</code> and <code>cascadingStages</code>.
-    <code>CheatEngine</code> tries registered
-    <code>CheatDefinition {'{ id, label, description?, enabled, cheat }'}</code>
-    entries in order and the first non-null <code>CheatSpinResult {'{ symbols, anticipationReels, meta? }'}</code>
-    wins, otherwise it produces a seeded random grid; held cells are applied on
-    top of every result. Its <code>SeededRng</code> is Mulberry32 with a
-    default seed of <code>0xdeadbeef</code>, and the engine seeds it with 1.
-    <code>evaluateWays(grid, {'{ wilds?, exclude?, minReels = 3, pays? }'})</code>
-    and <code>countWays(cellsPerReel)</code> live there too because the core
-    library never evaluates wins (ADR 007). The docs site and the library's
-    own integration tests both import it; a published game never does.
+    The cell size deserves a sentence. The default test cell is 120 wide by 100 high,
+    and that is deliberate: the library supports horizontal and reversed reels, and the
+    most likely bug in that code is using width where height was meant. With a square
+    cell such a bug passes every assertion. With a non-square one it fails loudly and
+    immediately. <code>ReelSetBuilder.rng(fn)</code> takes
+    any <code>() => number</code> and hands it to the random symbol provider, so the
+    strips between results are reproducible from a seed.
+  </p>
+
+  <p>
+    The cheats package is deliberately outside the library (ADR 009), because forcing an
+    outcome is something a game's demo mode and its tests need but a shipped game must
+    never contain. Its built-in cheats
+    are <code>forceGrid</code>, <code>forceLine</code>, <code>forceScatters</code>, <code>forceNearMiss</code>, <code>forceCell</code>, <code>forceAnticipation</code>, <code>holdAndWinProgress</code> and <code>cascadingStages</code>.
+    A <code>CheatEngine</code> tries its registered cheats in order, each
+    a <code>CheatDefinition {'{ id, label, description?, enabled, cheat }'}</code>, and
+    the first one to return a
+    non-null <code>CheatSpinResult {'{ symbols, anticipationReels, meta? }'}</code> wins;
+    if none does, it produces a seeded random grid. Held cells are applied on top of
+    every result. Its <code>SeededRng</code> is Mulberry32 with a default seed
+    of <code>0xdeadbeef</code>, and the engine seeds it with
+    1. <code>evaluateWays(grid, {'{ wilds?, exclude?, minReels = 3, pays? }'})</code> and <code>countWays(cellsPerReel)</code> live
+    there too, because the core library never evaluates wins (ADR 007). The docs site
+    and the library's own integration tests both import it; a published game never does.
   </p>
 
   <h2>Three suites around the harness</h2>
+
+  <p>
+    The library tests itself at three levels, and the split is a useful template for a
+    game. Mechanics go through the harness. The motion maths is checked as properties,
+    below the harness, because it must hold for every input. And a small browser suite
+    covers what only a browser can tell you.
+  </p>
 
   <div class="not-prose my-6 grid gap-3 md:grid-cols-3">
     <div class="rounded-xl border border-border bg-card p-4">
@@ -223,60 +406,23 @@ const OPTS: [string, string, string][] = [
     </div>
   </div>
 
-  <h2>What a real test looks like</h2>
-
-  <pre><code>{`import { it, expect } from 'vitest';
-import { createTestReelSet, expectGrid, captureEvents, countSymbol } from 'pixi-reels/testing';
-
-const cells = [
-  ['a', 'a', 'a'], ['b', 'b', 'b'], ['c', 'c', 'c'], ['a', 'b', 'c'], ['c', 'b', 'a'],
-];
-
-it('lands the grid it was given and fires the round events', async () => {
-  const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
-  try {
-    const log = captureEvents(h.reelSet, ['spin:start', 'spin:complete']);
-    // spinAndLand and setResult take ColumnTarget[]; expectGrid takes string[][].
-    const result = await h.spinAndLand(cells.map((visible) => ({ visible })));
-    expect(result.wasSkipped).toBe(true);
-    expectGrid(h.reelSet, cells);
-    expect(countSymbol(h.reelSet, 'a')).toBe(5);
-    expect(log.map((e) => e.event)).toEqual(['spin:start', 'spin:complete']);
-  } finally {
-    h.destroy();
-  }
-});`}</code></pre>
-
-  <p>
-    This is the shape every mechanic test in
-    <code>packages/pixi-reels/tests/integration/mechanics.test.ts</code> follows:
-    build, act through the public API, assert on the snapshot, destroy in
-    <code>finally</code>. A test that needs time to pass (a watchdog, a nudge
-    tween with a synchronous gsap shim, a pin overlay mid-spin) calls
-    <code>h.advance(ms)</code> between the act and the assertion instead of
-    <code>spinAndLand</code>.
-  </p>
-
   <h2>Why this composition is testable</h2>
 
   <p>
-    The library has no renderer assumptions anywhere except in the concrete
-    <code>ReelSymbol</code> subclasses (Sprite, AnimatedSprite, Spine, Card).
-    Control flow sits in <code>SpinController</code>, the phases and the
-    events, all plain JavaScript objects that read time from a ticker and
-    drive tweens through an injected gsap. Swapping the symbols for
-    <code>HeadlessSymbol</code> and the ticker for <code>FakeTicker</code> is
-    enough to run the whole thing in Node, which is also why the harness
-    cannot watch a reel mid-SPIN at real timing: <code>slamStop()</code> is
-    all-or-nothing, and timing-sensitive visual checks belong in the browser
-    suite.
+    None of this would work if the engine assumed a renderer anywhere but at the edges.
+    It does not. The only code that knows about textures, Spine or card faces is the
+    concrete <code>ReelSymbol</code> subclasses. All the control flow, the controller,
+    the phases and the events, is plain JavaScript that reads time from a ticker and
+    drives tweens through an injected gsap. Swap the symbols
+    for <code>HeadlessSymbol</code> and the ticker for <code>FakeTicker</code> and the
+    whole thing runs in Node.
   </p>
 
   <p>
-    The module ships as the <code>./testing</code> subpath (it moved out of
-    the main barrel in 1.0.0), so production bundles never see it, and
-    <code>createTestReelSet</code> is public API: consumers test their own
-    mechanics with the same harness.
+    The module ships as the <code>./testing</code> subpath (it moved out of the main
+    barrel in 1.0.0), so a production bundle never sees it,
+    and <code>createTestReelSet</code> is public API: you test your own mechanics with
+    the same harness the library uses on itself.
   </p>
 
   <h2>Where this lives</h2>
@@ -299,4 +445,12 @@ it('lands the grid it was given and fires the round events', async () => {
       </ul>
     </div>
   </div>
+
+  <Callout kind="remember">
+    Build with <code>createTestReelSet</code>, act
+    with <code>spinAndLand</code> or <code>advance</code>, assert
+    with <code>expectGrid</code>, destroy in <code>finally</code>. The reel set in your
+    test is the real one; only the clock and the art are fake, which is why a green test
+    here means the mechanic works.
+  </Callout>
 </Architecture>

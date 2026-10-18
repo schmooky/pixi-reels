@@ -7,6 +7,7 @@ import Group from '../../components/arch/Group.astro';
 import Label from '../../components/arch/Label.astro';
 import Cell from '../../components/arch/Cell.astro';
 import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
 
 type K = 'plain' | 'hot' | 'new' | 'empty' | 'buffer';
 type Col = { title: string; x: number; cells: [string, K, string?][] };
@@ -29,6 +30,28 @@ const offsetRows = [
   ['3', 'C', '2', '1', '3', 'X (new)', '5', '-2'],
   ['4', 'E', '4', '0 (no job)', '4', 'Y (new)', '6', '-2'],
 ];
+
+const dropOffsetFields = [
+  ['cell', 'The visible cell in the new grid.'],
+  ['originalCell', 'Where the symbol came from. For a survivor, its old cell. For a new symbol, a virtual cell outside the window: negative under forward gravity, at or past visibleCells under reverse.'],
+  ['offsetCells', 'cell - originalCell, signed. Zero means do not animate this cell at all.'],
+  ['isNew', 'Whether this is a new symbol. Branch on this, not on the sign of originalCell, which only works under forward gravity.'],
+];
+
+const skipRules = [
+  ['Per-phase signals', 'Each fall and drop-in run owns an AbortController, exposed as signal on the cascade:fall:symbol, cascade:dropIn:symbol and cascade:gravity:symbol events. It aborts only on an explicit skip and always before the paired :end event; natural completion drops it without aborting. Hook your per-symbol decoration tweens to it so they stop when the drop is skipped.'],
+  ['Your signals mean fast-forward', 'A signal you pass to destroySymbols, refill or runCascade jumps to the landed state; the promise still resolves, with wasSkipped set. ReelSet.refill also listens for skip:requested and calls abortSlam() on abort.'],
+  ['Quicken becomes slam', 'In cascade mode there is no spin-out to speed up, so a \'quicken\' press is turned into a slam, with a one-time quicken-cascade warning.'],
+  ['One press auto-slams later refills', 'The first skip press in a cascade round sets _autoSlamRefills instead of a speed boost; every later refill() in that round lands instantly and skips the phase chain. The flag clears on the next round\'s spin().'],
+  ['setDropOrder is sticky', 'setDropOrder(\'ltr\' | \'rtl\' | \'all\' | number[] | null, stepMs?) applies to every later spin() and refill() by design. The default step is max(stopDelay, 150); the docstring says "150 ms if stopDelay is 0", and the code is the source of truth here. Details on the skipping page.'],
+];
+
+const api = [
+  ['reelSet.destroySymbols(cells, opts?)', 'The "pop" primitive. Range-checks every coordinate up front, emits cascade:destroy:start { cells }, awaits Promise.allSettled of each symbol\'s own playDestroy({ delay, signal }) so a subclass can disintegrate in its own style (the default is a roughly 200 ms pop and implode), and lists any rejected cells in cascade:destroy:end { cells, failed? }. Options: delay (seconds, or (cell, i) => seconds, default 0), zIndex (default 1000, not restored, null skips), dim (false; true means 0.35), signal.'],
+  ['reelSet.refill({ winners, grid, mode?, gravityHoldMs?, gravityHold?, onGravityComplete?, signal? })', 'The "place and drop" primitive. Returns RefillResult { winnersRefilled, finalGrid, wasSkipped, skipContext, duration }.'],
+  ['reelSet.runCascade({ detectWinners, nextGrid, ... })', 'The chain orchestrator described above.'],
+  ['computeDropOffsets(visibleCells, winnerCells, opts?)', 'The algorithm itself, exported so you can test a server-side gravity simulation against it.'],
+];
 ---
 <Architecture
   title="Cascade physics"
@@ -36,19 +59,50 @@ const offsetRows = [
   eyebrow="Algorithm"
 >
   <p>
-    A correct cascade drop has one invariant: <strong>a symbol moves only if
-    there are cleared cells beneath it on the gravity side</strong>. Getting
-    this wrong is the classic cascade bug. Naive implementations shift every
-    visible cell by the winner count and tween back, so untouched symbols
-    visibly jump. pixi-reels computes a per-cell fall distance from the
-    winners list with one pure function,
-    <code>computeDropOffsets</code> in
-    <code>packages/pixi-reels/src/cascade/tumbleAlgorithm.ts</code>, and a cell
-    whose offset is zero never gets an animation job: its view stays exactly
-    where placement put it.
+    In a cascade game (also called a tumble or an avalanche) the reels do
+    not just stop. The winning symbols pop and vanish, the symbols above
+    them drop into the gaps, new symbols fall in from the top to fill the
+    column back up, and if that makes another win the whole thing repeats.
+    Players watch this very closely, because it is where the game feels
+    physical, and there is one mistake that breaks the illusion
+    immediately: a symbol that had nothing removed beneath it twitches,
+    slides or jumps anyway. The eye catches it every time.
   </p>
 
+  <p>
+    That mistake is common because the naive implementation makes it. If
+    you shift every cell up by the number of winners and tween it back
+    down, every symbol in the column moves, including the ones that should
+    have stayed perfectly still. pixi-reels instead works out, for every
+    cell, exactly how far its symbol has to fall, with one pure function
+    called <code>computeDropOffsets</code> in <code>packages/pixi-reels/src/cascade/tumbleAlgorithm.ts</code>. A cell
+    whose distance is zero never even gets an animation job; its view stays
+    exactly where placement put it. This page explains that function, the
+    three phases that animate its answer, the chain that runs cascades
+    until there are no more wins, and how skipping behaves in the middle of
+    all that.
+  </p>
+
+  <Callout kind="plain">
+    After the winners are removed, every surviving symbol slides toward the
+    bottom until it hits something, and the empty space left at the top is
+    filled by new symbols. A survivor falls exactly as many cells as there
+    were winners below it. If there were none, it does not move, and the
+    engine does not touch it at all.
+  </Callout>
+
   <h2>The algorithm, in one column</h2>
+
+  <p>
+    Figure 1 walks one column through a refill under <strong>forward
+    gravity</strong>, which is the normal case: symbols settle toward the
+    end of the strip, the bottom of a vertical reel. Five cells, the two
+    winners at cells 1 and 3. Follow the stages left to right: the winners
+    are removed, the survivors pack toward the bottom, and the new symbols
+    fill in from the top. The number beside each cell is how far it moved.
+    Notice that E, which had no winner below it, is marked 0 and is never
+    touched, while A, which had two winners below it, moves two cells.
+  </p>
 
   <Diagram height={420} caption="Forward gravity, five cells, winners [1, 3]: winCount 2, survivorCount 3. Survivors pack toward the end and two new symbols enter at the start, every new symbol travelling exactly winCount cells. The number beside a cell is its offsetCells; E has no hole below it and is never touched.">
     {forward.map((col) => (
@@ -68,6 +122,15 @@ const offsetRows = [
     <Label x={360} y={400} text="offsetCells = cell - originalCell" size={14} mono tone="fg" anchor="middle" />
   </Diagram>
 
+  <p>
+    Figure 2 is the same two winners under <strong>reverse gravity</strong>,
+    where symbols settle toward the start of the strip instead. The first
+    two stages are identical, so only the last two are drawn. Notice that
+    it is the mirror image: survivors pack toward the top, the new symbols
+    come in at the bottom, and the offsets are negative because the
+    symbols moved toward smaller cell numbers.
+  </p>
+
   <Diagram height={380} caption="Reverse gravity, the same winners [1, 3] and the same arithmetic mirrored: survivors pack toward the start, the new symbols enter at the end, and the offsets are negative. Stages 1 and 2 are identical to the forward case.">
     {reverse.map((col) => (
       <>
@@ -83,6 +146,12 @@ const offsetRows = [
     <Edge from={[reverse[0].x + 100, cellY(2) + 24]} to={[reverse[1].x - 16, cellY(2) + 24]} />
     <Label x={360} y={366} text="isNew when cell >= survivorCount" size={14} mono tone="fg" anchor="middle" />
   </Diagram>
+
+  <p>
+    The table is the same two examples as numbers, one row per cell of the
+    new grid. <code>originalCell</code> is where each symbol came from, and
+    for a new symbol that is a virtual cell outside the window.
+  </p>
 
   <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
@@ -119,60 +188,93 @@ const offsetRows = [
   <h2>computeDropOffsets, exactly</h2>
 
   <p>
-    <code>computeDropOffsets(visibleCells, winnerCells, {`{ initial = false, gravity = 'forward' }`})</code>
-    returns one <code>DropOffset</code> per visible cell of the <em>new</em> grid:
+    The function takes the number of visible cells, the list of winning
+    cells, and two options: <code>initial</code>, for the very first drop of
+    a spin, and <code>gravity</code>, <code>'forward'</code> or <code>'reverse'</code>. It returns one <code>DropOffset</code> per
+    visible cell of the <em>new</em> grid, with the four fields in the
+    table.
   </p>
-  <ul>
-    <li><code>cell</code>: the visible cell in the new grid.</li>
-    <li><code>originalCell</code>: the virtual "came from" index. Negative (forward) or <code>&gt;= visibleCells</code> (reverse) for a new symbol, the survivor's old cell otherwise.</li>
-    <li><code>offsetCells</code>: <code>cell - originalCell</code>, signed. Zero means do not animate.</li>
-    <li><code>isNew</code>: the discriminator to branch on. The sign of <code>originalCell</code> only works under forward gravity.</li>
-  </ul>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Field</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        {dropOffsetFields.map(([k, v]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 font-mono text-xs whitespace-nowrap align-top">{k}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
   <p>
-    The steps: <code>winCount = initial ? visibleCells : winnerCells.length</code>
-    (the winner set is empty when initial); <code>nonWinnerCells</code> is the
-    old cells not in the set, ascending; <code>survivorCount = visibleCells - winCount</code>.
-    Then for each <code>cell</code>: under forward gravity it is new when
-    <code>cell &lt; winCount</code>, under reverse when
-    <code>cell &gt;= survivorCount</code>. A new symbol's
-    <code>originalCell</code> is <code>cell - winCount</code> (forward) or
-    <code>cell + winCount</code> (reverse), so every arrival travels the same
-    <code>winCount</code> cells and lands in one beat. A survivor's is
-    <code>nonWinnerCells[cell - winCount]</code> (forward) or
-    <code>nonWinnerCells[cell]</code> (reverse). <strong>Moment A</strong>, the
-    initial drop, passes <code>initial: true</code>: every cell is new and
-    travels <code>visibleCells</code>. <strong>Moment B</strong>, a refill,
-    passes the cleared cells; an empty list means every offset is 0, and
-    <code>initial</code> defaults to false so a reel with no winners cannot
-    trigger a full re-drop by accident. Orientation never reaches the function;
-    only gravity does. It is exported so you can validate a server-side gravity
-    sim offline.
+    Here is how it gets there, in words first. Count the winners; call that <code>winCount</code> (on the initial drop every cell counts as a
+    winner, so <code>winCount</code> is the whole column). List the old
+    cells that did <em>not</em> win, in ascending order; those are the
+    survivors, and there are <code>survivorCount = visibleCells - winCount</code> of them. Now the key observation: after gravity, the survivors keep
+    their order and are packed against the gravity end, and the <code>winCount</code> cells at the other end are the new symbols. Under
+    forward gravity that means cells <code>0 .. winCount - 1</code> are new
+    and the rest are survivors; under reverse gravity, a cell is new when <code>cell &gt;= survivorCount</code>.
   </p>
+
   <p>
-    <strong>The server contract follows from this.</strong> In the grid you
-    pass to <code>refill</code> or return from <code>nextGrid</code>, the
-    <code>winners.length</code> cells at the gravity-entry end hold the new
-    symbols and the survivors keep their original order. The engine animates
-    the grid it is given; it does not reorder it. ADR 010 still describes a
-    staggered entrance (a new symbol at row R starting R+1 slots up) and uses
-    the v1 names <code>row</code> / <code>offsetRows</code>; the code moves
-    every new symbol a uniform <code>winCount</code> and uses
-    <code>cell</code> / <code>offsetCells</code>. The code is the source of
-    truth here. ADR 010's central rule holds: zero-offset cells are never
-    touched, and the API takes match winners, not a grid diff.
+    For a survivor, the i-th one in order lands at cell <code>winCount + i</code> (forward), and it came from the i-th entry of
+    the non-winner list, so its original cell is <code>nonWinnerCells[cell - winCount]</code>; under reverse gravity it
+    lands at cell <code>i</code> and comes from <code>nonWinnerCells[cell]</code>.
+    That is why a survivor with no hole below it never moves: its new cell
+    minus its old cell works out to exactly the number of winners that were
+    between it and the gravity end. E in figure 1 had nothing below it, so
+    its offset is zero. For a new symbol the original cell is simply <code>cell - winCount</code> (forward) or <code>cell + winCount</code> (reverse), a virtual cell beyond the window, so every arrival travels
+    the same <code>winCount</code> cells and the whole fill lands in one
+    beat.
+  </p>
+
+  <p>
+    The two options cover the two moments a drop happens. <strong>Moment
+    A</strong>, the initial drop on a spin, passes <code>initial: true</code>:
+    every cell is new and travels the full <code>visibleCells</code>. <strong>Moment B</strong>, a refill, passes the cleared cells; an empty
+    list makes every offset 0. <code>initial</code> defaults to false so a
+    reel with no winners cannot trigger a full re-drop by accident.
+    Orientation never reaches the function, only gravity does, and it is
+    exported so you can validate a server-side gravity simulation offline.
+  </p>
+
+  <Callout kind="why">
+    The function returns distances in cells rather than animating anything,
+    and the drop-in phase builds one animation job per cell whose distance
+    is not zero. That is the whole trick: an untouched survivor is not
+    "animated by zero", it is left alone, so there is nothing to twitch.
+  </Callout>
+
+  <p>
+    The server contract follows from this. In the grid you pass to <code>refill</code> or return from <code>nextGrid</code>, the <code>winners.length</code> cells at the gravity-entry end hold the new
+    symbols and the survivors keep their original order. The engine
+    animates the grid it is given; it does not reorder it. One note on the
+    design record: ADR 010 describes a staggered entrance, with a new symbol
+    at row R starting R + 1 slots up, and uses the v1 names <code>row</code> and <code>offsetRows</code>. The code moves every new symbol a uniform <code>winCount</code> and uses <code>cell</code> and <code>offsetCells</code>. The code is the source of truth here. ADR
+    010's central rule holds: zero-offset cells are never touched, and the
+    API takes match winners, not a grid diff.
   </p>
 
   <h2>Why winners must be semantic, not diffed</h2>
 
   <p>
-    Consider <code>prevCol = [A, C, X]</code> with <code>X</code> at cell 2
-    winning. The correct next column is <code>[N, A, C]</code>: one new symbol
-    at cell 0, two survivors shifted down by one. A "diff the two grids"
-    approach reports <em>three</em> changed cells (A→N, C→A, X→C) and would
-    animate three new symbols falling from above instead of one new plus two
-    survivors sliding one slot. The API takes a <code>Cell[]</code> of match
-    winners, so the answer is unambiguous. Your <code>detectWinners</code>
-    callback returns the cells your game rules consider winners, nothing else.
+    It is tempting to skip the winners list and let the engine compare the
+    old grid with the new one. That cannot work, and one example shows why.
+    Take a column <code>[A, C, X]</code> where <code>X</code> at cell 2 wins.
+    The correct next column is <code>[N, A, C]</code>: one new symbol at the
+    top, the two survivors shifted down by one. A diff reports <em>three</em> changed cells (A became N, C became A, X became C) and would animate
+    three new symbols falling in from above, instead of one new symbol plus
+    two survivors sliding one cell. The API therefore takes a <code>Cell[]</code> of match winners, so the answer is unambiguous. Your <code>detectWinners</code> callback returns the cells your game rules
+    consider winners, nothing else. The four cards below are the cases to
+    check your own implementation against.
   </p>
 
   <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
@@ -197,11 +299,14 @@ const offsetRows = [
   <h2>TumbleConfig</h2>
 
   <p>
-    <code>builder.tumble(config)</code> registers the three cascade phases and
-    makes <code>'cascade'</code> the default spin mode. The config
-    (<code>packages/pixi-reels/src/cascade/TumbleConfig.ts</code>) holds
-    animation values only; every callback is an event. The builder rejects v1
-    key names and v1 <code>cellOrder</code> values.
+    Calling <code>builder.tumble(config)</code> registers the three cascade
+    phases and makes <code>'cascade'</code> the default spin mode. The
+    config, in <code>packages/pixi-reels/src/cascade/TumbleConfig.ts</code>,
+    holds animation values only: how the old window falls out and how the
+    new one drops in. There are no callbacks in it, because everything you
+    might want to hook is an event. The builder rejects the v1 key names and
+    the v1 <code>cellOrder</code> values. The table lists every key with its
+    default.
   </p>
 
   <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
@@ -234,17 +339,23 @@ const offsetRows = [
   </div>
 
   <p>
-    Helpers: <code>resolveGravity(g, direction)</code>, <code>gravitySign(g)</code>
-    (+1 forward, -1 otherwise), <code>resolveCellOrder(order, gravity)</code>
-    (<code>'auto'</code> becomes <code>'endFirst'</code> under forward gravity
-    and <code>'startFirst'</code> under reverse), <code>resolveTumbleConfig</code>,
-    <code>mergeFallConfig</code> and <code>mergeDropInConfig</code>. A delay
-    between reels is not a tumble key: the fall is staggered by
-    <code>speed.spinDelay</code>, and place and drop-in by the stop delays or
-    <code>setDropOrder</code>.
+    A few small helpers live beside the config: <code>resolveGravity(g, direction)</code> turns <code>'auto'</code> into a concrete gravity, <code>gravitySign(g)</code> is +1 for forward and -1 otherwise, <code>resolveCellOrder(order, gravity)</code> turns <code>'auto'</code> into <code>'endFirst'</code> under forward
+    gravity and <code>'startFirst'</code> under reverse, and <code>resolveTumbleConfig</code>, <code>mergeFallConfig</code> and <code>mergeDropInConfig</code> fill in defaults and apply the per-profile
+    overrides. One thing you will not find in the config is a delay between
+    reels. The fall is staggered by <code>speed.spinDelay</code>, and the
+    place and drop-in by the stop delays or by <code>setDropOrder</code>.
   </p>
 
   <h2>The three phases, on a spin and on a refill</h2>
+
+  <p>
+    A cascade set uses the same phase machinery as a normal set, with
+    different phases. Figure 3 is one reel's phase list for a <code>spin()</code> in cascade mode. Notice that there is no spinning at
+    all: the old window falls out of the mask, the reel waits at speed zero
+    for the result, and then the new window is placed and drops in. Every
+    cascade phase is a <code>ReelPhase</code> with <code>skippable</code> and <code>quickenable</code> set, and its per-tick <code>update()</code> does
+    nothing because the animation is a GSAP timeline.
+  </p>
 
   <Diagram height={520} caption="spin() in cascade mode, per reel, after an optional early MultiWays adjust. Every cascade phase is a ReelPhase with skippable and quickenable set; update() does nothing because they are GSAP-timeline driven. The old window drops out, then the new one drops in.">
     <Box x={180} y={20} w={360} h={78} title="cascade:fall" sub={['replaces start', 'delay = stagger * spinDelay']} />
@@ -257,6 +368,17 @@ const offsetRows = [
     <Edge from={[360, 302]} to={[360, 326]} />
     <Edge from={[360, 404]} to={[360, 428]} />
   </Diagram>
+
+  <p>
+    A refill reuses the last two phases. Figure 4 shows the two ways it can
+    run them. The default, <code>'combined'</code>, places the new column
+    and drops survivors and new symbols together in one motion. The
+    two-stage mode, <code>'gravity-then-drop'</code>, lets the survivors
+    settle first on every reel at once, holds for a beat so the player can
+    see the gaps, and only then reveals the new symbols. Notice that in the
+    two-stage mode the new symbols are placed at alpha 0 during the first
+    stage, so they are already in position when the reveal comes.
+  </p>
 
   <Diagram height={320} caption="The two refill modes. 'combined' reuses place and dropIn with the winners list; 'gravity-then-drop' runs stage 1 on every reel in parallel, holds, then runs stage 2 per reel.">
     <Group x={10} y={20} w={700} h={142} kind="solid" label="refill mode 'combined'" note="the default" />
@@ -279,20 +401,60 @@ const offsetRows = [
   </Diagram>
 
   <p>
-    In <code>'gravity-then-drop'</code> the first drop-in runs with role
-    <code>'gravity'</code> and emits <code>cascade:gravity:*</code>; the hold is
-    <code>gravityHoldMs</code> (250) plus <code>gravityHold</code>, then
-    <code>onGravityComplete</code> is awaited; the second drop-in, role
-    <code>'new'</code>, reveals the survivors in place.
+    In <code>'gravity-then-drop'</code> the first drop-in runs with the role <code>'gravity'</code> and emits <code>cascade:gravity:*</code> events
+    instead of the drop-in ones. The hold is <code>gravityHoldMs</code> (250 by default) plus whatever <code>gravityHold</code> adds, after
+    which <code>onGravityComplete</code> is awaited; then the second drop-in,
+    role <code>'new'</code>, reveals the new symbols in place.
   </p>
 
-  <ul>
-    <li><strong><code>CascadeFallPhase</code></strong> (<code>spin/phases/CascadeFallPhase.ts</code>) sets the spinning mode, calls <code>haltDrive()</code> and <code>notifySpinStart()</code>, merges <code>speed.tumble.fall</code>, waits its delay, then emits <code>cascade:fall:start</code> and builds one timeline. The fall distance is <code>(visibleCells + exitBuffer + 1) * slotPitch</code>, where <code>exitBuffer</code> is <code>bufferEnd</code> under forward gravity and <code>bufferStart</code> under reverse. Each cell gets a <code>cascade:fall:symbol</code> call and a tween of the main axis; on completion every view goes to alpha 0 and <code>cascade:fall:end</code> fires. A zero duration skips the per-symbol events. <code>onSkip</code> aborts the signal before <code>:end</code>, and emits <code>:end</code> only if <code>:start</code> already fired.</li>
-    <li><strong><code>CascadePlacePhase</code></strong> is the identity swap: <code>beginMotion()</code> re-masks lifted views, <code>placeStrip</code> with buffer-above plus the visible cells (buffer-below is dropped so it random-fills, because a big-symbol anchor can live in buffer-above), <code>snapToGrid()</code>, <code>notifySpinEnd()</code>, then <code>computeDropOffsets</code> with the resolved gravity: survivors at offset 0 get alpha 1, movers alpha 0 so nothing flashes at its grid position. It emits <code>cascade:place:end {`{ reelIndex, placedSymbols, isInitial, winnerCells }`}</code> synchronously, before the drop starts, so decorations attached there fall with the symbol. There is no <code>:start</code>.</li>
-    <li><strong><code>CascadeDropInPhase</code></strong> picks its event triplet from <code>role</code> (<code>'gravity'</code> emits <code>cascade:gravity:*</code>, <code>'all'</code> and <code>'new'</code> emit <code>cascade:dropIn:*</code>), fires <code>:start</code> at once, builds one job per moving cell (big-symbol anchors once), computes <code>startMain</code> from the distance mode, moves first and reveals second, and tweens to <code>finalMain</code> with the stagger and order from <code>cellOrder</code>. Each job emits a <code>:symbol</code> event <code>{`{ symbol, view, reelIndex, cellIndex, duration, ease, offsetCells, signal }`}</code>. <code>finish</code> emits <code>:end</code>; the <code>'gravity'</code> role calls <code>onReelLanded</code> on movers only, the others call <code>reel.notifyLanded(moverCells)</code>, so untouched survivors never replay a landing. Zero jobs or zero duration snaps straight to the end.</li>
-  </ul>
+  <p>
+    The three phases each do one job. <strong>The fall</strong> (<code>spin/phases/CascadeFallPhase.ts</code>) empties the window. It
+    sets the spinning mode, halts the drive, tells the symbols the spin is
+    starting, merges any <code>speed.tumble.fall</code> override, waits its
+    delay, then emits <code>cascade:fall:start</code> and builds one
+    timeline. Every cell tweens along the main axis by <code>(visibleCells + exitBuffer + 1) * slotPitch</code>, far enough to
+    clear the mask, where <code>exitBuffer</code> is the buffer on the
+    gravity-exit side; each cell gets a <code>cascade:fall:symbol</code> event. When the timeline completes every view goes to alpha 0 and <code>cascade:fall:end</code> fires. A zero duration skips the
+    per-symbol events. On a skip the phase aborts its signal before <code>:end</code>, and emits <code>:end</code> only if <code>:start</code> already fired.
+  </p>
+
+  <p>
+    <strong>The place</strong> (<code>CascadePlacePhase</code>) swaps the
+    identities without moving anything. It re-masks any lifted views, calls <code>placeStrip</code> with the buffer above plus the visible cells
+    (the buffer below is left out so it random-fills; the buffer above is
+    kept because a big-symbol anchor can live there), snaps to the grid, and
+    tells the symbols the spin has ended. Then it runs <code>computeDropOffsets</code> with the resolved gravity: survivors at
+    offset 0 get alpha 1, movers get alpha 0, so nothing flashes at its
+    final position before it has fallen there. It emits <code>cascade:place:end {`{ reelIndex, placedSymbols, isInitial, winnerCells }`}</code> synchronously, before the drop starts, so a decoration you attach in
+    that handler falls with its symbol. There is no <code>:start</code>.
+  </p>
+
+  <p>
+    <strong>The drop-in</strong> (<code>CascadeDropInPhase</code>) is the
+    animation. It picks its event names from its role
+    (<code>'gravity'</code> emits <code>cascade:gravity:*</code>, <code>'all'</code> and <code>'new'</code> emit <code>cascade:dropIn:*</code>), fires <code>:start</code> at once, and
+    builds one job per moving cell (a big-symbol anchor gets one job for the
+    block). Each job works out its start position from the distance mode,
+    moves the view there first and reveals it second, then tweens to the
+    final position with the stagger and order from <code>cellOrder</code>,
+    emitting a <code>:symbol</code> event <code>{`{ symbol, view, reelIndex, cellIndex, duration, ease, offsetCells, signal }`}</code>.
+    On finish it emits <code>:end</code>. The <code>'gravity'</code> role
+    calls <code>onReelLanded</code> on the movers only; the other roles call <code>reel.notifyLanded(moverCells)</code>, so an untouched survivor
+    never replays a landing. Zero jobs or a zero duration snaps straight to
+    the end.
+  </p>
 
   <h2>runCascade, the chain</h2>
+
+  <p>
+    A single refill is one step. A real cascade keeps going until there are
+    no more wins, and <code>runCascade</code> is the loop that does it.
+    Figure 5 is one trip round that loop, clockwise from the top left. Your <code>detectWinners</code> decides whether there is anything to do; if
+    there is, the winners are presented and destroyed, there is a pause,
+    your <code>nextGrid</code> supplies the refilled column contents, and
+    the engine refills. Notice the two ways out: an empty winners list, or
+    hitting <code>maxChain</code>, both end the chain with a result object.
+  </p>
 
   <Diagram height={600} caption="One stage of the chain, clockwise. detectWinners returning [] or reaching maxChain (32) ends it with a RunCascadeResult; a skip anywhere sets wasSkipped and every later refill slams.">
     <Box x={16} y={40} w={260} h={60} kind="accent" title="detectWinners(grid, chain)" sub="sync or async" />
@@ -320,89 +482,126 @@ const offsetRows = [
 
   <p>
     <code>reelSet.runCascade(options)</code> (<code>core/ReelSet.ts</code>)
-    takes <code>detectWinners</code>, <code>nextGrid</code>, optional
-    <code>presentWinners</code> and <code>onCascade</code>,
-    <code>pauseAfterDestroyMs</code>, <code>maxChain</code>,
-    <code>destroyOptions</code>, <code>refillMode</code>,
-    <code>gravityHoldMs</code>, <code>gravityHold</code>,
-    <code>onGravityComplete</code> and <code>signal</code>. The round's signal
-    is forwarded to <code>destroySymbols</code> unless
-    <code>destroyOptions</code> carries its own; <code>gravityHold</code> is
-    wrapped so a builder function is invoked at gravity end; the
-    <code>wasSkipped</code> check runs after every await. After each refill
-    the loop sets <code>current = getVisibleGrid()</code>. The full event order
-    for one stage is <code>cascade:chain:start</code>,
-    <code>cascade:destroy:start</code>, <code>cascade:destroy:end</code>,
-    <code>spin:start</code> (from refill), then per reel
-    <code>cascade:place:end</code>, <code>cascade:dropIn:start</code>, the
-    <code>:symbol</code> events, <code>cascade:dropIn:end</code> (gravity
-    events first in two-stage mode) and <code>spin:reelLanding</code> /
-    <code>spin:reelLanded</code>, then <code>spin:allLanded</code>,
-    <code>spin:complete</code> and <code>cascade:chain:end</code>. The
-    <a href="/architecture/events/">events page</a> has every payload.
+    takes the two callbacks from the figure, <code>detectWinners</code> and <code>nextGrid</code>, the optional hooks <code>presentWinners</code> and <code>onCascade</code>, and the knobs <code>pauseAfterDestroyMs</code>, <code>maxChain</code>, <code>destroyOptions</code>, <code>refillMode</code>, <code>gravityHoldMs</code>, <code>gravityHold</code>, <code>onGravityComplete</code> and <code>signal</code>. The round's
+    signal is forwarded to <code>destroySymbols</code> unless <code>destroyOptions</code> carries its own; a <code>gravityHold</code> given as a function is invoked at gravity end; and the loop checks <code>wasSkipped</code> after every await. After each refill it reads
+    the board back with <code>getVisibleGrid()</code> to feed the next <code>detectWinners</code>.
   </p>
+
   <p>
-    <code>refill</code> validates everything before taking any state:
-    <code>_assertGrid</code> (shape, v1 keys, buffer counts), no spin or refill
-    in flight, <code>.tumble()</code> present, column count and visible length
-    matching the reels, winners in range. It then takes the spinning state,
-    sets the spin mode to <code>'cascade'</code>, builds the frames up front,
-    groups winners per reel ascending and emits <code>spin:start</code>. A
-    failure in stage 1 or the hold of <code>'gravity-then-drop'</code> emits
-    <code>cascade:gravity:error {`{ error }`}</code>, logs, and slams. From
-    reading the code, <code>refill()</code> emits <code>spin:start</code> and
-    <code>spin:allLanded</code>, so pin turns and <code>'eval'</code> pins are
-    probably spent on every refill; that has not been tested.
+    For one stage, the events arrive in this order: <code>cascade:chain:start</code>, <code>cascade:destroy:start</code>, <code>cascade:destroy:end</code>, <code>spin:start</code> (from the
+    refill), then per reel <code>cascade:place:end</code>, <code>cascade:dropIn:start</code>, the <code>:symbol</code> events and <code>cascade:dropIn:end</code> (with the gravity events first in
+    two-stage mode) and <code>spin:reelLanding</code> / <code>spin:reelLanded</code>, then <code>spin:allLanded</code>, <code>spin:complete</code> and <code>cascade:chain:end</code>. The <a href="/architecture/events/">events page</a> has every payload.
+  </p>
+
+  <p>
+    <code>refill</code> checks everything before it changes any state: the
+    grid shape, v1 keys and buffer counts (<code>_assertGrid</code>), that no
+    spin or refill is in flight, that <code>.tumble()</code> was configured,
+    that the column count and visible length match the reels, and that every
+    winner is in range. Only then does it take the spinning state, set the
+    spin mode to <code>'cascade'</code>, build all the frames up front, group
+    the winners per reel in ascending order and emit <code>spin:start</code>.
+    A failure in stage 1 or in the hold of <code>'gravity-then-drop'</code> emits <code>cascade:gravity:error {`{ error }`}</code>, logs, and slams.
+    From reading the code, <code>refill()</code> emits <code>spin:start</code> and <code>spin:allLanded</code>, so pin turns and <code>'eval'</code> pins are probably spent on every refill; that has not
+    been tested.
   </p>
 
   <h2>Abort, skip and slam</h2>
 
-  <ul>
-    <li><strong>Per-phase signals.</strong> Each fall and drop-in run owns an <code>AbortController</code>, exposed as <code>signal</code> on <code>cascade:fall:symbol</code>, <code>cascade:dropIn:symbol</code> and <code>cascade:gravity:symbol</code>. It aborts only on an explicit skip and always before the paired <code>:end</code>; natural completion drops it without aborting. Your per-symbol decoration tweens should listen to it.</li>
-    <li><strong>User signals mean fast-forward.</strong> A <code>signal</code> passed to <code>destroySymbols</code>, <code>refill</code> or <code>runCascade</code> jumps to the landed state; the promise still resolves (with <code>wasSkipped</code>). <code>ReelSet.refill</code> also listens for <code>skip:requested</code> and on abort calls <code>abortSlam()</code>.</li>
-    <li><strong>Quicken becomes slam.</strong> In cascade mode there is no spin-out to quicken, so a <code>'quicken'</code> press is turned into a slam with a one-time warning (<code>quicken-cascade</code>).</li>
-    <li><strong>One press auto-slams later refills.</strong> The first skip press in a cascade round sets <code>_autoSlamRefills</code> instead of a speed boost; every later <code>refill()</code> in that round lands instantly and skips the phase chain. The flag clears on the next round's <code>spin()</code>.</li>
-    <li><strong><code>setDropOrder('ltr' | 'rtl' | 'all' | number[] | null, stepMs?)</code></strong> is sticky across <code>spin()</code> and <code>refill()</code> by design. The default step is <code>max(stopDelay, 150)</code>; the docstring says "150 ms if stopDelay is 0", the code is the source of truth here. Details on <a href="/architecture/skipping/">skipping</a>.</li>
-  </ul>
+  <p>
+    Skipping in the middle of a cascade has a few rules of its own, because
+    there is no spin-out to speed up and a chain may have several refills
+    still to come. The table collects them.
+  </p>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Rule</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">What it means</th>
+        </tr>
+      </thead>
+      <tbody>
+        {skipRules.map(([k, v]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 text-xs font-semibold align-top">{k}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    The skip paths in full are on the <a href="/architecture/skipping/">skipping page</a>.
+  </p>
 
   <h2>MultiWays interplay</h2>
 
   <p>
-    <code>setShape(cellsPerReel)</code> throws if the set was not built with
-    <code>.multiways()</code>, if it runs after <code>setResult()</code> in
-    the current spin, or if a value leaves <code>[minCells, maxCells]</code>;
-    otherwise it records the target shape, emits <code>shape:changed</code> and
-    migrates pins eagerly. The correct order is <code>spin()</code> →
-    <code>setShape()</code> → <code>setResult()</code>, and for a cascade spin
-    calling <code>setShape</code> <em>before</em> <code>spin()</code> lets the
-    adjust run before the fall, so the reel drops at its target height. Shape
-    changes apply at the start of a spin (ADR 015): a reshape mid-chain inside
-    <code>runCascade</code> is not supported, the chain uses the shape the spin
-    landed with, and <code>runCascade</code> reads per-reel cell counts so it
-    is shape-aware. Big symbols plus MultiWays still throw at build. ADR 015's
-    phase names (<code>DropStartPhase</code>, <code>visibleRows</code>) are the
-    old ones.
+    On a MultiWays set the number of visible cells per reel can change
+    between spins, and that interacts with cascades in one specific way:
+    shape changes apply at the start of a spin (ADR 015), never in the
+    middle of a chain. <code>setShape(cellsPerReel)</code> records the target
+    shape, emits <code>shape:changed</code> and migrates pins straight away.
+    It throws if the set was not built with <code>.multiways()</code>, if it
+    is called after <code>setResult()</code> in the current spin, or if a
+    value is outside <code>[minCells, maxCells]</code>.
+  </p>
+
+  <Callout kind="gotcha">
+    Call <code>setShape()</code> before <code>setResult()</code>, or the
+    engine throws. For a cascade spin, call it before <code>spin()</code> as
+    well: the adjust then runs before the fall, so the reel drops at its
+    target height rather than reshaping afterwards. A reshape mid-chain
+    inside <code>runCascade</code> is not supported; the chain uses the
+    shape the spin landed with, and it reads per-reel cell counts so it
+    handles a jagged board correctly.
+  </Callout>
+
+  <p>
+    Big symbols plus MultiWays still throw at build. If you read ADR 015,
+    its phase names (<code>DropStartPhase</code>, <code>visibleRows</code>)
+    are the old ones.
   </p>
 
   <h2>CascadeMode is legacy</h2>
 
   <p>
-    <code>spin/modes/CascadeMode.ts</code> is a <code>SpinningMode</code> named
-    <code>'cascade'</code> with a gravity factor of 1.5 whose
-    <code>computeDelta</code> caps the per-frame step at one slot pitch. It is
-    exported, but nothing inside the engine instantiates it: the tumble
-    pipeline is the three phases above, and <code>CascadeFallPhase</code> sets
-    <code>reel.spinningMode</code> only to satisfy the start-phase contract.
+    You may find <code>spin/modes/CascadeMode.ts</code>, a <code>SpinningMode</code> named <code>'cascade'</code> with a gravity
+    factor of 1.5 whose <code>computeDelta</code> caps the per-frame step at
+    one slot pitch. It is exported, but nothing inside the engine
+    instantiates it. The tumble pipeline is the three phases above, and <code>CascadeFallPhase</code> sets <code>reel.spinningMode</code> only to
+    satisfy the start-phase contract.
   </p>
 
   <h2>API surface</h2>
 
-  <ul>
-    <li><code>reelSet.destroySymbols(cells, opts?)</code>: the "pop" primitive. Range-checks every coordinate up front, emits <code>cascade:destroy:start {`{ cells }`}</code>, awaits <code>Promise.allSettled</code> of each symbol's own <code>playDestroy({`{ delay, signal }`})</code> so subclasses get art-appropriate disintegration (the default is a ~200 ms pop and implode), lists rejected cells in <code>cascade:destroy:end {`{ cells, failed? }`}</code>. Options: <code>delay</code> (seconds or <code>(cell, i) =&gt; s</code>, default 0), <code>zIndex</code> (default 1000, not restored, <code>null</code> skips), <code>dim</code> (false, <code>true</code> is 0.35), <code>signal</code>.</li>
-    <li><code>reelSet.refill({`{ winners, grid, mode?, gravityHoldMs?, gravityHold?, onGravityComplete?, signal? }`})</code>: the "place + drop" primitive. Returns <code>RefillResult {`{ winnersRefilled, finalGrid, wasSkipped, skipContext, duration }`}</code>.</li>
-    <li><code>reelSet.runCascade({`{ detectWinners, nextGrid, ... }`})</code>: the chain orchestrator above.</li>
-    <li><code>computeDropOffsets(visibleCells, winnerCells, opts?)</code>: the algorithm itself, exported.</li>
-  </ul>
+  <p>
+    Four public calls cover everything on this page, from a single pop to
+    a whole chain.
+  </p>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Call</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">What it does</th>
+        </tr>
+      </thead>
+      <tbody>
+        {api.map(([k, v]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 font-mono text-xs align-top">{k}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
   <p>
     The <a href="/guides/cascades/">cascades guide</a> walks a first chain and
     the <a href="/recipes/cascade/">cascade recipes</a> show destroy
@@ -436,4 +635,12 @@ const offsetRows = [
       </ul>
     </div>
   </div>
+
+  <Callout kind="remember">
+    A survivor falls exactly as many cells as there were winners below it,
+    and a survivor with none below it is never touched, because the drop-in
+    only builds jobs for cells with a non-zero distance. Give the engine the
+    winners your rules found, not a grid diff, and give it the next grid
+    with the new symbols at the entry end; it animates what it is given.
+  </Callout>
 </Architecture>

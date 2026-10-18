@@ -4,6 +4,7 @@ import Diagram from '../../components/arch/Diagram.astro';
 import Box from '../../components/arch/Box.astro';
 import Edge from '../../components/arch/Edge.astro';
 import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
 
 // The 23 things build() does, in source order (core/ReelSetBuilder.ts:968-1440).
 // Drawn as three figures of eight, eight and seven steps; the step number is
@@ -44,9 +45,9 @@ const Y0 = 20;
 const pos = (i: number) => ({ x: X0 + (i % COLS) * (BW + GX), y: Y0 + Math.floor(i / COLS) * PITCH_Y });
 const figureHeight = (n: number) => Y0 + Math.ceil(n / COLS) * PITCH_Y - (PITCH_Y - BH) + 20;
 const FIGURES: [number, number, string][] = [
-  [0, 8, 'Steps 1 to 8: the gates, the derived numbers and the first engine object. Validation throws once, before anything is allocated.'],
+  [0, 8, 'Steps 1 to 8: the two gates, the derived numbers, and the first engine object. Validation throws once, before anything is allocated.'],
   [8, 16, 'Steps 9 to 16: the frame pipeline, the phase factories (your .phases() calls run last) and the viewport geometry.'],
-  [16, 23, 'Steps 17 to 23: the viewport, one reel per index, the factory that addReels() reuses, and finally the ReelSet that owns them all.'],
+  [16, 23, 'Steps 17 to 23: the viewport, one reel per index, the factory that addReels() reuses later, and finally the ReelSet that owns them all.'],
 ];
 ---
 <Architecture
@@ -55,26 +56,84 @@ const FIGURES: [number, number, string][] = [
   eyebrow="Construction"
 >
   <p>
-    <code>ReelSetBuilder</code> is the one class you construct yourself. It is
-    a fluent configurator: every setter returns <code>this</code>, most
-    setters only record a value, and all cross-field checks wait for
-    <code>build()</code>. The design rule in its header is that it "throws at
-    construction, not at first spin". Five calls are required:
-    <code>.reels(n)</code>, one of <code>.visibleCells(n)</code>,
-    <code>.visibleCellsPerReel([...])</code> or <code>.multiways({'{...}'})</code>,
-    <code>.symbolSize(w, h)</code>, <code>.symbols(cb)</code> and
-    <code>.ticker(ticker)</code>. Setter order is free, with one exception
-    worth knowing: <code>.phases()</code> is deferred to the end of
-    <code>build()</code>, so your phase overrides always win over the tumble
-    and MultiWays defaults no matter where they sit in the chain. It lives in
-    <code>packages/pixi-reels/src/core/ReelSetBuilder.ts</code>.
+    Before a reel set can spin it needs to know a surprising number of
+    things: how many columns there are, how many rows each column shows, how
+    big a cell is, which symbols exist and how each one is drawn, which ticker
+    drives the animation, and a long tail of optional details about curves,
+    masks, gaps and timing. Many of those settings only make sense together.
+    A symbol that spans two columns needs a mask that does not clip the gap
+    between them. A curve drawn in "warp" mode needs a renderer to draw with.
+    A list of per-reel values has to be exactly as long as the number of
+    reels. If the library checked each value the moment you set it, it would
+    have to guess at the values you had not set yet, and the first sign of a
+    mistake would be a blank board on the first spin.
   </p>
 
-  <h2>The build() pipeline</h2>
+  <p>
+    The builder solves this by splitting setup into two halves. While you
+    call setters, it only writes values down. When you call <code>build()</code>, it checks everything at once, constructs the engine
+    in a fixed order, and hands you back the <code>ReelSet</code>. The rule
+    written in the source header is that the builder "throws at construction,
+    not at first spin": a mistake surfaces as one error listing every problem,
+    before a single symbol has been drawn.
+  </p>
+
+  <Callout kind="plain">
+    Think of the builder as a form you fill in, in any order, and <code>build()</code> as the submit button. Nothing is validated and
+    nothing is allocated until you press it. The class is <code>ReelSetBuilder</code> in <code>packages/pixi-reels/src/core/ReelSetBuilder.ts</code>.
+  </Callout>
+
+  <h2>The five things you must say</h2>
 
   <p>
-    Source order, read left to right and row by row. Validation comes first
-    and throws once; the ReelSet is the last thing made.
+    Every setter on the builder is optional except five. The table lists them
+    in the order most people write them, but the order is free: each setter
+    returns the builder, so you chain them however reads best.
+  </p>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Call</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">What it tells the builder</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['.reels(n)', 'how many columns. pixi-reels calls a column a reel even when the set runs horizontally.'],
+          ['.visibleCells(n), .visibleCellsPerReel([...]) or .multiways({...})', 'how many cells each reel shows inside the window. Exactly one of the three.'],
+          ['.symbolSize(w, h)', 'the size of one cell, in screen pixels.'],
+          ['.symbols(cb)', 'a callback that registers every symbol id together with the class that draws it.'],
+          ['.ticker(ticker)', 'the PixiJS ticker that drives every animation in the set.'],
+        ].map(([c, w]) => (
+          <tr class="border-t border-border align-top">
+            <td class="px-4 py-2 font-mono text-xs">{c}</td>
+            <td class="px-4 py-2 text-foreground/80">{w}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    One ordering rule is worth knowing before anything else. A spin is made of
+    stages called phases (start, spin, stop and so on), and <code>.phases()</code> lets you override how one of them behaves. The
+    builder does not apply that override where it sits in your chain; it
+    saves it and applies it at the very end of <code>build()</code>, after the
+    default phases that tumble and MultiWays sets install. So your overrides
+    always win, whether you write them first or last.
+  </p>
+
+  <h2>What build() does, in order</h2>
+
+  <p>
+    <code>build()</code> runs twenty-three steps in a fixed sequence. Figures
+    1 to 3 draw them in source order, read left to right and row by row. Look
+    at the colours: the highlighted boxes near the start are gates that throw
+    or decide and allocate nothing, the dark boxes are the moments an engine
+    object is constructed, and the single primary box at the very end is the <code>ReelSet</code> itself. Everything that can fail does so in the first
+    two steps, before anything exists that would need cleaning up.
   </p>
 
   {FIGURES.map(([start, end, caption]) => (
@@ -105,35 +164,180 @@ const FIGURES: [number, number, string][] = [
     ]} />
   </div>
 
-  <h2>Step by step</h2>
+  <h2>The steps, in groups</h2>
 
-  <ol>
-    <li><strong>Validate.</strong> <code>_validate()</code> walks every rule, collects every message, and throws once with <code>ReelSetBuilder validation failed:</code> followed by one <code>- message</code> line per problem. The full list is below.</li>
-    <li><strong>Single throws.</strong> Four checks are not aggregated: <code>directionPerReel()</code> length, <code>curvePerReel()</code> length, <code>curveMode('warp')</code> without <code>.renderer(app.renderer)</code>, and <code>bufferSymbols({'{ end: 0 }'})</code> on a set that is not a tumble set.</li>
-    <li><strong>Axis projection.</strong> <code>setAxis = reelAxis(orientation, 'forward')</code>. The main cell size is <code>symbolHeight</code> on a vertical set and <code>symbolWidth</code> on a horizontal one; cross is the other. The same swap is applied to the gaps. Every later geometry number goes through <code>setAxis.toScreen</code>.</li>
-    <li><strong>Per-reel cells and extents.</strong> MultiWays uses <code>maxCells</code> on every reel; otherwise <code>visibleCellsPerReel</code>; otherwise a uniform fill of <code>visibleCells</code>. The main-axis extent is the MultiWays <code>reelExtent</code>, else the explicit <code>reelExtents[i]</code>, else <code>cells * mainCell + (cells - 1) * mainGap</code>. <code>tallest = max(extents)</code>.</li>
-    <li><strong>Speed default.</strong> If no profile was registered, <code>normal = SpeedPresets.NORMAL</code>. The first profile's <code>spinSpeed</code> becomes <code>defaultSpinSpeed</code>.</li>
-    <li><strong>symbolsData.</strong> For every registered id: <code>weight = override.weight ?? weights[id] ?? 10</code>, <code>zIndex = override.zIndex ?? 1</code>, plus <code>unmask</code> and <code>size</code> from <code>symbolData()</code>.</li>
-    <li><strong>Pool capacity.</strong> <code>poolCapacity ?? max(20, sum over reels of (cells + bufferStart + bufferEnd))</code>. The worst case for one id is the whole strip showing it.</li>
-    <li><strong>SymbolFactory.</strong> <code>new SymbolFactory(registry, poolCapacity, gsap, setAxis.mainProp)</code>. See <a href="/architecture/symbols/">symbols and pooling</a>.</li>
-    <li><strong>RandomSymbolProvider.</strong> Built from <code>symbolsData</code> and the <code>rng</code>, then every pool recorded by <code>.randomSymbols(pool, scope)</code> is applied with <code>set()</code>.</li>
-    <li><strong>FrameBuilder.</strong> Built over the provider, then each <code>.frameMiddleware(mw)</code> is added with <code>use()</code> in call order, after the two built-ins. See <a href="/architecture/frame-pipeline/">the frame pipeline</a>.</li>
-    <li><strong>Tumble phases.</strong> Only when <code>.tumble()</code> was called: factories for <code>cascade:fall</code>, <code>cascade:place</code> and <code>cascade:dropIn</code>. Gravity is left unresolved and read per reel at runtime, because <code>directionPerReel</code> can differ between reels.</li>
-    <li><strong>MultiWays adjust.</strong> <code>registerFactory('adjust', ...)</code> producing an <code>AdjustPhase(reel, speed, {'{ durationMs, ease }'})</code>. The duration may be a per-reel function.</li>
-    <li><strong>User phases last.</strong> Every <code>.phases(cb)</code> configurator runs now, after both defaults. The last call wins per phase key.</li>
-    <li><strong>Viewport size.</strong> <code>crossSpan = reelCount * (crossCell + crossGap) - crossGap</code>; <code>viewportSize = setAxis.toScreen(crossSpan, tallest)</code>.</li>
-    <li><strong>Mask auto-pick.</strong> The decision below, plus the <code>warp-skips-unmask</code> info notice when warp mode, a curve and an <code>unmask</code> symbol meet.</li>
-    <li><strong>Curve focus.</strong> <code>curveFocusWeight = CURVE_FOCUS_WEIGHT[focus]</code> (reel 0, set-lean 0.5, set 1) and <code>setCentreCross = crossSpan / 2</code>.</li>
-    <li><strong>ReelViewport.</strong> <code>new ReelViewport(w, h, undefined, maskStrategy, setAxis, warp ? curveBleed : 0)</code>. No per-reel rects exist yet, so the mask draws its bounding-box fallback until step 21.</li>
-    <li><strong>Initial frame.</strong> <code>assertBufferCountsInRange(initialFrame, ...)</code>, then <code>coordinateBigSymbols()</code> produces one seed strip per reel. A block that does not fit throws here, before any reel exists.</li>
-    <li><strong>Closure capture.</strong> Every builder field the reel factory needs is copied into a <code>const</code>: direction, curves, orientation, renderer, bleed, stacking, <code>symbolZIndex</code>, gap, anchor, gsap, drive, pool capacity and extents. Two helpers are defined here: <code>perReel(values, i)</code> returns the array's last entry past its end, and <code>mainOffsetFor(extent, tallest)</code> gives <code>0</code> for <code>start</code>, <code>tallest - extent</code> for <code>end</code> and <code>(tallest - extent) / 2</code> for <code>center</code>.</li>
-    <li><strong>createReel</strong> for each index. Cell main size is <code>spinCellSize</code> for MultiWays or when there are no explicit extents, otherwise <code>(extent - (cells - 1) * mainGap) / cells</code>. <code>frameBuilder.build(i, cells, bufferStart, bufferEnd, seed)</code> makes the initial strip. The <code>ReelConfig</code> carries <code>axis = reelAxis(orientation, perReel(directionPerReel) ?? direction)</code>, the per-reel curve, the warp renderer and ticker, bleed, stacking, gsap, <code>symbolZIndex</code> and <code>curveFocus = crossCell / 2 + w * (setCentreCross - i * (crossCell + crossGap) - crossCell / 2)</code>. Then <code>new Reel(config, symbolFactory, randomProvider, viewport)</code>; the reel adds its own container to <code>viewport.maskedContainer</code>. <code>reel.referenceSpeed = defaultSpinSpeed</code> is set before <code>installDrive(drive)</code>, because profile-relative drive bounds resolve against it.</li>
-    <li><strong>updateMaskSize.</strong> After the loop, <code>viewport.updateMaskSize(w, h, maskRects)</code> redraws the mask with one rect per reel. The rect formula is on the <a href="/architecture/viewport-and-masks/">viewport page</a>.</li>
-    <li><strong>ReelFactory.</strong> An object of closures: <code>extentFor</code>, <code>create</code> (the same <code>createReel</code>), <code>maskRect</code>, <code>mainOffset</code>, <code>viewportSize</code> and <code>poolCapacity</code>. <code>addReels()</code> and <code>expand()</code> use it later to build reels exactly the way these were built.</li>
-    <li><strong>new ReelSet</strong> with <code>config, reels, reelFactory, viewport, symbolFactory, frameBuilder, phaseFactory, spinningMode, defaultSpinMode, skipMode</code>. The ReelSet then constructs its own SpeedManager, SpinController and SymbolSpotlight; see <a href="/architecture/classes/">classes</a>.</li>
-  </ol>
+  <p>
+    Twenty-three steps are easier to hold as seven groups. Each paragraph
+    below says what a group does and why it comes where it does; the exact
+    formulas are collected in the table that follows, so the prose can stay
+    readable. A few words first, since the rest of the page leans on them. The <em>main axis</em> is the direction a reel travels (down the screen on a
+    vertical set, across it on a horizontal one) and the <em>cross axis</em> is the other one. A reel's <em>extent</em> is how long it is along the
+    main axis, in pixels. A <em>strip</em> is the array of symbols a reel
+    holds, which is longer than the window because of the <em>buffer
+    cells</em> parked just outside it on either end.
+  </p>
+
+  <p>
+    <strong>Steps 1 and 2, the gates.</strong> The first step walks every
+    validation rule, collects every message, and throws once with the header <code>ReelSetBuilder validation failed:</code> followed by one <code>- message</code> line per problem, so you fix a bad configuration in
+    one round trip rather than one error at a time. The full list of messages
+    is further down the page. Four checks are not folded into that list and
+    throw on their own: the length of <code>directionPerReel()</code>, the
+    length of <code>curvePerReel()</code>, warp curve mode without a
+    renderer, and a zero end buffer on a set that is not a tumble set.
+  </p>
+
+  <p>
+    <strong>Steps 3 and 4, the geometry.</strong> The builder makes a set-level
+    axis object from the orientation and uses it to translate every later
+    size into screen x and y, which is why the same code lays out vertical and
+    horizontal sets. On a vertical set the main cell size is the symbol height
+    and the cross cell size is the symbol width; on a horizontal set they
+    swap, and the gaps swap with them. It then works out how many cells each
+    reel shows and how long each reel is, and records the tallest extent,
+    because every shorter reel will be positioned inside that tallest box.
+  </p>
+
+  <p>
+    <strong>Steps 5 to 8, speed and symbols.</strong> If you registered no
+    speed profile, the builder installs the normal preset so a set always has
+    one; the first profile's spin speed becomes the reference speed each reel
+    is handed later. It then builds a metadata record for every registered
+    symbol id (weight, draw order, whether it may escape the mask, and its
+    size in cells) with the defaults filled in. Symbols are pooled rather
+    than allocated per spin, so the builder sizes the pool next: unless you
+    set a capacity, it is large enough for every strip to show one id at
+    once, with a floor of twenty. With those in hand it constructs the <code>SymbolFactory</code>, the object that hands out and takes back
+    symbol instances. The <a href="/architecture/symbols/">symbols page</a> has the pool in detail.
+  </p>
+
+  <p>
+    <strong>Steps 9 and 10, the frame pipeline.</strong> A <em>frame</em> is
+    the list of symbol ids a reel will show after it lands, buffers included.
+    The builder constructs the random provider that fills cells nobody has
+    claimed, applies every random-draw pool and scope you registered, and
+    then wraps it in the <code>FrameBuilder</code>, adding your frame
+    middleware in the order you called it, after the two built-in stages. The <a href="/architecture/frame-pipeline/">frame pipeline page</a> explains
+    how a result grid becomes a frame.
+  </p>
+
+  <p>
+    <strong>Steps 11 to 13, the phases.</strong> Two features ship phases of
+    their own. A tumble set (where winning symbols are removed and the ones
+    above fall into the holes) gets three cascade phases: fall, place and
+    drop-in. Gravity is deliberately left unresolved here and read per reel at
+    runtime, because reels can run in different directions. A MultiWays set
+    (where the server changes the number of cells per reel on each spin) gets
+    an adjust phase that migrates pinned cells, with a duration that may be a
+    per-reel function. Only after both defaults does the builder run your <code>.phases()</code> callbacks, so the last registration per phase key
+    is always yours.
+  </p>
+
+  <p>
+    <strong>Steps 14 to 17, the viewport.</strong> The viewport is the window
+    you see the reels through. Its size is the cross span of all reels by the
+    tallest extent. The builder then chooses a mask (figure 4 below), computes
+    how strongly a curve leans towards the centre of the set, and constructs
+    the <code>ReelViewport</code>. In warp curve mode it also passes the <em>bleed</em>, an extra margin on the cross axis so a bent reel is not
+    clipped at its edges. At this point no reel exists yet, so the viewport
+    has no per-reel rectangles to mask with; it draws a bounding-box mask as a
+    stand-in until step 21 replaces it.
+  </p>
+
+  <p>
+    <strong>Steps 18 to 21, the reels.</strong> If you supplied an initial
+    frame, it is checked against the buffer counts and any big symbols are
+    laid out now, so a block that does not fit throws before any reel exists.
+    Every builder field the reel code needs is then copied into local
+    constants (the section on the closure rule explains why), along with two
+    helpers: <code>perReel()</code>, which reads a per-reel array and reuses
+    its last entry for any index past the end, and <code>mainOffsetFor()</code>, which positions a short reel inside the
+    tallest box according to the anchor you chose. The loop then creates one
+    reel per index: it asks the frame builder for a seed strip, assembles the
+    reel's config, constructs the <code>Reel</code> (which adds its own
+    container to the viewport's masked layer), and sets the reel's reference
+    speed before installing the drive, because a drive's profile-relative
+    bounds resolve against that speed. When the loop ends, the viewport's mask
+    is redrawn with one rectangle per reel.
+  </p>
+
+  <p>
+    <strong>Steps 22 and 23, the factory and the set.</strong> The reel-making
+    code is bundled into a <code>ReelFactory</code>, an object of closures
+    that <code>addReels()</code> and <code>expand()</code> call later, so a
+    reel added at runtime is built exactly the way the originals were. Last of
+    all the <code>ReelSet</code> is constructed with the config, the reels,
+    the factory, the viewport, the symbol factory, the frame builder, the
+    phase factory and the three modes (spinning, default spin and skip). The
+    set builds its own speed manager, spin controller and spotlight; the <a href="/architecture/classes/">classes page</a> has that order.
+  </p>
+
+  <p>
+    The formulas, for when you need the exact number.
+  </p>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Step</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Quantity</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">How it is derived</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['3', 'setAxis', "reelAxis(orientation, 'forward'); main cell = symbolHeight (vertical) or symbolWidth (horizontal), cross cell the other; gaps swap the same way; every later geometry number goes through setAxis.toScreen"],
+          ['4', 'cells per reel', 'MultiWays: maxCells on every reel; else visibleCellsPerReel; else visibleCells on every reel'],
+          ['4', 'extent per reel', 'MultiWays reelExtent, else reelExtents[i], else cells * mainCell + (cells - 1) * mainGap; tallest = max(extents)'],
+          ['5', 'speed', 'no profile registered: normal = SpeedPresets.NORMAL; defaultSpinSpeed = the first profile\'s spinSpeed'],
+          ['6', 'symbolsData[id]', 'weight = override.weight ?? weights[id] ?? 10; zIndex = override.zIndex ?? 1; unmask and size from symbolData()'],
+          ['7', 'pool capacity', 'poolCapacity ?? max(20, sum over reels of (cells + bufferStart + bufferEnd))'],
+          ['8', 'SymbolFactory', 'new SymbolFactory(registry, poolCapacity, gsap, setAxis.mainProp)'],
+          ['9', 'random provider', 'new RandomSymbolProvider(symbolsData, rng), then set(pool, scope) for each .randomSymbols() call'],
+          ['10', 'FrameBuilder', 'over the provider; use(mw) for each .frameMiddleware() in call order, after the two built-ins'],
+          ['11', 'tumble phases', 'factories for cascade:fall, cascade:place, cascade:dropIn, only after .tumble()'],
+          ['12', 'adjust phase', "registerFactory('adjust', ...) producing AdjustPhase(reel, speed, { durationMs, ease })"],
+          ['14', 'viewport size', 'crossSpan = reelCount * (crossCell + crossGap) - crossGap; viewportSize = setAxis.toScreen(crossSpan, tallest)'],
+          ['16', 'curve focus', 'curveFocusWeight = CURVE_FOCUS_WEIGHT[focus] (reel 0, set-lean 0.5, set 1); setCentreCross = crossSpan / 2'],
+          ['17', 'ReelViewport', 'new ReelViewport(w, h, undefined, maskStrategy, setAxis, warp ? curveBleed : 0)'],
+          ['18', 'initial frame', 'assertBufferCountsInRange(initialFrame, ...), then coordinateBigSymbols() gives one seed strip per reel'],
+          ['19', 'perReel(values, i)', 'values[i], or the last entry when i is past the end'],
+          ['19', 'mainOffsetFor(extent, tallest)', "'start' -> 0; 'end' -> tallest - extent; 'center' -> (tallest - extent) / 2"],
+          ['20', 'cell main size', 'spinCellSize for MultiWays or when there are no explicit extents; otherwise (extent - (cells - 1) * mainGap) / cells'],
+          ['20', 'seed strip', 'frameBuilder.build(i, cells, bufferStart, bufferEnd, seed)'],
+          ['20', 'reel axis', 'reelAxis(orientation, perReel(directionPerReel) ?? direction)'],
+          ['20', 'reel curveFocus', 'crossCell / 2 + w * (setCentreCross - i * (crossCell + crossGap) - crossCell / 2)'],
+          ['20', 'the Reel', 'new Reel(config, symbolFactory, randomProvider, viewport); config also carries the per-reel curve, the warp renderer and ticker, bleed, stacking, gsap and symbolZIndex; reel.referenceSpeed = defaultSpinSpeed, then installDrive(drive)'],
+          ['21', 'mask', 'viewport.updateMaskSize(w, h, maskRects), one rect per reel; the rect formula is on the viewport page'],
+          ['22', 'ReelFactory', 'closures: extentFor, create (the same createReel), maskRect, mainOffset, viewportSize, poolCapacity'],
+          ['23', 'ReelSet', 'new ReelSet with config, reels, reelFactory, viewport, symbolFactory, frameBuilder, phaseFactory, spinningMode, defaultSpinMode, skipMode'],
+        ].map(([s, q, h]) => (
+          <tr class="border-t border-border align-top">
+            <td class="px-4 py-2 font-mono text-xs text-muted-foreground">{s}</td>
+            <td class="px-4 py-2 font-mono text-xs">{q}</td>
+            <td class="px-4 py-2 text-foreground/80">{h}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 
   <h2>Mask auto-pick</h2>
+
+  <p>
+    The mask is the shape that decides which part of each strip the player
+    can see; everything outside it, buffer cells included, is clipped. The
+    default mask is one rectangle per reel, which is exactly right for a
+    plain grid and wrong for two situations: a symbol that is wider than one
+    reel would be clipped in the gap between columns, and a reel that leans
+    towards the centre of the set (a curve with a set-wide focus) would be
+    clipped at its own column edge. In both cases the builder quietly switches
+    to one shared rectangle around the whole set. Figure 4 shows the
+    decision: the questions are asked top to bottom, an explicit strategy
+    short-circuits everything, both automatic rules land on the shared
+    rectangle, and the default is the per-reel rectangle.
+  </p>
 
   <Diagram height={490} caption="How build() chooses the mask. Questions are asked top to bottom; an explicit strategy short-circuits everything, both auto rules land on SharedRect, and the default is Rect.">
     <Box x={20} y={20} w={280} h={78} title="explicit strategy?" kind="ghost" mono={false} sub={['.maskStrategy(s) was called', 's.version must be 2']} />
@@ -155,14 +359,29 @@ const FIGURES: [number, number, string][] = [
   </Diagram>
 
   <p>
-    Rule one needs the gap: a tall <code>1 x N</code> stack never crosses a
-    column edge, so it does not trigger it. Rule two does not need a gap,
-    because a set-focused curve leans receding cells out of their own column
-    whether or not there is a gap there. Both rules log an info notice named
-    <code>mask-auto-shared</code> that says which reason fired.
+    The first rule only fires when there is a gap between columns, because
+    without a gap there is nothing to clip: a tall block that spans several
+    cells in one reel never crosses a column edge, so it does not trigger the
+    rule either. The second rule does not need a gap, because a set-focused
+    curve leans receding cells out of their own column whether or not a gap
+    is there. Both rules log an info notice named <code>mask-auto-shared</code> that says which reason fired, so you can
+    tell from the console why your mask is not the default. The <a href="/architecture/viewport-and-masks/">viewport page</a> has every
+    strategy you can choose explicitly.
   </p>
 
+  <Callout kind="gotcha">
+    The shared rectangle has a cost on sets where reels differ in height: it
+    uncovers the buffer cells beyond the short reels. If you combine a
+    pyramid layout with wide symbols, either hide the peek behind frame art
+    or pass a mask strategy of your own, which always wins over the auto-pick.
+  </Callout>
+
   <h2>Every setter, grouped by concern</h2>
+
+  <p>
+    The reference, for when you need a default or a constraint. Each card
+    groups the setters that affect one concern; required calls are marked.
+  </p>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
     <div class="rounded-xl border border-border bg-card p-4">
@@ -226,16 +445,19 @@ const FIGURES: [number, number, string][] = [
   </div>
 
   <p>
-    A handful of setters validate eagerly instead of waiting for
-    <code>build()</code>: <code>curveMode</code>, <code>curveBleed</code>,
-    <code>curveFocus</code>, <code>maskStrategy</code>,
-    <code>motionModel</code>, <code>symbolZIndex</code>, <code>tumble</code>,
-    <code>initialFrame</code> and the v1-key guards.
+    Most setters only record a value, but a handful check their argument on
+    the spot instead of waiting for <code>build()</code>, because a bad value
+    there is unambiguous and the earlier error is more useful. Those are <code>curveMode</code>, <code>curveBleed</code>, <code>curveFocus</code>, <code>maskStrategy</code>, <code>motionModel</code>, <code>symbolZIndex</code>, <code>tumble</code>, <code>initialFrame</code> and the guards that catch v1 option names.
   </p>
 
   <h2>What _validate() can say</h2>
 
-  <p>Messages in check order. Each becomes one line under the combined header.</p>
+  <p>
+    When step 1 throws, the message is this header followed by one line per
+    problem. The lines appear in check order, so a long list is worth reading
+    from the top: an early mistake (no reels, say) often explains the later
+    ones.
+  </p>
 
   <pre><code>{`reels() must be called with a positive number.
 one of visibleCells(n) or visibleCellsPerReel([...]) or multiways({...}) must be called.
@@ -258,14 +480,17 @@ ticker() must be called with a PixiJS Ticker.
 initialSpeed 'x' does not match any registered speed profile. Available: ...   (only when a speed is registered)`}</code></pre>
 
   <p>
-    And the four post-validate single throws, each on its own:
-    <code>directionPerReel() length (a) must equal reels() (n).</code>,
-    <code>curveMode('warp') renders each reel to a texture, so it needs a renderer: add .renderer(app.renderer)...</code>,
-    <code>curvePerReel() length (a) must equal reels() (n).</code> and
-    <code>bufferSymbols({'{ end: 0 }'}) is tumble-only...</code>.
+    The four checks from step 2 each throw on their own, with their own
+    message: <code>directionPerReel() length (a) must equal reels() (n).</code>, <code>curveMode('warp') renders each reel to a texture, so it needs a renderer: add .renderer(app.renderer)...</code>, <code>curvePerReel() length (a) must equal reels() (n).</code> and <code>bufferSymbols({'{ end: 0 }'}) is tumble-only...</code>.
   </p>
 
   <h2>Where each feature is wired</h2>
+
+  <p>
+    When you are chasing how a feature gets from the builder into the engine,
+    this table says which steps touch it and what it turns into on the other
+    side.
+  </p>
 
   <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
@@ -303,18 +528,30 @@ initialSpeed 'x' does not match any registered speed profile. Available: ...   (
   <h2>The closure rule</h2>
 
   <p>
-    The <code>createReel</code> closure outlives <code>build()</code>: the
-    ReelSet keeps it inside the <code>ReelFactory</code> and calls it again
-    from <code>addReels()</code> and <code>expand()</code>. So every builder
-    field it needs is copied into a <code>const</code> first. The source
-    comment puts it plainly: a builder reused for another set must not reach
-    into this one. Per-reel arrays are copied too, and <code>perReel()</code>
-    reuses the last entry for any reel added past the array's end. The gsap
-    instance is read at <code>build()</code> for the same reason: it is per
-    set, where v1 used a module global.
+    Step 19 looks like busywork: it copies a dozen builder fields into local
+    constants before the reel loop runs. The reason is that the reel-making
+    function outlives <code>build()</code>. The ReelSet keeps it inside the <code>ReelFactory</code> and calls it again whenever reels are added at
+    runtime, which may be minutes later. If that function read the builder's
+    fields directly, a builder you had since reused for a second set could
+    change the way the first set builds its new reels. The source comment
+    puts it plainly: a builder reused for another set must not reach into
+    this one.
   </p>
 
+  <Callout kind="why">
+    Copying the fields makes <code>build()</code> a snapshot. Per-reel arrays
+    are copied too, and <code>perReel()</code> reuses the last entry for any
+    reel added past the array's end, so a set that grows keeps the style of
+    its last column. The gsap instance is read at <code>build()</code> for the
+    same reason: it is per set, where v1 used a module global.
+  </Callout>
+
   <h2>Defaults</h2>
+
+  <p>
+    Every default the builder fills in when you say nothing, with the file
+    that defines it.
+  </p>
 
   <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
@@ -353,9 +590,15 @@ initialSpeed 'x' does not match any registered speed profile. Available: ...   (
   </div>
 
   <p>
-    One documentation note: the JSDoc block for <code>curveFocus</code> sits
-    above <code>curveMode</code> in the source, and the method itself is
-    further down. The code is the source of truth here. For the guide-level
-    walkthrough see <a href="/guides/your-first-reelset/">your first reel set</a>.
+    One documentation note, in case you read the source: the JSDoc block for <code>curveFocus</code> sits above <code>curveMode</code>, and the method
+    itself is further down. The code is the source of truth here. For the
+    guide-level walkthrough see <a href="/guides/your-first-reelset/">your first reel set</a>.
   </p>
+
+  <Callout kind="remember">
+    Setters only record; <code>build()</code> validates everything once,
+    throws once with every problem listed, and then constructs the engine in a
+    fixed order that ends with the <code>ReelSet</code>. Your <code>.phases()</code> overrides always run last, and the reel-making code
+    is a snapshot of the builder, so reusing a builder is safe.
+  </Callout>
 </Architecture>

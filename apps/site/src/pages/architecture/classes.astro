@@ -5,6 +5,7 @@ import Box from '../../components/arch/Box.astro';
 import Edge from '../../components/arch/Edge.astro';
 import Group from '../../components/arch/Group.astro';
 import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
 
 // ReelSet.destroy() in source order (core/ReelSet.ts:3702-3721).
 const TEARDOWN: [string, string][] = [
@@ -53,18 +54,63 @@ const CARDS: [string, string, string][] = [
   eyebrow="Objects"
 >
   <p>
-    Every class in pixi-reels sits on one of three layers: the
-    <strong>outer shell</strong> you build, the <strong>scene graph</strong>
-    PixiJS renders, or the <strong>internals</strong> that exist for the
-    duration of a spin. Ownership reads top to bottom, and the parent always
-    destroys its children on <code>destroy()</code>. The builder constructs
-    the viewport, the symbol factory, the frame builder, the random provider,
-    the phase factory and the reels, then hands them to the ReelSet through
-    one params object; the ReelSet constructs the SpeedManager, the
-    SpinController and the SymbolSpotlight itself.
+    A reel set is a lot of objects. Five reels of a few symbols each means
+    dozens of containers and sprites, plus the tweens that bounce them, the
+    ticker callbacks that move them every frame, the pooled symbols waiting
+    off screen, and the listeners your game attached. Slot games tear this
+    down and build it again all the time: a bonus round opens, a free-spins
+    board replaces the base board, the player switches games. If one ticker
+    callback survives that teardown it will run on a reel that no longer
+    exists and throw on the next frame; if one tween survives, it will animate
+    a destroyed sprite. The library's own source calls dangling ticker
+    callbacks the number one memory leak in the original engine.
+  </p>
+
+  <p>
+    The answer is strict ownership. Every object in pixi-reels has exactly
+    one parent, the parent is responsible for destroying it, and one call at
+    the top, <code>reelSet.destroy()</code>, cascades down the whole tree in
+    a fixed order. This page is that tree: who constructs what, who owns
+    what, and in what order it all comes apart.
+  </p>
+
+  <Callout kind="plain">
+    There is no garbage collector hiding inside the engine. Each class
+    destroys the things it made, and nothing else. If you can draw the
+    ownership tree, you know exactly what one <code>destroy()</code> frees.
+  </Callout>
+
+  <h2>Three layers</h2>
+
+  <p>
+    It helps to sort the classes into three layers before looking at the
+    tree. The <strong>outer shell</strong> is what you build: the builder and
+    the set it returns. The <strong>scene graph</strong> is what PixiJS
+    renders: the viewport, the reel containers and the symbols inside them.
+    The <strong>internals</strong> are the objects that exist for the duration
+    of a spin and do the timing, the counting and the choosing; none of them
+    draws anything. Ownership reads top to bottom through all three, and the
+    parent always destroys its children.
+  </p>
+
+  <p>
+    Construction is split between two places, and it is worth knowing which
+    is which. The builder constructs the viewport, the symbol factory, the
+    frame builder, the random provider, the phase factory and the reels, and
+    hands them all to the ReelSet through one params object. The ReelSet then
+    constructs the three subsystems that need the set to exist first: the
+    SpeedManager, the SpinController and the SymbolSpotlight.
   </p>
 
   <h2>The ownership tree</h2>
+
+  <p>
+    Figure 1 is the ReelSet after <code>build()</code> returns. Notice that
+    only one box, the viewport, is a display child that PixiJS draws; the
+    other seven are plain objects the set holds. The reels at the bottom are
+    owned by the set as objects, but their containers live inside the
+    viewport, which is why the next figure opens one reel on its own.
+  </p>
 
   <Diagram height={550} caption="What the ReelSet owns after build(). Eight subsystems plus the reels; the next figure opens one reel.">
     <Box x={20} y={80} w={200} h={60} title="ReelSetBuilder" kind="primary" sub="the only new you write" />
@@ -82,6 +128,16 @@ const CARDS: [string, string, string][] = [
     <Box x={488} y={342} w={196} h={78} title="pins, ReelFactory" sub={['Map<key, CellPin>', 'closure from build()']} />
     <Box x={276} y={436} w={408} h={78} title="Reel[]" kind="ghost" sub={['one per reels(n), plus addReels()', 'containers sit in the viewport']} />
   </Diagram>
+
+  <p>
+    Figure 2 is one reel. Each reel carries six things: an axis object that
+    says which way it travels, the motion that moves its strip every tick, a
+    queue of the symbols it must land on, the symbols themselves, the PixiJS
+    container they sit in, and a small event bus of its own. Notice that the
+    container's draw order is its reel index, positive or negative depending
+    on the stacking you chose, which is what decides whether the last reel
+    draws in front or behind.
+  </p>
 
   <Diagram height={370} caption="What one Reel owns. Its container is a display child of viewport.maskedContainer; the Reel object itself belongs to the ReelSet.">
     <Group x={20} y={20} w={680} h={330} kind="solid" label="Reel i" note="implements Disposable" />
@@ -105,7 +161,8 @@ const CARDS: [string, string, string][] = [
   <h2>What each class does, in plain English</h2>
 
   <p>
-    If a name feels opaque, read its one-liner here first.
+    Every class in the two figures, one card each. If a name on another page
+    feels opaque, this is the place to look it up.
   </p>
 
   <div class="not-prose my-6 grid gap-2 text-sm">
@@ -123,13 +180,16 @@ const CARDS: [string, string, string][] = [
   <h2>Teardown order</h2>
 
   <p>
-    <code>ReelSet.destroy()</code> is the single source of truth for teardown.
-    It guards against a second call, sets <code>isDestroyed</code>, and then
-    runs these ten lines in this order. The order matters: the controller goes
-    before the reels so no tick lands on a dead reel, the pool goes before the
-    viewport so released views are detached from the promoted layer before the
-    layer dies, and the <code>destroyed</code> event fires before the
-    listeners are dropped so anyone waiting on it still hears it.
+    <code>ReelSet.destroy()</code> is the single source of truth for
+    teardown. It guards against a second call, marks the set destroyed, and
+    then runs the ten lines in figure 3, in that order. The order is not
+    arbitrary. The spin controller goes before the reels so no frame callback
+    lands on a dead reel. The symbol pool goes before the viewport so that
+    symbols released into the pool are detached from the viewport's promoted
+    layer before that layer dies. And the <code>destroyed</code> event fires
+    one line before the listeners are dropped, so anyone waiting on it still
+    hears it. Read the figure top to bottom and notice that each step only
+    touches things the steps above it have not freed yet.
   </p>
 
   <Diagram height={TB_Y0 + (TEARDOWN.length - 1) * TB_PITCH + TB_H + 20} caption="ReelSet.destroy(), one box per line of source. Each step only touches things the previous steps have not freed yet.">
@@ -142,14 +202,29 @@ const CARDS: [string, string, string][] = [
   </Diagram>
 
   <p>
-    Two details from the code. The reel loop at step 3 runs before the pin
-    overlays at step 4 because overlays are pooled symbols too, and they are
-    released to the pool that step 5 then destroys. And the <code>nudge()</code>
-    catch block checks <code>isDestroyed</code> before emitting
-    <code>nudge:cancelled</code>, because after step 9 the bus is gone.
+    Two of the steps need a word of explanation. A <em>pin</em> is a cell that
+    stays put across spins (a sticky wild, a held coin), and the engine draws
+    it with an overlay that is itself a pooled symbol. That is why the pin
+    overlays at step 4 are destroyed after the reels but before the pool:
+    each overlay is released back into the pool, and the pool at step 5 then
+    disposes of everything it holds. The second is step 9. Once the listeners
+    are gone the bus is gone too, which is why the error handler in <code>nudge()</code> checks <code>isDestroyed</code> before trying to emit <code>nudge:cancelled</code>: an emit after this line would be shouting
+    into an empty room.
   </p>
 
+  <Callout kind="gotcha">
+    Destroy the set, not its parts. The controller's ticker callback and the
+    set's listeners are only removed by <code>reelSet.destroy()</code>, so
+    destroying a reel or the viewport on its own does not free them. One call
+    at the top does all ten steps.
+  </Callout>
+
   <h2>The Disposable contract</h2>
+
+  <p>
+    Every class that holds a resource promises the same two things: a <code>destroy()</code> method, and a flag that says whether it has already
+    run. That is the whole interface.
+  </p>
 
   <pre><code>{`export interface Disposable {
   destroy(): void;
@@ -159,10 +234,12 @@ const CARDS: [string, string, string][] = [
   <p>
     Anything that subscribes to a ticker, creates display objects or holds
     references implements it. Every <code>destroy()</code> in the engine is
-    idempotent: it returns early when <code>isDestroyed</code> is already set.
-    There is no hidden garbage collection. If you add a subsystem that holds
-    resources, it must implement <code>Disposable</code> and be destroyed from
-    the chain above, or it leaks.
+    safe to call twice: it returns early when <code>isDestroyed</code> is
+    already set, which is what lets the cascade be simple rather than
+    careful. If you add a subsystem of your own that holds resources, it must
+    implement <code>Disposable</code> and be destroyed from the chain above,
+    or it leaks. The list below is who owns what, so you can see which call
+    frees which resource.
   </p>
 
   <div class="not-prose my-4 grid gap-2 text-sm">
@@ -186,27 +263,61 @@ const CARDS: [string, string, string][] = [
   <h2>The TickerRef rule</h2>
 
   <p>
-    <code>packages/pixi-reels/src/utils/TickerRef.ts</code> wraps a
-    <code>PIXI.Ticker</code>. <code>add(fn)</code> records the callback and
-    forwards it to the ticker; <code>destroy()</code> removes every recorded
-    callback at once. Its header calls dangling ticker callbacks the number one
-    memory leak in the original library, and the rule that follows is simple:
-    nobody in the engine calls <code>ticker.add()</code> directly. The
-    SpinController constructs the one TickerRef and adds its
-    <code>_onTick</code> to it; <code>SpinController.destroy()</code> destroys
-    it, which is why the controller is the second thing the ReelSet tears down.
-    The testing subpath swaps in a <code>FakeTicker</code> at the same seam.
+    A PixiJS ticker calls a list of functions once per frame, forever, until
+    each one is removed. Forgetting to remove one is the easiest leak to
+    write and the hardest to see: the game keeps running, a little slower,
+    until the dead callback touches something that is gone. The engine's
+    answer is a thin wrapper, <code>TickerRef</code>, that remembers every
+    callback it adds and removes them all in one <code>destroy()</code>. The
+    rule that follows is simple: nobody in the engine calls <code>ticker.add()</code> directly.
   </p>
+
+  <Callout kind="why">
+    There is exactly one TickerRef, and the SpinController owns it. The
+    controller adds its one per-frame callback to it and destroys it in its
+    own <code>destroy()</code>, which is why the controller is the second
+    thing the set tears down: after that line, nothing in the set runs on a
+    frame. The testing subpath swaps a <code>FakeTicker</code> in at the same
+    seam, so a whole spin can be stepped by hand in Node.
+  </Callout>
 
   <h2>Extension points</h2>
 
-  <ul>
-    <li><strong><code>ReelSymbol</code></strong> for a new rendering style. Subclass it, implement the five required members, register it in <code>builder.symbols(r =&gt; r.register(id, Class, opts))</code>. The <a href="/architecture/symbols/">symbols page</a> has the lifecycle and every optional hook.</li>
-    <li><strong><code>ReelPhase&lt;TConfig&gt;</code></strong> for a new spin stage. Register a factory with <code>builder.phases(f =&gt; f.register(...))</code>; your configurators always run after the tumble and MultiWays defaults. See <a href="/architecture/spin-lifecycle/">spin lifecycle</a>.</li>
-    <li><strong><code>SpinningMode</code></strong> for a different motion model. Pass an instance to <code>builder.spinningMode(mode)</code>.</li>
-    <li><strong><code>FrameMiddleware</code></strong> to hook into per-result frame generation. <code>{'{ name, priority, process(ctx, next) }'}</code>; lower priority runs first, and a middleware that does not call <code>next()</code> short-circuits the rest. Random fill and target placement are themselves middleware. See <a href="/architecture/frame-pipeline/">the frame pipeline</a>.</li>
-    <li><strong><code>MaskStrategy</code></strong> for a custom clip shape. <code>{'{ version: 2, build(ctx), update(g, ctx) }'}</code>, or a <code>DrawableMaskStrategy</code> with <code>draw(g, ctx)</code> so it composes. See <a href="/architecture/viewport-and-masks/">viewport and masks</a>.</li>
-  </ul>
+  <p>
+    Five seams are designed to be replaced. Each row says what you would
+    reach for it to do and how to plug your version in.
+  </p>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Extend</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">When you want</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">How</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['ReelSymbol', 'a new way of drawing a cell', 'subclass it, implement the five required members, and register it with builder.symbols(r => r.register(id, Class, opts)). The symbols page has the lifecycle and every optional hook.'],
+          ['ReelPhase<TConfig>', 'a new stage in the spin', 'register a factory with builder.phases(f => f.register(...)). Your configurators always run after the tumble and MultiWays defaults. See the spin lifecycle page.'],
+          ['SpinningMode', 'a different idea of what a spin is', 'pass an instance to builder.spinningMode(mode).'],
+          ['FrameMiddleware', 'a say in which symbols land where', '{ name, priority, process(ctx, next) }. Lower priority runs first; a middleware that does not call next() stops the rest. Random fill and target placement are themselves middleware. See the frame pipeline page.'],
+          ['MaskStrategy', 'a custom clip shape', '{ version: 2, build(ctx), update(g, ctx) }, or a DrawableMaskStrategy with draw(g, ctx) so it composes with others. See the viewport page.'],
+        ].map(([e, w, h]) => (
+          <tr class="border-t border-border align-top">
+            <td class="px-4 py-2 font-mono text-xs">{e}</td>
+            <td class="px-4 py-2 text-foreground/80">{w}</td>
+            <td class="px-4 py-2 text-foreground/80">{h}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    The pages for each seam: <a href="/architecture/symbols/">symbols</a>, <a href="/architecture/spin-lifecycle/">spin lifecycle</a>, <a href="/architecture/frame-pipeline/">the frame pipeline</a> and <a href="/architecture/viewport-and-masks/">viewport and masks</a>.
+  </p>
 
   <h2>Where this lives</h2>
 
@@ -232,4 +343,11 @@ const CARDS: [string, string, string][] = [
       </ul>
     </div>
   </div>
+
+  <Callout kind="remember">
+    Every object has one owner, every owner destroys what it made, and <code>reelSet.destroy()</code> runs the whole cascade in an order that
+    stops the ticker first and drops the listeners last. If you add something
+    that holds a resource, give it a <code>destroy()</code> and hang it off
+    that chain.
+  </Callout>
 </Architecture>

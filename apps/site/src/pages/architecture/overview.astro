@@ -6,6 +6,7 @@ import Edge from '../../components/arch/Edge.astro';
 import Group from '../../components/arch/Group.astro';
 import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
 ---
 <Architecture
   title="Overview"
@@ -13,13 +14,40 @@ import Legend from '../../components/arch/Legend.astro';
   eyebrow="Start here"
 >
   <p>
-    pixi-reels is three rings. The <strong>builder</strong> validates your
-    configuration and constructs everything in one <code>build()</code> call.
-    The <strong>reel set</strong> is the PixiJS container you add to the stage:
-    it owns the reels, the spin controller, the speed profiles and the win
-    spotlight. Around that sit two optional subpaths, <strong>testing</strong>
-    and <strong>debug</strong>, which never ship in a production bundle unless
-    you import them.
+    A slot machine looks simple from the outside: press a button, five columns
+    blur, five columns stop, you see a grid. Inside a real game that moment is
+    a surprising amount of coordination. Something has to fetch the result from
+    a server while the reels are already moving, hand each column the exact
+    symbols it must land on, stop them one after another with a satisfying
+    bounce, let one column hesitate for drama, and survive a player who taps
+    the button twenty times a second. pixi-reels is that machinery, packaged so
+    you can build the game around it instead of building it again.
+  </p>
+
+  <Callout kind="plain">
+    You describe the board once with a builder. You get back one PixiJS
+    container, the <code>ReelSet</code>, that you add to your stage. From then
+    on you talk to it in three verbs: <code>spin()</code>, <code>setResult()</code> when the server answers, and <code>events.on()</code> to hear what happened.
+    Everything else on this page is what happens between those calls.
+  </Callout>
+
+  <h2>Three rings</h2>
+
+  <p>
+    It helps to picture the library as three rings around your game. The
+    innermost ring is the <strong>builder</strong>: a fluent object that
+    collects your configuration and, in one <code>build()</code> call, checks
+    it and constructs everything. The middle ring is the <strong>reel set</strong>: the container that owns the reels, the spin
+    controller, the speed profiles and the win spotlight. The outer ring is
+    optional tooling, <strong>testing</strong> and <strong>debug</strong>,
+    that attaches from the outside and never ships in your bundle unless you
+    import it.
+  </p>
+
+  <p>
+    Figure 1 is the middle ring after <code>build()</code> returns. The boxes
+    inside the ReelSet are its subsystems; each one has its own page in this
+    tour.
   </p>
 
   <Diagram height={430} caption="What you construct, and what build() hands back. The ReelSet owns six subsystems and one display child, the viewport.">
@@ -42,6 +70,24 @@ import Legend from '../../components/arch/Legend.astro';
     <Box x={488} y={248} w={196} h={78} title="EventEmitter" sub={['59 typed events', 'spin:*, skip:*, ...']} />
     <Box x={276} y={342} w={408} h={52} title="ReelViewport" kind="subtle" sub="the only display child: five reels under one mask" />
   </Diagram>
+  <ul>
+    <li><strong>SpinController</strong> is the conductor. It walks each reel through its phases (start, spin, maybe anticipation, stop), holds every reel back until your result has arrived, and turns a skip press into a slam or a quicken. It never draws and never chooses an outcome.</li>
+    <li><strong>SpeedManager</strong> holds named timing profiles, normal, turbo and super turbo out of the box, and lets you tune any phase at runtime.</li>
+    <li><strong>FrameBuilder</strong> turns your result grid into the exact list of symbols each reel will show, buffers included, before the reel starts stopping.</li>
+    <li><strong>SymbolFactory</strong> hands out symbol instances from a pool, one pool per symbol id, so a five-second spin allocates nothing.</li>
+    <li><strong>SymbolSpotlight</strong> is the win presentation primitive: dim the losers, lift the winners above the mask, play their animation.</li>
+    <li><strong>EventEmitter</strong> is how the set talks back. Fifty-nine typed events, from <code>spin:start</code> to <code>pin:expired</code>.</li>
+  </ul>
+
+  <h2>What a reel is</h2>
+
+  <p>
+    The word "reel" usually means a column on screen. In pixi-reels a reel is
+    a <em>strip</em>: an array of symbols that is longer than the window you
+    see. The extra symbols sit just outside the visible area, above and below
+    it, so there is always something ready to scroll in. The window itself is
+    a mask on the viewport. Figure 2 shows the five strips under that mask.
+  </p>
 
   <Diagram height={330} caption="Inside the viewport. Each Reel is a strip longer than the window; the mask hides the buffer cells above and below it.">
     <Group x={20} y={20} w={680} h={290} kind="dashed" label="ReelViewport" note="maskedContainer" />
@@ -60,6 +106,33 @@ import Legend from '../../components/arch/Legend.astro';
     <Label x={360} y={244} text="dashed = the visible window (the mask)" anchor="middle" tone="fg" />
     <Label x={360} y={268} text="the symbols above and below it are buffer cells, drawn but clipped" anchor="middle" />
   </Diagram>
+  <Callout kind="why">
+    Keeping the off-screen symbols as real, positioned objects is what makes
+    everything else cheap. Scrolling is just moving the strip. Landing is just
+    deciding which symbol goes into which slot as it scrolls past the edge.
+    Nothing is created or destroyed while a reel moves.
+  </Callout>
+
+  <p>
+    Each strip carries three small helpers. <code>ReelAxis</code> knows which
+    screen axis the strip travels on and in which direction, so the same code
+    runs a vertical, horizontal or reversed reel. <code>ReelMotion</code> owns
+    the position of every symbol and derives it from the array index on every
+    frame, which is why reels never drift. <code>StopSequencer</code> is the
+    short queue of symbols the reel must land on, handed out one at a time as
+    symbols wrap around. The <a href="/architecture/motion/">motion page</a> walks through one frame of all three.
+  </p>
+
+  <h2>Things that attach from outside</h2>
+
+  <p>
+    Two subpaths exist so you can look inside without shipping the tools. <code>pixi-reels/testing</code> swaps exactly two things, the Pixi ticker
+    and the symbol art, and leaves everything else real, which is why a whole
+    spin can run in Node in a few milliseconds. <code>pixi-reels/debug</code> draws what the engine knows (cells, buffers,
+    axes, a phase timeline) onto the canvas, and <code>enableDebug()</code> in
+    the main entry exposes the same facts as JSON for anyone, human or agent,
+    who cannot see a canvas.
+  </p>
 
   <Diagram height={300} caption="Two subpaths attach from outside and never ship unless imported. Testing swaps the ticker and the art; debug only reads.">
     <Box x={250} y={110} w={220} h={78} title="ReelSet" kind="primary" sub={['the thing on', 'your stage']} />
@@ -74,7 +147,6 @@ import Legend from '../../components/arch/Legend.astro';
     <Edge from={[210, 149]} to={[250, 149]} style="dashed" />
     <Edge from={[510, 149]} to={[470, 149]} style="dashed" />
   </Diagram>
-
   <div class="not-prose my-8">
     <Legend items={[
       { kind: 'primary', label: 'Entry point', note: 'the one class you construct yourself' },
@@ -84,58 +156,81 @@ import Legend from '../../components/arch/Legend.astro';
     ]} />
   </div>
 
-  <h2>Reading the diagram</h2>
+  <h2>One spin, end to end</h2>
 
-  <ul>
-    <li><strong>You construct exactly one class.</strong> <code>ReelSetBuilder</code> is the only <code>new</code> in a typical game. Its <code>build()</code> validates every setting, then constructs the viewport, the symbol pool, the frame pipeline, the reels, and finally the <code>ReelSet</code> that owns them. The <a href="/architecture/builder/">builder page</a> walks that call line by line.</li>
-    <li><strong>The ReelSet is a PixiJS container.</strong> <code>app.stage.addChild(reelSet)</code> and it renders. Its only display child is the <code>ReelViewport</code>, which holds the five reel containers under one mask plus the layers above the mask that win presentation uses. See <a href="/architecture/viewport-and-masks/">viewport and masks</a>.</li>
-    <li><strong>Each reel is a strip, not a column.</strong> A <code>Reel</code> owns an array of symbols longer than the window (buffer cells on both ends), a <code>ReelMotion</code> that derives every symbol's position from its array index, and a <code>StopSequencer</code> that hands out the landing symbols one wrap at a time. See <a href="/architecture/motion/">motion</a>.</li>
-    <li><strong>The SpinController only does timing.</strong> It runs each reel through <code>start → spin → [anticipation] → stop</code>, gates stopping on <code>setResult()</code>, and turns button presses into slams or quickens. It draws nothing and decides no outcome. See <a href="/architecture/spin-lifecycle/">spin lifecycle</a> and <a href="/architecture/timeline/">a spin in milliseconds</a>.</li>
-    <li><strong>Everything talks through typed events.</strong> Two buses: <code>reelSet.events</code> (59 set-level events) and <code>reel.events</code> (7 per-reel events). The full map is on the <a href="/architecture/events/">events page</a>.</li>
-    <li><strong>Testing swaps two things.</strong> A <code>FakeTicker</code> for the Pixi ticker and <code>HeadlessSymbol</code> for the art. Nothing else changes, which is why a full spin runs in Node in milliseconds. See <a href="/architecture/testing/">testing model</a>.</li>
-  </ul>
+  <p>
+    Here is the story the rest of this tour tells in detail. You call <code>spin()</code>. Each reel starts a little after the previous one, so
+    the kickoff looks staggered. Meanwhile your code asks the server for the
+    outcome and calls <code>setResult()</code> with the grid. The controller
+    waits until every reel is actually spinning and until each has spun for a
+    minimum time, then lets them stop one by one. As a stopping reel scrolls,
+    the symbols it must land on are swapped in at the top edge, one per wrap,
+    until the last one is in place; the reel snaps to the grid and bounces.
+    When the last reel has bounced, the promise from <code>spin()</code> resolves with the grid and the set emits <code>spin:complete</code>.
+  </p>
 
-  <h2>What lives where</h2>
+  <p>
+    If the player presses skip, the controller either slams (every reel lands
+    on its result this frame) or quickens (the delays are cut, the landing
+    still plays), depending on what you asked for. If a reel was set up to
+    tease, it slows down and holds before it stops, and you can protect that
+    tease from the first skip press. All of that is covered on the <a href="/architecture/spin-lifecycle/">spin lifecycle</a>, <a href="/architecture/timeline/">timeline</a>, <a href="/architecture/skipping/">skipping</a> and <a href="/architecture/anticipation/">anticipation</a> pages.
+  </p>
+
+  <h2>Where the code lives</h2>
+
+  <p>
+    You rarely need to open these files, but it helps to know the map when a
+    stack trace points into the library.
+  </p>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
     <div class="rounded-xl border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>core/</code> ReelSet, ReelSetBuilder, Reel, ReelViewport, ReelMotion, ReelAxis, ReelDrive, ReelCurve, ReelWarp, StopSequencer, maskStrategies</li>
-        <li><code>spin/</code> SpinController, phases (Start, Spin, Anticipation, Stop, Adjust, Cascade*), steps, modes</li>
-        <li><code>symbols/</code> ReelSymbol and the Sprite, AnimatedSprite, Spine, Card, Empty subclasses; SymbolRegistry, SymbolFactory</li>
-        <li><code>frame/</code> FrameBuilder, ColumnTarget, RandomSymbolProvider, SymbolPool</li>
-        <li><code>config/</code> types, defaults, SpeedPresets, phaseProfile</li>
-        <li><code>speed/</code> SpeedManager · <code>spotlight/</code> SymbolSpotlight · <code>wins/</code> WinPresenter</li>
-        <li><code>cascade/</code> tumbleAlgorithm, TumbleConfig · <code>board/</code> BoardGrid, Hold &amp; Win · <code>pins/</code> CellPin</li>
-        <li><code>events/</code> EventEmitter, ReelEvents · <code>utils/</code> Disposable, TickerRef, gsap, notify</li>
-        <li><code>debug/</code> enableDebug (main) and the <code>pixi-reels/debug</code> subpath · <code>testing/</code> the <code>pixi-reels/testing</code> subpath</li>
+        <li><code>core/</code> the set, the builder, one reel and its motion, axis, curve and viewport</li>
+        <li><code>spin/</code> the controller, the phases and their steps, the spinning modes</li>
+        <li><code>symbols/</code> the symbol base class and its sprite, animated, Spine and card flavours, plus the registry and factory</li>
+        <li><code>frame/</code> how a result grid becomes a strip of symbols</li>
+        <li><code>config/</code> types, defaults, the speed presets</li>
+        <li><code>speed/</code>, <code>spotlight/</code>, <code>wins/</code> timing profiles and win presentation</li>
+        <li><code>cascade/</code>, <code>board/</code>, <code>pins/</code> tumble physics, boards and Hold &amp; Win, sticky cells</li>
+        <li><code>events/</code>, <code>utils/</code> the typed emitter, the ticker wrapper, gsap plumbing, notices</li>
+        <li><code>debug/</code>, <code>testing/</code> the two subpaths</li>
       </ul>
     </div>
     <div class="rounded-xl border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">apps/site/src/runtime/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>BlurSpriteSymbol.ts</code> sprite symbol with a motion-blur texture swap</li>
-        <li><code>CoinSymbol.ts</code> Graphics-drawn coin symbol for Hold &amp; Win</li>
-        <li><code>holdAndWinFx.ts</code> coin waves and bezier collect flights</li>
-        <li><code>prototypeSpriteLoader.ts</code> the prototype-symbols atlas loader</li>
+        <li><code>BlurSpriteSymbol.ts</code> a sprite symbol that swaps to a motion-blur texture while spinning</li>
+        <li><code>CoinSymbol.ts</code> a coin drawn with Graphics, for Hold &amp; Win demos</li>
+        <li><code>holdAndWinFx.ts</code> coin waves and collect flights</li>
+        <li><code>prototypeSpriteLoader.ts</code> the open-licensed symbol atlas the demos use</li>
         <li><code>spineSets.ts</code> the bundled Spine sets behind one interface</li>
       </ul>
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">packages/cheats/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>cheats.ts</code> CheatEngine and the built-in forced results</li>
-        <li><code>seededRng.ts</code> Mulberry32 PRNG · <code>ways.ts</code> countWays, evaluateWays</li>
+        <li><code>cheats.ts</code> forced results for demos and tests</li>
+        <li><code>seededRng.ts</code> a tiny seeded random number generator</li>
       </ul>
     </div>
   </div>
 
   <p>
-    Neither the recipe runtime nor the cheats package is library API. They are
-    reference code you copy into your game, which is why they live outside
-    <code>packages/pixi-reels/</code> (ADR 009).
+    The recipe runtime and the cheats package are reference code, not library
+    API. They live outside the package on purpose so you copy what you need
+    into your own game and own it.
   </p>
 
-  <h2>Dependency direction</h2>
+  <h2>Which way the imports point</h2>
+
+  <p>
+    One rule keeps the library easy to reason about and lets the testing
+    subpath be dropped from your bundle: imports only ever point down the
+    stack in figure 4. The types and the event emitter know nothing about
+    reels; reels know nothing about the controller; the controller knows
+    nothing about the set that owns it.
+  </p>
 
   <Diagram height={470} caption="Imports only point downward. No cycles, which is what keeps the testing subpath tree-shakeable.">
     {[
@@ -152,10 +247,16 @@ import Legend from '../../components/arch/Legend.astro';
       <Edge from={[360, 76 + i * 74]} to={[360, 94 + i * 74]} />
     ))}
   </Diagram>
+  <Callout kind="remember">
+    You construct one builder, you get one container, you speak three verbs.
+    The reels are strips under a mask, the controller only does timing, and
+    everything reports back through typed events. The rest of the tour zooms
+    into each of those sentences.
+  </Callout>
 
   <p>
-    Read on in order for the full tour, or jump to the page that answers your
-    question. Every page has one hand-laid-out diagram per idea and cites the
-    file it describes.
+    Read on in order, or jump to the page that answers your question. Every
+    page opens with the idea in plain words, then shows it, then names the
+    code.
   </p>
 </Architecture>

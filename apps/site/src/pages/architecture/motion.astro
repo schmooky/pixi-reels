@@ -7,6 +7,7 @@ import Group from '../../components/arch/Group.astro';
 import Label from '../../components/arch/Label.astro';
 import Cell from '../../components/arch/Cell.astro';
 import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
 
 const stripKinds = ['buffer', 'buffer', 'plain', 'plain', 'plain', 'buffer', 'buffer'] as const;
 const stripIds = ['K', 'Q', 'A', '7', 'J', '9', 'W'];
@@ -22,24 +23,107 @@ const quads: Quad[] = [
   { x: 16, y: 290, label: 'horizontal / forward', vertical: false, forward: true, line: "main 'x', polarity +1, feed 'start'" },
   { x: 364, y: 290, label: 'horizontal / reverse', vertical: false, forward: false, line: "main 'x', polarity -1, feed 'end'" },
 ];
+
+const laws = [
+  ['Rigidity and order', 'Neighbours in the array are always exactly one pitch apart on screen, and the array is sorted by screen position. Array index is screen order, so getSymbolAt, getVisibleSymbols, placeSymbols and the z-index formula all index by array position.'],
+  ['Any step size is legal', 'There is no "at most one wrap per call" rule. A step of three pitches applies three rotations inside the same advance() call. The half-pitch cap in StandardMode exists only for smoothness.'],
+  ['Inverse and additivity', 'advance(d) followed by advance(-d) restores the exact state, and advance(a) then advance(b) equals advance(a + b). Frame rate therefore cannot change where a reel ends up.'],
+  ['Nobody else writes a main coordinate', 'The reel reads each view\'s position back to work out which seat it is in (in beginMotion, notifyLanded and _replaceSymbol), so a bent or shifted value would compound on every round trip. The one documented exception is ReelSymbol.playDestroy, which restores what it touched. Curves hand the symbol a quad instead of moving it.'],
+  ['Travel is not facing', 'Direction changes which way the strip moves and which edge feeds it. It never rotates or mirrors the art (ADR 017); view.rotation stays 0 in every combination.'],
+  ['The epsilon snap', 'travel / pitch is rounded to a whole number when it is within 1e-9 of one, so a travel of exactly N pitches lands on rotation N rather than N - 1 when float residue leaves it a hair short. The remainder is zeroed under the same epsilon.'],
+];
+
+const landOrder = [
+  ['haltDrive()', 'speed, target speed and the drive state all go to zero together'],
+  ['isStopping = false', 'the wrap callback stops asking the sequencer'],
+  ['snapToGrid()', 'travel, rot and off go to zero and every view is re-rendered on its grid seat; then _finalizeFrame() and refreshZIndex()'],
+  ['notifySpinEnd()', 'every symbol on the strip gets onReelSpinEnd()'],
+  ['notifyLanded(cells)', 'every symbol gets onReelLanded(ctx); the reel raises \'landing\' and the set emits spin:reelLanding'],
+];
+
+const nudgeRules = [
+  ['The reel is moving, stopping or already nudging', 'a nudge is a post-stop move; two at once would fight over the strip'],
+  ['distance is not a positive integer strictly below M', 'at M the strip would rotate fully and any pre-placed buffer entries would be silently dropped'],
+  ['incoming.length is not equal to distance', 'every revealed cell needs exactly one id'],
+  ['An incoming id is unregistered, or is a big symbol', 'big symbols cannot be introduced through a nudge'],
+  ['A same-reel block would be split by the wrap boundary', 'half a big symbol cannot wrap on its own'],
+  ['A visible cell belongs to a cross-reel block', 'the neighbouring reel would be left holding a torn block'],
+];
+
+const geometry = [
+  ['extent', 'The length of the reel box along the strip. It comes from reelExtents([...]), multiways({ reelExtent }), or cells * cellMain + (cells - 1) * mainGap.'],
+  ['mainOffset', 'Where a shorter reel sits inside the tallest strip, chosen by reelAnchor: \'start\' gives 0, \'end\' gives tallest - extent, \'center\' (the default) gives half of that. It is written to the reel container and re-baked into any lifted unmask view by _syncUnmaskedViewOffsets after every motion write.'],
+  ['cellMain', 'The size of one cell along the strip for this reel: (extent - (cells - 1) * mainGap) / cells when explicit extents are set, otherwise the symbol size itself. spinCellSize is the cell every MultiWays reel spins on; AdjustPhase reshapes to the landed size afterwards through Reel.reshape and ReelMotion.reshape, which only refresh the pitch and bufferStart.'],
+  ['symbolWidth / symbolHeight', 'axis.toScreen(cellCross, cellMain): the screen-space pair every resize() call receives.'],
+];
 ---
 <Architecture
   title="Motion"
-  subtitle="The strip, index to position, wrapping, the axis, one tick."
+  subtitle="How a column of symbols scrolls, wraps and stops exactly on the grid, every time."
   eyebrow="Physics"
 >
   <p>
-    A reel is not a column of three symbols. It is a <strong>strip</strong> of
-    <code>M = bufferStart + visibleCells + bufferEnd</code> symbols that
-    marches along one screen axis and wraps around. Every position on screen
-    is computed from a symbol's <em>array index</em> each frame, nothing is
-    accumulated, and the only state the motion layer keeps is how far the strip
-    has travelled since it was last snapped. This page covers that layer
-    (<code>packages/pixi-reels/src/core/ReelMotion.ts</code>), the axis it is
-    projected through, the drive model, and what happens in one ticker frame.
+    Watch one column of a slot machine while it spins. Symbols stream past,
+    the top one slides out of view, a new one slides in at the bottom, and
+    when the column stops every symbol sits dead centre in its cell. Now
+    imagine doing that for a few seconds at sixty frames a second, on a tab
+    that might freeze and refocus, with a player hammering the skip button.
+    The easy implementation, "move each sprite down a bit each frame and
+    recycle it when it leaves", drifts: a rounding error here, a skipped
+    frame there, and after a long spin the column lands half a pixel off, or
+    one symbol short.
   </p>
 
+  <p>
+    pixi-reels avoids that by refusing to accumulate anything per symbol. A
+    reel keeps a single number, how far the strip has travelled since it was
+    last snapped to the grid, and recomputes every symbol's position from
+    that number and the symbol's place in an array on every frame. This page
+    is about that layer: the strip of symbols, the one formula that places
+    them, how the array rotates when a symbol wraps, how the same code runs a
+    vertical or horizontal reel, and what happens in one tick of the clock.
+  </p>
+
+  <Callout kind="plain">
+    A reel is an array of symbols that is a little longer than the window you
+    see. Scrolling means adding to one travel number; placing means reading
+    each symbol's array index and multiplying. When the strip has moved a
+    whole cell, the array rotates by one and the symbol that left is reused
+    at the other end. Nothing is created, nothing is destroyed, and nothing
+    is remembered per symbol.
+  </Callout>
+
   <h2>The strip</h2>
+
+  <p>
+    Some vocabulary first, because the rest of the page leans on it. The <strong>strip</strong> is the array of symbols one reel owns. The <strong>visible cells</strong> are the ones inside the window the player
+    sees; the window is a mask on the viewport. On either side of the window
+    the strip carries extra <strong>buffer cells</strong>, drawn but clipped,
+    so there is always a symbol ready to scroll in and one still on its way
+    out. The strip therefore has <code>M = bufferStart + visibleCells + bufferEnd</code> symbols, where <code>bufferStart</code> and <code>bufferEnd</code> are the
+    number of buffer cells on each side. With one buffer per side (the
+    default) and three visible cells, that is five symbols per reel.
+  </p>
+
+  <p>
+    Each symbol has one coordinate the motion layer cares about, which this
+    page calls <strong>main</strong>: its position along the direction the
+    strip travels. On a vertical reel main is <code>y</code>; on a
+    horizontal reel it is <code>x</code>. The distance from one symbol's main
+    coordinate to the next is the <strong>pitch</strong>: the cell size along
+    the strip plus the gap between cells. If your cells are 96 pixels tall
+    with a 4 pixel gap, the pitch is 100 and every symbol sits exactly 100
+    pixels after its neighbour.
+  </p>
+
+  <p>
+    Figure 1 lays one strip out as a table: seven symbols, two buffers above
+    the window, three visible, two buffers below. Notice that index 0 is
+    always the symbol nearest the <em>start</em> edge (the top, on a vertical
+    reel) no matter which way the reel is travelling, and that the first
+    visible cell is at main 0 because the buffer cells above it have negative
+    coordinates.
+  </p>
 
   <Diagram height={500} caption="One reel's symbol array, with the main coordinate each index gets at pitch 100 and off 0. Index 0 is always the symbol nearest the start edge, whatever direction the reel travels; the dashed outline is the mask.">
     <Label x={70} y={40} text="i" anchor="end" weight={600} tone="fg" />
@@ -74,44 +158,101 @@ const quads: Quad[] = [
   </div>
 
   <p>
-    Read the figure as a table: <code>pitch = cellMain + mainGap</code>
-    (<code>ReelMotion.slotPitch</code>), and with <code>bufferStart = 2</code>
-    index 2 is the first visible cell at main 0, index 0 sits one buffer above
-    the window at -200, and the window spans <code>0 .. 3 * pitch - gap</code>.
-    <code>getCellMain(cell) = (cell - bufferStart) * pitch</code> is the same
-    formula read back by visible cell number. <code>snapToGrid()</code> sets
-    <code>travel = rot = off = 0</code> and re-renders, so after a snap every
-    symbol sits exactly on its grid slot. Buffers are geometric:
-    <code>bufferStart</code> is the smaller coordinate on every reel, forward
-    or reverse (ADR 016 section 3.4).
+    The formula at the bottom of the figure is the whole placement rule, so
+    it is worth reading slowly. Take a symbol's index <code>i</code> in the
+    array and subtract the number of buffer cells above the window; that
+    tells you how many cells the symbol is below the first visible cell
+    (negative if it is a buffer above). Multiply by the pitch to turn cells
+    into pixels. Then add <code>off</code>, the fraction of a cell the whole
+    strip has scrolled since the last wrap, which is the same for every
+    symbol on the reel. That is it: no symbol has a position of its own,
+    only an index.
+  </p>
+
+  <p>
+    The figure also names the two ends of the strip. The <strong>feed
+    edge</strong> is where new symbols enter while the reel is moving, and
+    the <strong>exit edge</strong> is where they leave. On a forward reel the
+    feed edge is the start (top) and symbols travel toward the end; on a
+    reverse reel it is the other way round. In code, the pitch is <code>ReelMotion.slotPitch</code>, and <code>getCellMain(cell)</code> is
+    the same formula read by visible cell number instead of array index. <code>snapToGrid()</code> sets travel and the offset back to zero and
+    re-renders, which is how a landed reel ends up with every symbol exactly
+    on its grid seat. One rule to hold on to: <code>bufferStart</code> is
+    always the side with the smaller coordinate, forward or reverse (ADR 016
+    section 3.4). Buffers are about geometry, not about which way the reel
+    happens to be moving.
   </p>
 
   <h2>Derive from index, never accumulate</h2>
 
   <p>
-    <code>ReelMotion.advance(delta)</code> does not move symbols by
-    <code>delta</code>. It adds <code>polarity * delta</code> to a single
-    <code>_travel</code> number, derives the whole-wrap count
-    <code>rot = floor(travel / pitch)</code>, rotates the array until the
-    applied count matches, and then writes every symbol's position from scratch
-    with the formula above. ADR 018 (<code>docs/adr/018-motion-contract.md</code>)
-    is the reason: a property suite found that the old accumulate-and-compare
-    model skipped a wrap at exact slot boundaries, which lands the frame one
-    symbol short. Deriving makes the strip's laws true by construction and the
-    suite in <code>packages/pixi-reels/tests/contract/</code> runs them in CI
-    against all four orientation × direction combinations.
+    Here is the idea that the whole layer is built on. When the controller
+    asks the reel to move by some number of pixels, <code>advance(delta)</code> does not touch any symbol. It adds the delta to a single travel number
+    (with the sign flipped on a reverse reel, so that "travel" always means
+    "in the reel's own direction"). Then it asks a simple question: how many
+    whole cells is that?
   </p>
 
-  <ul>
-    <li><strong>Rigidity and order.</strong> <code>main(symbols[i+1]) - main(symbols[i]) === pitch</code> and the array is strictly ascending by main coordinate. Array index <em>is</em> screen order. <code>getSymbolAt</code>, <code>getVisibleSymbols</code>, <code>placeSymbols</code> and the z-index formula all index by array position because of this.</li>
-    <li><strong>Any step size is legal.</strong> There is no "at most one wrap per call" precondition. A 3-pitch step applies three rotations in the same <code>advance</code>. The half-slot cap in <code>StandardMode</code> is now only for smoothness.</li>
-    <li><strong>Inverse and additivity.</strong> <code>advance(d); advance(-d)</code> restores the exact state and <code>advance(a); advance(b)</code> equals <code>advance(a+b)</code>, so frame rate cannot change where a reel ends up.</li>
-    <li><strong>Never write a main coordinate outside the motion layer.</strong> <code>Reel</code> reads <code>view[mainProp]</code> back in <code>beginMotion</code>, <code>notifyLanded</code> and <code>_replaceSymbol</code> to recover which slot a view is in. The one documented exception is <code>ReelSymbol.playDestroy</code>, which restores what it touched. Curves hand the symbol a view-local quad instead of moving it.</li>
-    <li><strong>Travel is not facing.</strong> Direction changes which way the strip moves and which edge feeds it; it never rotates or mirrors the art (ADR 017). <code>view.rotation</code> stays 0 in every combination.</li>
-    <li><strong>EPS snap.</strong> <code>travel / pitch</code> is rounded to a whole number when within <code>1e-9</code>, so a travel of exactly N pitches lands on rotation N rather than N-1 when float residue leaves it a hair short. The remainder <code>off</code> is zeroed under the same epsilon.</li>
-  </ul>
+  <p>
+    The answer is <code>travel / pitch</code>, rounded down, and it is worth
+    seeing why that is the number of wraps. The pitch is the distance from
+    one seat to the next. Every time the strip has moved one more pitch,
+    every symbol has advanced exactly one seat, so the symbol at the exit
+    edge has moved out of the strip entirely and a new seat has opened at
+    the feed edge. That is one <strong>wrap</strong>. Dividing total travel
+    by pitch therefore counts how many times that has happened since the
+    last snap. The motion layer rotates the array until the number of
+    rotations it has applied matches that count, keeps the remainder as <code>off</code>, and writes every position from the formula above.
+  </p>
+
+  <p>
+    ADR 018 (<code>docs/adr/018-motion-contract.md</code>) records why this
+    matters. The earlier implementation accumulated an offset per frame and
+    wrapped when it crossed a threshold; a property-based test suite found
+    that it could skip a wrap when the strip landed exactly on a cell
+    boundary, which leaves the landed frame one symbol short. Deriving the
+    wrap count from total travel makes that impossible by construction. The
+    suite in <code>packages/pixi-reels/tests/contract/</code> now runs the
+    laws below in CI against all four orientation and direction combinations.
+  </p>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Law</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">What it means</th>
+        </tr>
+      </thead>
+      <tbody>
+        {laws.map(([k, v]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 text-xs font-semibold whitespace-nowrap align-top">{k}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <Callout kind="why">
+    Accumulating per symbol feels natural and is wrong in a way that only
+    shows up after thousands of spins. Deriving from one number means a
+    dropped frame, a huge delta or a float residue can change how smooth the
+    spin looks but never where it ends. The laws in the table are not design
+    goals the code tries to meet; they fall out of the formula.
+  </Callout>
 
   <h2>The wrap cycle</h2>
+
+  <p>
+    Figure 2 is <code>advance()</code> drawn as a flow. Follow the single
+    number down the middle: the delta goes into travel, travel gives a wrap
+    count and a remainder, and the array is rotated one way or the other
+    until it has caught up. Notice that the array can rotate in either
+    direction, because travel can go backwards too (the brief step-back at
+    the start of a spin does exactly that).
+  </p>
 
   <Diagram height={560} caption="advance() derives rotation. Travel is one number; the whole-wrap count comes from it, the array is rotated until it matches, and _render() writes every position from index.">
     <Box x={180} y={20} w={360} h={60} title="advance(delta)" kind="primary" sub="delta = 0 returns at once" />
@@ -130,6 +271,17 @@ const quads: Quad[] = [
     <Edge from={[530, 404]} via={[[530, 434], [360, 434]]} to={[360, 464]} />
     <Label x={360} y={550} text="main = (i - bufferStart) * pitch + off" size={14} mono tone="fg" anchor="middle" />
   </Diagram>
+
+  <p>
+    A rotation moves one symbol from the exit edge of the array to the feed
+    edge, but it does not decide what that symbol should now show. That is
+    the reel's job, and figure 3 shows how it chooses. Each rotation hands
+    the wrapped symbol to the reel, which asks up to three sources in order:
+    a nudge in flight supplies its own ids; a reel that is stopping takes
+    the next id from the queue of symbols it must land on; and otherwise the
+    id is a random draw. The first source that answers wins, and the seat is
+    refilled before anything is drawn.
+  </p>
 
   <Diagram height={420} caption="The wrap callback picks an id. Each rotation hands the wrapped symbol to the Reel, which asks three sources in order; the first that answers wins, and the seat is refilled before _render() runs.">
     <Box x={200} y={20} w={320} h={60} title="Reel._onSymbolWrapped()" kind="accent" sub="called once per rotation" />
@@ -150,21 +302,32 @@ const quads: Quad[] = [
   </Diagram>
 
   <p>
-    The Reel side of that loop lives in
-    <code>packages/pixi-reels/src/core/Reel.ts</code>. <code>_onSymbolWrapped</code>
-    chooses the id in the priority shown, then <code>_replaceSymbol</code>
-    records the old view's reel-local main coordinate, and either installs an
-    OCCUPIED stub (big-symbol tail), reuses the same instance on a same-id fast
-    path (no pool round trip, no <code>symbol:created</code>), or releases the
-    old symbol to the <code>SymbolFactory</code> and acquires the new one. The
-    new view gets <code>resize(symbolWidth, symbolHeight)</code>, alpha 1,
-    scale 1, its position, its z-index, a parent (the reel container, or the
-    unmasked layer at rest) and then <code>symbol:created</code>. The pool
-    mechanics are on the <a href="/architecture/symbols/">symbols page</a>; where
-    the landing ids come from is the <a href="/architecture/frame-pipeline/">frame pipeline</a>.
+    With an id in hand, the reel swaps the symbol in the wrapped seat. It
+    first notes where the old view was, so it knows which seat it is
+    filling. Then it takes one of three routes. If the id is the invisible
+    stub that marks the tail of a big symbol, it installs a stub. If the new
+    id is the same as the old one, it keeps the same instance, which costs
+    no pool round trip and raises no event. Otherwise it returns the old
+    symbol to the factory's pool and takes a fresh one for the new id. The
+    new view is sized to the cell, reset to alpha 1 and scale 1, positioned,
+    given its z-index and a parent (the reel container, or the unmasked
+    layer when the reel is at rest), and only then does the set emit <code>symbol:created</code>. That whole path is <code>Reel._onSymbolWrapped</code> and <code>_replaceSymbol</code> in <code>packages/pixi-reels/src/core/Reel.ts</code>. How the pool works is
+    on the <a href="/architecture/symbols/">symbols page</a>; where the
+    landing ids come from is the <a href="/architecture/frame-pipeline/">frame pipeline</a>.
   </p>
 
   <h2>The axis</h2>
+
+  <p>
+    Everything so far talked about "main" without saying whether that is <code>x</code> or <code>y</code>, and that is deliberate. One small
+    object per reel, the <strong>axis</strong>, is the only thing that knows.
+    It holds three facts: which screen property is along the strip (the
+    main axis) and which is across it (the cross axis), the <strong>polarity</strong>, a plus or minus one that says which way along
+    that property counts as forward travel, and which end of the array is
+    the feed edge. Figure 4 shows the four combinations the builder can
+    produce; the motion code is identical in all four, only those three
+    facts change.
+  </p>
 
   <Diagram height={560} caption="ReelAxis, built once per reel by reelAxis(orientation, direction). The same ReelMotion code runs all four combinations; only the property key, the polarity and the feed edge differ. The arrow is travel; new ids enter at the feed edge.">
     {quads.map((q) => (
@@ -191,26 +354,35 @@ const quads: Quad[] = [
   </Diagram>
 
   <p>
-    <code>packages/pixi-reels/src/core/ReelAxis.ts</code> is the only place that
-    knows which screen property is "along the strip". It exposes
-    <code>getMain / setMain / addMain</code>, <code>getCross / setCross</code>,
-    and the two projections <code>toLocal(width, height)</code> to
-    <code>{`{ cross, main }`}</code> and <code>toScreen(cross, main)</code> to
-    <code>{`{ x, y }`}</code>. Public geometry stays screen-space
-    (<code>symbolSize(w, h)</code>, <code>resize(w, h)</code>,
-    <code>CellBounds</code>), which is why third-party symbol classes do not
-    care about orientation. The builder constructs one axis per reel from
-    <code>.orientation()</code> and <code>.direction()</code> /
-    <code>.directionPerReel()</code>; there is no per-spin direction override.
-    GSAP tweens in the phases are built from <code>axis.mainProp</code> as a
-    computed key, which is what lets the bounce, the cascade fall and the pin
-    squash work on any axis. Z-stacking is geometric, not travel-relative:
-    <code>cellStacking</code> defaults to <code>'ascending'</code> (larger
-    coordinate draws in front) and a reverse reel does not flip it.
-    See the <a href="/guides/orientation-and-direction/">orientation guide</a>.
+    The axis lives in <code>packages/pixi-reels/src/core/ReelAxis.ts</code> and offers getters and setters for the main and cross coordinates of a
+    view, plus two conversions: <code>toLocal(width, height)</code> turns a
+    screen-space size into a cross and main pair, and <code>toScreen(cross, main)</code> turns it back. Everything public stays
+    in screen space, so a symbol class you write receives an ordinary width
+    and height in <code>resize(w, h)</code> and never has to think about
+    orientation. The builder makes one axis per reel from <code>.orientation()</code> and <code>.direction()</code> or <code>.directionPerReel()</code>; there is no way to change direction
+    for a single spin.
+  </p>
+
+  <p>
+    Two consequences are easy to miss. The GSAP tweens inside the phases use
+    the axis's property name as a computed key, which is what lets the
+    bounce, the cascade fall and the pin squash work on any axis without a
+    special case. And stacking order is geometric, not relative to travel: <code>cellStacking</code> defaults to <code>'ascending'</code>, meaning
+    the cell with the larger coordinate draws in front, and a reverse reel
+    does not flip that. The <a href="/guides/orientation-and-direction/">orientation guide</a> shows
+    the combinations in a running demo.
   </p>
 
   <h2>One tick</h2>
+
+  <p>
+    Figure 5 is one frame of the clock, top to bottom. The controller
+    registers exactly one ticker callback. Each tick it visits every reel in
+    index order and asks it to move by the time that has passed; only then
+    does it update the active phases. Look for the two things the phases
+    never do: they never write a position, and they never call <code>advance()</code>. A phase only sets a reel's speed, or the speed
+    it should head toward, and the motion layer turns that into distance.
+  </p>
 
   <Diagram height={760} caption="The whole per-frame path, top to bottom: every reel in index order, then every active phase. Phases never write positions: they set reel.speed or reel.targetSpeed and the motion layer does the rest. A reel at speed 0 returns before computeDelta, so a parked reel never wraps.">
     <Box x={180} y={20} w={360} h={60} title="PIXI.Ticker" kind="code" sub="ticker.deltaMS" />
@@ -233,31 +405,41 @@ const quads: Quad[] = [
   </Diagram>
 
   <p>
-    <code>SpinController</code> registers exactly one ticker callback
-    (<code>packages/pixi-reels/src/spin/SpinController.ts</code>). The clamp to
-    <code>MAX_TICK_MS</code> bounds the displacement when a backgrounded tab
-    refocuses or a custom ticker reports a huge delta. <code>StandardMode</code>
-    (<code>spin/modes/StandardMode.ts</code>) is the default
-    <code>SpinningMode</code>; the sign of its result carries the
-    <code>StartPhase</code> step-back pull (a brief negative speed) through
-    unchanged, so "travel" means relative to the reel's own direction, not
-    always positive. The motion layer also keeps an unsigned
-    <code>odometer</code> that never resets; <code>Reel.travelledCells</code>
-    divides it by the pitch, and <code>AnticipationPhase</code> uses it to end
-    a tease after N cells instead of N milliseconds. <code>speedNormalized</code>
-    is <code>speed / referenceSpeed</code>, where <code>referenceSpeed</code> is
-    set to the active profile's <code>spinSpeed</code> at the start of every
-    spin.
+    The first thing a reel does with the elapsed time is clamp it to <code>MAX_TICK_MS</code>. A browser tab that was in the background for a
+    minute reports one enormous delta when it comes back, and without the
+    clamp the strip would leap a thousand cells in a single frame. Then the
+    default spinning mode, <code>StandardMode</code>, turns speed into
+    distance: pitch times speed times seconds elapsed. Speed is therefore in
+    cells per second, whatever the cell size. The sign of the result is kept
+    as is, which is how the brief backwards pull at the start of a spin (a
+    short negative speed) travels through the same path; "travel" always
+    means relative to the reel's own direction, not always positive.
+  </p>
+
+  <p>
+    Alongside the signed travel the motion layer keeps an unsigned <strong>odometer</strong> that never resets. <code>Reel.travelledCells</code> divides it by the pitch, and the anticipation phase uses it to end a
+    tease after a number of cells rather than a number of milliseconds, so
+    the hold looks the same at every speed. A related value, <code>speedNormalized</code>, is the current speed divided by the <code>referenceSpeed</code>, which is set to the active profile's <code>spinSpeed</code> at the start of every spin. The controller side of
+    all this is <code>_onTick</code> in <code>packages/pixi-reels/src/spin/SpinController.ts</code>.
   </p>
 
   <h2>ReelDrive: bounded acceleration</h2>
 
   <p>
-    By default a phase <em>tweens</em> <code>reel.speed</code>. With
-    <code>builder.motionModel('drive', config)</code> the reel instead
-    integrates toward <code>reel.targetSpeed</code> under acceleration bounds
-    (<code>packages/pixi-reels/src/core/ReelDrive.ts</code>). The config comes
-    in two mutually exclusive forms and mixing them throws:
+    By default a phase changes a reel's speed with a GSAP tween: "go from 0
+    to 30 over 400 ms with this ease". That is simple and looks good, but it
+    is a timing model, not a physical one: the reel reaches the speed in the
+    time you asked for, however far apart the two speeds are. With <code>builder.motionModel('drive', config)</code> the reel instead
+    behaves like a motor: a phase sets a <code>targetSpeed</code>, and each
+    tick the reel moves its actual speed toward that target by no more than
+    a fixed acceleration, optionally with a limit on how fast the
+    acceleration itself may change (jerk), which rounds the corners into an
+    S-curve. The code is <code>packages/pixi-reels/src/core/ReelDrive.ts</code>.
+  </p>
+
+  <p>
+    The bounds can be given in two forms, and the two must not be mixed; the
+    builder throws if they are. The table shows both and how each resolves.
   </p>
 
   <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
@@ -285,27 +467,46 @@ const quads: Quad[] = [
   </div>
 
   <p>
-    <code>stepDrive(state, target, bounds, deltaMs)</code> runs once per reel
-    per tick and mutates its state object to avoid per-frame garbage. In order:
-    <code>dt = deltaMs / DRIVE_FRAME_MS</code> (a frame is <code>1000/60</code>
-    ms); if the gap to the target is under <code>1e-4</code> it snaps to the
-    target and zeroes acceleration; otherwise it picks <code>accel</code> when
-    <code>|target| &gt; |speed|</code> and <code>decel</code> when slowing (a
-    magnitude comparison, so the negative step-back pull lands on the right
-    bound); with jerk it walks the acceleration toward that bound by at most
-    <code>jerk * dt</code> and starts easing off once the remaining gap is below
-    <code>accel^2 / (2 * jerk)</code>, the S-curve; then it steps the speed and
-    clamps on crossing the target. <code>haltDrive()</code> zeroes speed,
-    target and acceleration together, because <code>speed = 0</code> alone would
-    ramp straight back toward the old target next tick; <code>forceSpeed(v)</code>
-    jumps with no ramp and is what slams use. Under the drive model
-    <code>StopPhase</code> sets <code>targetSpeed</code> for the spin-out instead
-    of forcing it, and <code>land()</code> calls <code>haltDrive()</code>.
-    The builder validates the config's shape at <code>build()</code> so a bad
-    number names the <code>motionModel(...)</code> call.
+    The profile-relative form is the one to reach for. "Reach full speed in
+    20 frames" means the same thing in normal and turbo, because the bound
+    is recomputed from the profile's <code>spinSpeed</code>; an absolute
+    bound makes a faster profile take proportionally longer to get going.
+  </p>
+
+  <p>
+    The per-tick step, <code>stepDrive</code>, runs once per reel and
+    mutates a reusable state object so a long spin allocates nothing. In
+    plain terms: convert the elapsed milliseconds to frames (a frame is <code>1000/60</code> ms). If the speed is already within <code>1e-4</code> of the target, snap to it and stop accelerating.
+    Otherwise choose the acceleration bound when speeding up and the
+    deceleration bound when slowing down; the comparison is on magnitudes,
+    so the negative step-back pull picks the right bound too. With jerk
+    configured, walk the acceleration toward that bound by at most <code>jerk * dt</code> per tick, and start easing it off once the
+    remaining speed gap drops below <code>accel^2 / (2 * jerk)</code>, which
+    is the point at which a smooth stop must begin. Finally step the speed
+    and clamp it if it crossed the target.
+  </p>
+
+  <p>
+    Two helpers matter for the stop. <code>haltDrive()</code> zeroes speed,
+    target and acceleration together; setting speed to 0 on its own would
+    leave the old target in place and the reel would ramp straight back up
+    on the next tick. <code>forceSpeed(v)</code> jumps to a speed with no
+    ramp and is what slams use. Under the drive model the stop phase sets <code>targetSpeed</code> for the spin-out rather than forcing a speed,
+    and <code>land()</code> calls <code>haltDrive()</code>. The builder checks
+    the shape of the config at <code>build()</code>, so a bad number is
+    reported against the <code>motionModel(...)</code> call that caused it.
   </p>
 
   <h2>The landing</h2>
+
+  <p>
+    A reel does not stop by hitting the brakes. It keeps spinning at full
+    speed while the symbols it must land on are fed in one wrap at a time,
+    and once the last one is in place it snaps to the grid and bounces.
+    Figure 6 shows the four steps inside the stop phase that make that
+    happen; the spin-out in the middle is where this page's wrap cycle and
+    the frame pipeline meet.
+  </p>
 
   <Diagram height={160} caption="The animated stop is four steps inside StopPhase: wait out the stagger, load the frame and spin out through M wraps, land, bounce.">
     <Box x={8} y={40} w={128} h={78} title="delay" sub={['stop stagger', 'cut by quicken']} />
@@ -320,22 +521,75 @@ const quads: Quad[] = [
   </Diagram>
 
   <p>
-    <code>land()</code> (<code>ReelPhase.land</code>) runs in a fixed order:
-    <code>haltDrive()</code> zeroes speed, target speed and the drive state;
-    <code>isStopping</code> goes false; <code>snapToGrid()</code> sets
-    <code>travel = rot = off = 0</code>, re-renders, then
-    <code>_finalizeFrame()</code> and <code>refreshZIndex()</code>;
-    <code>notifySpinEnd()</code> calls <code>onReelSpinEnd()</code> on every
-    strip symbol; and <code>notifyLanded(cells)</code> calls
-    <code>onReelLanded(ctx)</code>, raises the reel event <code>'landing'</code>
-    and the set event <code>spin:reelLanding</code>. <code>bounce()</code>
-    (<code>ReelPhase.bounce</code>, <code>defaultBounce</code>) is two legs of
-    half the duration each: <code>container[mainProp]</code> to
-    <code>base + polarity * distance</code>, then back to base, with
-    <code>bounceEase ?? 'power1.out'</code>; <code>followLifted</code> shifts
-    unmasked views every frame; a distance of 0 or less returns an
-    already-settled bounce. <code>spin:reelLanded</code> fires after it, via
-    <code>_markLanded</code>.
+    The spin-out starts when the reel is handed its <strong>stop
+    frame</strong>: the full list of <code>M</code> ids it must end up
+    showing, buffers included, in start-to-end order. <code>Reel.setStopFrame</code> loads that list into the <code>StopSequencer</code> (<code>packages/pixi-reels/src/core/StopSequencer.ts</code>) along with
+    the reel's feed edge, and from then on every wrap takes the next id from
+    the sequencer instead of a random draw. Because the sequencer holds
+    exactly <code>M</code> ids, exactly <code>M</code> wraps happen, and when
+    the last one lands the whole strip, buffers included, matches the frame.
+  </p>
+
+  <p>
+    The order the ids are handed out in is the part people get wrong. The
+    frame is always listed start to end. On a forward reel new symbols enter
+    at the start edge and get pushed toward the end, so the symbol that must
+    finish at the <em>end</em> of the strip has to go in <em>first</em>: the
+    sequencer consumes the frame end-first, cursor at the last index,
+    stepping backwards. On a reverse reel the feed edge is the end, so it
+    consumes the frame head-first, cursor at 0, stepping forwards. Get this
+    backwards and the reel lands a frame that looks right but is upside
+    down, which is why the sequencer has a test per combination. <code>next()</code> throws once the frame is exhausted; its only caller
+    checks <code>hasRemaining</code> first.
+  </p>
+
+  <p>
+    The spin-out normally keeps full <code>spinSpeed</code>. The exception is
+    a stop that follows a tease, where the reel has already slowed down for
+    drama: then <code>preserveSpeed</code> keeps the current slow speed,
+    floored at 8% of <code>spinSpeed</code> and capped at <code>spinSpeed</code>, so the reel does not visibly speed up again
+    before stopping. The stop and skip paths in full are on <a href="/architecture/spin-lifecycle/">spin lifecycle</a> and <a href="/architecture/skipping/">skipping</a>.
+  </p>
+
+  <p>
+    When the sequencer runs dry, <code>land()</code> (in <code>ReelPhase</code>) finishes the job in a fixed order. The table lists
+    the steps; the order matters because each one assumes the previous.
+  </p>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Step</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">What happens</th>
+        </tr>
+      </thead>
+      <tbody>
+        {landOrder.map(([k, v]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 font-mono text-xs whitespace-nowrap align-top">{k}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Then comes the bounce, the small overshoot and settle that makes a stop
+    feel mechanical. <code>bounce()</code> moves the whole reel container
+    rather than the symbols: two legs of half the duration each, first to
+    the base position plus the bounce distance in the direction of travel,
+    then back to base, with <code>bounceEase</code> defaulting to <code>'power1.out'</code>. Any symbol that has been lifted out of the
+    mask is shifted along every frame by <code>followLifted</code> so it does
+    not appear to detach. A distance of 0 or less returns an already
+    settled bounce. <code>spin:reelLanded</code> fires after the bounce, via <code>_markLanded</code>.
+  </p>
+
+  <p>
+    There is a second way to stop, with no steps and no bounce: the <strong>slam</strong>. A skip press, an explicit <code>slamStop()</code>,
+    an abort, a timeout or a phase chain that threw all take the path in
+    figure 7, where the entire target frame is placed in a single tick.
   </p>
 
   <Diagram height={450} caption="The slam path: skip(), slamStop(), an abort, a timeout or a phase chain that threw. The full target frame is placed in one tick, buffers included, and nothing bounces.">
@@ -350,93 +604,118 @@ const quads: Quad[] = [
   </Diagram>
 
   <p>
-    The full strip is placed, buffers included, so a big-symbol tail parked in
-    <code>bufferStart</code> lands too. The container is rested before the snap
-    so a mid-bounce slam cannot bake the overshoot into a lifted view. The
-    controller then does what <code>land()</code> would have:
-    <code>placeSymbols</code>, <code>notifySpinEnd</code>,
-    <code>notifyLanded</code>, <code>_markLanded</code>.
-  </p>
-
-  <p>
-    <code>Reel.setStopFrame(frame)</code> loads the strip into the
-    <code>StopSequencer</code> (<code>packages/pixi-reels/src/core/StopSequencer.ts</code>)
-    with <code>axis.feedEdge</code>. The frame is always start-to-end order. A
-    forward reel feeds from the start edge, so new symbols are pushed toward the
-    end and the frame is consumed <strong>end-first</strong> (cursor starts at
-    <code>length - 1</code>, step -1). A reverse reel consumes it
-    <strong>head-first</strong> (cursor 0, step +1). Getting this backwards
-    lands a correct-looking frame reversed, which is why the sequencer has a
-    test per combination. <code>next()</code> throws when the frame is
-    exhausted; the only caller gates on <code>hasRemaining</code>. Because the
-    sequencer holds <code>M</code> ids, exactly <code>M</code> wraps happen
-    during the spin-out and then the whole strip, buffers included, matches
-    the frame. The spin-out keeps full <code>spinSpeed</code> unless the stop
-    follows a tease (<code>preserveSpeed</code>): then the current slow speed
-    is kept, floored at <code>8%</code> of <code>spinSpeed</code> and capped at
-    <code>spinSpeed</code>. The stop and skip paths in full are on
-    <a href="/architecture/spin-lifecycle/">spin lifecycle</a> and
-    <a href="/architecture/skipping/">skipping</a>.
+    The whole strip is placed, buffers included, so a big-symbol tail that
+    is parked in a buffer above the window lands correctly too. The
+    container is returned to its rest position <em>before</em> the snap,
+    because a slam that interrupts a bounce would otherwise bake the
+    overshoot into any lifted view. The controller then does by hand what <code>land()</code> would have done: <code>placeSymbols</code>, <code>notifySpinEnd</code>, <code>notifyLanded</code>, <code>_markLanded</code>.
   </p>
 
   <h2>Big-symbol occupancy</h2>
 
   <p>
-    A big symbol is one id at its anchor cell plus OCCUPIED stubs in every
-    other cell of its block. Stubs are invisible <code>ReelSymbol</code>s
-    allocated by the reel, never pooled through the factory. The motion layer
-    treats them like any other symbol: they wrap, they get a position, they
-    carry the block's shape through the strip. On every snap
-    <code>_finalizeFrame()</code> rebuilds <code>_occupancy</code>: it scans
-    visible anchors first, then <code>bufferStart</code> anchors whose block
-    reaches into the window, and resizes each anchor to
-    <code>_blockSize(reels, cells)</code>, which includes the gaps (a 2×2 on
-    80px cells with a 4px gap is 164px, not 160). <code>size.reels</code>
-    always spans the cross axis and <code>size.cells</code> the main axis, so
-    the screen width and height it maps to swap under horizontal.
-    <code>getSymbolAt</code> and <code>getVisibleSymbols</code> resolve covered
-    cells to the anchor's id. See <a href="/guides/big-symbols/">big symbols</a>.
+    A big symbol, one that covers a block of two or more cells, is stored as
+    a single real symbol at its <strong>anchor</strong> cell plus an invisible
+    stub in every other cell of the block. The stubs are plain <code>ReelSymbol</code>s the reel allocates itself, never pooled through
+    the factory. The motion layer does not treat them specially: they wrap,
+    they get a position, and they carry the block's shape through the strip
+    like any other seat. That is what lets a big symbol scroll through the
+    window as one object without the motion code knowing it exists.
+  </p>
+
+  <p>
+    What does know about blocks is the snap. On every snap, <code>_finalizeFrame()</code> rebuilds the reel's occupancy map: it
+    scans the visible anchors first, then any anchor in the buffer above
+    whose block reaches into the window, and resizes each anchor to the size
+    of its whole block. That size includes the gaps between cells, so a 2 by
+    2 block on 80 px cells with a 4 px gap is 164 px across, not 160. A
+    block's <code>size.reels</code> always spans the cross axis and <code>size.cells</code> the main axis, so under a horizontal orientation
+    the screen width and height they map to swap. <code>getSymbolAt</code> and <code>getVisibleSymbols</code> resolve a covered cell to the anchor's
+    id. See the <a href="/guides/big-symbols/">big symbols guide</a>.
   </p>
 
   <h2>Nudge: a post-stop reposition</h2>
 
   <p>
-    <code>Reel.nudge({`{ distance, direction, incoming, duration?, ease?, startDelay?, signal? }`})</code>
-    shifts a reel at rest by whole cells and reveals caller-supplied ids. It
-    throws if the reel is moving, stopping or already nudging; if
-    <code>distance</code> is not a positive integer strictly below
-    <code>M</code> (at <code>M</code> the strip would rotate fully and
-    pre-placed buffer entries would be silently dropped); if
-    <code>incoming.length !== distance</code>; if any incoming id is
-    unregistered or is a big symbol; if a same-reel block would be split by
-    the wrap boundary; or if a visible cell belongs to a cross-reel block.
-    <code>direction</code> is relative to the reel's own axis, so
-    <code>wrapsIntoStart = travelSign * polarity &gt; 0</code> decides which
-    buffer the incoming ids are pre-placed into (up to that buffer's size) and
-    the rest go into <code>_nudgeQueue</code>, padded with
-    <code>'bufferStart'</code> / <code>'bufferEnd'</code> pool draws for wraps
-    that only reach the off-screen buffer. The tween drives a 0..1 progress and
-    feeds <code>motion.advance()</code> in steps of at most
-    <code>0.45 * pitch</code>, clamped to the intended total so an overshooting
-    ease cannot fire a spurious wrap. Default <code>duration</code> is
-    <code>200 * distance</code> ms, default ease <code>'power2.out'</code>. The
-    per-wrap <code>refreshZIndex</code> is deferred to the final
-    <code>snapToGrid()</code>. Events on the set bus: <code>nudge:start</code>,
-    <code>nudge:complete</code>, <code>nudge:cancelled</code>; the reel emits
-    <code>phase:enter</code> / <code>phase:exit</code> with the name
-    <code>'nudge'</code>. <code>skipNudge()</code> jumps to the landed state.
-    See the <a href="/guides/nudge/">nudge guide</a> and the
-    <a href="/recipes/nudge/">nudge recipes</a>.
+    A <strong>nudge</strong> moves a reel that has already landed by a whole
+    number of cells and reveals ids you supply, the "reel creeps one more
+    symbol" feature. The call is <code>Reel.nudge({`{ distance, direction, incoming, duration?, ease?, startDelay?, signal? }`})</code>,
+    and it leans on everything above: the incoming ids are pre-placed into
+    the buffer the strip will wrap through, the tween feeds <code>motion.advance()</code>, and the usual wrap callback takes ids from
+    the nudge queue first.
+  </p>
+
+  <p>
+    <code>direction</code> is relative to the reel's own axis. Whether the
+    strip will wrap into the start or the end buffer follows from the sign
+    of the travel and the reel's polarity, and that decides which buffer the
+    incoming ids are pre-placed into (as many as fit). Any that do not fit
+    wait in the nudge queue, padded with buffer-pool draws for the wraps
+    that only reach the off-screen cells. The tween drives a 0 to 1 progress
+    and hands the motion layer steps of at most <code>0.45 * pitch</code>,
+    clamped to the intended total, so an ease that overshoots cannot cause a
+    spurious extra wrap. The z-index refresh that normally happens on each
+    wrap is deferred to the final <code>snapToGrid()</code>. The default
+    duration is <code>200 * distance</code> ms and the default ease is <code>'power2.out'</code>.
+  </p>
+
+  <p>
+    A nudge refuses to start in a number of situations, all of which throw.
+    The table lists them and the reason behind each.
+  </p>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Throws when</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        {nudgeRules.map(([k, v]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 text-xs align-top">{k}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    The set emits <code>nudge:start</code>, <code>nudge:complete</code> and <code>nudge:cancelled</code>; the reel itself emits <code>phase:enter</code> and <code>phase:exit</code> with the name <code>'nudge'</code>. <code>skipNudge()</code> jumps straight to the
+    landed state. See the <a href="/guides/nudge/">nudge guide</a> and the <a href="/recipes/nudge/">nudge recipes</a>.
   </p>
 
   <h2>Per-reel geometry</h2>
 
-  <ul>
-    <li><strong><code>extent</code></strong> is the reel box's length along the strip, from <code>reelExtents([...])</code>, <code>multiways({`{ reelExtent }`})</code>, or <code>cells * cellMain + (cells - 1) * mainGap</code>.</li>
-    <li><strong><code>mainOffset</code></strong> places a shorter reel inside the tallest strip by <code>reelAnchor</code>: <code>'start'</code> gives 0, <code>'end'</code> gives <code>tallest - extent</code>, <code>'center'</code> (the default) gives <code>(tallest - extent) / 2</code>. It is written to <code>container[mainProp]</code> and re-baked into any lifted unmask view by <code>_syncUnmaskedViewOffsets</code> after every motion write.</li>
-    <li><strong><code>cellMain</code></strong> is the per-reel cell size along the strip: <code>(extent - (cells - 1) * mainGap) / cells</code> when explicit extents are set, otherwise the symbol size itself. <code>spinCellSize</code> is the cell every MultiWays reel spins on; <code>AdjustPhase</code> reshapes to the landed size afterwards through <code>Reel.reshape</code> → <code>ReelMotion.reshape</code>, which only refreshes pitch and <code>bufferStart</code>.</li>
-    <li><strong><code>symbolWidth</code> / <code>symbolHeight</code></strong> are <code>axis.toScreen(cellCross, cellMain)</code>, the pair every <code>resize()</code> receives.</li>
-  </ul>
+  <p>
+    Reels in one set do not all have to be the same length; a pyramid board
+    has a short reel at each side and a tall one in the middle. Four values
+    per reel describe that, and the motion layer reads them rather than
+    assuming a uniform grid.
+  </p>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Value</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">What it is</th>
+        </tr>
+      </thead>
+      <tbody>
+        {geometry.map(([k, v]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 font-mono text-xs whitespace-nowrap align-top">{k}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
   <p>
     The <a href="/guides/per-reel-geometry/">per-reel geometry guide</a> shows
     pyramids and jagged boards built from these.
@@ -444,12 +723,32 @@ const quads: Quad[] = [
 
   <h2>Caveats, from reading the code</h2>
 
-  <ul>
-    <li><strong>Speed units.</strong> The <code>ReelDrive</code> comments call <code>reel.speed</code> "pixels per frame", but <code>StandardMode</code> computes <code>slotPitch * speed * deltaMs / 1000</code>, so <code>spinSpeed: 30</code> moves 30 cell pitches per second (half a pitch per 60 fps frame) regardless of cell size. The drive bounds are in the same unit per frame. The code is the source of truth here.</li>
-    <li><strong>Vertical-only wording.</strong> <code>ReelMotion</code>'s constructor still names its parameters <code>symbolHeight</code> and <code>symbolGapY</code>, <code>Reel.update</code> calls its result <code>deltaY</code>, and the <code>StandardMode</code> and <code>StopSequencer</code> headers describe a strip "scrolling downward". The behaviour is axis-generic; the names are v1 leftovers.</li>
-  </ul>
+  <p>
+    Two places where the comments and the code disagree. In both, the code
+    is the source of truth.
+  </p>
+
+  <Callout kind="gotcha">
+    The <code>ReelDrive</code> comments call <code>reel.speed</code> "pixels
+    per frame". It is not: <code>StandardMode</code> multiplies speed by the
+    pitch and by elapsed seconds, so <code>spinSpeed: 30</code> moves 30 cell
+    pitches per second (half a pitch per frame at 60 fps) whatever your cell
+    size. The drive bounds are in that same unit, per frame. Tune speeds in
+    cells, not pixels.
+  </Callout>
+
+  <p>
+    The second is wording only. <code>ReelMotion</code>'s constructor still
+    names its parameters <code>symbolHeight</code> and <code>symbolGapY</code>, <code>Reel.update</code> calls its result <code>deltaY</code>, and the <code>StandardMode</code> and <code>StopSequencer</code> headers describe
+    a strip "scrolling downward". The behaviour is axis-generic; the names
+    are leftovers from the vertical-only first version.
+  </p>
 
   <h2>Defaults</h2>
+
+  <p>
+    The numbers this page relies on, with the file each one is set in.
+  </p>
 
   <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
@@ -512,4 +811,12 @@ const quads: Quad[] = [
       </ul>
     </div>
   </div>
+
+  <Callout kind="remember">
+    A reel is an array that is longer than the window. Its only state is how
+    far it has travelled; every position is index times pitch plus the
+    remainder, and the wrap count is travel divided by pitch. Phases set
+    speeds, the motion layer turns speed into travel, and the stop feeds the
+    landing ids in one per wrap until the strip is the frame.
+  </Callout>
 </Architecture>
