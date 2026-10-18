@@ -55,6 +55,11 @@ const PAGES = [
   // adding <RecipeDemo> to another guide is a deliberate act, not a silent
   // gap in coverage.
   '/guides/nudge/',
+  // The landing page mounts four live sets (hero + three mechanic panels)
+  // through LandingReels, not RecipeRunner. A mount failure there renders no
+  // canvas and no `.text-destructive`, so the canvas-count assertion is the
+  // one that catches it.
+  '/',
 ];
 
 test.beforeAll(async () => {

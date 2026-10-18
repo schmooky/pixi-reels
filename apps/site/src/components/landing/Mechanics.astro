@@ -1,0 +1,70 @@
+---
+import { LandingReels } from './LandingReels.tsx';
+
+/**
+ * Three more live sets under the hero, one per mechanic family the engine is
+ * known for. Each is a real ReelSet (see LandingReels.tsx) that loops while it
+ * is on screen and idles when it is not. The cards share one aspect ratio and
+ * the island letterboxes its well inside, so the row stays even.
+ */
+const cards = [
+  {
+    variant: 'cascade',
+    title: 'Cascades',
+    body: 'Winners pop, survivors fall by exactly the holes beneath them, new symbols drop in. One call: runCascade().',
+    href: '/recipes/cascade/',
+    code: 'reelSet.runCascade({ detectWinners, nextGrid })',
+  },
+  {
+    variant: 'anticipation',
+    title: 'Anticipation',
+    body: 'Two scatters land, the remaining reels slow and tease. Driven from the result grid with anticipationForScatters().',
+    href: '/recipes/anticipation/',
+    code: "reelSet.setAnticipation(reels, { stagger: 'sequential' })",
+  },
+  {
+    variant: 'horizontal',
+    title: 'Any orientation',
+    body: 'Strips that scroll sideways, upward, or each their own way. Travel changes motion; facing never changes the art.',
+    href: '/recipes/orientation-and-direction/',
+    code: ".orientation('horizontal').direction('reverse')",
+  },
+] as const;
+---
+<section class="border-b border-border/60 py-20">
+  <div class="container">
+    <div class="mx-auto mb-10 max-w-2xl text-center">
+      <h2 class="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+        Mechanics that ship in the box.
+      </h2>
+      <p class="mt-3 text-muted-foreground">
+        Every panel below is live. Click one to spin it now.
+      </p>
+    </div>
+
+    <div class="grid gap-5 md:grid-cols-3">
+      {cards.map((c) => (
+        <div class="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40">
+          <div class="mech-well relative aspect-[4/3] w-full overflow-hidden" data-mechanic={c.variant}>
+            <LandingReels variant={c.variant} client:only="react" />
+          </div>
+          <div class="flex flex-1 flex-col p-5">
+            <h3 class="text-base font-semibold tracking-tight">{c.title}</h3>
+            <p class="mt-1.5 text-sm text-muted-foreground">{c.body}</p>
+            <code class="mt-3 block truncate rounded-md bg-muted px-2.5 py-1.5 font-mono text-[11px] text-foreground/80">{c.code}</code>
+            <a href={c.href} class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
+              See the recipes →
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .mech-well {
+    background: hsl(var(--code-bg));
+    border-bottom: 1px solid hsl(var(--code-border));
+  }
+</style>

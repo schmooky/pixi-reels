@@ -1,0 +1,619 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
+
+const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground';
+
+const PIN_API: [string, string][] = [
+  ['pin(reel, cell, symbolId, opts?)', 'Throws during a nudge or on an out-of-range cell; negative cells are rejected, buffer cells go through setResult. At rest it asserts a big symbol fits, applies the symbol immediately through _placeCellsAtRest (a pin on a block cell replaces the block) and emits pin:placed. Mid-spin it creates an overlay. Re-pinning the same cell is silent: no pin:expired, the old overlay is destroyed.'],
+  ['unpin(reel, cell)', "Removes the overlay and emits pin:expired(pin, 'explicit'). Does nothing if there is no pin."],
+  ['pins / getPin(reel, cell)', 'A ReadonlyMap keyed "reel:cell" (pinKey). During a spin it reflects the next setResult.'],
+  ['movePin(from, to, opts?)', "Only at rest. Throws if from has no pin, to is out of range, or to already has a pin; from === to still emits pin:moved. Updates the map atomically (originCell = to.cell), destroys the overlay at from, backfills the vacated cell, flies a pooled symbol through viewport.unmaskedContainer, places the pin, releases the flight symbol, emits pin:moved(movedPin, from). Options: duration 400, easing 'power2.inOut', backfill (random by default), onFlightCreated, onFlightCompleted. Hook throws are logged as pin-hook-threw, never thrown."],
+  ['refreshPinOverlaysForReel(reelIndex)', 'Called automatically after the AdjustPhase. Call it yourself only after a custom layout change.'],
+];
+
+const GUARDS: [string, string][] = [
+  ['setSymbolAt', 'throws on a pinned cell'],
+  ['nudge', 'throws if any pin is on that reel'],
+  ['splitSymbol', 'throws if a pinned cell is in the split range'],
+  ['setColumn', 'the new column must show the pinned symbol at its cell; a pin past the new length expires'],
+  ['removeReels, removeRows, resetColumns', "pins past the end expire with 'explicit'"],
+];
+
+const RESHAPE: [string, string, string][] = [
+  ['expand({ columns, step?, onStepAdded?, onStepLanded?, anticipation?, mode?, signal? })', 'Adds reels one step at a time while the existing reels hold still: the infinity-reels feature. Validation happens first, so a throw leaves the board untouched. Per step the engine adds the reels (reels:added, expand:stepAdded), awaits your onStepAdded, spins with every older reel held, lands, emits expand:stepLanded and awaits onStepLanded. It ends with expand:complete then expand:end(\'complete\'), or expand:end(\'failed\').', 'step defaults to 1 and is widened, never split, so a big symbol always fits whole. Aborting the signal fast-forwards: the step in flight slams and the remaining columns land in one last step flagged fastForward: true. A skip carries across steps. While it runs, spin(), addReels() and removeReels() throw, and addRows() is only allowed inside onStepLanded. All steps are one round, so pins are not spent per step.'],
+  ['setColumn(reel, column, { height? })', 'Shows column.visible.length cells on one reel at rest. The default \'grow\' keeps the cell size and re-anchors the board; \'keep\' keeps the reel\'s height and resizes cells to (extent - (n - 1) x gap) / n. Only the changed cells are replaced. Emits column:set, then pin:moved for any pin that shifted.', 'On a MultiWays set \'keep\' is the default, \'grow\' throws, and the count must stay within [minCells, maxCells], because MultiWays owns the reel height.'],
+  ['splitSymbol(reel, cell, ids)', 'Splits a 1x1 symbol, or a one-reel-wide stacked block, into ids.length cells. Pins below the split shift down with their symbols.', 'It goes through the same _setColumn path as setColumn, so the events and the pin handling are identical.'],
+  ['resetColumns()', 'Returns every reel to the cells and cell size it was built or added with, undoing setColumn, splitSymbol and addRows.', 'Safe to call at round start after removeReels(). Not available on MultiWays. addRows() and removeRows() emit rows:added and rows:removed.'],
+];
+
+const GRID_OPTS: [string, string, string][] = [
+  ['cols, rows', 'required', 'board size'],
+  ['cellSize', 'required', 'a number or { width, height }'],
+  ['gap · columnGap · rowGap', '4', 'columnGap and rowGap fall back to gap'],
+  ['emptyId', "'empty'", 'an EmptySymbol is auto-registered'],
+  ['symbols · weights · symbolData · rng', '', 'forwarded to every cell builder'],
+  ['ticker', 'required', 'the constructor throws without it'],
+  ['chrome(g, w, h)', 'none', 'per-cell background drawn below the cell'],
+  ['mask(cell, { cols, rows, corners })', 'SharedRectMaskStrategy', 'corners lets RoundedRectMaskStrategy round only the outer corners'],
+  ['orientation · direction', 'vertical · forward', 'the axis each cell strip travels on; the board layout does not change'],
+  ['profiles', '{ default: NORMAL + minimumSpinTime 320 }', 'name to profile, or a per-cell function'],
+  ['symbolZIndex · cellZIndex(ctx)', 'none', 'order symbols inside a cell; order the cells lifted art'],
+];
+
+const GRID_API: [string, string][] = [
+  ['lift(cell) → release', 'Moves the cell lifted art into _promoted. Reference-counted per cell; release is idempotent. Separate from zIndex, so it survives refreshCellZIndex. Also liftedCells and releaseAllLifts().'],
+  ['dim({ except?, amount = 0.5, fade = 180 }) → release', 'One black rect per non-excepted cell, faded over fade × |delta| ms on the ticker. A second dim while one is up throws. Also dimmedCells and clearDim().'],
+  ['dimSymbols({ except?, amount, fade }) → release', 'Darkens view.tint toward black (0.5 gives 0x808080). Watches symbol:created so a swapped-in symbol arrives dark and a departing one is cleaned before pooling. Owns view.tint while active. Also dimmedSymbolCells and clearSymbolDim().'],
+  ['refreshCellZIndex()', 'Re-asks cellZIndex({ symbolId, cell, cols, rows, atRest, attachOrder }) for every cell. Runs on every place and every landing.'],
+  ['cells() · cellBounds(cell) · cellCenter(cell)', 'Reel-major order; board-local bounds (use container.toGlobal for stage space).'],
+  ['symbolAt(cell) · reelAt(cell) · setProfile(cell, name)', 'The live ReelSymbol, the underlying 1x1 ReelSet, the profile selection.'],
+  ['place(cell, id)', 'Instant, empty buffers, then refreshCellZIndex.'],
+  ['spinCells(targets: { cell, id }[], onLanded?)', 'Per target: spin(), setResult with empty buffers, await, refreshCellZIndex, await onLanded. All cells run concurrently; resolves after every cell landed and its after-land work finished.'],
+  ['skipSpinning(options?)', 'Returns the in-flight count; swallows "no result yet" errors.'],
+  ['destroy()', 'Releases lifts and dims, then destroys every reel set.'],
+];
+
+const HW_DEFAULTS: [string, string][] = [
+  ['grid', '5 x 3'],
+  ['cellSize', '72 x 72'],
+  ['columnGap · rowGap', '4'],
+  ['emptyId', "'empty'"],
+  ['inactive', '[] (inactive id defaults to the empty id)'],
+  ['respins', '3'],
+  ['lockAnimation', "'win' (or 'landing', 'none', or a per-coin function)"],
+  ['speeds', '{ normal: NORMAL + minimumSpinTime 320 + stopDelay 70 }'],
+  ['initialSpeed', "'normal'"],
+  ['stagger', '(reel + cell) × profile.stopDelay, a diagonal wave'],
+  ['skipMode', "'slam'"],
+  ['axis', 'vertical · forward'],
+  ['TENSION_EXTRA_MS', '1100, added to minimumSpinTime for the name:tension profile'],
+];
+
+const HW_METHODS: [string, string][] = [
+  ['enter(seed)', 'The reducer validates first, then the board places the coins and replays the effects.'],
+  ['respin(hits)', 'One wave; see the diagram. On a throw: abortWave() plus grid.skipSpinning(), then rethrow.'],
+  ['setSymbolAt(cell, id, data?)', 'Locked cells only. Throws inside a coin:locked listener, because the wave is still in flight.'],
+  ['setSpeed(name) · addSpeed(name, profile)', 'Updates every cell; keeps the tension variant if a tense wave is in flight.'],
+  ['playWin(cells?) · activate(cells) · release(cells)', 'Pass-throughs to the lock animation and the reducer; release and activate throw mid-wave.'],
+  ['skip({ mode?, speed?, payload? })', 'Emits feature:skip and returns the in-flight count.'],
+  ['reset()', 'Releases lifts, clears dims, places empty on every cell, re-dresses inactive cells. The reducer emits only feature:reset, never coin:released.'],
+  ['lift · dim · dimSymbols · cellBounds · cellCenter · symbolAt · reelAt · refreshCellZIndex', 'BoardGrid pass-throughs. Lifts and dims survive a respin() and are released by reset() and destroy().'],
+];
+---
+<Architecture
+  title="Pins, boards, Hold & Win"
+  subtitle="Cell pins across spins, the BoardGrid, the Hold & Win state machine."
+  eyebrow="Boards"
+>
+  <p>
+    Some of the most popular slot features break the basic rule that every cell gets a
+    fresh symbol on every spin. A sticky wild stays where it landed for three more spins
+    while the reels blur around it. In a Hold &amp; Win bonus the coins you have
+    collected lock in place and only the empty cells respin, one at a time, in a wave.
+    An expanding board adds columns mid-feature. Each of those needs a way to say "this
+    cell is claimed" that survives a spin, and a way to show the claimed symbol while
+    everything around it is moving.
+  </p>
+
+  <p>
+    This page covers three pieces that together make those features possible, and that
+    games tend to combine. A <strong>pin</strong> is a claim on one cell: it forces a
+    symbol into every result on that cell for a number of spins.
+    A <strong>BoardGrid</strong> is a grid where every cell spins on its own, because
+    each cell is a complete
+    one-cell <code>ReelSet</code>. <strong>Hold &amp; Win</strong> is the bonus game
+    built on both: a pure state machine that knows the rules, and a driver that plays
+    them out on a BoardGrid. The hands-on guides
+    are <a href="/guides/pins/">pins</a>, <a href="/guides/hold-and-win/">hold and win</a>, <a href="/guides/nudge/">nudge</a>, <a href="/guides/win-animations/">win animations</a> and <a href="/guides/multiways/">multiways</a>;
+    the recipe umbrellas
+    are <a href="/recipes/wilds-and-pins/">wilds and pins</a>, <a href="/recipes/hold-and-win/">hold and win</a> and <a href="/recipes/nudge/">nudge</a>.
+  </p>
+
+  <Callout kind="plain">
+    A pin is a sticky note on a cell that says "show this symbol here, no matter what
+    the server sends, for the next N spins". The engine honours the note when the result
+    arrives and keeps the symbol visible while the reel underneath it is spinning.
+    Everything else on this page is either bookkeeping around those notes or a bigger
+    structure built out of one-cell reel sets.
+  </Callout>
+
+  <h2>A pin across one spin</h2>
+
+  <p>
+    A pin does two separate jobs, and it helps to keep them apart. The first is about
+    the <em>result</em>: when you call <code>setResult(grid)</code>, the engine rewrites
+    the pinned cell of that grid with the pinned symbol id before the reels use it, so
+    the server's answer never overrides a pin. The second is about the <em>picture</em>:
+    while the reel is spinning, the real symbol in that cell is scrolling away with the
+    rest of the strip, so the set draws a stand-in on top. That stand-in is a pooled
+    symbol placed in the viewport's <strong>unmasked container</strong> (a layer that
+    sits above the mask, so it is never clipped) at a very high z-index, and it is
+    called the <strong>overlay</strong>.
+  </p>
+
+  <p>
+    Both jobs hang off two set events. On <code>spin:start</code> the set creates the
+    overlays; between that and the stop, <code>setResult()</code> applies the pins to
+    the grid; on <code>spin:allLanded</code> the overlays are destroyed, because the
+    real symbols are now in place, and each pin spends one <strong>turn</strong>. Figure
+    1 is that loop. Follow the primary edges round from <code>pin()</code>: a pin with
+    numeric turns goes round once per spin until its count reaches zero and it leaves
+    through <code>pin:expired</code>. A <code>'permanent'</code> pin never leaves the
+    ring on its own, an <code>'eval'</code> pin leaves at the very
+    next <code>spin:start</code> (it only lives for one evaluation),
+    and <code>unpin()</code> can pull any pin out at any time.
+  </p>
+
+  <Diagram height={330} caption="The automatic path every pin takes, and the one way out. A numeric pin spends a turn on every spin:allLanded and goes round again while turns remain; 'permanent' pins never leave the ring, 'eval' pins expire at the next spin:start, and unpin() expires one at any time.">
+    <Box x={20} y={40} w={210} h={60} title="pin() at rest" kind="primary" sub="applied now, pin:placed" />
+    <Box x={255} y={40} w={210} h={60} title="spin:start" kind="accent" sub="overlay created" />
+    <Box x={490} y={40} w={210} h={60} title="setResult(grid)" sub="cell := pin.symbolId" />
+    <Box x={490} y={200} w={210} h={60} title="spin:allLanded" kind="accent" sub="overlay destroyed, turns -= 1" />
+    <Box x={255} y={200} w={210} h={60} title="next spin()" kind="ghost" sub="overlay again" />
+    <Box x={20} y={200} w={210} h={60} title="pin:expired" sub="also unpin(), 'eval', collision" />
+    <Edge from={[230, 70]} to={[255, 70]} kind="primary" />
+    <Edge from={[465, 70]} to={[490, 70]} kind="primary" />
+    <Edge from={[595, 100]} to={[595, 200]} kind="primary" />
+    <Edge from={[490, 230]} to={[465, 230]} />
+    <Edge from={[360, 200]} to={[360, 100]} label="turns left" />
+    <Edge from={[595, 260]} via={[[595, 292], [125, 292]]} to={[125, 260]} label="turns <= 0" />
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'primary', label: 'your call', note: 'pin, unpin, movePin' },
+      { kind: 'accent', label: 'set event hook', note: 'spin:start, spin:allLanded' },
+      { kind: 'subtle', label: 'state change', note: 'setResult, pin:expired' },
+    ]} />
+  </div>
+
+  <Callout kind="why">
+    The overlay is a separate object rather than a frozen cell because the reel
+    underneath has to keep scrolling as one continuous strip; the motion code never
+    special-cases a cell. Drawing a stand-in above the mask is cheaper and safer than
+    teaching the strip to leave a hole. It also means a pin costs nothing while the
+    reels are at rest: no overlay exists then.
+  </Callout>
+
+  <h3>Moving a pin</h3>
+
+  <p>
+    Two things can relocate a pin: you, or a board that changed shape. When you
+    call <code>movePin(from, to)</code> between spins, the pinned symbol flies from one
+    cell to the other (400 ms, <code>power2.inOut</code> easing, through the unmasked
+    container so it is visible along the way), the cell it left is backfilled with a
+    random symbol, and the set emits <code>pin:moved</code> with the old position. It
+    only works at rest.
+  </p>
+
+  <p>
+    The other case is a <strong>MultiWays</strong> set, where the number of cells a reel
+    shows can change from spin to spin through <code>setShape()</code>. If a reel
+    shrinks, a pin near its bottom may no longer have a cell. The
+    pin's <code>migration</code> option says what to do. An <code>'origin'</code> pin
+    moves to the nearest cell that still exists
+    (<code>min(originCell, newCells - 1)</code>) and is moved back later when the reel
+    grows again. A <code>'frozen'</code> pin stays where it is if the cell still exists,
+    and otherwise clamps to the edge and forgets its original position. Reels are
+    processed top to bottom, pins that can stay claim their cells first, and a pin that
+    loses its cell to another expires with reason <code>'collision'</code>. Every move
+    emits <code>pin:migrated</code> with <code>{'{ fromCell, toCell, clamped }'}</code>.
+    Migration happens after <code>spin()</code> and before <code>setResult()</code>, so
+    the result is applied to the new positions.
+  </p>
+
+  <h3>The pin record</h3>
+
+  <p>
+    One small record, <code>CellPin</code>, is enough to drive sticky wilds, expanding
+    wilds, Hold &amp; Win coins, multiplier wilds and sticky-win respins; the features
+    differ only in what they pass for <code>turns</code> and what they keep
+    in <code>payload</code>. The record
+    is <code>{'{ reel, cell, symbolId, originCell, migration, turns, payload? }'}</code>,
+    where <code>turns</code> is a
+    number, <code>'eval'</code> or <code>'permanent'</code>. The options you pass
+    to <code>pin()</code> are <code>{'{ turns = \'permanent\', payload?, originCell?, migration = \'origin\' }'}</code>;
+    you may pin during a reshape, and <code>originCell</code> then defaults to the cell
+    after the reshape. A pin leaves for one of four
+    reasons, <code>'turns' | 'explicit' | 'eval' | 'collision'</code>, and the reason
+    rides on the <code>pin:expired</code> event.
+  </p>
+
+  <p>
+    The table below is the full pin API with the exact rules each method enforces,
+    followed by the places elsewhere in the set that refuse to disturb a pinned cell.
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>Method</th><th class={th}>Behaviour</th></tr></thead>
+        <tbody>
+          {PIN_API.map(([sig, what]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{sig}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{what}</td>
+            </tr>
+          ))}
+          <tr class="border-t border-border/60 bg-muted/30"><td colspan="2" class="px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">guards elsewhere</td></tr>
+          {GUARDS.map(([sig, what]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{sig}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{what}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    If you draw your own art on the board, you need to know where the overlay sits in
+    the stacking order. The budget
+    is <code>{'{ symbolLayer: 100, pinOverlay: 10000 }'}</code> (<code>Z_INDEX_BUDGET</code> in <code>config/types.ts</code>):
+    an ordinary symbol's default z-index is its symbol z-index times 100 plus its array
+    index, so no ordinary symbol can ever climb above a pin overlay. Art that must sit
+    above pins goes into <code>viewport.spotlightContainer</code> instead.
+  </p>
+
+  <Callout kind="gotcha">
+    From reading the code: <code>refill()</code> emits <code>spin:start</code> and
+    finishes through the same path that emits <code>spin:allLanded</code>, so the pin
+    hooks probably run on every cascade stage. Numeric turns would then be spent per
+    stage, <code>'eval'</code> pins would expire at the first refill, and the refill
+    grid does not go through the pin rewrite. Treat pins and cascades as a combination
+    to test before you ship it.
+  </Callout>
+
+  <h3>Growing and reshaping a board</h3>
+
+  <p>
+    Four methods change the board's geometry at rest, and all of them know about
+    pins. <code>expand()</code> adds reels one step at a time and is the basis of
+    infinity-reels features. <code>setColumn()</code> changes how many cells one reel
+    shows. <code>splitSymbol()</code> breaks one symbol into several
+    cells. <code>resetColumns()</code> puts everything back. The table gives each one's
+    behaviour and the rules around it.
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>Method</th><th class={th}>What it does</th><th class={th}>Rules and edges</th></tr></thead>
+        <tbody>
+          {RESHAPE.map(([sig, what, rules]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{sig}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{what}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{rules}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>BoardGrid layering</h2>
+
+  <p>
+    A <code>BoardGrid</code> is what you reach for when cells, not columns, are the unit
+    of play: Hold &amp; Win, a coin collector, a bingo-style board. It is a grid of
+    independent one-cell <code>ReelSet</code> instances laid out
+    at <code>(reel x (cellWidth + columnGap), cell x (cellHeight + rowGap))</code>, each
+    with its own mask. The grid is mechanism only. It knows nothing about coins, locks,
+    rules or hit areas; games build those on top from <code>cellBounds()</code>. What it
+    does provide is a fixed stacking order and three presentation primitives that work
+    across cells.
+  </p>
+
+  <p>
+    Figure 2 shows the five layers, bottom to top. The <strong>chrome</strong> is a
+    per-cell background you draw once. The <strong>cells</strong> are the reel sets.
+    Above them, <code>_lifted</code> is a render layer where every cell's unmasked art
+    is attached, so a symbol can poke outside its cell.
+    The <strong>dim layer</strong> holds the black rectangles
+    that <code>dim()</code> draws over losing cells. And <code>_promoted</code> is where
+    a cell goes when you <code>lift()</code> it: above everything, including the dim,
+    which is how a winning coin stays bright while the rest of the board darkens. The
+    API table that follows the figure has the details of each call.
+  </p>
+
+  <Diagram height={404} caption="Five layers, bottom to top. lift() moves one cell's unmasked art into _promoted; dim() draws black rectangles in the dim layer, between lifted and promoted art; dimSymbols() tints instead of covering. cellZIndex() sorts _lifted. The API table below has the details.">
+    <Edge from={[60, 384]} to={[60, 20]} label="draw order" />
+    <Box x={140} y={20} w={540} h={60} title="_promoted (RenderLayer)" kind="accent" sub="cells that have been lift()ed" />
+    <Box x={140} y={96} w={540} h={60} title="dim layer" mono={false} sub="_dimHost and _dimLayer: black rects from dim(), faded on the ticker" />
+    <Box x={140} y={172} w={540} h={60} title="_lifted (RenderLayer)" sub="every cell's viewport.unmaskedContainer attaches here" />
+    <Box x={140} y={248} w={540} h={60} title="cells" kind="code" mono={false} sub="one 1x1 ReelSet per cell, each with its own mask strategy" />
+    <Box x={140} y={324} w={540} h={60} title="chrome" kind="muted" mono={false} sub="chrome(g, w, h) per cell, drawn first" />
+  </Diagram>
+
+  <p>
+    These are the constructor options. Most are forwarded straight to the builder of
+    every cell, so anything you can configure on a reel set you can configure here.
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>BoardGridOptions</th><th class={th}>Default</th><th class={th}>Meaning</th></tr></thead>
+        <tbody>
+          {GRID_OPTS.map(([k, d, m]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2 font-mono text-xs text-muted-foreground">{d}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{m}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    And this is the grid's API. The three presentation calls each hand back
+    a <code>release</code> function, which is the pattern for "undo this when the
+    feature ends".
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>BoardGrid API</th><th class={th}>Behaviour</th></tr></thead>
+        <tbody>
+          {GRID_API.map(([sig, what]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{sig}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{what}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    Inside each cell the viewport has its own small stack, in
+    order: <code>maskedContainer</code> (the strip,
+    clipped), <code>unmaskedContainer</code> (sortable, above the
+    mask), <code>spotlightContainer</code>, <code>promotedLayer</code> and <code>dimOverlay</code>.
+    When you need a cell's
+    rectangle, <code>ReelSet.getCellBounds(reel, cell)</code> returns set-local bounds
+    including the viewport offset; on a curved reel that is the bounding box of a
+    trapezoid, and <code>getCellQuad</code> gives you the four corners.
+  </p>
+
+  <h2>The Hold &amp; Win state machine</h2>
+
+  <p>
+    Hold &amp; Win has rules that are easy to state and easy to get subtly wrong: a coin
+    that lands locks in place; any lock resets the respin counter; a wave with no new
+    coin costs a respin; the feature ends when the board is full or the respins hit
+    zero. The library keeps those rules in one place, <code>HoldAndWinState</code>, a
+    pure reducer with no PixiJS in it. Every derived value is computed from the ledger
+    rather than
+    cached: <code>capacity = all - inactive</code>, <code>isFull = locked.size === capacity</code>.
+    That makes the rules testable in isolation and impossible to drift from the
+    picture. <code>HoldAndWinBoard</code> is the driver: it composes the reducer with a
+    BoardGrid, spins the cells, reports each landing back to the reducer and replays the
+    reducer's effects as events on <code>board.events</code>.
+  </p>
+
+  <p>
+    Figure 3 is the reducer's life. It starts idle. <code>enter(seed)</code> places the
+    first coins and makes it active. Each <code>beginWave()</code> opens one wave of
+    respins, and <code>endWave()</code> or <code>abortWave()</code> closes it. Notice
+    that <code>land()</code> is only honoured while spinning: a landing that arrives
+    after an abort is dropped rather than corrupting the ledger.
+  </p>
+
+  <Diagram height={360} caption="The reducer's three phases. enter() leaves idle, beginWave() opens a wave, endWave() or abortWave() closes it, and endWave() goes back to idle when the board is full or respins reach 0. land(cell, coin) is only honoured while spinning, so stray landings after an abort are dropped.">
+    <Box x={265} y={30} w={230} h={60} title="idle" kind="muted" mono={false} sub="before enter(), after feature:end" />
+    <Box x={265} y={150} w={230} h={60} title="active" kind="accent" mono={false} sub="coins locked, between waves" />
+    <Box x={265} y={270} w={230} h={60} title="spinning" kind="primary" mono={false} sub="one wave in flight" />
+    <Edge from={[380, 90]} to={[380, 150]} kind="primary" label="enter(seed)" />
+    <Edge from={[380, 210]} to={[380, 270]} kind="primary" label="beginWave(hits)" />
+    <Edge from={[495, 300]} via={[[575, 300], [575, 180]]} to={[495, 180]} label="endWave() · abortWave()" />
+    <Edge from={[265, 180]} via={[[160, 180], [160, 60]]} to={[265, 60]} label="full or respins <= 0" />
+  </Diagram>
+
+  <p>
+    <code>endWave()</code> is where the rules live, and it applies them in a fixed
+    order. If the wave produced any hit, <code>respins</code> resets to the default
+    and <code>respins:changed</code> fires with reason <code>'hit-reset'</code>; if not,
+    it decrements, never below zero, with reason <code>'miss'</code>. The phase goes
+    back to active and <code>respin:end {'{ round, hits, respinsLeft }'}</code> fires.
+    If the board is now full, <code>board:full {'{ coins }'}</code> fires. And if the
+    board is full or respins are zero, the phase becomes idle
+    and <code>feature:end</code> fires. The other reducer calls guard
+    themselves: <code>enter(seed)</code> only works from idle and needs active, unique
+    seed cells (the round counter restarts at
+    0); <code>release()</code>, <code>activate()</code> and <code>swap()</code> throw
+    during a wave; <code>reset()</code> clears the ledger, restores inactive cells and
+    emits only <code>feature:reset</code>; <code>beginWave()</code> throws on an
+    inactive, locked or duplicate hit.
+  </p>
+
+  <p>
+    Figure 4 is what the driver does for one wave when you
+    call <code>respin(hits)</code>. It opens the wave, picks a speed profile per cell,
+    announces the wave, spins the free cells through the grid with a diagonal stagger
+    and reports each landing, then closes the wave.
+  </p>
+
+  <Diagram height={100} caption="HoldAndWinBoard.respin(hits), the driver around one wave: beginWave() (round++, the free cells), pick the per-cell profile (speed, or speed:tension when anticipateWhen() says so), emit respin:start, grid.spinCells() with the diagonal stagger and land() per cell, then endWave().">
+    <Box x={20} y={28} w={106} h={44} title="beginWave" />
+    <Box x={144} y={28} w={132} h={44} title="pick profile" mono={false} />
+    <Box x={294} y={28} w={132} h={44} title="respin:start" />
+    <Box x={444} y={28} w={150} h={44} title="grid.spinCells" />
+    <Box x={612} y={28} w={88} h={44} title="endWave" />
+    <Edge from={[126, 50]} to={[144, 50]} />
+    <Edge from={[276, 50]} to={[294, 50]} />
+    <Edge from={[426, 50]} to={[444, 50]} />
+    <Edge from={[594, 50]} to={[612, 50]} />
+  </Diagram>
+
+  <p>
+    The "pick profile" step is how the board builds tension. For each speed you
+    register, the constructor registers two per-cell profiles, the plain one and
+    a <code>name:tension</code> variant that spins 1100 ms longer
+    (<code>TENSION_EXTRA_MS</code>). Each cell's minimum spin time is the profile's
+    (default 320 ms) plus its share of the stagger, so the wave lands diagonally.
+    Your <code>anticipateWhen()</code> callback is asked once per wave, against the
+    state before the wave, and decides whether the tense variant is used; it only
+    matters if at least one cell is spinning. When a coin locks, the driver plays the
+    lock animation: <code>'win'</code> waits for the symbol's landing animation to
+    finish first, <code>'landing'</code> does not replay it, and a failure is logged
+    as <code>hw-coin-&lt;anim&gt;-failed</code> rather than thrown.
+  </p>
+
+  <p>
+    The two tables below are the builder's defaults and the board's methods. Most of the
+    board's methods are either pass-throughs to the reducer or to the grid; the ones
+    that throw mid-wave do so because the ledger must not change while landings are
+    still arriving.
+  </p>
+
+  <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>HoldAndWinBuilder</th><th class={th}>Default</th></tr></thead>
+        <tbody>
+          {HW_DEFAULTS.map(([k, d]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2 font-mono text-xs text-muted-foreground">{d}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60"><tr><th class={th}>HoldAndWinBoard</th><th class={th}>Behaviour</th></tr></thead>
+        <tbody>
+          {HW_METHODS.map(([k, d]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{d}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    The builder's other methods
+    are <code>grid</code>, <code>cellSize(size, {'{ gap, columnGap, rowGap }'})</code>, <code>symbols</code> (required), <code>weights</code>, <code>emptyId</code>, <code>inactive(cells, id?)</code>, <code>symbolData</code> (merged; <code>{'{ unmask: true }'}</code> is
+    the headline
+    use), <code>respins</code>, <code>lockAnimation</code>, <code>symbolZIndex</code>, <code>cellZIndex</code>, <code>speedProfile</code>, <code>speeds</code>, <code>initialSpeed</code>, <code>skipMode</code>, <code>stagger</code>, <code>anticipateWhen(fn)</code>, <code>cellChrome</code>, <code>cellMask</code>, <code>axis</code>, <code>ticker</code> (required)
+    and <code>rng</code>. <code>build()</code> throws
+    without <code>symbols</code> or <code>ticker</code>, or
+    if <code>initialSpeed</code> names no registered profile.
+  </p>
+
+  <p>
+    The board talks back on its own bus, one object per
+    event: <code>feature:enter</code>, <code>respin:start</code>, <code>cell:landed</code> (in
+    stagger
+    order), <code>coin:locked</code>, <code>coin:released</code>, <code>respins:changed</code>, <code>respin:end</code>, <code>board:full</code>, <code>feature:skip</code>, <code>feature:reset</code>, <code>feature:end</code>, <code>cells:activated</code> and <code>speed:changed</code>.
+    The payloads are on the <a href="/architecture/events/">events page</a>. A coin
+    is <code>HwCoin {'{ readonly cell, readonly id, data? }'}</code>: the board
+    owns <code>cell</code> and <code>id</code>, and <code>data</code> is yours to
+    mutate, for a coin's value or multiplier.
+  </p>
+
+  <h2>Nudge, in short</h2>
+
+  <p>
+    A nudge moves one landed reel by a few cells, feeding new symbols in from one end,
+    the way a mechanical slot "bumps" a reel one notch to complete a
+    line. <code>ReelSet.nudge(reel, options)</code> does that at rest. You give it
+    a <code>distance</code> (a positive whole number of cells, below the strip's
+    capacity),
+    a <code>direction</code> of <code>'forward'</code> or <code>'reverse'</code> relative
+    to the reel's own travel axis, and the <code>incoming</code> symbols, which must be
+    exactly <code>distance</code> long, listed in start-to-end order, and may overflow
+    into the buffer cells. The defaults are a duration of 200 ms per cell and
+    a <code>'power2.out'</code> ease with its overshoot clamped, and you can add
+    a <code>startDelay</code>, a custom <code>ease</code> or an
+    abort <code>signal</code>.
+  </p>
+
+  <p>
+    The engine refuses a nudge while a spin, a refill or an expand step is in flight, on
+    a reel whose <code>bufferEnd</code> is 0, or if any pin sits on that reel. While a
+    nudge runs, the reverse is also
+    true: <code>spin</code>, <code>setResult</code>, <code>pin</code>, <code>setShape</code> and
+    resizing all throw. The set emits <code>nudge:start</code> after the incoming
+    symbols are placed, so what the event reports is what is about to animate, and then
+    either <code>nudge:complete</code> with the new visible column
+    or <code>nudge:cancelled</code> with a reason and
+    an <code>AbortError</code> rejection. The reel's own bus
+    sees <code>phase:enter('nudge')</code> and <code>phase:exit('nudge')</code>. <code>skipNudge(reel?)</code> fast-forwards
+    and still resolves normally. A nudge is deliberately per reel; to nudge several, run
+    them with <code>Promise.all</code>.
+  </p>
+
+  <h2>Presenting wins</h2>
+
+  <p>
+    The engine never decides what a win is (ADR 007), but it does give you three ways to
+    show one once you have decided. <code>WinPresenter</code> runs a whole sequence of
+    wins, cycling through them with the losers dimmed. <code>SymbolSpotlight</code> is
+    the single-highlight primitive it is built on. <code>promote()</code> is the
+    lightest of the three: it lifts symbols above the mask without dimming or animating
+    anything. A <code>Win</code> is just <code>{'{ cells, value?, kind?, id? }'}</code>,
+    and the order of <code>cells</code> matters when a stagger is set.
+  </p>
+
+  <div class="not-prose my-6 grid gap-3 md:grid-cols-3">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">WinPresenter</div>
+      <p class="text-sm text-foreground/80"><code>wins/WinPresenter.ts</code>. <code>show(wins)</code> aborts any previous run, sorts by value (<code>sortByValue: true</code>), emits <code>win:start</code>, then per win per cycle dims losers (<code>dimLosers</code> alpha <code>0.35</code>), emits <code>win:group</code>, then <code>win:symbol</code> per cell spaced by <code>stagger</code> (0) and plays <code>symbolAnim</code> (<code>'win'</code>, a named animation, or a function). <code>cycleGap</code> 400 ms, <code>cycles</code> 1 (<code>-1</code> infinite). <code>win:end</code> fires in <code>finally</code>. In a cascade, call it from <code>presentWinners</code>.</p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">SymbolSpotlight</div>
+      <p class="text-sm text-foreground/80"><code>reelSet.spotlight</code>. <code>show(positions)</code> emits <code>spotlight:start</code>, dims the viewport (<code>dimAmount</code> 0.5), reparents each view into <code>viewport.spotlightContainer</code> (<code>promoteAboveMask</code> true), and awaits <code>playWin()</code> (<code>playWinAnimation</code> true). <code>hide()</code> reparents back, skipping views the pool recycled, and emits <code>spotlight:end</code>. <code>cycle(lines)</code> shows each for <code>displayDuration</code> 2000 ms with <code>gapDuration</code> 300 ms, <code>cycles</code> 1.</p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">promote()</div>
+      <p class="text-sm text-foreground/80"><code>ReelSet.promote(positions) → release</code> is the non-reparenting alternative. It attaches the views to <code>viewport.promotedLayer</code> (a RenderLayer), prunes itself on <code>symbol:created</code> when a swap hands the cell a new instance, and does no dim and no <code>playWin</code>. The engine never computes or draws wins (ADR 007); a <code>Win</code> is <code>{'{ cells, value?, kind?, id? }'}</code> and the order of <code>cells</code> matters when <code>stagger &gt; 0</code>.</p>
+    </div>
+  </div>
+
+  <h2>Where this lives</h2>
+
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>pins/CellPin.ts</code> CellPin, CellPinOptions, MovePinOptions, PinExpireReason, pinKey</li>
+        <li><code>core/ReelSet.ts</code> pin, unpin, movePin, _onSpinStart, _onSpinLanded, _applyPinsToGrid, _migratePinsForReel, nudge, expand, setColumn, splitSymbol, resetColumns, promote</li>
+        <li><code>core/expand.ts</code> ExpandStep, ExpandStepLanded, ExpandResult, planExpandSteps</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">board/, wins/, spotlight/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>board/BoardGrid.ts</code> the grid · <code>board/HwTypes.ts</code> events and coin types</li>
+        <li><code>board/HoldAndWinState.ts</code> the reducer · <code>board/HoldAndWinBoard.ts</code> the driver · <code>board/HoldAndWinBuilder.ts</code></li>
+        <li><code>wins/WinPresenter.ts</code> · <code>spotlight/SymbolSpotlight.ts</code> · <code>config/types.ts</code> Z_INDEX_BUDGET, Win</li>
+      </ul>
+    </div>
+  </div>
+
+  <Callout kind="remember">
+    A pin rewrites the result and draws a stand-in while the reel moves; it spends one
+    turn per <code>spin:allLanded</code>. A BoardGrid is many one-cell reel sets with a
+    shared stacking order. Hold &amp; Win is a pure reducer that owns the rules, driven
+    by a board that owns the pictures. Keep the rules and the pictures apart and the
+    features compose.
+  </Callout>
+</Architecture>

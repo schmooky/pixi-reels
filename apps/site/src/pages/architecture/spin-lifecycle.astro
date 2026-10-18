@@ -1,110 +1,793 @@
 ---
 import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
-import Mermaid from '../../components/Mermaid.astro';
+import Callout from '../../components/arch/Callout.astro';
+
+// Phase chain figures: two rows of four boxes, 146 wide, 16 gap, inside a 680 group.
+const col = (i: number) => 44 + i * 162;
+const BW = 146;
+const R1 = 64;
+const R2 = 196;
 ---
 <Architecture
   title="Spin lifecycle"
-  subtitle="One spin as a state machine, per reel."
+  subtitle="What happens to one reel between spin() and its landing, phase by phase."
   eyebrow="Lifecycle"
 >
   <p>
-    Each reel moves through four phases, independently. The diagram below
-    shows the transitions and what triggers each one. Anticipation is
-    optional. a reel skips it unless <code>setAnticipation([i])</code> put
-    its index on the list. <code>skipSpin()</code> can short-circuit any phase
-    into an immediate landing.
+    Watch a single spin as a player. The five columns start one after the other,
+    a beat apart, with a small backward tug before they fly. They blur for a
+    moment. Then they stop one by one, left to right, each one overshooting the
+    grid and settling back with a bounce. Sometimes the last column slows to a
+    crawl and holds there, teasing a big win, before it finally drops. If the
+    player taps the button in the middle of all that, everything slams into
+    place at once.
   </p>
 
-  <Mermaid chart={`
-stateDiagram-v2
-  [*] --> IDLE
-  IDLE --> START : spin()
-  START --> SPIN : tween complete
-  SPIN --> ANTICIPATION : if anticipationReels<br/>includes this reel
-  SPIN --> STOP : default
-  ANTICIPATION --> STOP : hold complete
-  STOP --> IDLE : landed event
+  <p>
+    None of those columns knows about the others. Each reel walks its own short
+    chain of <strong>phases</strong>, the named stages of its journey: start,
+    spin, stop, with an optional tease in between. The thing that keeps five
+    independent chains looking like one choreographed spin is the
+    <strong>spin controller</strong>. It decides when each chain may move on,
+    holds every reel back until your result has arrived, and resolves one
+    promise when the last reel has landed. It never draws a pixel (the reel and
+    its symbols do that) and it never picks an outcome (your <code>setResult()</code>
+    call does that). <code>ReelSet</code> wraps it; most of the public methods you
+    call on the set forward straight to the controller.
+  </p>
 
-  SPIN --> IDLE : skipSpin()
-  ANTICIPATION --> IDLE : skipSpin()
-  STOP --> IDLE : skipSpin()
-  START --> IDLE : skipSpin()
+  <Callout kind="plain">
+    A spin is five little state machines running side by side, one per reel.
+    The controller is the referee: it starts them in the same tick, lets the
+    speed profile stagger them, refuses to let any of them stop before the
+    result is known, and blows the whistle when the last one is down.
+  </Callout>
 
-  note left of START
-    accelerate + step-back
-  end note
-  note right of SPIN
-    speed = max
-    symbols wrap
-    setResult() called here
-    setAnticipation() called here
-  end note
-  note right of ANTICIPATION
-    slow-hold for tension
-    anticipationDelay ms
-  end note
-  note right of STOP
-    decelerate
-    place target
-    bounce + snap
-  end note
-  `} caption="Per-reel state machine. setResult and setAnticipation are caller actions during SPIN; skipSpin short-circuits any phase to landing." />
+  <h2>The chain, one reel at a time</h2>
+
+  <p>
+    Figure 1 is the chain a reel walks in <strong>standard mode</strong>, the
+    ordinary spinning-column look. Read it left to right and then down. The
+    three solid boxes, start, spin and stop, run on every spin. The dashed ones
+    are optional: <strong>adjust</strong> only exists on a MultiWays board that
+    changes shape, and <strong>anticipation</strong> only runs when you asked a
+    reel to tease. The grey <strong>barrier</strong> is not a phase at all; it
+    is a plain await where a reel waits for earlier reel groups to land.
+  </p>
+
+  <Diagram height={322} caption="Standard mode, one reel. Each box is a ReelPhase the controller awaits in turn (the barrier is a plain await). A slam calls forceComplete() on whichever phase is active and lands the reel in the same tick.">
+    <Group x={20} y={20} w={680} h={278} kind="tint" label="standard mode" note="spin() default, or spin({ mode: 'standard' })" />
+    {([
+      ['IDLE', ['at rest'], 'ghost'],
+      ['start', ['5 steps', 'stagger here'], 'accent'],
+      ['spin', ['until resolve()', '+ min spin time'], 'accent'],
+      ['adjust', ['MultiWays', 'only'], 'ghost'],
+      ['barrier', ['earlier groups', 'landed'], 'muted'],
+      ['anticipation', ['tease (cut)', 'if listed'], 'ghost'],
+      ['stop', ['delay, spinOut,', 'land, bounce'], 'accent'],
+      ['landed', ['_markLanded', 'reelLanded'], 'primary'],
+    ] as const).map(([t, s, k], i) => (
+      <Box x={col(i % 4)} y={i < 4 ? R1 : R2} w={BW} h={78} title={t} sub={[...s]} kind={k} />
+    ))}
+    {[0, 1, 2].map((i) => (
+      <Edge from={[col(i) + BW, R1 + 39]} to={[col(i + 1), R1 + 39]} />
+    ))}
+    <Edge from={[col(3) + BW / 2, R1 + 78]} via={[[col(3) + BW / 2, R1 + 105], [col(0) + BW / 2, R1 + 105]]} to={[col(0) + BW / 2, R2]} />
+    {[0, 1, 2].map((i) => (
+      <Edge from={[col(i) + BW, R2 + 39]} to={[col(i + 1), R2 + 39]} />
+    ))}
+  </Diagram>
+
+  <p>
+    Figure 2 is the same chain in <strong>cascade mode</strong>, the look where
+    symbols fall into the board from above and winning symbols are removed so
+    new ones can drop in. The shape is identical; only the names change. A
+    <code>cascade:fall</code> phase replaces start, and the stop is split into
+    <code>cascade:place</code> (swap the result symbols in) and
+    <code>cascade:dropIn</code> (drop them into the board). Notice that the tease here is
+    a pure hold at speed zero: a falling reel cannot "crawl", so it pauses
+    instead.
+  </p>
+
+  <Diagram height={322} caption="Cascade mode, one reel. fall replaces start, place and dropIn replace stop, and the tease is a pure hold at speed 0. The same slam rule applies; a quicken is turned into a slam here.">
+    <Group x={20} y={20} w={680} h={278} kind="tint" label="cascade mode" note=".tumble() default, spin({ mode: 'cascade' }), every refill()" />
+    {([
+      ['IDLE', ['at rest'], 'ghost'],
+      ['fall', ['cascade:fall', 'replaces start'], 'accent'],
+      ['spin', ['until resolve()', '+ min spin time'], 'accent'],
+      ['adjust', ['MultiWays', 'only'], 'ghost'],
+      ['barrier', ['earlier groups', 'landed'], 'muted'],
+    ] as const).map(([t, s, k], i) => (
+      <Box x={44 + i * 130} y={R1} w={112} h={78} title={t} sub={[...s]} kind={k} />
+    ))}
+    {[0, 1, 2, 3].map((i) => (
+      <Edge from={[44 + i * 130 + 112, R1 + 39]} to={[44 + (i + 1) * 130, R1 + 39]} />
+    ))}
+    <Edge from={[620, R1 + 78]} via={[[620, R1 + 105], [117, R1 + 105]]} to={[117, R2]} />
+    {([
+      ['anticipation', ['pure hold', 'at speed 0'], 'ghost'],
+      ['place', ['cascade:place', 'after stop delay'], 'accent'],
+      ['dropIn', ['cascade:dropIn', 'initial: true'], 'accent'],
+      ['landed', ['_markLanded', 'reelLanded'], 'primary'],
+    ] as const).map(([t, s, k], i) => (
+      <Box x={col(i)} y={R2} w={BW} h={78} title={t} sub={[...s]} kind={k} />
+    ))}
+    {[0, 1, 2].map((i) => (
+      <Edge from={[col(i) + BW, R2 + 39]} to={[col(i + 1), R2 + 39]} />
+    ))}
+  </Diagram>
 
   <div class="not-prose my-8">
     <Legend items={[
-      { kind: 'muted', label: 'Idle', note: 'at rest' },
-      { kind: 'primary', label: 'Conditional path', note: 'dashed = may be skipped' },
-      { kind: 'accent', label: 'Required transition' },
-      { kind: 'subtle', label: 'Caller actions', note: 'drive the state machine' },
+      { kind: 'accent', label: 'phase every reel runs', note: 'start, spin, stop or their cascade stand-ins' },
+      { kind: 'subtle', label: 'optional phase', note: 'dashed: adjust needs MultiWays, anticipation needs setAnticipation()' },
+      { kind: 'muted', label: 'barrier', note: 'an await, not a phase: no ReelPhase object exists' },
+      { kind: 'primary', label: 'landed', note: '_markLanded(i) resolves the promise once every reel is here' },
     ]} />
   </div>
 
-  <h2>What each phase actually does</h2>
+  <p>
+    Each phase is itself a short list of <strong>steps</strong>: the start
+    phase, for example, is a delay, a launch, a backward pull, an acceleration
+    and an announcement. Steps matter because of what a skip press does to
+    them. There are two kinds of press. A <strong>slam</strong> cancels the
+    whole phase and puts the reel on its result in the same tick. A
+    <strong>quicken</strong> is gentler: it removes only the steps marked
+    <code>cut</code> (the start delay, the tease, the stop delay) and lets the
+    rest play, so the reel still spins out, lands and bounces, only sooner. In
+    cascade mode a quicken is turned into a slam (with one warning), because a
+    falling symbol has no "sooner" worth watching. Reels you asked the spin to
+    hold skip the whole chain and simply count as landed.
+  </p>
 
-  <div class="not-prose my-6 grid gap-3 md:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">START</div>
-      <p class="text-sm">A brief downward "step-back" (pulling the handle), then GSAP tweens <code>reel.speed</code> from 0 to <code>spinSpeed</code> with <code>accelerationEase</code>. Each reel's start is delayed by <code>reelIndex × spinDelay</code>, producing the classic staggered kickoff.</p>
+  <h2>What the controller owns</h2>
+
+  <p>
+    The controller is handed everything it needs when the set is built: the
+    reels, the speed manager, the frame builder that turns your result grid
+    into symbol strips, the phase factory that constructs phases by name, the
+    set-level event emitter, the Pixi ticker, a spinning mode (how far the
+    strip moves per frame; <code>StandardMode</code> by default), the default
+    spin mode (<code>'standard'</code> or <code>'cascade'</code>) and an
+    optional bag of hooks. The hooks are how MultiWays and big-symbol features
+    reach in (<code>isMultiWaysSlot</code>, <code>peekTargetShape</code>,
+    <code>clearTargetShape</code>, <code>getPinsOnReel</code>,
+    <code>migratePinsForReel</code> and so on); every one defaults to a no-op,
+    so a plain game pays nothing for them.
+  </p>
+
+  <p>
+    It registers exactly one ticker callback. While a spin is running, that
+    callback asks every reel to move (<code>reel.update(deltaMs)</code>) and
+    then gives every active phase its slice of time
+    (<code>phase.update(deltaMs)</code>). It also listens to each reel's
+    <code>landing</code> event and re-emits it at the set level as
+    <code>spin:reelLanding</code>, so your game only ever subscribes in one
+    place.
+  </p>
+
+  <p>
+    The state the controller carries falls into two buckets, and knowing which
+    is which saves a lot of head-scratching: some of it is wiped at the start of
+    every <code>spin()</code>, and some of it survives from spin to spin. The two
+    cards list both; the names are the private fields you will meet in a stack
+    trace.
+  </p>
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Per spin, reset by spin()</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>_isSpinning</code>, <code>_spinStartTime</code>, <code>_resultSymbols</code>, <code>_cachedFrames</code></li>
+        <li><code>_activePhases: Map&lt;reelIndex, ReelPhase&gt;</code>, <code>_landedReels</code>, <code>_slammedReels</code>, <code>_heldReels</code></li>
+        <li><code>_activeSpinSpeed</code>: the profile captured once for this spin</li>
+        <li>every anticipation field: reels, stagger, slowdown, curve, cells, duration, protect, <code>_teasingReels</code>, <code>_anticipatedReels</code></li>
+        <li><code>_reelLandedPromises</code>: one landing promise per reel, used by <code>'sequential'</code> stagger and group barriers</li>
+        <li>skip state for the press: <code>_wasSkipped</code>, <code>_skipMode</code>, <code>_skipCtx</code>, <code>_skipPending</code>, <code>_quickenedReels</code>, <code>_quickenBatches</code></li>
+      </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">SPIN</div>
-      <p class="text-sm">Reel holds at full speed indefinitely. Symbols wrap vertically via <code>ReelMotion</code>; as each symbol wraps, its identity is swapped for a new one from the <code>RandomSymbolProvider</code>. Waits for <code>setResult()</code> and <code>spin:allStarted</code> before any stop can begin.</p>
-    </div>
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">ANTICIPATION (optional)</div>
-      <p class="text-sm">Reel holds at a reduced speed for <code>anticipationDelay</code> ms. Entered only if <code>setAnticipation()</code> included this reel. Fires <code>spin:stopping</code> on entry, not <code>phase:enter "stop"</code> yet.</p>
-    </div>
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">STOP</div>
-      <p class="text-sm">GSAP timeline decelerates to 0, calls <code>reel.placeSymbols(visible)</code> to lock in the target, then overshoots by <code>bounceDistance</code> and snaps back. Fires <code>landed</code> when complete.</p>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Persisting across spins</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>_stopDelayOverride</code> and <code>_dropOrder</code> (<code>setStopDelays</code>, <code>setDropOrder</code>)</li>
+        <li><code>_reelGroups</code> and <code>_groupOfReel</code> (<code>setReelGroups</code>)</li>
+        <li><code>_minimumSpinTimeOverride</code> (<code>setMinimumSpinTime</code>)</li>
+        <li><code>defaultSkipMode</code>, public, default <code>'slam'</code></li>
+        <li>round-level skip state: <code>_skipStage</code> (0, 1, 2), <code>_skipPreviousSpeedName</code>, <code>_skipBoostedToName</code>, <code>_manualSpeedSinceBoost</code>, <code>_autoSlamRefills</code></li>
+        <li>promise plumbing: <code>_currentSpinResolve</code>, <code>_currentSpinReject</code>, <code>_pendingAbortError</code>, <code>_spinWatchdogCleanup</code></li>
+        <li><code>_spinGeneration</code>: the abort switch, see below</li>
+      </ul>
     </div>
   </div>
+
+  <Callout kind="gotcha">
+    Anticipation is per spin. Every tease setting is cleared at the top of
+    <code>spin()</code>, so call <code>setAnticipation()</code> after
+    <code>spin()</code> and before <code>setResult()</code>, every time. Stop
+    delays, drop order, reel groups and the minimum spin time are the opposite:
+    set them once and they stay.
+  </Callout>
+
+  <h2>What spin() does before any reel moves</h2>
+
+  <p>
+    From the player's side, <code>spin()</code> is the instant the columns
+    lurch. Inside, a fair amount of housekeeping happens first, all in the same
+    tick, and the order matters when you are debugging. Here it is as a list.
+  </p>
+  <ol>
+    <li>Refuse to start if a spin is already running. If the abort signal you passed is already aborted, reject at once.</li>
+    <li>Work out the spin mode. <code>'cascade'</code> needs the <code>cascade:fall</code> phase to be registered, which <code>.tumble()</code> does; <code>'standard'</code> needs at least one trailing buffer cell (<code>bufferEnd &gt;= 1</code>) on every reel, because strip scrolling has to have somewhere to pull the next symbol from. Either failure throws.</li>
+    <li>Close the previous round, unless this spin is a continuation of one (<code>round.continueRound</code>, which <code>expand()</code> steps use). If an earlier skip boosted the speed and you have not called <code>setSpeed()</code> since, the previous profile is put back; the skip stage returns to 0 and the cascade auto-slam flag is cleared.</li>
+    <li>Reset the per-spin state from the left-hand card above: result, every anticipation setting, the quicken sets, the landed and slammed sets, the active phases. Fresh landing promises are created. A press carried over from the previous <code>expand()</code> step becomes a pending skip. The stop-delay override is deliberately kept.</li>
+    <li>Tidy <code>holdReels</code>: out-of-range, non-integer and duplicate entries are dropped.</li>
+    <li>Build the stagger ranking, but only for <code>expand()</code> steps that use <code>stagger: 'spinning'</code>.</li>
+    <li>Bump the generation counter (explained below) and capture the active speed profile once. Every phase in this spin receives that same object, which is why a speed change always takes effect on the next spin, never mid-spin.</li>
+    <li>Emit <code>spin:start</code>, create the promise you will await, and arm the watchdog.</li>
+    <li>If every reel is held, finish on the next microtask with no animation at all.</li>
+    <li>Otherwise start a chain for every reel that is not held. All chains begin in the same tick; the stagger you see comes from each start phase's delay step, not from the controller starting them late.</li>
+  </ol>
+  <p>
+    Each chain runs inside a small safety net (<code>_runReelTask</code>). If a
+    chain throws, the controller logs a <code>phase-chain-threw</code> notice
+    and slams the spin, so your promise resolves with <code>wasSkipped: true</code>
+    instead of hanging forever. Errors that belong to an older spin are dropped.
+  </p>
+
+  <h2>One reel's chain, from the inside</h2>
+
+  <p>
+    Now the part that produces what the player sees. This is the chain the
+    controller runs for one reel (<code>_startReel</code>), in order. The player
+    only notices four moments in it: the lurch, the blur, the optional
+    hesitation, and the landing.
+  </p>
+  <ol>
+    <li>Tell the reel its reference speed, the profile's <code>spinSpeed</code>. The reel uses it to normalise its own speed and to bound its drive.</li>
+    <li>Cascade only: if a MultiWays reshape is already waiting, apply it now so the reel falls at its new height.</li>
+    <li><strong>Start.</strong> The lurch. Create the start phase (or <code>cascade:fall</code>) with a delay of <code>_staggerIndex(i) * spinDelay</code>, so reel 0 goes at once and reel 4 waits four beats.</li>
+    <li><strong>Spin.</strong> The blur. Create the spin phase with a minimum spin time: the per-reel override from <code>setMinimumSpinTime</code>, or 0 if a quicken has already reached this reel. Do not await it yet.</li>
+    <li>If this reel is the last one to enter its spin phase, emit <code>spin:allStarted</code> and try to open the stop gate (next section).</li>
+    <li>Now await the spin phase. It completes only after the controller has told it the result is in <em>and</em> its minimum spin time has elapsed.</li>
+    <li><strong>Adjust</strong> (MultiWays only). Commit the reshape, emitting <code>adjust:start</code> and <code>adjust:complete</code>. An actual adjust phase is only created when there are pin overlays to animate.</li>
+    <li><strong>Group barrier.</strong> Keep spinning at full speed until every earlier reel group has landed.</li>
+    <li>Look up this reel's stop delay, its target frame (the symbols it must land on) and the tease length: the <code>setAnticipation</code> duration if given, else the profile's <code>anticipationDelay</code>.</li>
+    <li><strong>Tease decision.</strong> The hesitation. The reel teases if it is on the anticipation list, the tease length is above zero, and no quicken has touched it. It first waits out its stagger offset at full speed, then joins the teasing set, tells the reel (<code>notifyAnticipationStart</code>, so a symbol can drop its blur), emits <code>anticipation:reel</code> and then <code>spin:stopping</code>, and runs the anticipation phase. Afterwards it joins the "anticipated" set only if the tease played to its end. A reel that does not tease emits <code>spin:stopping</code> and moves on. The <a href="/architecture/anticipation/">anticipation page</a> has the shapes.</li>
+    <li><strong>Stop.</strong> The landing. Standard mode creates the stop phase with the target frame, a delay (0 if the reel was quickened, else its stop delay) and <code>preserveSpeed</code> set when the tease played to the end and nothing quickened it; a quickened reel's phase is primed so its cut steps are skipped from the first one. Cascade mode halts and snaps a teased reel first, then runs <code>cascade:place</code> after the stop delay and <code>cascade:dropIn</code>.</li>
+    <li>Mark the reel landed.</li>
+  </ol>
 
   <h2>The generation counter</h2>
 
   <p>
-    Internally <code>SpinController</code> increments <code>_spinGeneration</code>
-    on every <code>spin()</code> and <code>skipSpin()</code>. Every async chain
-    checks the generation before continuing. an in-flight phase from a
-    previous spin quietly no-ops if the player spun again or skipped. That's
-    how you can hammer the spin button without state corruption.
+    A chain is a series of awaits, and a lot can change while one is parked:
+    the player can slam, the game can abort, the set can be destroyed. The
+    controller needs a cheap way for a chain to notice, after each await, that
+    the world has moved on and it should stop quietly. That is the
+    <strong>generation counter</strong>, a single integer that goes up on every
+    <code>spin()</code> and <code>refill()</code>, on a full slam, and on
+    <code>destroy()</code>. Each chain remembers the value it started with and
+    compares after every await; a mismatch means "stale, stop here".
   </p>
-
-  <h2>What <code>skipSpin()</code> does exactly</h2>
-
-  <ol>
-    <li>Emits <code>skip:requested</code>.</li>
-    <li>Force-completes every active phase's GSAP timeline.</li>
-    <li>Bumps <code>_spinGeneration</code> so pending async chains exit.</li>
-    <li>If <code>setResult()</code> was already called: places the target symbols directly. Otherwise snaps current symbols to grid.</li>
-    <li>Emits <code>spin:reelLanded</code> + <code>spin:allLanded</code> + <code>spin:complete</code> with <code>wasSkipped: true</code>.</li>
-    <li>Emits <code>skip:completed</code>.</li>
-  </ol>
 
   <p>
-    The <code>spinAndLand</code> test helper uses this exact path. That's why
-    it's synchronous. no ticker, no tweens, just direct symbol placement
-    and event emission.
+    A partial slam, which lands some reels while others keep spinning, must not
+    bump the counter, or it would strand the reels still running. So the stale
+    check has a second clause: a reel is also stale if it is in the slammed set.
+    The watchdog, the abort callbacks and the safety net check the generation
+    too. One ordering detail worth knowing: <code>destroy()</code> bumps the
+    counter <em>before</em> it force-completes phases, so no chain can start a
+    fresh tween during teardown.
   </p>
+
+  <h2>setResult and the stop gate</h2>
+
+  <p>
+    From the player's seat, the reels blur until the game "knows" the outcome,
+    then start dropping. The thing that connects those two moments is the
+    <strong>stop gate</strong>. Your <code>setResult(symbols)</code> call does
+    nothing if no spin is running. Otherwise it checks any big-symbol blocks
+    against the pending MultiWays shape (one warning for misaligned wide
+    blocks), stores the grid and tries to open the gate. After that it fires
+    any press that was queued with <code>requestSkip()</code>, and, if an
+    earlier press in a cascade round asked for it, presses a side-effect-free
+    slam. At the <code>ReelSet</code> level the same call first asserts that no
+    nudge is in flight, validates the grid and overlays any pins.
+  </p>
+
+  <p>
+    Figure 3 is the gate itself. It is tried from three places, and it only
+    opens when both conditions on the left are true: the result is in, and
+    every live reel has reached its spin phase. Notice the third trigger, a
+    partial slam: without it, a reel that got slammed before it ever reached
+    its spin phase could leave the gate closed for good.
+  </p>
+
+  <Diagram height={556} caption="The stop gate. _tryBeginStopSequence() is called from three places and only opens when the result is present and every live reel is inside its spin phase.">
+    <Box x={32} y={20} w={208} h={60} title="setResult(symbols)" kind="primary" sub="your call" />
+    <Box x={256} y={20} w={208} h={60} title="spin:allStarted" kind="accent" sub="the last reel to enter spin" />
+    <Box x={480} y={20} w={208} h={60} title="partial slam" kind="accent" sub="_slamTargets, re-check" />
+    <Box x={200} y={124} w={320} h={60} title="_tryBeginStopSequence()" kind="subtle" sub="the gate" />
+    <Edge from={[136, 80]} via={[[136, 102], [280, 102]]} to={[280, 124]} />
+    <Edge from={[360, 80]} to={[360, 124]} />
+    <Edge from={[584, 80]} via={[[584, 102], [440, 102]]} to={[440, 124]} />
+
+    <Box x={200} y={234} w={320} h={60} title="result set?" mono={false} kind="subtle" sub="_resultSymbols is not null" />
+    <Edge from={[360, 184]} to={[360, 234]} />
+    <Box x={200} y={344} w={320} h={60} title="every live reel in spin?" mono={false} kind="subtle" sub="each non-held, non-landed reel is in 'spin'" />
+    <Edge from={[360, 294]} to={[360, 344]} label="yes" labelDx={42} />
+
+    <Box x={580} y={225} w={120} h={78} title="closed" mono={false} kind="ghost" sub={['return, wait for', 'the next trigger']} />
+    <Edge from={[520, 264]} to={[580, 264]} label="no" />
+    <Edge from={[520, 374]} via={[[640, 374]]} to={[640, 303]} label="no" />
+
+    <Box x={160} y={454} w={400} h={78} title="gate opens" mono={false} kind="primary" sub={['build and cache one frame per reel,', 'spinPhase.resolve() on every live reel']} />
+    <Edge from={[360, 404]} to={[360, 454]} label="yes" labelDx={42} kind="primary" />
+  </Diagram>
+
+  <p>
+    Opening the gate does not drop the reels. It builds one frame per reel (the
+    exact symbols each will show, buffers included) and tells every spin phase
+    "you may finish". Figure 4 shows what each reel still has to get through
+    after that before it starts spinning out: its own minimum spin time, its
+    group turn, an optional tease and its stop delay. This is why an early
+    result still produces a staggered landing.
+  </p>
+
+  <Diagram height={232} caption="Even after the gate opens, each reel still waits for its own minimum spin time, its group turn, an optional tease and its stop delay before it spins out.">
+    <Box x={240} y={20} w={240} h={60} title="gate opens" mono={false} kind="primary" sub="spinPhase.resolve()" />
+    <Edge from={[360, 80]} via={[[360, 105], [102, 105]]} to={[102, 130]} kind="primary" />
+    <Box x={24} y={130} w={156} h={78} title="min spin time" kind="muted" sub={['per reel, from its', 'own spin entry']} />
+    <Box x={196} y={130} w={156} h={78} title="group barrier" kind="muted" sub={['earlier groups', 'landed']} />
+    <Box x={368} y={130} w={156} h={78} title="tease" kind="ghost" sub={['offset + hold, only', 'with setAnticipation']} />
+    <Box x={540} y={130} w={156} h={78} title="stop delay" kind="accent" sub={['then spinOut,', 'land, bounce']} />
+    <Edge from={[180, 169]} to={[196, 169]} />
+    <Edge from={[352, 169]} to={[368, 169]} />
+    <Edge from={[524, 169]} to={[540, 169]} />
+  </Diagram>
+
+  <p>
+    The minimum spin time is there so a result that comes back instantly does
+    not produce a spin that is over before the player has seen it move. It is
+    counted in ticker deltas, not wall-clock time, so it pauses while the tab
+    is hidden, and the reel caps any single delta at <code>MAX_TICK_MS</code>
+    (100 ms). When the gate opens
+    the spin phase marks itself ready and completes either at once, if the
+    minimum has already passed, or on the first update where it has.
+  </p>
+
+  <p>
+    The stop delay is what spreads the landings out. The controller picks it
+    from the first rule that applies, top to bottom.
+  </p>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">If you set</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Reel i waits</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ["a drop order, setDropOrder('ltr' | 'rtl' | 'all', step)", 'its position in that order times step; the default step is max(active.stopDelay, 150)'],
+            ['an explicit list, setStopDelays([...])', 'the entry for i; entries past the end give 0'],
+            ['reel groups, setReelGroups([...])', 'its position within its group times the profile stopDelay'],
+            ['nothing', '_staggerIndex(i) times the profile stopDelay'],
+          ].map(([k, v]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p>
+    One note from reading the code: the doc comment on
+    <code>ReelSet.setDropOrder</code> describes a different default step than
+    the one the code uses; the code (<code>max(active.stopDelay, 150)</code>)
+    is the source of truth. The <a href="/architecture/timeline/">timeline
+    page</a> runs these rules with real numbers.
+  </p>
+
+  <h2>Reel groups and held reels</h2>
+
+  <p>
+    <strong>Reel groups</strong> let you say "these reels land together, and
+    only after those". <code>setReelGroups(groups)</code> must list every reel
+    exactly once or it throws, and it throws if any reel has already landed in
+    the current round; pass <code>null</code> to clear. Groups persist across
+    spins. While stopping, a reel waits at the barrier until every earlier
+    group has landed, and its stop delay becomes its position within the
+    group times the profile's <code>stopDelay</code>. A skip press frees only
+    the next group that has not landed. If reels are added or removed later,
+    new reels are appended as one trailing group and removed reels are
+    filtered out.
+  </p>
+
+  <p>
+    <strong>Held reels</strong> (<code>spin({'{ holdReels }'})</code>) are the
+    ones a feature keeps still while the others respin. They skip start, spin
+    and stop entirely and keep whatever symbols they show. They count as landed
+    from the beginning, so the spin finishes when the number of landed reels
+    equals the number of live ones. They never emit <code>spin:stopping</code>
+    or <code>spin:reelLanded</code>, <code>setAnticipation</code> drops them
+    silently, their columns in your result grid are ignored, and their frames
+    are built empty. A big-symbol block may not cross from a held reel into a
+    live one.
+  </p>
+
+  <p>
+    Finally, <code>spin({'{ mode }'})</code> overrides the builder's default
+    spin mode for this one spin. The mode decides start versus fall, stop
+    versus place-and-drop-in, which side effect a skip press has, and whether
+    a quicken becomes a slam. <code>refill()</code> always runs in cascade mode.
+  </p>
+
+  <h2>Inside each phase</h2>
+
+  <p>
+    A phase is an object that runs a named list of steps and completes when the
+    last one is done. Figures 5 and 6 lay out the lists for the four built-in
+    phases. In both, the tinted steps are the ones marked <code>cut</code>: a
+    quicken skips them and lets the rest play. Look at the spin phase in
+    particular. Its single "wait" step cannot be skipped from inside at all;
+    the controller completes it from outside, and a quicken only drops its
+    minimum to zero.
+  </p>
+
+  <Diagram height={348} caption="The start and spin step lists. Tinted steps are marked cut: a quicken skips them and lets the rest play. The spin wait is not skippable at all; the controller force-completes it from outside, and a quicken only drops its minimum to 0.">
+    <Group x={12} y={20} w={696} h={142} kind="tint" label="start" note="StartPhase" />
+    {([
+      ['delay', ['i * spinDelay', 'cut step'], 'accent'],
+      ['launch', ['beginMotion()', 'instant'], 'subtle'],
+      ['pull', ['speed to -2', 'over 50 ms'], 'subtle'],
+      ['accelerate', ['to spinSpeed', 'over 300 ms'], 'subtle'],
+      ['announce', ['notifySpinStart', 'instant'], 'subtle'],
+    ] as const).map(([t, s, k], i) => (
+      <Box x={36 + i * 133} y={60} w={116} h={78} title={t} sub={[...s]} kind={k} />
+    ))}
+    {[0, 1, 2, 3].map((i) => (
+      <Edge from={[36 + i * 133 + 116, 99]} to={[36 + (i + 1) * 133, 99]} />
+    ))}
+
+    <Group x={12} y={186} w={696} h={142} kind="tint" label="spin" note="SpinPhase" />
+    <Box x={36} y={226} w={300} h={78} title="wait" kind="muted" sub={['resolve() from the stop gate', 'and elapsed >= minimumSpinTime']} />
+  </Diagram>
+
+  <p>
+    Figure 6 is the stopping half. Notice that only the first step of the stop
+    phase is a cut step: the spin-out, the landing and the bounce always play
+    under a quicken, which is exactly what makes a quicken feel like "hurry
+    up" rather than "stop now".
+  </p>
+
+  <Diagram height={348} caption="The anticipation and stop step lists. A quicken skips the tinted cut steps, so spinOut, land and bounce still play. A slam cancels the running step instead: onSkip places the strip on the frame, resets the container and snaps.">
+    <Group x={12} y={20} w={696} h={142} kind="tint" label="anticipation" note="AnticipationPhase" />
+    <Box x={36} y={60} w={300} h={78} title="tease" kind="accent" sub={['duration ?? anticipationDelay', 'cut step']} />
+
+    <Group x={12} y={186} w={696} h={142} kind="tint" label="stop" note="StopPhase" />
+    {([
+      ['delay', ['speed kept', 'cut step'], 'accent'],
+      ['spinOut', ['setStopFrame(frame)', 'drain the sequencer'], 'subtle'],
+      ['land', ['haltDrive, snapToGrid', 'notifyLanded'], 'subtle'],
+      ['bounce', ['bounceDistance over', 'bounceDuration'], 'subtle'],
+    ] as const).map(([t, s, k], i) => (
+      <Box x={36 + i * 166} y={226} w={150} h={78} title={t} sub={[...s]} kind={k} />
+    ))}
+    {[0, 1, 2].map((i) => (
+      <Edge from={[36 + i * 166 + 150, 265]} to={[36 + (i + 1) * 166, 265]} />
+    ))}
+  </Diagram>
+
+  <p>
+    <strong>Start</strong> is the lurch. On entry it gives the reel its
+    spinning mode and halts any leftover drive, then runs its steps. The delay
+    is the stagger. The pull is the small backward tug the player sees before
+    the reel flies: speed goes to -2 over 50 ms with <code>power1.out</code>,
+    and the step only exists when the profile's <code>bounceDistance</code> is
+    above zero (no bounce, no pull). Accelerate then ramps to
+    <code>spinSpeed</code> over 300 ms with <code>power2.in</code>, and announce
+    tells the reel it is spinning. The phase is both skippable and
+    quickenable. Under a slam it forces the reel to full speed and announces;
+    under a quicken it does the same and then completes itself, because "at
+    full speed" is already its natural end pose. A phase registered with a
+    steps editor can rewrite this list.
+  </p>
+
+  <p>
+    <strong>Spin</strong> is the blur, and the odd one out. It has no motion of
+    its own; the reel is already flying, so the phase is really a wait with
+    two conditions: the gate has opened, and at least the minimum spin time
+    (<code>config.minimumSpinTime ?? timing.minimumSpinTime ?? 500</code>) has
+    passed. It is quickenable but not skippable: a slam does nothing in its
+    skip handler because the controller completes it from outside, and a
+    quicken sets its minimum to 0 and completes it if the gate is already open.
+    It emits nothing beyond <code>phase:enter</code> and <code>phase:exit</code>.
+  </p>
+
+  <p>
+    <strong>Stop</strong> is the landing. It records the container's position
+    on entry so the bounce has a home to return to, then walks its four steps.
+    During the delay the reel keeps whatever speed it has, which after a tease
+    is the slow tease speed. The spin-out loads the full target frame into the
+    reel's stop queue; from then on, every time a symbol wraps off the strip,
+    the next result symbol is pulled in, and the step waits until the queue is
+    empty. With <code>preserveSpeed</code> the speed is kept, clamped between
+    8% and 100% of <code>spinSpeed</code>; otherwise it returns to full speed.
+    The land step halts the drive (never "speed = 0", which a drive would ramp
+    back up), snaps to the grid and raises the reel's <code>landing</code>
+    event. The bounce is a two-leg timeline: out by <code>bounceDistance</code>
+    in half the time, back in the other half, with <code>bounceEase</code>
+    (default <code>power1.out</code>); a distance of zero is treated as already
+    settled. The slam path halts the drive, places the strip straight onto the
+    frame, resets the container to its recorded home <em>before</em> snapping
+    (snapping mid-bounce used to lock in the overshoot) and marks the phase
+    done.
+  </p>
+
+  <p>
+    <strong>Adjust</strong> only exists on MultiWays boards. The reshape
+    geometry is already applied by the time the phase runs; all it does is
+    tween pin overlays from their old position and scale to the new one over
+    <code>pinMigrationDuration</code> (200 ms, <code>power2.out</code>), or
+    snap when the duration is zero. The three <strong>cascade phases</strong>
+    are all skippable and quickenable; their slam pose is their natural end, so
+    a quicken completes them. Fall defaults to 300 ms <code>sine.in</code>,
+    drop-in to 600 ms <code>power2.out</code> with a 60 ms stagger between
+    cells. The <a href="/architecture/cascade/">cascade page</a> covers them.
+  </p>
+
+  <h2>The phase base class</h2>
+
+  <p>
+    Every phase extends <code>ReelPhase</code>. A subclass gives it a name,
+    says whether it is skippable and quickenable, and implements three things:
+    what to do on entry, what to do each update, and what to do when a press
+    arrives. In return it gets the reel, the raw speed profile, a resolved
+    <code>timing</code> for this phase (the profile with the phase's section
+    and any <code>whenAnticipated</code> override folded in), and a context
+    that says which reel this is, whether it teased to the end earlier this
+    spin, and whether it has been quickened. The methods the controller calls
+    on it are in the table.
+  </p>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Method</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['run(config)', 'marks the phase active, stores the config, applies any primed quicken, emits phase:enter, calls onEnter and returns a promise whose resolver emits phase:exit first'],
+            ['_complete()', 'cancels the steps and resolves that promise once; this is how control passes on, the controller awaits run() and then creates the next phase. Phases never create their successor'],
+            ['skip(ctx)', "does nothing if inactive. Quicken: swaps in ctx.speed if given, marks the phase quickened, calls onSkip only if quickenable, then drops the cut steps; it does not complete the phase. Slam: only if skippable, cancels the steps, calls onSkip, completes"],
+            ['forceComplete(ctx)', 'a slam that ignores skippable; the controller uses it for its own slams'],
+            ['primeQuicken(ctx)', 'marks a phase created after the press, so it starts quickened and its cut steps are skipped from the first one'],
+            ['attachContext(ctx)', 'called once by the factory when the phase is created'],
+          ].map(([k, v]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs whitespace-nowrap">{k}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <Callout kind="why">
+    Phases never create their successor. Each one completes and hands control
+    back to the controller, which decides what comes next. That is what lets
+    the same stop phase serve a plain spin, a teased spin and a quickened one,
+    and it is why a slam can cancel any phase without knowing what it was.
+  </Callout>
+
+  <h2>The steps system</h2>
+
+  <p>
+    A step is a tiny object with a name, a run function and an optional
+    <code>cut</code> flag. Its run function can return one of four things: a
+    GSAP animation (killed on cancel), a promise (stopped through the step's
+    abort signal), a small cancellable such as the bounce, or nothing at all
+    for an instant step. A phase's step list is a plain array, so you can edit
+    it. The editors <code>insertBefore</code>, <code>insertAfter</code>,
+    <code>replaceStep</code> and <code>removeStep</code> each return a copy and
+    throw on an unknown name, listing the names that do exist. You pass an
+    editor when registering a phase, as
+    <code>register('stop', StopPhase, {'{ steps }'})</code>.
+  </p>
+
+  <p>
+    When a phase runs its list it warns once if the profile configures a step
+    name the list does not have, cancels any previous run, and completes the
+    phase after the last step. Instant steps chain in the same call. The two cards show what a step
+    can see while it runs and what it reports.
+  </p>
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">StepContext</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>reel</code>, <code>container</code>, <code>main</code> (<code>'x' | 'y'</code>), <code>gsap</code></li>
+        <li><code>profile</code>: the phase's <code>timing</code></li>
+        <li><code>step: readonly StepTiming[]</code>: this step's entries from <code>profile[phase].steps[name]</code>, with <code>whenAnticipated</code> merged over; built-ins read <code>step[0]</code></li>
+        <li><code>anticipated</code>, <code>quickened</code>, <code>config</code>, <code>phase</code>, <code>signal</code></li>
+        <li><code>wait(ms)</code>: a GSAP <code>delayedCall</code> that resolves early on abort</li>
+        <li><code>until(predicate)</code>: checked from <code>tickSteps()</code> each update</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">phase:step statuses</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>start</code>, <code>end</code>: the step ran normally</li>
+        <li><code>skipped</code>: a <code>cut</code> step a quicken never started</li>
+        <li><code>cut</code>: a <code>cut</code> step a quicken stopped while it was running</li>
+        <li><code>cancelled</code>: stopped by a slam or by <code>destroy()</code></li>
+        <li>payload <code>{'{ phase, step, status }'}</code> on <code>reel.events</code>; <code>phase:enter</code> and <code>phase:exit</code> wrap the whole phase</li>
+        <li><code>StepTiming</code> is <code>{'{ ease?, duration? }'}</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Where phases come from</h2>
+
+  <p>
+    The controller never constructs a phase directly; it asks the
+    <strong>phase factory</strong> for one by name. The factory pre-registers
+    <code>start</code>, <code>spin</code>, <code>stop</code> and
+    <code>anticipation</code>. <code>register(name, PhaseClass, options?)</code>
+    stores a recipe that builds the class with those options;
+    <code>registerFactory(name, fn)</code> is for phases that need extra
+    arguments or should be chosen per reel or per tease state. Asking for an
+    unknown name throws and lists the registered ones; <code>has(name)</code>
+    is what the spin-mode check and <code>refill()</code> use.
+  </p>
+
+  <p>
+    Registration order is what lets you override anything. The builder wires
+    the four built-ins first, then <code>.tumble()</code> adds the three
+    cascade phases, then MultiWays adds <code>adjust</code>, and your own
+    <code>.phases(f =&gt; ...)</code> configurators run last, so they can
+    replace any default.
+  </p>
+
+  <h2>Spinning modes</h2>
+
+  <p>
+    A spinning mode answers exactly one question: how many pixels should the
+    strip move this frame, given the cell pitch, the current speed and the
+    frame's delta. The reel asks it on every update. <code>StandardMode</code>
+    computes <code>slotPitch * speed * deltaMs / 1000</code>, caps it at half
+    a cell per frame, and lets a negative
+    value through for the start pull. <code>CascadeMode</code> multiplies by
+    gravity (1.5), caps at one cell and never goes negative.
+    <code>ImmediateMode</code> always returns 0 and leaves placement to the
+    phase. Landing, frames and timing never belong to a mode. One thing to
+    note from reading the code: the profile documents <code>spinSpeed</code>
+    as pixels per frame, while <code>StandardMode</code> treats it as cells
+    per second with that half-cell cap; the
+    <a href="/architecture/motion/">motion page</a> has the pixel arithmetic.
+  </p>
+
+  <h2>How the promise resolves</h2>
+
+  <p>
+    When a reel's chain reaches the end, the controller marks it landed. That
+    call is idempotent and does its work in a fixed order: add the reel to the
+    landed set; resolve the reel's landing promise, which releases anyone
+    waiting at a group barrier or on a <code>'sequential'</code> tease; emit
+    <code>anticipation:reelEnd</code> if the reel was teasing; emit the reel's
+    own <code>landed</code> and then the set-level <code>spin:reelLanded</code>;
+    settle any quicken batch that has now fully landed. When every live reel
+    is down it finishes the spin.
+  </p>
+
+  <p>
+    Finishing has two paths. If the spin was aborted, the promise rejects with
+    the abort reason and no success events fire. Otherwise the controller
+    builds the result, clears its per-spin state, tells the MultiWays hook to
+    clear its target shape, emits <code>spin:allLanded</code> and then
+    <code>spin:complete</code>, and resolves with the object in the table.
+  </p>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">SpinResult field</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['symbols', 'string[][], one column per reel'],
+            ['wasSkipped', 'true after any slam or quicken, including the error-recovery slam'],
+            ['skipMode', "'slam' | 'quicken' | null"],
+            ['skipContext', "SkipContext | null; { mode: 'slam' } for engine slams"],
+            ['duration', 'ms since spin()'],
+          ].map(([k, v]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p>
+    Two safety valves sit around the promise. If you pass
+    <code>options.signal</code>, aborting it rejects the spin with the signal's
+    reason; if you pass <code>options.timeoutMs</code> (off by default, values
+    of 0 or less ignored), the spin rejects when it expires. Both land the reels
+    on a clean grid through an abort slam before rejecting, so the board is
+    never left mid-motion. Refills have no watchdog and no reject path.
+  </p>
+
+  <h2>Defaults</h2>
+  <p>The numbers this page mentions, in one place, with the step that reads each.</p>
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Setting</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Default</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Read in</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['minimumSpinTime', '500 ms', 'SpinPhase, when the profile has none'],
+            ['accelerationDuration / accelerationEase', "300 ms / 'power2.in'", 'StartPhase accelerate'],
+            ['pull', "-2 for 50 ms, 'power1.out'", 'StartPhase pull, only if bounceDistance > 0'],
+            ['bounceEase', "'power1.out'", 'ReelPhase.bounce'],
+            ['preserveSpeed floor / cap', '0.08 x spinSpeed / 1.0 x spinSpeed', 'StopPhase spinOut'],
+            ['defaultSkipMode', "'slam'", 'SpinController, builder skipMode()'],
+            ['pinMigrationDuration / Ease', "200 ms / 'power2.out'", 'AdjustPhase'],
+            ['CascadeMode gravity', '1.5', 'spin/modes/CascadeMode'],
+            ['MAX_TICK_MS', '100', 'Reel.update'],
+            ['timeoutMs', 'off', 'spin() watchdog'],
+            ['StandardMode cap', 'half a cell per frame', 'computeDelta'],
+          ].map(([k, v, w]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{v}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{w}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card p-4">
+    <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Where this lives</div>
+    <ul class="text-sm space-y-1 text-foreground/80">
+      <li><code>packages/pixi-reels/src/spin/SpinController.ts</code>: spin(), _startReel, _runReelTask, _isStale, _tryBeginStopSequence, _stopDelayFor, _markLanded, _finishSpin, _abortSpin</li>
+      <li><code>packages/pixi-reels/src/spin/phases/ReelPhase.ts</code>, <code>steps.ts</code>, <code>PhaseFactory.ts</code></li>
+      <li><code>packages/pixi-reels/src/spin/phases/StartPhase.ts</code>, <code>SpinPhase.ts</code>, <code>AnticipationPhase.ts</code>, <code>StopPhase.ts</code>, <code>AdjustPhase.ts</code>, <code>Cascade*Phase.ts</code></li>
+      <li><code>packages/pixi-reels/src/spin/modes/</code>: StandardMode, CascadeMode, ImmediateMode</li>
+      <li>Guide: <a href="/guides/spin-lifecycle/">spin lifecycle</a>. Next: <a href="/architecture/timeline/">a spin in milliseconds</a>, <a href="/architecture/skipping/">skipping</a>.</li>
+    </ul>
+  </div>
+
+  <Callout kind="remember">
+    Each reel walks start, spin, stop on its own, and the controller only
+    decides when it may move from one to the next. Nothing stops before the
+    result is in and the minimum spin time has passed; after that, the stop
+    delay spreads the landings and the tease adds the hesitation. A slam
+    cancels a phase outright; a quicken only removes the waiting.
+  </Callout>
 </Architecture>

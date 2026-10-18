@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 4.0.1 is a reel engine for PixiJS v8.
+pixi-reels 4.1.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -1386,23 +1386,59 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.Z_INDEX_BUDGET/
 
 ## Architecture deep-dives
 
+### architecture/anticipation
+URL: https://pixi-reels.schmooky.dev/architecture/anticipation/
+
+### architecture/builder
+URL: https://pixi-reels.schmooky.dev/architecture/builder/
+
 ### architecture/cascade
 URL: https://pixi-reels.schmooky.dev/architecture/cascade/
 
 ### architecture/classes
 URL: https://pixi-reels.schmooky.dev/architecture/classes/
 
+### architecture/curvature
+URL: https://pixi-reels.schmooky.dev/architecture/curvature/
+
+### architecture/debug
+URL: https://pixi-reels.schmooky.dev/architecture/debug/
+
 ### architecture/events
 URL: https://pixi-reels.schmooky.dev/architecture/events/
+
+### architecture/frame-pipeline
+URL: https://pixi-reels.schmooky.dev/architecture/frame-pipeline/
+
+### architecture/motion
+URL: https://pixi-reels.schmooky.dev/architecture/motion/
 
 ### architecture/overview
 URL: https://pixi-reels.schmooky.dev/architecture/overview/
 
+### architecture/pins-and-boards
+URL: https://pixi-reels.schmooky.dev/architecture/pins-and-boards/
+
+### architecture/skipping
+URL: https://pixi-reels.schmooky.dev/architecture/skipping/
+
+### architecture/speed-profiles
+URL: https://pixi-reels.schmooky.dev/architecture/speed-profiles/
+
 ### architecture/spin-lifecycle
 URL: https://pixi-reels.schmooky.dev/architecture/spin-lifecycle/
 
+### architecture/symbols
+URL: https://pixi-reels.schmooky.dev/architecture/symbols/
+
 ### architecture/testing
 URL: https://pixi-reels.schmooky.dev/architecture/testing/
+
+### architecture/timeline
+URL: https://pixi-reels.schmooky.dev/architecture/timeline/
+
+### architecture/viewport-and-masks
+URL: https://pixi-reels.schmooky.dev/architecture/viewport-and-masks/
 
 ## Recipes
 

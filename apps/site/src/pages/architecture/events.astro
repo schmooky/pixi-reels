@@ -1,102 +1,225 @@
 ---
 import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Label from '../../components/arch/Label.astro';
 import Legend from '../../components/arch/Legend.astro';
-import Mermaid from '../../components/Mermaid.astro';
+import Callout from '../../components/arch/Callout.astro';
+
+// Swimlane geometry for the two landing-order figures. Three vertical lanes,
+// time flows down, one row per step. Boxes carry the event name only; the
+// payloads are in the tables below.
+const LANE_X = [20, 250, 480];
+const LANE_W = 220;
+const LANES = ['Caller', 'reelSet.events', 'reel.events'];
+const BW = 204;
+const BH = 44;
+const STEP = 60;
+const row = (i: number) => 64 + i * STEP;
+const bx = (lane: number) => LANE_X[lane] + (LANE_W - BW) / 2;
+const mid = (i: number) => row(i) + BH / 2;
+const figH = (rows: number) => row(rows - 1) + BH + 20;
+const H1 = figH(9);
+const H2 = figH(8);
+// Corridor x between two adjacent lanes, for the polyline connectors.
+const gapX = (lane: number) => (bx(lane) + BW + bx(lane + 1)) / 2;
+
+type Row = [string, string, string, string];
+const SET_EVENTS: [string, Row[]][] = [
+  ['spin', [
+    ['spin:start', '[]', 'A spin or a cascade refill begins. Each refill emits it again, so a refill counts as a new round.', 'spin/SpinController.ts spin(), refill()'],
+    ['spin:allStarted', '[]', 'Every non-held reel has started.', 'SpinController.ts _announceAllStartedIfReady'],
+    ['spin:stopping', '[reelIndex]', 'The controller has asked this reel to stop. Never fires for held reels.', 'SpinController.ts _startReel'],
+    ['spin:reelLanding', '[reelIndex, symbols]', 'The reel is on its result frame, every visible symbol had onReelLanded(), the bounce has not started. Fires on every landing path and is not deduplicated per spin.', 'relay of Reel.ts notifyLanded via SpinController.attachReel'],
+    ['spin:reelLanded', '[reelIndex, symbols]', 'The reel is fully at rest: one bounceDuration after spin:reelLanding on an animated stop, the same tick on a slam.', 'SpinController.ts _markLanded'],
+    ['spin:allLanded', '[result: SpinResult]', 'The last reel is at rest.', 'SpinController.ts _finishSpin'],
+    ['spin:complete', '[result: SpinResult]', 'Right after spin:allLanded, same function.', 'SpinController.ts _finishSpin'],
+  ]],
+  ['anticipation', [
+    ['anticipation:reel', '[{ reelIndex, order, total }]', 'A reel started its tease, after any stagger offset. Only for reels in the anticipation set whose effective hold is above 0.', 'SpinController.ts _startReel'],
+    ['anticipation:reelEnd', '[{ reelIndex }]', 'A teasing reel landed. Fires just before that reel\'s spin:reelLanded.', 'SpinController.ts _markLanded'],
+    ['anticipation:segment', '[{ reelIndex, index, total, speed, targetSpeed }]', 'One leg of a curve tease began. speed is a multiple of spinSpeed, targetSpeed the same in px/frame. Curve teases only.', 'spin/phases/AnticipationPhase.ts'],
+  ]],
+  ['skip', [
+    ['skip:requested', '[info: SkipInfo]', 'A press freed reels. reels excludes landed and held reels; partial is true if reels are still spinning afterwards; mode is slam or quicken.', 'SpinController.ts _quicken, _slamTargets'],
+    ['skip:completed', '[info: SkipInfo]', 'The same press, once its reels are down: the same tick for a slam, when the last freed reel lands for a quicken.', 'SpinController.ts _slamTargets, _markLanded'],
+    ['skip:queued', '[info: SkipContext]', 'requestSkip() arrived before the result. The press fires once the result arrives.', 'SpinController.ts requestSkip, carrySkip'],
+    ['skip:boosted', '[{ previous, current }]', 'The first skip() of a standard-mode round switched to the fastest registered profile. Once per round; never for slamStop(), requestSkip() or cascade mode. The restore on the next spin() emits speed:changed instead.', 'SpinController.ts _applyRoundSideEffects'],
+  ]],
+  ['speed', [
+    ['speed:changed', '[profile, previous]', 'setSpeed() switched profiles, including the round-end restore after a boost.', 'core/ReelSet.ts setSpeed'],
+  ]],
+  ['spotlight', [
+    ['spotlight:start', '[positions: SymbolPosition[]]', 'spotlight.show() or cycle() began a highlight.', 'spotlight/SymbolSpotlight.ts'],
+    ['spotlight:end', '[]', 'The spotlight was hidden. Only if it was active.', 'spotlight/SymbolSpotlight.ts'],
+  ]],
+  ['win', [
+    ['win:start', '[wins: readonly Win[]]', 'Once per show(), with the wins in display order (value descending by default).', 'wins/WinPresenter.ts'],
+    ['win:group', '[win, cells]', 'One win is now being presented, before its win:symbol events. Draw lines and outlines here.', 'wins/WinPresenter.ts'],
+    ['win:symbol', '[symbol, cell, win]', 'One event per cell per win per cycle, spaced by stagger. symbol is typed unknown.', 'wins/WinPresenter.ts'],
+    ['win:end', "[reason: 'complete' | 'aborted']", 'The presentation finished or abort() was called. Loser alpha is restored first.', 'wins/WinPresenter.ts'],
+  ]],
+  ['pin', [
+    ['pin:placed', '[pin: CellPin]', 'pin() registered a claim on a cell.', 'core/ReelSet.ts pin'],
+    ['pin:moved', '[pin, from: { reel, cell }]', 'movePin() finished, or setColumn()/splitSymbol() shifted a pin with its symbol.', 'ReelSet.ts movePin, _setColumn'],
+    ['pin:expired', "[pin, reason: 'turns' | 'explicit' | 'eval' | 'collision']", 'A pin was removed: turns ran out, unpin() or a geometry change, an eval pin at spin:start, or a migration collision.', 'ReelSet.ts unpin, _migratePinsForReel, _onSpinLanded, _onSpinStart'],
+    ['pin:migrated', '[pin, { fromCell, toCell, clamped, reelIndex }]', 'A MultiWays reshape moved the pin.', 'ReelSet.ts _migratePinsForReel'],
+    ['pin:overlayCreated', '[pin, overlay]', 'A pooled overlay symbol was created for a pin while the reels move.', 'ReelSet.ts _ensurePinOverlay'],
+    ['pin:overlayDestroyed', '[pin, overlay]', 'The overlay goes back to the pool: on spin:allLanded, unpin or replacement.', 'ReelSet.ts'],
+  ]],
+  ['shape and adjust (MultiWays only)', [
+    ['shape:changed', '[cellsPerReel: number[]]', 'setShape() recorded a target shape, before any geometry change.', 'ReelSet.ts setShape'],
+    ['adjust:start', '[{ reelIndex, fromCells, toCells }]', 'The AdjustPhase began reshaping this reel.', 'SpinController.ts _applyReshape'],
+    ['adjust:complete', '[{ reelIndex }]', 'The reshape finished.', 'SpinController.ts _applyReshape'],
+  ]],
+  ['reels, rows, column', [
+    ['reels:added', '[{ from, count }]', 'addReels() or an expand step. The reels are already in reelSet.reels and the mask covers them.', 'ReelSet.ts _addReels'],
+    ['reels:removed', '[{ from, count }]', 'removeReels() finished. The reels are already destroyed.', 'ReelSet.ts removeReels'],
+    ['rows:added', '[{ count, rows: number[] }]', 'addRows() finished.', 'ReelSet.ts addRows'],
+    ['rows:removed', '[{ count, rows: number[] }]', 'removeRows() finished.', 'ReelSet.ts removeRows'],
+    ['column:set', '[{ reelIndex, fromCells, toCells }]', 'setColumn(), splitSymbol() or resetColumns() changed one reel at rest.', 'ReelSet.ts _setColumn'],
+  ]],
+  ['expand', [
+    ['expand:start', '[{ from, to, steps }]', 'expand() validated its input and is about to add the first step.', 'ReelSet.ts expand'],
+    ['expand:stepAdded', '[step: ExpandStep]', 'A step\'s reels exist; fires before the onStepAdded hook.', 'ReelSet.ts expand'],
+    ['expand:stepLanded', '[step: ExpandStepLanded]', 'The step\'s spin landed; fires before onStepLanded.', 'ReelSet.ts expand'],
+    ['expand:complete', '[result: ExpandResult]', 'Every step landed.', 'ReelSet.ts expand'],
+    ['expand:end', "[reason: 'complete' | 'failed']", 'Always fires, so it is the one place to restore UI.', 'ReelSet.ts expand'],
+  ]],
+  ['cascade (tumble)', [
+    ['cascade:fall:start', '[{ reelIndex }]', 'Once per reel per spin(). Never on refill().', 'spin/phases/CascadeFallPhase.ts'],
+    ['cascade:fall:symbol', '[{ symbol, view, reelIndex, cellIndex, duration, ease, distance, signal }]', 'Right before each symbol\'s fall tween. signal aborts on skip or slam.', 'CascadeFallPhase.ts'],
+    ['cascade:fall:end', '[{ reelIndex }]', 'Every view is at alpha 0. Only fires if :start fired.', 'CascadeFallPhase.ts'],
+    ['cascade:place:end', '[{ reelIndex, placedSymbols, isInitial, winnerCells }]', 'New ids are snapped to the grid, before the drop-in. Attach badges here. No :start counterpart.', 'CascadePlacePhase.ts'],
+    ['cascade:dropIn:start', '[{ reelIndex }]', 'The drop-in timeline for this reel began.', 'CascadeDropInPhase.ts'],
+    ['cascade:dropIn:symbol', '[{ symbol, view, reelIndex, cellIndex, duration, ease, offsetCells, signal }]', 'Right before each mover\'s tween.', 'CascadeDropInPhase.ts'],
+    ['cascade:dropIn:end', '[{ reelIndex }]', 'Every mover is in place; movers get notifyLanded.', 'CascadeDropInPhase.ts'],
+    ['cascade:gravity:start', '[{ reelIndex }]', "Stage 1 of a 'gravity-then-drop' refill began. Only in that mode.", 'CascadeDropInPhase.ts (role gravity)'],
+    ['cascade:gravity:symbol', '[same as dropIn:symbol]', 'Before each survivor\'s gravity tween.', 'CascadeDropInPhase.ts'],
+    ['cascade:gravity:end', '[{ reelIndex }]', 'Survivors settled; the gravityHoldMs hold starts after the slowest reel.', 'CascadeDropInPhase.ts'],
+    ['cascade:gravity:error', '[{ error }]', 'A user gate rejected or threw. The engine logs refill-threw and slams.', 'SpinController.ts refill'],
+    ['cascade:chain:start', '[{ chain, winners, currentGrid }]', 'runCascade found winners (chain is 1-based), before destroy.', 'ReelSet.ts runCascade'],
+    ['cascade:chain:end', '[{ chain, winners, nextGrid }]', 'The refill for this stage landed.', 'ReelSet.ts runCascade'],
+    ['cascade:destroy:start', '[{ cells }]', 'destroySymbols() is about to play playDestroy(). Not emitted for an empty list.', 'ReelSet.ts destroySymbols'],
+    ['cascade:destroy:end', '[{ cells, failed? }]', 'All playDestroy() promises settled; failed lists the rejected cells.', 'ReelSet.ts destroySymbols'],
+  ]],
+  ['nudge', [
+    ['nudge:start', "[{ reelIndex, distance, direction: 'forward' | 'reverse' }]", 'After pre-placement, so the state it shows is the one about to animate.', 'ReelSet.ts nudge'],
+    ['nudge:complete', '[{ ...start, symbols }]', 'The strip is at its new position; symbols is the new visible column.', 'ReelSet.ts nudge'],
+    ['nudge:cancelled', '[{ ...start, reason }]', 'The signal aborted. The strip is snapped to its post-nudge position and the promise rejects with AbortError. nudge:complete does not fire.', 'ReelSet.ts nudge'],
+  ]],
+  ['lifecycle', [
+    ['destroyed', '[]', 'destroy() ran.', 'ReelSet.ts destroy'],
+  ]],
+];
+
+const REEL_EVENTS: Row[] = [
+  ['phase:enter', '[phaseName]', 'A phase started on this reel. Reel.nudge emits it with the name nudge.', 'spin/phases/ReelPhase.ts run, core/Reel.ts nudge'],
+  ['phase:exit', '[phaseName]', 'The phase ended.', 'ReelPhase.ts run, Reel.ts nudge'],
+  ['phase:step', '[{ phase, step, status }]', "status is 'start' | 'end' | 'skipped' | 'cut' | 'cancelled'. skipped: a cut step a quicken never started; cut: stopped mid-flight by a quicken; cancelled: stopped by a slam or destroy.", 'ReelPhase.ts runSteps'],
+  ['symbol:created', '[symbolId, stripIndex]', 'A cell took a different symbol (a wrap, a placement, a swap).', 'Reel.ts _replaceSymbol'],
+  ['landing', '[symbols]', 'The per-reel source of spin:reelLanding.', 'Reel.ts notifyLanded'],
+  ['landed', '[symbols]', 'Fully at rest, right before the set\'s spin:reelLanded.', 'SpinController.ts _markLanded'],
+  ['destroyed', '[]', 'The reel was destroyed.', 'Reel.ts destroy'],
+];
+
+const API: [string, string][] = [
+  ['on(event, fn, context?)', 'Add a listener. Chainable.'],
+  ['once(event, fn, context?)', 'Add a listener that is removed before its first call.'],
+  ['off(event, fn?, context?)', 'No fn: remove every listener for the event. fn only: remove every entry with that function, whatever its context. Both: remove only the matching pair.'],
+  ['onAny(fn(event, ...args)) / offAny(fn)', 'Wildcard listeners for tracing and recording. They run after the event\'s own listeners.'],
+  ['emit(event, ...args): boolean', 'Dispatch. Returns false only when there are no specific listeners and no any-listeners.'],
+  ['removeAllListeners(event?)', 'With no argument it also clears the onAny hooks. With an event it leaves them alone.'],
+  ['listenerCount(event)', 'Specific listeners only; any-listeners are not counted.'],
+];
+
+const DISPATCH: [string, string][] = [
+  ['Listeners are snapshotted before dispatch', 'Both the listener array and the any-listener array are copied first. A listener that adds or removes another listener during an emit does not change who receives that emit, so you never get a half-updated audience.'],
+  ['once() is removed by identity', 'A once entry is removed before it is called, by entry identity. If you also registered the same function with on(), that persistent registration survives.'],
+  ['Listeners get their context', 'Each listener is called with fn.apply(entry.context, args), so a class method registered with its instance as context keeps its this.'],
+  ['onAny runs last', 'Wildcard listeners run after the event\'s own listeners and receive the event name as their first argument. Tracing never gets ahead of the real listeners.'],
+  ['No error isolation', 'There is no try/catch in emit. A listener that throws stops the loop: the listeners after it and the any-listeners do not run for that emit, and the error propagates into the engine code that called emit. Wrap a risky listener in your own try/catch.'],
+];
+
+const HUD_AUDIO: [string, string, string][] = [
+  ['The spin starts', 'spin:start', 'Disable the spin button or turn it into a skip button. Start the reel loop sound. In a cascade this fires again on every refill, so a counter keyed on it counts stages, not spins.'],
+  ['Every reel is moving', 'spin:allStarted', 'The staggered kickoff is over. A good moment to fade in the loop fully or start a "waiting for result" timer in your own code.'],
+  ['A reel is about to tease', 'anticipation:reel', 'Start the drumroll or heartbeat and show the anticipation glow on that reel. The payload tells you its order in the tease sequence and how many will tease in total.'],
+  ['A reel hits its result frame', 'spin:reelLanding', 'Play the landing thunk. This fires the instant the symbols are in place and before the bounce, which is where the sound feels right. It fires again on every cascade stage.'],
+  ['A reel is fully at rest', 'spin:reelLanded', 'Light up a scatter that just landed, or count landed reels. One bounce later than reelLanding on an animated stop, the same tick on a slam.'],
+  ['The whole spin is over', 'spin:complete', 'Stop the loop sound, read result.symbols to evaluate wins, re-enable the button. Everything the HUD needs about the outcome is in the SpinResult payload.'],
+  ['The player pressed skip', 'skip:requested, skip:completed', 'Play the skip whoosh on requested; wait for completed before you treat the reels as settled. A quicken completes when its last freed reel lands, a slam completes the same tick.'],
+  ['The speed changed', 'speed:changed', 'Update the turbo indicator. The round-end restore after a skip boost comes through here too, so the indicator follows the real profile.'],
+];
+
+const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground';
 ---
 <Architecture
   title="Events"
-  subtitle="What fires when, and in what order."
+  subtitle="What fires when, in what order, on which bus."
   eyebrow="Flow"
 >
   <p>
-    Every event pixi-reels emits is typed. The headline stream comes off
-    <code>reelSet.events</code>. Each <code>Reel</code> also has its own
-    per-reel stream. useful when you want to drive behavior on one column
-    without the whole set.
+    The reels only move symbols. Everything a player actually hears and reads during a
+    spin, the whoosh as the columns take off, the thunk as each one lands, the drumroll
+    when the last reel hesitates, the button that turns from "spin" into "skip", the win
+    counter that starts rolling, all of that is built by you, outside the library. For
+    that to work the engine has to tell you what is happening, at the exact moment it
+    happens, without you polling it every frame or guessing from timers.
   </p>
-
-  <h2>The spin timeline</h2>
 
   <p>
-    A typical spin unfolds in this exact order. The timeline below has the
-    reel-set-level events on the top track and per-reel events on the bottom.
-    Read left-to-right as wall-clock time.
+    That is what events are for. Every moment that matters inside a spin is announced on
+    a typed emitter, with a payload that carries the facts you need (which reel, which
+    symbols, which result). You subscribe
+    with <code>reelSet.events.on('spin:complete', fn)</code> and the TypeScript types
+    tell you what <code>fn</code> receives. There are fifty-nine such names on the set,
+    grouped by prefix
+    (<code>spin:</code>, <code>skip:</code>, <code>pin:</code>, <code>cascade:</code> and
+    so on), seven more on each individual reel, and a separate thirteen on a Hold &amp;
+    Win board. The rest of this page says which fires when, in what order, and how to
+    use them.
   </p>
 
-  <Mermaid chart={`
-sequenceDiagram
-  participant Caller
-  participant ReelSet
-  participant Reel as Reel (per-reel)
+  <Callout kind="plain">
+    Think of three radio channels. <code>reelSet.events</code> is the main channel and
+    carries the story of the whole board. Each reel has a quieter channel of its own for
+    anyone who only cares about one column. A Hold &amp; Win board broadcasts on a third
+    channel with its own vocabulary. You can listen to any of them, and you never have
+    to poll.
+  </Callout>
 
-  Note over Caller,Reel: START phase
-  Caller->>ReelSet: spin()
-  ReelSet-->>Caller: spin:start
-  ReelSet->>Reel: phase:enter "start"
+  <h2>Wiring a HUD and audio</h2>
 
-  Note over Caller,Reel: SPIN phase
-  Reel-->>Caller: phase:exit "start"
-  Reel-->>Caller: phase:enter "spin"
-  ReelSet-->>Caller: spin:allStarted
-  Reel-->>Caller: symbol:created (many)
-  Caller->>ReelSet: setResult(symbols[][])
-  Caller->>ReelSet: setAnticipation([3,4])
+  <p>
+    Before the detailed timeline, here is how to think about the two things almost every
+    game wires first. A HUD cares about <em>state</em>: is the board spinning, can the
+    button be pressed, what did the spin produce. Audio cares about <em>moments</em>: a
+    sound has to start at the instant a reel hits its frame, not a bounce later. The set
+    bus gives you both, and the trick is matching each to the event that fires at the
+    right instant.
+  </p>
 
-  Note over Caller,Reel: ANTICIPATION phase (optional)
-  Reel-->>Caller: phase:exit "spin"
-  Reel-->>Caller: phase:enter "anticipation"
-
-  Note over Caller,Reel: STOP phase
-  ReelSet-->>Caller: spin:stopping (per reel)
-  Reel-->>Caller: phase:enter "stop"
-
-  Note over Caller,Reel: LANDED
-  Reel-->>Caller: phase:exit "stop"
-  Reel-->>Caller: landed (symbols[])
-  ReelSet-->>Caller: spin:reelLanded (per reel)
-  ReelSet-->>Caller: spin:allLanded
-  ReelSet-->>Caller: spin:complete
-  `} />
-
-  <div class="not-prose my-8">
-    <Legend items={[
-      { kind: 'primary', label: 'ReelSet events', note: 'reelSet.events.on(...)' },
-      { kind: 'accent', label: 'Per-reel events', note: 'reelSet.getReel(i).events.on(...)' },
-      { kind: 'muted', label: 'Caller actions', note: 'setResult, setAnticipation, skipSpin' },
-    ]} />
-  </div>
-
-  <h2>The full event map</h2>
+  <p>
+    The table below is a starting map from "what the player experiences" to the event to
+    listen for. Two words of vocabulary first. A <strong>tease</strong> (the library
+    calls it anticipation) is a reel that slows down and holds before stopping, for
+    drama; a <strong>skip</strong> is the player pressing the button mid-spin, which the
+    engine turns into either a <strong>slam</strong> (every reel lands this frame) or
+    a <strong>quicken</strong> (the delays are cut, the landing still plays).
+  </p>
 
   <div class="not-prose my-6">
     <div class="rounded-xl border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
-        <thead class="bg-muted/60">
-          <tr>
-            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Event</th>
-            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Payload</th>
-            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Fires when</th>
-          </tr>
-        </thead>
+        <thead class="bg-muted/60"><tr><th class={th}>The player experiences</th><th class={th}>Listen for</th><th class={th}>What to do there</th></tr></thead>
         <tbody>
-          {[
-            ['spin:start', '(none)', 'Any spin() call'],
-            ['spin:allStarted', '(none)', 'Every reel is in SPIN phase'],
-            ['spin:stopping', 'reelIndex', 'A reel begins STOP (or ANTICIPATION)'],
-            ['spin:reelLanded', 'reelIndex, symbols[]', 'A reel finished landing'],
-            ['spin:allLanded', 'result: SpinResult', 'Last reel landed'],
-            ['spin:complete', 'result: SpinResult', 'Just after spin:allLanded'],
-            ['skip:requested', '{ reels, partial }', 'A slam is about to place reels'],
-            ['skip:completed', '{ reels, partial }', 'Those reels have been force-landed'],
-            ['speed:changed', 'profile, previous', 'setSpeed() called'],
-            ['spotlight:start', 'positions: SymbolPosition[]', 'spotlight.cycle(...) began'],
-            ['spotlight:end', '(none)', 'Spotlight sequence finished'],
-            ['destroyed', '(none)', 'destroy() called'],
-          ].map(([name, payload, when]) => (
-            <tr class="border-t border-border/60">
-              <td class="px-4 py-2.5 font-mono text-primary text-xs">{name}</td>
-              <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{payload}</td>
-              <td class="px-4 py-2.5 text-xs text-foreground/80">{when}</td>
+          {HUD_AUDIO.map(([moment, ev, what]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 text-xs text-foreground/80">{moment}</td>
+              <td class="px-4 py-2 font-mono text-primary text-xs whitespace-nowrap">{ev}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{what}</td>
             </tr>
           ))}
         </tbody>
@@ -104,29 +227,32 @@ sequenceDiagram
     </div>
   </div>
 
-  <h2>Two interaction patterns</h2>
-
   <p>
-    Wiring these events together gets you every major slot UX without
-    custom state tracking:
+    Two patterns cover most of the HUD. The spin button is one control with two
+    meanings, and <code>isSpinning</code> is enough to pick between them. The server
+    round trip happens while the reels are already moving: you call <code>spin()</code>,
+    fetch, then hand the grid to <code>setResult()</code>, which is what releases the
+    stop. If the player skipped before the result arrived, the engine queues that press
+    (<code>skip:queued</code>) and applies it the moment the result lands.
   </p>
 
   <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
     <div class="rounded-xl border border-border bg-card p-5">
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-2">Pattern: Skip button</div>
       <p class="text-sm text-muted-foreground mb-3">
-        Use <code>isSpinning</code> to branch the same button between "start" and "slam-stop."
+        Use <code>isSpinning</code> to branch the same button between "start" and "skip".
       </p>
       <pre class="text-[11px] !my-0"><code>{`button.addEventListener('click', () => {
-  if (reelSet.isSpinning) reelSet.skipSpin();
-  else               reelSet.spin();
+  if (reelSet.isSpinning) reelSet.skip();
+  else                    reelSet.spin();
 });`}</code></pre>
     </div>
 
     <div class="rounded-xl border border-border bg-card p-5">
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-2">Pattern: Fetch + stop</div>
       <p class="text-sm text-muted-foreground mb-3">
-        Real slots fetch the server answer while the reels are spinning, then call setResult() to trigger the stop.
+        Real slots fetch the server answer while the reels are spinning, then call
+        setResult() to release the stop.
       </p>
       <pre class="text-[11px] !my-0"><code>{`const p = reelSet.spin();
 const r = await fetch('/spin').then(x => x.json());
@@ -136,15 +262,385 @@ await p;`}</code></pre>
     </div>
   </div>
 
-  <h2>Listening on a single reel</h2>
+  <Callout kind="gotcha">
+    Key sounds on <code>spin:reelLanding</code>, not on the promise returned
+    by <code>spin()</code>. The promise resolves once, at the end; the landing event
+    fires per reel, in stop order, at the frame the symbols arrive. And if your game has
+    cascades, remember that <code>spin:start</code> and the landing events fire again on
+    every refill stage, so a "spins played" counter should key on your
+    own <code>spin()</code> call instead.
+  </Callout>
+
+  <h2>One spin, in landing order</h2>
 
   <p>
-    Each <code>Reel</code> has its own typed emitter. Useful when only one
-    column's state matters. e.g. a sticky wild tracker that needs to
-    know exactly when reel 2 landed:
+    The two figures that follow are the backbone of this page: one spin, laid out as a
+    swimlane, with time flowing down. The left lane is you, the caller. The middle lane
+    is the set bus, <code>reelSet.events</code>. The right lane is one reel's own
+    bus, <code>reel.events</code>, where you can see the reel moving through
+    its <strong>phases</strong> (start, spin, maybe anticipation, stop), each announced
+    by a <code>phase:enter</code> and a <code>phase:exit</code>. Boxes carry only the
+    event name; the payloads are in the big table further down.
+  </p>
+
+  <p>
+    Figure 1 runs from your <code>spin()</code> call to the moment the result arrives.
+    Notice three things: your skip press can land anywhere
+    after <code>spin:start</code>; <code>symbol:created</code> fires on the reel bus
+    once per <strong>wrap</strong> (a symbol scrolling off one edge and being reused at
+    the other, which is how the strip loops); and <code>setResult()</code> is the gate,
+    because nothing can stop until the engine knows what to land on.
+  </p>
+
+  <Diagram height={H1} caption="From spin() to the result. phase:exit 'start' is followed at once by phase:enter 'spin', and phase:exit 'spin' by phase:enter 'anticipation' on a teasing reel. spin:start fires again on every cascade refill.">
+    {LANE_X.map((x, i) => (
+      <>
+        <rect x={x} y={48} width={LANE_W} height={H1 - 60} rx="12" class="lane-bg" />
+        <Label x={x + LANE_W / 2} y={36} text={LANES[i]} anchor="middle" mono tone="fg" weight={600} size={14} />
+      </>
+    ))}
+
+    <Box x={bx(0)} y={row(0)} w={BW} h={BH} title="spin()" kind="ghost" />
+    <Box x={bx(1)} y={row(1)} w={BW} h={BH} title="spin:start" kind="primary" />
+    <Box x={bx(2)} y={row(2)} w={BW} h={BH} title="phase:enter 'start'" kind="accent" />
+    <Box x={bx(2)} y={row(3)} w={BW} h={BH} title="phase:exit 'start'" kind="accent" />
+    <Box x={bx(0)} y={row(3)} w={BW} h={BH} title="skip() · slamStop()" kind="ghost" />
+    <Label x={bx(0) + BW / 2} y={row(3) + BH + 20} text="any time after spin:start" anchor="middle" />
+    <Box x={bx(1)} y={row(4)} w={BW} h={BH} title="spin:allStarted" kind="primary" />
+    <Box x={bx(2)} y={row(5)} w={BW} h={BH} title="symbol:created" kind="accent" />
+    <Label x={bx(2) + BW / 2} y={row(5) + BH + 20} text="one per wrap" anchor="middle" />
+    <Box x={bx(0)} y={row(6)} w={BW} h={BH} title="setResult(grid)" kind="ghost" />
+    <Label x={bx(0) + BW / 2} y={row(6) + BH + 20} text="gates the stop" anchor="middle" tone="fg" />
+    <Box x={bx(1)} y={row(7)} w={BW} h={BH} title="anticipation:reel" kind="primary" />
+    <Box x={bx(2)} y={row(8)} w={BW} h={BH} title="phase:exit 'spin'" kind="accent" />
+
+    <Edge from={[bx(0) + BW, mid(0)]} via={[[gapX(0), mid(0)], [gapX(0), mid(1)]]} to={[bx(1), mid(1)]} />
+    <Edge from={[bx(1) + BW, mid(1)]} via={[[gapX(1), mid(1)], [gapX(1), mid(2)]]} to={[bx(2), mid(2)]} />
+    <Edge from={[bx(0) + BW, mid(6)]} via={[[gapX(0), mid(6)], [gapX(0), mid(7)]]} to={[bx(1), mid(7)]} />
+  </Diagram>
+
+  <p>
+    Figure 2 picks up at the first stop and runs to <code>spin:complete</code>. The
+    dashed window is the part that repeats: once per reel, in stop order, and again on
+    every cascade stage. Look at the two arrows crossing from the reel lane into the set
+    lane. The solid one is the reel's <code>landing</code> being relayed
+    as <code>spin:reelLanding</code> at the frame the symbols arrive, before the bounce.
+    The dashed one is <code>landed</code> becoming <code>spin:reelLanded</code> one
+    bounce later, when the reel is truly at rest. On a slam the two happen in the same
+    tick. Reels you asked the engine to hold still (<code>holdReels</code>) skip the
+    window entirely.
+  </p>
+
+  <Diagram height={H2} caption="From the first stop to spin:complete. The dashed window repeats per reel in stop order and on every cascade stage; held reels skip it. The solid arrow is SpinController.attachReel() relaying landing as spin:reelLanding on the result frame, before the bounce; spin:reelLanded follows the reel's landed one bounce later (same tick on a slam), right after phase:exit 'stop'.">
+    {LANE_X.map((x, i) => (
+      <>
+        <rect x={x} y={48} width={LANE_W} height={H2 - 60} rx="12" class="lane-bg" />
+        <Label x={x + LANE_W / 2} y={36} text={LANES[i]} anchor="middle" mono tone="fg" weight={600} size={14} />
+      </>
+    ))}
+    <rect x={LANE_X[1] - 6} y={row(0) - 10} width={LANE_X[2] + LANE_W + 6 - (LANE_X[1] - 6)} height={row(5) + BH + 10 - (row(0) - 10)} rx="12" class="guide-strong" style="stroke-dasharray: 5 4" />
+    <Label x={bx(0)} y={row(2)} text={['dashed window:', 'per reel, in stop order,', 'again per cascade stage']} tone="fg" />
+
+    <Box x={bx(1)} y={row(0)} w={BW} h={BH} title="spin:stopping" kind="primary" />
+    <Box x={bx(2)} y={row(1)} w={BW} h={BH} title="phase:enter 'stop'" kind="accent" />
+    <Box x={bx(2)} y={row(2)} w={BW} h={BH} title="phase:step" kind="accent" />
+    <Box x={bx(2)} y={row(3)} w={BW} h={BH} title="landing" kind="accent" />
+    <Box x={bx(1)} y={row(3)} w={BW} h={BH} title="spin:reelLanding" kind="primary" />
+    <Box x={bx(1)} y={row(4)} w={BW} h={BH} title="anticipation:reelEnd" kind="primary" />
+    <Box x={bx(2)} y={row(5)} w={BW} h={BH} title="landed" kind="accent" />
+    <Box x={bx(1)} y={row(5)} w={BW} h={BH} title="spin:reelLanded" kind="primary" />
+    <Box x={bx(1)} y={row(6)} w={BW} h={BH} title="spin:allLanded" kind="primary" />
+    <Box x={bx(1)} y={row(7)} w={BW} h={BH} title="spin:complete" kind="primary" />
+
+    <Edge from={[bx(1) + BW, mid(0)]} via={[[gapX(1), mid(0)], [gapX(1), mid(1)]]} to={[bx(2), mid(1)]} />
+    <Edge from={[bx(2), mid(3)]} to={[bx(1) + BW, mid(3)]} kind="primary" />
+    <Edge from={[bx(2), mid(5)]} to={[bx(1) + BW, mid(5)]} style="dashed" />
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'primary', label: 'reelSet.events', note: 'ReelSetEvents, 59 names' },
+      { kind: 'accent', label: 'reel.events', note: 'ReelEvents, 7 names per reel' },
+      { kind: 'muted', label: 'Caller', note: 'spin, setResult, setAnticipation, skip' },
+    ]} />
+  </div>
+
+  <Callout kind="why">
+    Two landing events instead of one exist because two different consumers want two
+    different instants. Sound and particle effects want the frame the symbols arrive
+    (<code>spin:reelLanding</code>). Game logic that reads the board wants the reel to
+    have stopped moving for good (<code>spin:reelLanded</code>). Collapsing them would
+    make one of those consumers guess.
+  </Callout>
+
+  <h2>Three buses</h2>
+
+  <p>
+    Figure 3 shows how the channels relate. Each reel's bus is private to that reel and
+    feeds the set bus in exactly one place: the spin controller listens to every
+    reel's <code>landing</code> and <code>landed</code> and re-emits them on the set bus
+    with the reel index added in front. Nothing else is relayed, so the two buses never
+    duplicate each other. The Hold &amp; Win board bus stands apart: it is its own
+    emitter with its own vocabulary, never relayed to or from the others. And because
+    a <code>BoardGrid</code> cell is a complete one-cell <code>ReelSet</code>, every
+    cell on a board also carries the two buses on the left.
+  </p>
+
+  <Diagram height={340} caption="The per-reel bus feeds the set bus in exactly one place: SpinController.attachReel() re-emits each reel's landing and landed as spin:reelLanding and spin:reelLanded with the reel index added. The Hold & Win board bus is its own emitter and is never relayed; a BoardGrid cell is a 1x1 ReelSet, so each cell also has the two buses on the left.">
+    <Box x={60} y={30} w={300} h={78} title="ReelEvents" kind="accent" sub={['reel.events, one per reel', '7 events, phase:* and landing']} />
+    <Box x={60} y={240} w={300} h={78} title="ReelSetEvents" kind="primary" sub={['reelSet.events', '59 events, 13 prefixes']} />
+    <Box x={440} y={135} w={240} h={78} title="HoldAndWinBoardEvents" kind="subtle" sub={['board.events, its own bus', '13 events, one object each']} />
+    <Edge from={[140, 108]} to={[140, 240]} kind="primary" label="landing → spin:reelLanding" labelDy={-20} />
+    <Edge from={[280, 108]} to={[280, 240]} style="dashed" label="landed → spin:reelLanded" labelDy={20} />
+  </Diagram>
+
+  <h2>Every ReelSet event</h2>
+
+  <p>
+    This is the full reference for the set bus, and the table you will come back to long
+    after the rest of the page is familiar. It is grouped by prefix, in roughly the
+    order the features appear in a game: the core spin first, then teases and skips,
+    then the presentation layers, then the board-reshaping and cascade features that
+    most games never touch.
+  </p>
+
+  <p>
+    How to read it: the <strong>payload</strong> column is the tuple your listener
+    receives as its arguments,
+    so <code>[reelIndex, symbols]</code> means <code>fn(reelIndex, symbols)</code> and <code>[]</code> means
+    the listener takes no arguments. <strong>Fires when</strong> is the exact instant
+    and any caveats. <strong>Emitted from</strong> is the file and method
+    under <code>packages/pixi-reels/src/</code>, for when you want to read the source
+    around it. You do not need the last column to use the event.
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class={th}>Event</th>
+            <th class={th}>Payload</th>
+            <th class={th}>Fires when</th>
+            <th class={th}>Emitted from</th>
+          </tr>
+        </thead>
+        <tbody>
+          {SET_EVENTS.map(([group, rows]) => (
+            <>
+              <tr class="border-t border-border/60 bg-muted/30">
+                <td colspan="4" class="px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{group} · {rows.length}</td>
+              </tr>
+              {rows.map(([name, payload, when, from]) => (
+                <tr class="border-t border-border/60 align-top">
+                  <td class="px-4 py-2 font-mono text-primary text-xs whitespace-nowrap">{name}</td>
+                  <td class="px-4 py-2 font-mono text-xs text-muted-foreground">{payload}</td>
+                  <td class="px-4 py-2 text-xs text-foreground/80">{when}</td>
+                  <td class="px-4 py-2 font-mono text-[11px] text-muted-foreground">{from}</td>
+                </tr>
+              ))}
+            </>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    A few of the groups deserve a sentence of context. <strong>Pins</strong> are claims
+    on a cell that force a symbol to stay there across spins (sticky wilds, Hold &amp;
+    Win coins). <strong>MultiWays</strong> sets can change how many cells each reel
+    shows between spins, which is what the shape and adjust events
+    report. <strong>Expand</strong> adds whole reels one step at a time, the
+    infinity-reels feature. <strong>Cascade</strong> (also called tumble) is the mode
+    where winning symbols are destroyed and new ones fall in from above, and each such
+    refill is a new round on the bus. <strong>Nudge</strong> moves one reel by a few
+    cells after it has landed. Each has its own page in this tour.
+  </p>
+
+  <h2>Per-reel events</h2>
+
+  <p>
+    The reel bus is small and lower level. Its job is to narrate one column's progress
+    through its phases and to be the original source of the landing
+    events. <code>phase:step</code> is the most detailed thing the library emits: every
+    phase is made of named steps (the stop phase, for example,
+    runs <code>delay</code>, <code>spinOut</code>, <code>land</code> and <code>bounce</code>),
+    and this event reports each one starting, ending, or being cut short by a skip. The
+    same four columns apply.
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class={th}>Event</th>
+            <th class={th}>Payload</th>
+            <th class={th}>Fires when</th>
+            <th class={th}>Emitted from</th>
+          </tr>
+        </thead>
+        <tbody>
+          {REEL_EVENTS.map(([name, payload, when, from]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs whitespace-nowrap">{name}</td>
+              <td class="px-4 py-2 font-mono text-xs text-muted-foreground">{payload}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{when}</td>
+              <td class="px-4 py-2 font-mono text-[11px] text-muted-foreground">{from}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    You reach a reel's bus through the set. This is the shape of a listener that only
+    cares about one column, for example a sticky wild tracker that needs to know exactly
+    when reel 2 came to rest:
   </p>
 
   <pre><code>{`reelSet.getReel(2).events.on('landed', (symbols) => {
   if (symbols.includes('wild')) stickyWilds.push({ reel: 2, ... });
 });`}</code></pre>
+
+  <h2>Hold &amp; Win board events</h2>
+
+  <p>
+    A Hold &amp; Win board is a grid of cells that each spin on their own, collecting
+    coins across a series of respins. It has a different story to tell than a reel set,
+    so it has its own bus, <code>HoldAndWinBoard.events</code>, typed
+    by <code>HoldAndWinBoardEvents</code>. Every event carries a single object, which
+    makes them easy to log and to forward. Two of
+    them, <code>respin:start</code> and <code>feature:skip</code>, come from the board
+    driver itself; every other one is an effect produced by the pure state machine and
+    replayed onto the bus as a <code>{'{ type, payload }'}</code> pair. The state
+    machine is explained on
+    the <a href="/architecture/pins-and-boards/">pins and boards page</a>.
+  </p>
+
+  <ul>
+    <li><code>feature:enter {'{ seed, respins }'}</code>, <code>feature:skip {'{ inFlight, mode, speed?, payload? }'}</code>, <code>feature:reset {'{ clearedCoins }'}</code>, <code>feature:end {'{ coins, rounds, full }'}</code></li>
+    <li><code>respin:start {'{ round, respinsLeft, spinning }'}</code>, <code>respin:end {'{ round, hits, respinsLeft }'}</code>, <code>respins:changed {'{ value, reason }'}</code></li>
+    <li><code>cell:landed {'{ cell, coin | null }'}</code> in stagger order, <code>coin:locked {'{ coin, locked, capacity }'}</code>, <code>coin:released {'{ coin, remaining }'}</code></li>
+    <li><code>board:full {'{ coins }'}</code>, <code>cells:activated {'{ cells, capacity }'}</code>, <code>speed:changed {'{ name, previous }'}</code> (names as strings)</li>
+  </ul>
+
+  <h2>The emitter</h2>
+
+  <p>
+    All three buses are instances of one small class, <code>EventEmitter</code>, written
+    for this library with no dependencies. It is generic over an event map: a type that
+    pairs each event name with a labelled tuple of argument types, which is where the
+    autocomplete and the typed payloads come from. Inside it keeps
+    a <code>Map</code> from name to listener entries
+    (<code>{'{ fn, context, once }'}</code>) and one extra array of wildcard listeners.
+    Every method
+    except <code>emit</code> and <code>listenerCount</code> returns <code>this</code>,
+    so registrations chain.
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr><th class={th}>Method</th><th class={th}>Behaviour</th></tr>
+        </thead>
+        <tbody>
+          {API.map(([sig, what]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 font-mono text-primary text-xs whitespace-nowrap">{sig}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{what}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    The rules below describe what happens during an <code>emit</code>. Most of them you
+    will never notice; the last one you should know about before you ship.
+  </p>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr><th class={th}>Rule</th><th class={th}>What it means for you</th></tr>
+        </thead>
+        <tbody>
+          {DISPATCH.map(([rule, what]) => (
+            <tr class="border-t border-border/60 align-top">
+              <td class="px-4 py-2 text-xs font-medium text-foreground">{rule}</td>
+              <td class="px-4 py-2 text-xs text-foreground/80">{what}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    A typing caveat, from reading the types rather than from a comment: both event
+    maps <code>extend Record&lt;string, unknown[]&gt;</code>, which adds a string index
+    signature. A misspelled event name therefore probably still type-checks,
+    with <code>unknown[]</code> arguments. Only the declared names get precise argument
+    types. ADR 002 says typos are compile errors; the code is the source of truth here,
+    so lean on autocomplete rather than on the compiler catching a typo.
+  </p>
+
+  <Callout kind="why">
+    You write <code>reelSet.events.on(...)</code>, not <code>reelSet.on(...)</code>,
+    because a <code>ReelSet</code> is a PixiJS container and containers already
+    have <code>on</code>, <code>off</code> and <code>emit</code> for pointer events. ADR
+    002 keeps the engine's events on their own object so the two vocabularies can never
+    collide. The cost is one extra <code>.events.</code> hop.
+  </Callout>
+
+  <h2>Watch out</h2>
+
+  <p>
+    These are the things that catch people. Each is also stated in the table, but they
+    are worth reading together once.
+  </p>
+
+  <ul>
+    <li>Count <code>spin:reelLanding</code> per stage, not per spin. It fires on the animated stop, on a slam, and again on every cascade refill stage, and nothing deduplicates it.</li>
+    <li>Do not wait for a held reel. Reels you hold with <code>spin({'{ holdReels }'})</code> emit no <code>spin:stopping</code> and no <code>spin:reelLanded</code>, yet they count as landed and contribute their unchanged cells to <code>SpinResult.symbols</code>.</li>
+    <li>Do not rely on <code>skip:boosted</code> to track the speed. It never fires in cascade mode, nor from <code>slamStop()</code> or <code>requestSkip()</code>, and the restore at the next <code>spin()</code> only emits <code>speed:changed</code>. Listen to <code>speed:changed</code> instead.</li>
+    <li>Expect <code>cascade:gravity:*</code> only under <code>mode: 'gravity-then-drop'</code>, and never expect <code>cascade:fall:*</code> on a <code>refill()</code>.</li>
+    <li>Handle <code>nudge:cancelled</code> and <code>nudge:complete</code> as alternatives: exactly one of them fires. On cancel the strip still lands deterministically.</li>
+    <li>Clean up your own parallel tweens from the <code>signal</code> on every <code>cascade:*:symbol</code> payload. It aborts on a slam, always before the paired <code>:end</code>.</li>
+    <li>Only expect <code>pin:migrated</code>, <code>shape:changed</code> and <code>adjust:*</code> on MultiWays sets.</li>
+    <li>Prefer <code>off()</code> to a bare <code>removeAllListeners()</code>. With no argument it also removes the <code>onAny</code> hooks, which is what <code>enableDebug().trace()</code> and <code>SpinMetrics</code> rely on.</li>
+  </ul>
+
+  <h2>Where this lives</h2>
+
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/events/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>EventEmitter.ts</code> the class, 145 lines, no dependencies</li>
+        <li><code>ReelEvents.ts</code> ReelSetEvents, ReelEvents, SpinResult, SkipInfo, RunCascadeResult</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">emitters</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>core/ReelSet.ts</code> owns <code>_events</code>; pin, nudge, expand, column, cascade chain events</li>
+        <li><code>spin/SpinController.ts</code> spin, skip, anticipation, adjust events and the landing relay</li>
+        <li><code>board/HwTypes.ts</code> HoldAndWinBoardEvents · <code>docs/adr/002-typed-event-emitter.md</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <Callout kind="remember">
+    Audio keys on moments, so use <code>spin:reelLanding</code> for the thunk. The HUD
+    keys on state, so use <code>spin:start</code> to lock the button and
+    the <code>SpinResult</code> on <code>spin:complete</code> to read the outcome.
+    Everything else on this page is a refinement of those two sentences.
+  </Callout>
 </Architecture>

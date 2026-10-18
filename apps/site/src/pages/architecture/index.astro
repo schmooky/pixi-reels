@@ -1,11 +1,19 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { ARCH_PAGES } from '../../content/architectureNav.ts';
+import { ARCH_PAGES, ARCH_SECTIONS } from '../../content/architectureNav.ts';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { SITE, articleLd, breadcrumbLd } from '../../lib/seo.ts';
 
 const title = 'Architecture. how pixi-reels is put together';
-const description = 'A visual tour of the pixi-reels internals: component graph, composition tree, event flow, spin state machine, cascade gravity, and the test harness. Hand-drawn diagrams, no UML.';
+const description = `A visual tour of the pixi-reels internals in ${ARCH_PAGES.length} pages: the builder, the ownership tree, the viewport and masks, symbols and pooling, motion and wrapping, the frame pipeline, curvature, the spin lifecycle and its timeline, skipping, anticipation, speed profiles, events, cascade physics, pins and boards, debug tooling and the test harness. Hand-laid SVG diagrams, no UML, no mermaid.`;
+
+const blurbs: Record<(typeof ARCH_SECTIONS)[number], string> = {
+  'Structure': 'What you get back from build(), who owns what, and where things draw.',
+  'Motion': 'How a column of symbols moves, wraps around, lands, and bends into a drum.',
+  'A spin': 'One spin from the button press to the last bounce, phase by phase and millisecond by millisecond.',
+  'Mechanics': 'The thinking behind cascades, sticky cells and boards.',
+  'Tooling': 'How to see inside a canvas, and how to test a spin without one.',
+};
 ---
 <Base
   title={`Architecture · ${SITE.name}`}
@@ -26,33 +34,43 @@ const description = 'A visual tour of the pixi-reels internals: component graph,
         A tour, <span class="gradient-text">in pictures.</span>
       </h1>
       <p class="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-        Six pages, one per axis of the library. Composition, lifecycle,
-        events, algorithms, testing. Hand-laid-out SVG. no UML, no
-        mermaid. so you can read at a glance what's wired to what.
+        How pixi-reels works, told the way you would explain it to a new
+        teammate: what the player sees, what the engine does about it, and
+        then the names in the code. {ARCH_PAGES.length} pages, each with its
+        own hand-drawn diagrams. Start with the overview, or jump to the
+        question you came with.
       </p>
     </div>
   </section>
 
   <section class="py-14">
-    <div class="container">
-      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {ARCH_PAGES.map((p, i) => (
-          <a
-            href={`/architecture/${p.slug}/`}
-            class="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:-translate-y-0.5"
-          >
-            <div class="absolute top-4 right-4 font-mono text-[10px] text-muted-foreground/70">
-              {String(i + 1).padStart(2, '0')}
-            </div>
-            <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">{p.eyebrow}</div>
-            <h3 class="mt-2 text-xl font-semibold tracking-tight">{p.title}</h3>
-            <p class="mt-2 text-sm text-muted-foreground">{p.subtitle}</p>
-            <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
-              Read → <ArrowRight size={13} strokeWidth={2} />
-            </div>
-          </a>
-        ))}
-      </div>
+    <div class="container space-y-12">
+      {ARCH_SECTIONS.map((section) => (
+        <div>
+          <div class="mb-5 flex items-baseline gap-3">
+            <h2 class="text-xl font-semibold tracking-tight">{section}</h2>
+            <p class="text-sm text-muted-foreground">{blurbs[section]}</p>
+          </div>
+          <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {ARCH_PAGES.filter((p) => p.section === section).map((p) => (
+              <a
+                href={`/architecture/${p.slug}/`}
+                class="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:-translate-y-0.5"
+              >
+                <div class="absolute top-4 right-4 font-mono text-[10px] text-muted-foreground/70">
+                  {String(ARCH_PAGES.indexOf(p) + 1).padStart(2, '0')}
+                </div>
+                <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">{p.eyebrow}</div>
+                <h3 class="mt-2 text-xl font-semibold tracking-tight">{p.title}</h3>
+                <p class="mt-2 text-sm text-muted-foreground">{p.subtitle}</p>
+                <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
+                  Read <ArrowRight size={13} strokeWidth={2} />
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   </section>
 </Base>

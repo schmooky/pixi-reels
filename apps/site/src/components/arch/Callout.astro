@@ -1,0 +1,34 @@
+---
+/**
+ * A short aside in the architecture prose. Four voices:
+ *   plain    "In plain words": the idea without any class names
+ *   why      "Why it is built this way": the design reason
+ *   gotcha   "Watch out": a mistake people make
+ *   remember "If you remember one thing": the takeaway
+ * Keep it to two or three sentences; it is a margin note, not a section.
+ */
+interface Props {
+  kind?: 'plain' | 'why' | 'gotcha' | 'remember';
+  title?: string;
+}
+const { kind = 'plain', title } = Astro.props as Props;
+const defaults: Record<string, string> = {
+  plain: 'In plain words',
+  why: 'Why it is built this way',
+  gotcha: 'Watch out',
+  remember: 'If you remember one thing',
+};
+const heading = title ?? defaults[kind];
+const tone: Record<string, string> = {
+  plain: 'border-l-foreground/40',
+  why: 'border-l-foreground/25',
+  gotcha: 'border-l-destructive/60',
+  remember: 'border-l-primary',
+};
+---
+<aside class:list={['not-prose my-6 rounded-r-xl border border-border border-l-4 bg-card px-5 py-4', tone[kind]]}>
+  <div class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{heading}</div>
+  <div class="text-[15px] leading-7 text-foreground/85 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_p+p]:mt-2">
+    <slot />
+  </div>
+</aside>

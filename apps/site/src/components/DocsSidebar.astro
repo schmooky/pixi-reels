@@ -1,21 +1,40 @@
 ---
 import type { NavSection } from '../content/nav.ts';
-interface Props { nav: NavSection[]; pathname: string; }
-const { nav, pathname } = Astro.props;
+interface Props {
+  nav: NavSection[];
+  pathname: string;
+  /**
+   * The viewport width at which the sidebar sits beside the content instead
+   * of above it. `md` (the default) suits text pages; the architecture pages
+   * use `lg` so their 720px diagrams get the full column on laptops and in
+   * narrow windows, with the nav folded into a toggle until then.
+   */
+  breakpoint?: 'md' | 'lg';
+}
+const { nav, pathname, breakpoint = 'md' } = Astro.props;
+const lg = breakpoint === 'lg';
 ---
-<aside class="md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-5.5rem)] md:overflow-y-auto pr-4">
+<aside class:list={[
+  'pr-4',
+  lg
+    ? 'lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto'
+    : 'md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-5.5rem)] md:overflow-y-auto',
+]}>
   <button
     id="sidebar-toggle"
-    class="md:hidden mb-3 flex w-full items-center justify-between rounded-md border border-border bg-card/60 px-3 py-2 text-sm font-medium text-foreground"
-    aria-expanded="true"
+    class:list={[
+      'mb-3 flex w-full items-center justify-between rounded-md border border-border bg-card/60 px-3 py-2 text-sm font-medium text-foreground',
+      lg ? 'lg:hidden' : 'md:hidden',
+    ]}
+    aria-expanded={lg ? 'false' : 'true'}
     aria-controls="sidebar-nav"
   >
     <span>On this section</span>
-    <svg id="sidebar-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden>
+    <svg id="sidebar-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden style={lg ? 'transform: rotate(-90deg)' : undefined}>
       <path d="M4 6l4 4 4-4"/>
     </svg>
   </button>
-  <nav id="sidebar-nav" class="space-y-6">
+  <nav id="sidebar-nav" class:list={['space-y-6', { 'hidden lg:block': lg }]}>
     {nav.map((section) => (
       <div>
         <div class="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">

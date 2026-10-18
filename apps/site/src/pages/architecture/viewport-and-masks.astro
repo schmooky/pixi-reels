@@ -1,0 +1,477 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
+import Cell from '../../components/arch/Cell.astro';
+import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
+
+// A small pyramid set (3,4,5,4,3 cells, one buffer cell each side) drawn
+// eight times, once per mask strategy. All numbers are SVG px.
+const CM = 16; // main-axis cell size
+const BUF = 16; // one buffer cell per side
+type Layout = { xs: number[]; offsets: number[]; extents: number[]; tallest: number; width: number; cross: number };
+function layout(cells: number[], cross: number, gap: number): Layout {
+  const extents = cells.map((c) => c * CM);
+  const tallest = Math.max(...extents);
+  const offsets = extents.map((e) => (tallest - e) / 2);
+  const xs = cells.map((_, i) => i * (cross + gap));
+  return { xs, offsets, extents, tallest, width: cells.length * cross + (cells.length - 1) * gap, cross };
+}
+type Pt = [number, number];
+/** Closed polygon with a quadratic rounding at each vertex; radii per vertex. */
+function roundedPath(pts: Pt[], radii: number | number[]): string {
+  const n = pts.length;
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const r = Array.isArray(radii) ? radii[i] : radii;
+    const p = pts[i];
+    const prev = pts[(i - 1 + n) % n];
+    const next = pts[(i + 1) % n];
+    const lin = Math.hypot(p[0] - prev[0], p[1] - prev[1]);
+    const lout = Math.hypot(next[0] - p[0], next[1] - p[1]);
+    const vin = [(p[0] - prev[0]) / lin, (p[1] - prev[1]) / lin];
+    const vout = [(next[0] - p[0]) / lout, (next[1] - p[1]) / lout];
+    const a = [p[0] - vin[0] * r, p[1] - vin[1] * r];
+    const b = [p[0] + vout[0] * r, p[1] + vout[1] * r];
+    d += `${i === 0 ? 'M' : 'L'} ${a[0]} ${a[1]} Q ${p[0]} ${p[1]} ${b[0]} ${b[1]} `;
+  }
+  return d + 'Z';
+}
+function rectPts(x: number, y: number, w: number, h: number): Pt[] {
+  return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+}
+/** The rectilinear union outline of contiguous reels: leading edge across, trailing edge back. */
+function staircase(L: Layout, ox: number, oy: number): Pt[] {
+  const top: Pt[] = [];
+  const bottom: Pt[] = [];
+  L.xs.forEach((x, i) => {
+    top.push([ox + x, oy + L.offsets[i]], [ox + x + L.cross, oy + L.offsets[i]]);
+    bottom.unshift([ox + x + L.cross, oy + L.offsets[i] + L.extents[i]], [ox + x, oy + L.offsets[i] + L.extents[i]]);
+  });
+  return [...top, ...bottom];
+}
+const PYRAMID = [3, 4, 5, 4, 3];
+const UNIFORM = [5, 5, 5, 5, 5];
+const PANEL_W = 164;
+const PANEL_H = 200;
+const PX = [14, 190, 366, 542];
+const PY = [16, 232];
+/** Panel origin plus the drawing origin: the drawing (of total width `dw`) is centred, below the 40 units of label headroom and one buffer cell. */
+const panel = (i: number, dw: number) => ({ px: PX[i % 4], py: PY[Math.floor(i / 4)], ox: PX[i % 4] + (PANEL_W - dw) / 2, oy: PY[Math.floor(i / 4)] + 40 + BUF });
+const gapped = layout(PYRAMID, 22, 4);
+const flush = layout(PYRAMID, 25.2, 0);
+const uniform = layout(UNIFORM, 22, 4);
+const small = layout(PYRAMID, 18, 3);
+const BANNER_GAP = 10;
+const BANNER_W = 24;
+
+// The dim reference count, drawn as a vertical chain.
+const DIM_STEPS: [string, string, 'muted' | 'accent'][] = [
+  ['count 0', 'hidden', 'muted'],
+  ['count 1', 'visible, alpha 0.5', 'accent'],
+  ['count 2', 'visible, alpha 0.35', 'accent'],
+  ['count 1', 'still visible', 'accent'],
+  ['count 0', 'hidden again', 'muted'],
+];
+const DIM_CALLS = ['spotlight: showDim(0.5)', 'destroySymbols: showDim(0.35)', 'hideDim()', 'hideDim()'];
+const DIM_PITCH = 110;
+const pillDx = (label: string) => 20 + (7.6 * label.length + 18) / 2;
+---
+<Architecture
+  title="Viewport and masks"
+  subtitle="The five layers under and above the mask, and every mask strategy."
+  eyebrow="Scene graph"
+>
+  <p>
+    The player sees three rows, but every reel is longer than that. The extra
+    symbols parked above and below the window, the buffer cells, are real
+    PixiJS objects with real positions, and something has to hide them or
+    the board looks like a tall list. The obvious tool is a mask: a stencil
+    shape, and PixiJS only draws what falls inside it. The trouble starts as
+    soon as the game needs something to escape that stencil. A winning symbol
+    wants to pop out over the frame art. A big win needs the losers darkened
+    while the winners stay bright. A sticky symbol flying from one cell to
+    another has to cross over the reels in between. One mask around
+    everything would clip all of that.
+  </p>
+
+  <p>
+    So the viewport is not one container with a mask but a short stack of
+    them: one masked layer that holds the reels, and four more layers above
+    the mask for the things that must break out of it. The <code>ReelViewport</code> is that stack. The ReelSet owns it, it is the
+    ReelSet's only display child, and each reel keeps a reference to it so it
+    can add its own container to the masked layer. This page walks the layers
+    from the bottom up, then every shape the mask can take.
+  </p>
+
+  <Callout kind="plain">
+    The viewport is the window you look through. Under the glass sit the
+    reels, clipped to the grid. On top of the glass sit the things that are
+    allowed to spill over the edge: lifted symbols, the darkening overlay,
+    winners, and anything promoted to draw above all of it. The class lives in <code>packages/pixi-reels/src/core/ReelViewport.ts</code>; the mask shapes
+    beyond the two basic ones live in <code>core/maskStrategies.ts</code>.
+  </Callout>
+
+  <h2>The layer stack</h2>
+
+  <p>
+    Figure 1 draws the viewport's five children in child order, bottom to
+    top. In PixiJS a later child renders on top of an earlier one, so reading
+    upwards is reading towards the player. Look for the mask: it is a single
+    Graphics inside the lowest layer, applied to that layer as a whole, and
+    nothing above it is clipped by it. Everything that must escape the clip
+    lives in one of the four layers above.
+  </p>
+
+  <Diagram height={550} caption="The viewport's five children in child order, drawn bottom to top. A later child renders on top, so the promoted layer beats an active spotlight and the dim overlay never darkens a winner.">
+    <Edge from={[30, 524]} to={[30, 20]} kind="primary" />
+    <Label x={14} y={272} text="later child, drawn on top" anchor="middle" rotate={-90} />
+
+    <Box x={60} y={20} w={640} h={60} title="promotedLayer" kind="accent" sub="RenderLayer; promote() attaches a view here without reparenting it" />
+    <Box x={60} y={100} w={640} h={60} title="spotlightContainer" sub="winning views are reparented here during show()" />
+    <Box x={60} y={180} w={640} h={60} title="dimOverlay" kind="muted" sub="a black rect of viewport size, alpha 0.5; hidden until showDim()" />
+
+    <Group x={60} y={260} w={640} h={124} kind="solid" label="unmaskedContainer" note="above the mask, same local space" />
+    <Box x={84} y={300} w={186} h={60} title="unmask symbols" sub="at rest only" />
+    <Box x={286} y={300} w={186} h={60} title="pin overlays" sub="zIndex 10000, in motion" />
+    <Box x={488} y={300} w={186} h={60} title="movePin flights" sub="the travelling symbol" />
+
+    <Group x={60} y={404} w={640} h={120} kind="solid" label="maskedContainer" note=".mask = the Graphics, itself a child" />
+    <Cell x={84} y={444} w={88} h={56} label="mask" sub="Graphics" kind="empty" />
+    {[0, 1, 2, 3, 4].map((i) => (
+      <Cell x={184 + i * 100} y={444} w={88} h={56} label={`Reel ${i}`} sub={`zIndex ${i}`} kind="plain" />
+    ))}
+  </Diagram>
+
+  <p>
+    From the bottom. The <strong>masked container</strong> holds every reel
+    and the one mask that clips them all. Each reel's container has a draw
+    order equal to its index, positive when reels stack ascending and negative
+    when they stack descending, which decides whether the last reel draws in
+    front of or behind its neighbour. In warp curve mode a <code>ReelWarp</code> stands in for the reel container and copies that
+    order.
+  </p>
+
+  <p>
+    The <strong>unmasked container</strong> sits directly above the mask in
+    the same coordinate space, so anything moved into it keeps its position
+    but stops being clipped. Three things live here. Symbols registered with <code>unmask: true</code> are lifted here while the reel is at rest, so a
+    tall or wide piece of art can overhang its cell and even cross into a
+    neighbouring reel. Pin overlays, the symbols the engine draws over cells
+    that stay put across spins, sit here while they are in motion, at a very
+    high draw order. And when a pin is moved from one cell to another, the
+    travelling symbol flies through this layer.
+  </p>
+
+  <p>
+    The <strong>dim overlay</strong> is a black rectangle the size of the
+    viewport, hidden until something asks for it. When shown it darkens the
+    two layers below it, reels and unmasked symbols, and nothing above it. The <strong>spotlight container</strong> is where winning symbols are moved
+    during a win presentation; because it is above the dim, winners stay
+    bright while everything else goes dark. The <strong>promoted layer</strong> is the last child and so draws above everything, even an active
+    spotlight. It is a PixiJS RenderLayer rather than a container: a view
+    attached to it keeps its real parent and only changes where it renders,
+    sorted by whatever draw order the symbol already carries.
+  </p>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'accent', label: 'promotedLayer', note: 'render order only; a view keeps its parent' },
+      { kind: 'subtle', label: 'Containers', note: 'ordinary children, sortable' },
+      { kind: 'muted', label: 'dimOverlay', note: 'hidden until a dim request' },
+    ]} />
+  </div>
+
+  <p>
+    The viewport can be constructed on its own, and then its defaults are a
+    position of <code>{'{0, 0}'}</code>, a plain <code>RectMaskStrategy</code>,
+    the vertical-forward axis and a bleed of 0. The builder never relies on
+    those: it passes its own axis, the strategy it chose, and, in warp mode
+    only, the curve bleed. One note if you read the source: the class comment
+    says "three stacking layers" and lists four, but there are five children.
+    The code is the source of truth here.
+  </p>
+
+  <h2>One mask, per-reel geometry</h2>
+
+  <p>
+    There is exactly one mask Graphics per viewport, and it applies to the
+    masked container as a whole. Masks are never applied to individual reel
+    containers. When this page says "per-reel masking", it means drawing one
+    rectangle per reel into that single Graphics. A PixiJS mask is the union
+    of every filled shape it contains, so the default strategy gets a jagged
+    but rectangular clip, one that follows a pyramid layout exactly, with no
+    shader and no extra draw calls.
+  </p>
+
+  <p>
+    The thing that draws those shapes is a <em>mask strategy</em>: a small
+    object with a <code>build()</code> that creates the Graphics and an <code>update()</code> that redraws it. Both receive a <code>MaskContext</code> describing the current board, and the table lists
+    what is in it.
+  </p>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Field</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['rects', 'one ReelMaskRect per reel, screen space, viewport-local, in reel order; empty before the builder supplies them'],
+          ['width, height', 'the viewport box'],
+          ['axis', 'the set axis, so a strategy can tell main from cross'],
+          ['bleed', 'cross-axis curve bleed; 0 unless warp mode with curveBleed'],
+          ['origin', 'optional; set only by inset(), shifts where the box starts'],
+        ].map(([f, m]) => (
+          <tr class="border-t border-border">
+            <td class="px-4 py-2 font-mono text-xs">{f}</td>
+            <td class="px-4 py-2 text-foreground/80">{m}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    The full contract is <code>{'interface MaskStrategy { readonly version: 2; build(ctx): Graphics; update(g, ctx): void }'}</code>.
+    A second, smaller interface exists for strategies that want to be
+    combined: a <code>DrawableMaskStrategy</code> adds <code>draw(g, ctx)</code>,
+    which draws into a Graphics somebody else owns and so must never call <code>clear()</code>. That is what lets several strategies draw into one
+    mask. All fills are white; the colour is never rendered, because a mask
+    is a stencil, not a picture.
+  </p>
+
+  <Callout kind="why">
+    The <code>version: 2</code> field is a tripwire. The v1 engine passed
+    positional arguments to its mask strategies, and a v1 strategy handed to
+    the v2 builder would have drawn a full-bleed mask, which clips nothing,
+    and the board would quietly show its buffer cells. The version check,
+    exported as <code>MASK_STRATEGY_VERSION</code>, turns that silent bug into
+    a named throw in <code>builder.maskStrategy()</code>.
+  </Callout>
+
+  <h2>Every strategy</h2>
+
+  <p>
+    Figure 2 draws the same small pyramid set eight times, once per
+    strategy. The grey strips are the full reels, buffer cells included; the
+    shaded shape is what the mask lets through. Compare the first two
+    panels: the per-reel rectangles hug each reel, while the shared rectangle
+    lets the buffer cells of the short outer reels show through. Then look at
+    the last two, which are not shapes of their own but ways of changing or
+    combining the others.
+  </p>
+
+  <Diagram height={448} caption="The same pyramid set (3, 4, 5, 4, 3 cells, one buffer cell per side) under each strategy. The shaded shape is what the mask lets through; the grey strips are the full reels, buffer cells included. The table below has every rule and caveat.">
+    {[
+      { i: 0, L: gapped, label: 'Rect', note: 'one rect per reel', shapes: (ox: number, oy: number) => gapped.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + gapped.offsets[k], gapped.cross, gapped.extents[k]), 0)) },
+      { i: 1, L: gapped, label: 'SharedRect', note: 'one bounding box', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 0)] },
+      { i: 2, L: gapped, label: "Rounded 'set'", note: 'one rounded union box', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 8)] },
+      { i: 3, L: gapped, label: "Rounded 'reel'", note: 'each reel rounded', shapes: (ox: number, oy: number) => gapped.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + gapped.offsets[k], gapped.cross, gapped.extents[k]), 5)) },
+      { i: 4, L: uniform, label: "Rounded 'outer'", note: 'union corners only', shapes: (ox: number, oy: number) => uniform.xs.map((x, k) => roundedPath(rectPts(ox + x, oy + uniform.offsets[k], uniform.cross, uniform.extents[k]), k === 0 ? [8, 0, 0, 8] : k === 4 ? [0, 8, 8, 0] : 0)) },
+      { i: 5, L: flush, label: 'Silhouette', note: 'staircase outline', shapes: (ox: number, oy: number) => [roundedPath(staircase(flush, ox, oy), 4)] },
+      { i: 6, L: gapped, label: 'Path', note: 'fill() then cut()', shapes: (ox: number, oy: number) => [`${roundedPath(rectPts(ox, oy, gapped.width, gapped.tallest), 6)} M ${ox + gapped.width / 2 - 12} ${oy + gapped.tallest / 2} a 12 12 0 1 0 24 0 a 12 12 0 1 0 -24 0 Z`] },
+      { i: 7, L: small, label: 'inset + compose', note: 'inset(s, 8) + banner', shapes: (ox: number, oy: number) => [roundedPath(rectPts(ox + 8, oy + 8, small.width - 16, small.tallest - 16), 0), roundedPath(rectPts(ox + small.width + BANNER_GAP, oy + 16, BANNER_W, 40), 4)] },
+    ].map(({ i, L, label, note, shapes }) => {
+      const { px, py, ox, oy } = panel(i, i === 7 ? L.width + BANNER_GAP + BANNER_W : L.width);
+      return (
+        <g>
+          <Group x={px} y={py} w={PANEL_W} h={PANEL_H} kind="plain" label={label} />
+          <Label x={px + PANEL_W / 2} y={py + PANEL_H - 12} text={note} anchor="middle" tone="fg" />
+          {L.xs.map((x, k) => (
+            <g>
+              <rect x={ox + x} y={oy + L.offsets[k] - BUF} width={L.cross} height={L.extents[k] + 2 * BUF} rx="3" class="lane-bg" />
+              {Array.from({ length: L.extents[k] / CM + 1 }, (_, t) => (
+                <line x1={ox + x} x2={ox + x + L.cross} y1={oy + L.offsets[k] - BUF + (t + 1) * CM} y2={oy + L.offsets[k] - BUF + (t + 1) * CM} class="guide" />
+              ))}
+            </g>
+          ))}
+          {shapes(ox, oy).map((d) => (
+            <g>
+              <path d={d} class="span-spin" fill-rule="evenodd" />
+              <path d={d} class="edge edge-primary" />
+            </g>
+          ))}
+          {i === 7 && <rect x={ox} y={oy} width={small.width} height={small.tallest} class="guide-strong" style="stroke-dasharray: 4 3" />}
+        </g>
+      );
+    })}
+  </Diagram>
+
+  <p>
+    In words: <strong>Rect</strong> is the default and draws one rectangle
+    per reel. <strong>SharedRect</strong> draws one box around the whole set,
+    which is what you need when a symbol spans the gap between reels or leans
+    out of its column. <strong>RoundedRect</strong> rounds corners, and its
+    scope decides which corners: the whole set, each reel, or only the outer
+    corners of the union. <strong>Silhouette</strong> traces the staircase
+    outline of a pyramid so the rounding follows the steps. <strong>Path</strong> hands you the Graphics and lets you draw anything, including holes. <strong>inset</strong> shrinks or grows another strategy by a margin, and <strong>composeMasks</strong> unions several strategies into one mask,
+    for a board with a detached banner or side cell. The table has the exact
+    rules and every caveat.
+  </p>
+
+  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Strategy</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Draws</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Rules and caveats</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['RectMaskStrategy', 'one rect per ctx.rects entry, each inflated on the cross axis by bleed on both sides; with no rects, a single viewport-sized rect', 'the default. No buffer peek past short reels. With a cross gap, a block spanning reels is clipped in the gap.'],
+          ['SharedRectMaskStrategy', 'one bounding rect from origin to width x height, bleed-inflated on the cross axis', 'for blocks across a gap, unmask symbols and curve lean. On pyramids it shows buffer cells past short reels (the pyramid peek, usually behind frame art). bleed ?? 0 guards third-party contexts, otherwise the rect is NaN and clips everything.'],
+          ["RoundedRectMaskStrategy { radius, scope = 'set', corners }", "'set': one rounded union box. 'reel': every reel rect rounded on its own. 'outer': per-reel rects where a corner rounds only if it coincides with a union-box corner (CORNER_EPS 0.5 px)", "throws on a negative or non-finite radius or a non-object corners. 'reel' at gap 0 warns once (mask-rounded-touching) because the seams notch; it warns rather than throws because a MultiWays reshape can legally pass through a touching layout. 'outer' may round nothing on a jagged set. Hold & Win uses corners per cell."],
+          ['SilhouetteMaskStrategy { radius, concaveRadius = radius }', 'the rectilinear union outline of the reel rects: leading main edge in cross order, then the trailing edge back; convex corners get radius, concave corners get concaveRadius', 'needs a zero cross gap. Disjoint reels warn once (mask-silhouette-disjoint) and fall back to RoundedRect scope reel. Duplicate and collinear vertices are dropped (RING_EPS 0.5), so a uniform set yields four corners. Bleed applies only to the two outermost cross edges, with !== 0 so a negative bleed from inset() still applies. Under 3 ring points: a plain rect.'],
+          ['PathMaskStrategy(fn)', 'whatever (g, ctx) => void draws; clear() is already handled', 'throws if the argument is not a function. cut() subtracts from the last filled shape, so fill first and cut second or the mask is empty and the board invisible.'],
+          ['inset(strategy, px | { top, right, bottom, left })', 'the wrapped strategy, shrunk (positive) or grown (negative); sides are screen sides in every orientation', 'cross-axis inset goes through a negated bleed plus an origin shift; main-axis inset shrinks rect sizes and the box and shifts origin. Mixing the two forms double-counts. A custom strategy that ignores ctx.origin insets in size but not position. Throws inset(): expected a finite number... on bad input.'],
+          ['composeMasks(...strategies)', 'the union of every member; drawable members share one Graphics, others get a nested child Graphics cached per host in a WeakMap', 'union only; PixiJS cannot intersect or subtract across strategies. Throws on an empty list. The motivating case is a reel set plus a detached banner or side cell.'],
+        ].map(([s, d, r]) => (
+          <tr class="border-t border-border align-top">
+            <td class="px-4 py-2 font-mono text-xs">{s}</td>
+            <td class="px-4 py-2 text-foreground/80">{d}</td>
+            <td class="px-4 py-2 text-foreground/80">{r}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <Callout kind="gotcha">
+    With <code>PathMaskStrategy</code>, fill first and cut second. <code>cut()</code> subtracts from the last filled shape, so a cut with
+    nothing filled yet leaves the mask empty and the whole board invisible,
+    with no error to tell you why.
+  </Callout>
+
+  <p>
+    Every strategy and combinator is exported from the package entry, along
+    with <code>MASK_STRATEGY_VERSION</code>, <code>isDrawableMaskStrategy</code> and the types <code>ReelMaskRect</code>, <code>MaskStrategy</code>, <code>MaskContext</code>, <code>DrawableMaskStrategy</code>, <code>MaskCorners</code>, <code>MaskPathFn</code>, <code>RoundedMaskScope</code>, <code>RoundedRectMaskOptions</code>, <code>SilhouetteMaskOptions</code> and <code>InsetSides</code>. The one
+    helper that is not re-exported from <code>index.ts</code> is <code>bleedOutset</code>. Worked examples are in the <a href="/recipes/masks/">masks recipes</a>.
+  </p>
+
+  <h2>Which strategy you get without asking</h2>
+
+  <p>
+    Most games never choose a mask. The builder picks one, and it only ever
+    picks between the first two: the per-reel rectangle by default, or the
+    shared rectangle when something would otherwise be clipped. If you called <code>.maskStrategy()</code> yourself, that choice always wins and the
+    rules below are skipped.
+  </p>
+
+  <p>
+    The first rule looks at your symbols. If any registered symbol is wider
+    than one reel (<code>size.reels</code> greater than 1) or is allowed to
+    escape the mask (<code>unmask: true</code>), and there is a gap between
+    reels, the set gets the shared rectangle. Without a gap there is nothing
+    to clip, so the rule stays quiet; a tall stack within one reel never
+    crosses a column edge, so it does not trigger it either. The second rule
+    looks at curvature. If the curve focus is anything but <code>'reel'</code> and a curve is set, the set gets the shared rectangle too, gap or no gap,
+    because a set-focused curve leans cells out of their own column
+    regardless. Both rules log an info notice named <code>mask-auto-shared</code> saying which reason fired. Otherwise you get
+    the default. The decision is drawn on the <a href="/architecture/builder/">builder page</a>.
+  </p>
+
+  <p>
+    There is also a runtime check for the shared rectangle's one weakness.
+    When reels change height after build, through <code>setColumn</code> and
+    its relatives, the set warns once (<code>shared-mask-jagged</code>) if the
+    mask now covers buffer cells past a short reel. It finds out honestly: it
+    hit-tests the mask Graphics with <code>containsPoint</code> just past each
+    short reel's ends, rather than guessing from the strategy's name.
+  </p>
+
+  <h2>The per-reel rects</h2>
+
+  <p>
+    The rectangles a strategy receives are computed by the builder once the
+    reels exist. Each one is positioned by marching across the reels on the
+    cross axis, and by the reel's own offset inside the tallest strip on the
+    main axis, according to the anchor you chose (start, centre or end). Its
+    size is one cell across and the reel's full extent along.
+  </p>
+
+  <pre><code>{`position = setAxis.toScreen(reelIndex * (crossCell + crossGap), mainOffsetFor(extent, tallest))
+size     = setAxis.toScreen(crossCell, extent)
+
+mainOffsetFor: 'start' -> 0   'end' -> tallest - extent   'center' -> (tallest - extent) / 2`}</code></pre>
+
+  <p>
+    The viewport takes those rectangles through one method, <code>updateMaskSize(width, height, rects = [])</code>. It stores the
+    three values, asks the strategy to redraw, and resizes the dim overlay to
+    match, so a spotlight never dims a stale rectangle. It is called from
+    three places: the builder, right after the reel loop; every board change
+    on the set, because <code>addReels</code>, <code>removeReels</code>, <code>addRows</code>, <code>removeRows</code>, <code>setColumn</code>, <code>splitSymbol</code>, <code>resetColumns</code> and <code>expand</code> all go through <code>ReelSet._afterBoardChange()</code>; and MultiWays
+    reshapes. Before the first call the viewport has no rects, so the mask
+    draws its bounding-box fallback. The current values are readable through <code>maskWidth</code>, <code>maskHeight</code>, <code>maskRects</code>, <code>maskGraphics</code> (used by debug code and by the jagged check
+    above), <code>axis</code> and <code>isDestroyed</code>.
+  </p>
+
+  <h2>The dim reference count</h2>
+
+  <p>
+    Two different features darken the board: the win spotlight, and <code>destroySymbols({'{ dim: true }'})</code>, which dims while symbols
+    are removed. They can overlap, and if each simply switched the overlay on
+    and off, the first one to finish would switch it off under the other. So
+    the overlay is reference counted. Figure 3 follows one such overlap;
+    notice that the overlay only hides when the count returns to zero, and
+    that each show sets the alpha, so the latest request decides how dark.
+  </p>
+
+  <Diagram height={20 + (DIM_STEPS.length - 1) * DIM_PITCH + 60 + 20} caption="Two users of the dim overlay overlap. Neither can hide the other's dim, because the overlay only hides when the count returns to zero.">
+    {DIM_STEPS.map(([t, s, k], i) => (
+      <Box x={40} y={20 + i * DIM_PITCH} w={220} h={60} title={t} sub={s} kind={k} mono={false} />
+    ))}
+    {DIM_CALLS.map((l, i) => (
+      <Edge from={[150, 80 + i * DIM_PITCH]} to={[150, 20 + (i + 1) * DIM_PITCH]} label={l} labelDx={pillDx(l)} />
+    ))}
+  </Diagram>
+
+  <p>
+    In code, <code>showDim(alpha = 0.5)</code> increments the count, sets the
+    overlay's alpha and makes it visible; <code>hideDim()</code> decrements
+    and hides only when the count reaches zero. The spotlight asks for 0.5
+    and <code>destroySymbols</code> for 0.35. From reading the code: the
+    Graphics fill itself is drawn at alpha 0.5, and <code>showDim</code> sets
+    the container alpha on top of that, so the effective darkness is <code>0.5 x alpha</code>, not the number you passed.
+  </p>
+
+  <h2>Warp mode skips the unmasked layer</h2>
+
+  <p>
+    Warp mode draws a curved reel by rendering the reel to a texture and
+    bending the texture. Only what is inside the reel container ends up in
+    that texture, so anything the engine lifts out of the container is drawn
+    flat: symbols registered with <code>unmask: true</code>, the spotlight and
+    the pin overlays all sit flat over a curved board. When warp mode, a
+    curve and an unmask symbol are combined, <code>build()</code> logs the
+    info notice <code>warp-skips-unmask</code> and suggests <code>curveMode('symbol')</code>, which bends each symbol individually
+    and so keeps lifted ones on the drum. See <a href="/architecture/curvature/">curvature</a>.
+  </p>
+
+  <h2>Destroy</h2>
+
+  <p>
+    <code>ReelViewport.destroy()</code> first detaches every view from the
+    promoted layer, so a pooled symbol that outlives the viewport is not left
+    holding a reference to a dead render layer, and then destroys itself and
+    its children. The ReelSet calls it after the symbol pool and before
+    clearing pins; the full order is on the <a href="/architecture/classes/">classes page</a>.
+  </p>
+
+  <Callout kind="remember">
+    One mask, five layers. The reels are clipped by a single Graphics under
+    the lowest layer, and everything that must escape the clip (lifted
+    symbols, the dim, winners, promoted views) lives in a layer above it. The
+    mask's shape comes from a strategy; the builder picks Rect or SharedRect
+    for you, and anything else is one <code>.maskStrategy()</code> call away.
+  </Callout>
+</Architecture>
