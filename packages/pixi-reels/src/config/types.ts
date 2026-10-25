@@ -580,6 +580,19 @@ export interface SymbolData {
    * symbol is a "big symbol". at landing it occupies a `reels × cells` block of
    * cells anchored at the (reel, cell) where its id appears in the result.
    * Big-symbol registration is rejected on MultiWays slots.
+   *
+   * A tall block (`reels: 1`, `cells > 1`) may also carry a `weight`: the
+   * random fill then streams it past during the spin, anchor and covered
+   * cells together, like any other symbol. Give it the weight on the reels
+   * that may show it (`builder.randomSymbols({ weights: { TALL: 5 } }, { reel: 0 })`)
+   * and `0` elsewhere. A block wider than one reel must keep weight `0`:
+   * only a landing can coordinate it across reels.
+   *
+   * A weighted tall block needs `bufferSymbols({ start: cells })` or more,
+   * checked at build time and by `randomSymbols.set()`: the block enters a
+   * forward reel tail first and leaves a reverse reel anchor first, and
+   * those buffer slots are where its covered cells sit while the anchor
+   * that draws them is off the strip.
    */
   size?: { reels: number; cells: number };
 }

@@ -363,6 +363,17 @@ export class Reel implements Disposable {
    */
   private _nudgeQueue: string[] | null = null;
   /**
+   * The rest of a tall block the random feed is streaming in, one id per
+   * coming wrap. A `'strip'` draw that returns a tall block is placed as
+   * anchor + OCCUPIED cells over `size.cells` wraps; whatever has not been
+   * placed yet waits here, and takes precedence over the stop frame so a
+   * block never lands cut in half by the landing.
+   */
+  private _feedQueue: string[] = [];
+  /** Cells of the block in `_feedQueue` already on the strip, and the edge they entered at. */
+  private _feedPlaced = 0;
+  private _feedEdge: 'start' | 'end' = 'start';
+  /**
    * GSAP tween handle for the active nudge animation. Stored so `destroy()`
    * and `skipNudge()` can `kill()` it cleanly; cleared in `onComplete` and
    * on cancellation. `null` between nudges.
@@ -1166,6 +1177,7 @@ export class Reel implements Disposable {
    * @internal SpinController and AdjustPhase finalization only.
    */
   snapToGrid(): void {
+    this._abandonFeed();
     this._reMaskLiftedBufferSlots();
     this.motion.snapToGrid();
     this._syncUnmaskedViewOffsets();
@@ -1686,6 +1698,9 @@ export class Reel implements Disposable {
    * where a big symbol's tail sits.
    */
   placeStrip(frame: ReadonlyArray<string | undefined>): void {
+    // The frame replaces every slot, so a half-fed random block is gone too.
+    this._feedQueue = [];
+    this._feedPlaced = 0;
     const totalSlots = this.symbols.length;
     for (let i = 0; i < totalSlots; i++) {
       // Buffer pools apply to the buffer slots only, and each side has its
@@ -1923,6 +1938,8 @@ export class Reel implements Disposable {
       this._nudgeReject = null;
     }
     this._nudgeQueue = null;
+    this._feedQueue = [];
+    this._feedPlaced = 0;
     this._isNudging = false;
     // Hand the live symbols back to the shared pool rather than destroying
     // them. `release()` deactivates each one, which stops its animations, so
@@ -2159,6 +2176,7 @@ export class Reel implements Disposable {
   }
 
   private _onSymbolWrapped(symbol: ReelSymbol): void {
+    const index = this.symbols.indexOf(symbol);
     let newSymbolId: string;
     if (this._nudgeQueue && this._nudgeQueue.length > 0) {
       // Nudge queue is exhaustively pre-built by `nudge()` to cover every
@@ -2167,13 +2185,20 @@ export class Reel implements Disposable {
       // wins over the stop sequencer so a queued slam-stop on a stale spin
       // can't bleed symbols into a fresh nudge.
       newSymbolId = this._nudgeQueue.shift()!;
+    } else if (this._feedQueue.length > 0) {
+      // A tall block is half-way onto the strip: finish it before the stop
+      // frame starts. The frame is exactly one strip long, so it still
+      // pushes every random symbol out; the landing just comes a few wraps
+      // later.
+      newSymbolId = this._feedQueue.shift()!;
+      this._feedPlaced++;
     } else if (this._isStopping && this.stopSequencer.hasRemaining) {
       newSymbolId = this.stopSequencer.next();
     } else {
-      newSymbolId = this._randomProvider.next('spinning', this.reelIndex);
+      newSymbolId = this._drawForStrip(index);
     }
 
-    this._replaceSymbol(this.symbols.indexOf(symbol), newSymbolId);
+    this._replaceSymbol(index, newSymbolId);
     // During a nudge tween, defer the O(N) zIndex rescan to `snapToGrid()`
     // in the tween's finalize step. `distance` wraps fire back-to-back
     // and a single refresh at the end produces the same final state.
@@ -2184,6 +2209,62 @@ export class Reel implements Disposable {
       // array index of every remaining symbol changed. refresh all zIndexes.
       this.refreshZIndex();
     }
+  }
+
+  /**
+   * Draw the next random symbol for the strip. A tall block comes back as
+   * its first cell, with the rest queued in `_feedQueue` in the order the
+   * strip will show them. New symbols arrive at index `0` (the start edge,
+   * smaller main coordinate) or at the last index (the end edge). The anchor
+   * is the block's start-most cell, so a block entering at the start edge
+   * shows its tail first and its anchor last; entering at the end edge, the
+   * anchor leads and the OCCUPIED cells follow.
+   */
+  private _drawForStrip(index: number): string {
+    // Once the stop frame is exhausted the reel is a wrap or less from
+    // landing, and a block begun now would be cut by it. One cell only.
+    if (this._isStopping) return this._randomProvider.next('spinning', this.reelIndex);
+    const id = this._randomProvider.nextForStrip(this.reelIndex);
+    const h = this._symbolsData[id]?.size?.cells ?? 1;
+    if (h <= 1) return id;
+    const stubs = new Array<string>(h - 1).fill(OCCUPIED_SENTINEL);
+    const sequence = index === 0 ? [...stubs, id] : [id, ...stubs];
+    this._feedQueue = sequence.slice(1);
+    this._feedPlaced = 1;
+    this._feedEdge = index === 0 ? 'start' : 'end';
+    return sequence[0];
+  }
+
+  /**
+   * Drop a block the feed did not finish. Its placed cells are still at the
+   * edge they entered at (nothing else wraps while a block is in the queue),
+   * so they are replaced with single-cell draws: a strip that snaps to rest
+   * without its result (abort, timeout) rests on a clean grid, not on a
+   * stub with no anchor.
+   */
+  private _abandonFeed(): void {
+    if (this._feedQueue.length === 0) return;
+    const total = this.symbols.length;
+    for (let k = 0; k < this._feedPlaced; k++) {
+      const index = this._feedEdge === 'start' ? k : total - 1 - k;
+      this._replaceSymbol(index, this._randomProvider.next(this._slotKind(index), this.reelIndex));
+    }
+    this._feedQueue = [];
+    this._feedPlaced = 0;
+  }
+
+  /**
+   * The screen size a symbol takes the moment it is placed on the strip. A
+   * tall block (one reel wide) gets its whole block, so it scrolls in at
+   * full height and a snapshot symbol captures it at that size once. A
+   * wider block gets one cell here and its block at the landing, as before:
+   * its neighbours are still spinning their own strips while this reel
+   * feeds its anchor. `_finalizeFrame` sizes every anchor again at rest.
+   */
+  private _placedSize(symbolId: string): { width: number; height: number } {
+    const size = this._symbolsData[symbolId]?.size;
+    if (size && size.reels === 1 && size.cells > 1) return this._blockSize(1, size.cells);
+    return { width: this.symbolWidth, height: this.symbolHeight };
   }
 
   private _replaceSymbol(index: number, newSymbolId: string): void {
@@ -2229,7 +2310,8 @@ export class Reel implements Disposable {
       this._releaseOccupiedStub(oldSymbol);
       const newSymbol = this._symbolFactory.acquire(newSymbolId);
       const newIsUnmasked = this._effectiveUnmask(newSymbolId, index);
-      newSymbol.resize(this.symbolWidth, this.symbolHeight);
+      const placed = this._placedSize(newSymbolId);
+      newSymbol.resize(placed.width, placed.height);
       newSymbol.view.alpha = 1;
       // Reset BEFORE placing: on a curved reel the placement is what writes
       // the cell's scale, and a reset after it would flatten the symbol back
@@ -2250,6 +2332,13 @@ export class Reel implements Disposable {
     // container in case the pool moved it elsewhere since the last
     // activation (e.g. spotlight promotion above the mask).
     if (oldSymbol.symbolId === newSymbolId) {
+      // A tall anchor is re-sized even on reuse: the instance may have been
+      // placed at one cell by a frame whose block never reached the window.
+      const size = this._symbolsData[newSymbolId]?.size;
+      if (size && size.reels === 1 && size.cells > 1) {
+        const placed = this._placedSize(newSymbolId);
+        oldSymbol.resize(placed.width, placed.height);
+      }
       // The instance is reused WITHOUT deactivate/activate, so nothing else
       // resets its animation pose. A symbol that just played a one-shot win
       // is still parked on that animation's final frame, and the reset below
@@ -2286,7 +2375,8 @@ export class Reel implements Disposable {
     this._symbolFactory.release(oldSymbol);
     const newSymbol = this._symbolFactory.acquire(newSymbolId);
     const newIsUnmasked = this._effectiveUnmask(newSymbolId, index);
-    newSymbol.resize(this.symbolWidth, this.symbolHeight);
+    const placed = this._placedSize(newSymbolId);
+    newSymbol.resize(placed.width, placed.height);
     newSymbol.view.alpha = 1;
     // Reset before placing. see the stub-replacement path above.
     newSymbol.view.scale.set(1, 1);

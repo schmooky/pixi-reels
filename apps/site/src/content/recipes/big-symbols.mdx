@@ -28,6 +28,30 @@ Square 2x2, tall 1x3, giant 3x3, wide 2x4, one focused demo per shape.
 <RecipeDemo code="big-symbols-mxn-giant" height={300} />
 <RecipeDemo code="big-symbols-mxn-wide" height={300} />
 
+<a id="tall-symbols-in-spin"></a>
+
+## Tall blocks that stream past during the spin
+
+A 1x3 block with a weight scrolls on reel 0 while it spins, and a scatter only ever scrolls on reel 4. Both weights live in per-reel pools: `0` in the base `weights()` table, raised on the one reel that may show the symbol. Only blocks one reel wide can carry a weight; wider ones still land only, since the random fill feeds one reel at a time.
+
+**Gotcha:** a pool `exclude` cannot be lifted again by a narrower layer, a weight of `0` can. Use weights, not `exclude`, for "this symbol on this reel only". And a weighted block needs `bufferSymbols({ start: size.cells })`, which the builder checks: the block enters a forward reel bottom first and leaves a reverse reel anchor first, and those buffer slots are where its covered cells sit while the anchor that draws them is off the strip.
+
+<RecipeDemo code="tall-symbols-in-spin" height={340} />
+
+<a id="tall-peek"></a>
+
+## Tall block in an anticipation tease, landing peeking, then up
+
+Two scatters put reel 4 into a crawl, and the weighted 1x3 keeps sliding past while it crawls. The result lands the block with its head on the last visible cell and its body in `bufferEnd` (so `bufferSymbols({ start: 3, end: 2 })`: `start` for the weight, `end` for the peek). Then the game brings it up, two ways:
+
+- **Nudge up.** `nudge(reel, { distance: 2, direction: 'reverse' })` moves the whole column; the two cards above scroll out through the top.
+- **Expand up.** The landed anchor is already one sprite three cells tall with its body under the mask. Tween its view up two cells and it grows over the cards, then `setColumn(reel, { visible: ['tall', ...] })` commits the block at the top of the column while the rest of the board stays put. An expanding wild, in engine terms.
+
+**Gotcha:** `getBlockBounds` reports the whole block even while part of it hangs in a buffer; the mask does the clipping.
+
+<RecipeDemo code="tall-peek-nudge-up" height={320} />
+<RecipeDemo code="tall-peek-expand-up" height={320} />
+
 <a id="big-symbol-cascade-fall"></a>
 
 ## Big symbol falls into view through a cascade
