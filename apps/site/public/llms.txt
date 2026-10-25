@@ -26760,10 +26760,9 @@ const reelSet = new ReelSetBuilder()
   .visibleCells(ROWS)
   // A block's anchor is its top cell. On a reel that travels down, the block
   // enters bottom first, so its covered cells arrive before the anchor that
-  // draws them. With `start` buffer slots >= the block's cells those arrive
-  // hidden above the window and the anchor is in place before any of it
-  // shows. With the default 1, the top cell flickers blank for one wrap.
-  // (A reel travelling up feeds anchor first and needs nothing.)
+  // draws them; on a reel that travels up it leaves anchor first. With
+  // `start` buffer slots >= the block's cells that happens above the window,
+  // out of sight. The builder refuses a weighted tall block with fewer.
   .bufferSymbols({ start: TALL.cells, end: 1 })
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)

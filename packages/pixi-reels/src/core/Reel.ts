@@ -370,6 +370,9 @@ export class Reel implements Disposable {
    * block never lands cut in half by the landing.
    */
   private _feedQueue: string[] = [];
+  /** Cells of the block in `_feedQueue` already on the strip, and the edge they entered at. */
+  private _feedPlaced = 0;
+  private _feedEdge: 'start' | 'end' = 'start';
   /**
    * GSAP tween handle for the active nudge animation. Stored so `destroy()`
    * and `skipNudge()` can `kill()` it cleanly; cleared in `onComplete` and
@@ -1174,6 +1177,7 @@ export class Reel implements Disposable {
    * @internal SpinController and AdjustPhase finalization only.
    */
   snapToGrid(): void {
+    this._abandonFeed();
     this._reMaskLiftedBufferSlots();
     this.motion.snapToGrid();
     this._syncUnmaskedViewOffsets();
@@ -1696,6 +1700,7 @@ export class Reel implements Disposable {
   placeStrip(frame: ReadonlyArray<string | undefined>): void {
     // The frame replaces every slot, so a half-fed random block is gone too.
     this._feedQueue = [];
+    this._feedPlaced = 0;
     const totalSlots = this.symbols.length;
     for (let i = 0; i < totalSlots; i++) {
       // Buffer pools apply to the buffer slots only, and each side has its
@@ -1934,6 +1939,7 @@ export class Reel implements Disposable {
     }
     this._nudgeQueue = null;
     this._feedQueue = [];
+    this._feedPlaced = 0;
     this._isNudging = false;
     // Hand the live symbols back to the shared pool rather than destroying
     // them. `release()` deactivates each one, which stops its animations, so
@@ -2185,6 +2191,7 @@ export class Reel implements Disposable {
       // pushes every random symbol out; the landing just comes a few wraps
       // later.
       newSymbolId = this._feedQueue.shift()!;
+      this._feedPlaced++;
     } else if (this._isStopping && this.stopSequencer.hasRemaining) {
       newSymbolId = this.stopSequencer.next();
     } else {
@@ -2215,33 +2222,51 @@ export class Reel implements Disposable {
    * anchor leads and the OCCUPIED cells follow.
    */
   private _drawForStrip(index: number): string {
+    // Once the stop frame is exhausted the reel is a wrap or less from
+    // landing, and a block begun now would be cut by it. One cell only.
+    if (this._isStopping) return this._randomProvider.next('spinning', this.reelIndex);
     const id = this._randomProvider.nextForStrip(this.reelIndex);
     const h = this._symbolsData[id]?.size?.cells ?? 1;
     if (h <= 1) return id;
-    if (h > this.symbols.length) {
-      throw new Error(
-        `big symbol '${id}' (1x${h}) cannot be drawn at random on reel ${this.reelIndex}: ` +
-          `its ${h} cells do not fit on a strip of ${this.symbols.length} slots ` +
-          `(bufferStart + visibleCells + bufferEnd). Give it weight 0 on this reel, or add ` +
-          `buffer slots.`,
-      );
-    }
     const stubs = new Array<string>(h - 1).fill(OCCUPIED_SENTINEL);
     const sequence = index === 0 ? [...stubs, id] : [id, ...stubs];
     this._feedQueue = sequence.slice(1);
+    this._feedPlaced = 1;
+    this._feedEdge = index === 0 ? 'start' : 'end';
     return sequence[0];
   }
 
   /**
-   * Size a big-symbol anchor the moment it is fed onto the strip, so it
-   * scrolls in at its full block size. `_finalizeFrame` sizes the same
-   * anchors again at rest; this keeps them right while in motion.
+   * Drop a block the feed did not finish. Its placed cells are still at the
+   * edge they entered at (nothing else wraps while a block is in the queue),
+   * so they are replaced with single-cell draws: a strip that snaps to rest
+   * without its result (abort, timeout) rests on a clean grid, not on a
+   * stub with no anchor.
+   */
+  private _abandonFeed(): void {
+    if (this._feedQueue.length === 0) return;
+    const total = this.symbols.length;
+    for (let k = 0; k < this._feedPlaced; k++) {
+      const index = this._feedEdge === 'start' ? k : total - 1 - k;
+      this._replaceSymbol(index, this._randomProvider.next(this._slotKind(index), this.reelIndex));
+    }
+    this._feedQueue = [];
+    this._feedPlaced = 0;
+  }
+
+  /**
+   * Size a tall anchor the moment it is fed onto the strip, so it scrolls in
+   * at its full block size. `_finalizeFrame` sizes the same anchors again at
+   * rest; this keeps them right while in motion.
    */
   private _sizeFedAnchor(index: number): void {
     const sym = this.symbols[index];
     if (sym instanceof OccupiedStub) return;
     const size = this._symbolsData[sym.symbolId]?.size;
-    if (!size || (size.reels === 1 && size.cells === 1)) return;
+    // One reel wide only. A wider block's neighbours are still spinning
+    // their own strips while this reel feeds its anchor, so it keeps
+    // growing at the landing, as before.
+    if (!size || size.reels !== 1 || size.cells === 1) return;
     const block = this._blockSize(size.reels, size.cells);
     sym.resize(block.width, block.height);
   }

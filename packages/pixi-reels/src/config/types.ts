@@ -588,11 +588,11 @@ export interface SymbolData {
    * and `0` elsewhere. A block wider than one reel must keep weight `0`:
    * only a landing can coordinate it across reels.
    *
-   * On a reel that travels forward the block enters tail first, so give the
-   * set `bufferSymbols({ start: cells })` or the top visible cell shows
-   * blank for one wrap before the anchor arrives to draw it. The block
-   * also needs its cells on the strip at once: `cells` must not exceed
-   * `bufferStart + visibleCells + bufferEnd`.
+   * A weighted tall block needs `bufferSymbols({ start: cells })` or more,
+   * checked at build time and by `randomSymbols.set()`: the block enters a
+   * forward reel tail first and leaves a reverse reel anchor first, and
+   * those buffer slots are where its covered cells sit while the anchor
+   * that draws them is off the strip.
    */
   size?: { reels: number; cells: number };
 }

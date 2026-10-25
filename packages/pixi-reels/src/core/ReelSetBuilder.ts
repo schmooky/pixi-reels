@@ -1108,7 +1108,9 @@ export class ReelSetBuilder {
       this._gsap,
       setAxis.mainProp,
     );
-    const randomProvider = new RandomSymbolProvider(symbolsData, this._rng);
+    const randomProvider = new RandomSymbolProvider(symbolsData, this._rng, {
+      bufferStart: this._bufferStart,
+    });
     for (const { pool, scope } of this._symbolPools) {
       randomProvider.set(pool, scope);
     }

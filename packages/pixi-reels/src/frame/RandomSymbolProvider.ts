@@ -53,14 +53,27 @@ export class RandomSymbolProvider implements RandomSymbolControl {
   private _tables = new Map<string, DrawTable>();
   private _rng: () => number;
 
+  /** Buffer slots before the window, when known. Bounds the tall blocks a strip may stream. */
+  private _bufferStart: number | undefined;
+
   /**
    * @param symbolsData - Symbol id → weight/data map.
    * @param rng - Source of randomness returning a value in [0, 1). Defaults to
    *   `Math.random`. Regulated / provably-fair deployments must inject a
    *   seeded, audited PRNG so the on-screen strip can be replayed from a seed.
+   * @param options.bufferStart - The set's buffer slots before the window. A
+   *   tall block with a weight needs `cells <= bufferStart`, or its covered
+   *   cells show blank while it enters a forward reel and leaves a reverse
+   *   one; the check runs here so a weight that would do that fails at the
+   *   call that set it. Omit to skip the check.
    */
-  constructor(symbolsData: Record<string, SymbolData>, rng: () => number = Math.random) {
+  constructor(
+    symbolsData: Record<string, SymbolData>,
+    rng: () => number = Math.random,
+    options: { bufferStart?: number } = {},
+  ) {
     this._rng = rng;
+    this._bufferStart = options.bufferStart;
     this._symbols = Object.keys(symbolsData);
     this._readBaseWeights(symbolsData);
     this._assertUsable();
@@ -213,9 +226,26 @@ export class RandomSymbolProvider implements RandomSymbolControl {
         if (data.weight > 0) throw new Error(this._wideWeightMessage(id, size));
         this._wideIds.add(id);
       } else {
+        if (data.weight > 0) this._assertTallFits(id, size.cells);
         this._tallIds.add(id);
       }
     }
+  }
+
+  /**
+   * A tall block's anchor is its start-most cell. It enters a forward reel
+   * tail first and leaves a reverse reel anchor first, so its covered cells
+   * are on the strip without the anchor that draws them for up to `cells - 1`
+   * wraps. With `bufferStart >= cells` that happens outside the window.
+   */
+  private _assertTallFits(id: string, cells: number): void {
+    if (this._bufferStart === undefined || cells <= this._bufferStart) return;
+    throw new Error(
+      `big symbol '${id}' (1x${cells}) cannot carry a weight on a set with ` +
+        `bufferSymbols({ start: ${this._bufferStart} }): its ${cells} cells enter and leave the ` +
+        `window before the anchor that draws them, so cells would show blank. Call ` +
+        `builder.bufferSymbols({ start: ${cells}, end: ... }), or keep its weight 0.`,
+    );
   }
 
   private _wideWeightMessage(id: string, size: { reels: number; cells: number }): string {
@@ -318,12 +348,14 @@ export class RandomSymbolProvider implements RandomSymbolControl {
       }
     }
     for (const [id, weight] of Object.entries(pool.weights ?? {})) {
-      if (weight > 0 && this._wideIds.has(id)) {
+      if (weight <= 0) continue;
+      if (this._wideIds.has(id)) {
         throw new Error(
           `SymbolPool ${this._scopeName(scope.slots ?? 'spinning', scope.reel)}: ` +
             `${this._wideWeightMessage(id, this._sizeOf(id))}`,
         );
       }
+      if (this._tallIds.has(id)) this._assertTallFits(id, this._sizeOf(id).cells);
     }
   }
 
