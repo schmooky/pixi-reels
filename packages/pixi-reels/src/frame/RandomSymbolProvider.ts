@@ -12,6 +12,15 @@ import type {
  */
 export type DrawSlot = 'spinning' | 'bufferStart' | 'bufferEnd';
 
+/**
+ * What a draw is for. `'cell'` fills one slot and can only return a 1x1 id.
+ * `'strip'` feeds the scrolling strip and may also return a tall block
+ * (`size.reels === 1`, `size.cells > 1`), which the reel then streams in as
+ * an anchor plus its OCCUPIED cells. Wide blocks (`size.reels > 1`) are
+ * never drawn: they need the cross-reel coordinator a landing runs.
+ */
+type DrawFill = 'cell' | 'strip';
+
 /** A compiled draw table: ids with weight > 0 plus their cumulative weights. */
 interface DrawTable {
   ids: string[];
@@ -33,6 +42,11 @@ const ALL_REELS = '*';
 export class RandomSymbolProvider implements RandomSymbolControl {
   private _symbols: string[];
   private _baseWeights: Record<string, number> = {};
+  /** Ids a `'cell'` draw skips: tall blocks, which only a strip feed can place. */
+  private _tallIds = new Set<string>();
+  /** Ids no draw may return: wide blocks. A weight > 0 on one is an error. */
+  private _wideIds = new Set<string>();
+  private _sizes: Record<string, { reels: number; cells: number } | undefined> = {};
   /** Installed pools, keyed by `${slots}:${reel}`. */
   private _pools = new Map<string, SymbolPool>();
   /** Compiled tables, same key shape. Dropped wholesale on any mutation. */
@@ -53,7 +67,8 @@ export class RandomSymbolProvider implements RandomSymbolControl {
   }
 
   /**
-   * Get a random symbol for one slot.
+   * Get a random symbol for one slot. Never a big symbol: one slot holds one
+   * cell, and a block needs its OCCUPIED cells placed next to it.
    *
    * @param slot - Which slot is being filled. A buffer slot names its side,
    *   so the pools for that side apply on top of the wider ones.
@@ -61,7 +76,20 @@ export class RandomSymbolProvider implements RandomSymbolControl {
    *   belongs to no particular reel; per-reel pools then don't apply.
    */
   next(slot: DrawSlot = 'spinning', reelIndex?: number): string {
-    const table = this._table(slot, reelIndex);
+    return this._draw(this._table(slot, reelIndex, 'cell'));
+  }
+
+  /**
+   * Get the next symbol to feed onto a spinning strip. Same `'spinning'`
+   * pools as `next('spinning', reelIndex)`, but a tall block (one reel wide,
+   * several cells high) with a weight > 0 may come back: the reel streams
+   * it in whole, anchor and OCCUPIED cells together.
+   */
+  nextForStrip(reelIndex: number): string {
+    return this._draw(this._table('spinning', reelIndex, 'strip'));
+  }
+
+  private _draw(table: DrawTable): string {
     const rand = this._rng() * table.total;
     let lo = 0;
     let hi = table.cumulative.length - 1;
@@ -166,11 +194,37 @@ export class RandomSymbolProvider implements RandomSymbolControl {
     return `${slots}:${reel ?? ALL_REELS}`;
   }
 
+  private _tableKey(slots: SymbolPoolSlots, reel: number | undefined, fill: DrawFill): string {
+    return `${this._key(slots, reel)}:${fill}`;
+  }
+
   private _readBaseWeights(symbolsData: Record<string, SymbolData>): void {
     this._baseWeights = {};
+    this._tallIds.clear();
+    this._wideIds.clear();
+    this._sizes = {};
     for (const id of this._symbols) {
-      this._baseWeights[id] = symbolsData[id].weight;
+      const data = symbolsData[id];
+      this._baseWeights[id] = data.weight;
+      const size = data.size;
+      this._sizes[id] = size;
+      if (!size || (size.reels === 1 && size.cells === 1)) continue;
+      if (size.reels > 1) {
+        if (data.weight > 0) throw new Error(this._wideWeightMessage(id, size));
+        this._wideIds.add(id);
+      } else {
+        this._tallIds.add(id);
+      }
     }
+  }
+
+  private _wideWeightMessage(id: string, size: { reels: number; cells: number }): string {
+    return (
+      `big symbol '${id}' (${size.reels}x${size.cells}) spans ${size.reels} reels and cannot be ` +
+      'drawn at random: the random fill feeds one reel at a time and has no way to place the ' +
+      'other reels of the block. Give it weight 0 and place it via setResult(). Only blocks one ' +
+      'reel wide (size.reels === 1) may carry a weight.'
+    );
   }
 
   /**
@@ -224,11 +278,11 @@ export class RandomSymbolProvider implements RandomSymbolControl {
     return weights;
   }
 
-  private _table(slots: SymbolPoolSlots, reelIndex: number | undefined): DrawTable {
-    const key = this._key(slots, reelIndex);
+  private _table(slots: SymbolPoolSlots, reelIndex: number | undefined, fill: DrawFill): DrawTable {
+    const key = this._tableKey(slots, reelIndex, fill);
     const cached = this._tables.get(key);
     if (cached) return cached;
-    const table = this._compile(slots, reelIndex);
+    const table = this._compile(slots, reelIndex, fill);
     if (table.total <= 0) {
       throw new Error(this._emptyPoolMessage(slots, reelIndex));
     }
@@ -236,7 +290,7 @@ export class RandomSymbolProvider implements RandomSymbolControl {
     return table;
   }
 
-  private _compile(slots: SymbolPoolSlots, reelIndex: number | undefined): DrawTable {
+  private _compile(slots: SymbolPoolSlots, reelIndex: number | undefined, fill: DrawFill): DrawTable {
     const weights = this._resolve(slots, reelIndex);
     const table: DrawTable = { ids: [], cumulative: [], total: 0 };
     for (const id of this._symbols) {
@@ -244,6 +298,8 @@ export class RandomSymbolProvider implements RandomSymbolControl {
       // Zero-weight ids are dropped rather than carried at a repeated
       // cumulative value: same draw either way, smaller table.
       if (weight <= 0) continue;
+      // A single slot cannot hold a block; a wide block has no random path at all.
+      if (this._wideIds.has(id) || (fill === 'cell' && this._tallIds.has(id))) continue;
       table.total += weight;
       table.ids.push(id);
       table.cumulative.push(table.total);
@@ -261,6 +317,18 @@ export class RandomSymbolProvider implements RandomSymbolControl {
         );
       }
     }
+    for (const [id, weight] of Object.entries(pool.weights ?? {})) {
+      if (weight > 0 && this._wideIds.has(id)) {
+        throw new Error(
+          `SymbolPool ${this._scopeName(scope.slots ?? 'spinning', scope.reel)}: ` +
+            `${this._wideWeightMessage(id, this._sizeOf(id))}`,
+        );
+      }
+    }
+  }
+
+  private _sizeOf(id: string): { reels: number; cells: number } {
+    return this._sizes[id] ?? { reels: 1, cells: 1 };
   }
 
   /**
@@ -282,8 +350,11 @@ export class RandomSymbolProvider implements RandomSymbolControl {
     for (const reel of reels) {
       for (const slot of drawn) scopes.push([slot, reel]);
     }
+    // The single-cell table is the strict one: a strip draw adds the tall
+    // blocks to it, so a pool that leaves a cell drawable leaves the strip
+    // drawable too.
     for (const [slot, reel] of scopes) {
-      if (this._compile(slot, reel).total <= 0) {
+      if (this._compile(slot, reel, 'cell').total <= 0) {
         throw new Error(this._emptyPoolMessage(slot, reel));
       }
     }
@@ -292,7 +363,8 @@ export class RandomSymbolProvider implements RandomSymbolControl {
   private _emptyPoolMessage(slots: SymbolPoolSlots, reelIndex: number | undefined): string {
     return (
       `No symbol left to draw ${this._scopeName(slots, reelIndex)}: every registered symbol is ` +
-      'excluded or weighted 0, so the strip cannot be filled. Leave at least one symbol drawable.'
+      'excluded, weighted 0 or a big symbol, so the strip cannot be filled. Leave at least one ' +
+      '1x1 symbol drawable.'
     );
   }
 
@@ -311,11 +383,14 @@ export class RandomSymbolProvider implements RandomSymbolControl {
       throw new Error('RandomSymbolProvider requires at least one symbol.');
     }
     let total = 0;
-    for (const id of this._symbols) total += Math.max(0, this._baseWeights[id]);
+    for (const id of this._symbols) {
+      if (this._tallIds.has(id) || this._wideIds.has(id)) continue;
+      total += Math.max(0, this._baseWeights[id]);
+    }
     if (total <= 0) {
       throw new Error(
-        'RandomSymbolProvider requires at least one symbol with weight > 0; ' +
-          'all registered symbols have weight 0, so the spinning strip cannot be filled.',
+        'RandomSymbolProvider requires at least one 1x1 symbol with weight > 0; ' +
+          'every registered 1x1 symbol has weight 0, so the spinning strip cannot be filled.',
       );
     }
   }

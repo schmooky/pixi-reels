@@ -363,6 +363,14 @@ export class Reel implements Disposable {
    */
   private _nudgeQueue: string[] | null = null;
   /**
+   * The rest of a tall block the random feed is streaming in, one id per
+   * coming wrap. A `'strip'` draw that returns a tall block is placed as
+   * anchor + OCCUPIED cells over `size.cells` wraps; whatever has not been
+   * placed yet waits here, and takes precedence over the stop frame so a
+   * block never lands cut in half by the landing.
+   */
+  private _feedQueue: string[] = [];
+  /**
    * GSAP tween handle for the active nudge animation. Stored so `destroy()`
    * and `skipNudge()` can `kill()` it cleanly; cleared in `onComplete` and
    * on cancellation. `null` between nudges.
@@ -1686,6 +1694,8 @@ export class Reel implements Disposable {
    * where a big symbol's tail sits.
    */
   placeStrip(frame: ReadonlyArray<string | undefined>): void {
+    // The frame replaces every slot, so a half-fed random block is gone too.
+    this._feedQueue = [];
     const totalSlots = this.symbols.length;
     for (let i = 0; i < totalSlots; i++) {
       // Buffer pools apply to the buffer slots only, and each side has its
@@ -1923,6 +1933,7 @@ export class Reel implements Disposable {
       this._nudgeReject = null;
     }
     this._nudgeQueue = null;
+    this._feedQueue = [];
     this._isNudging = false;
     // Hand the live symbols back to the shared pool rather than destroying
     // them. `release()` deactivates each one, which stops its animations, so
@@ -2159,6 +2170,7 @@ export class Reel implements Disposable {
   }
 
   private _onSymbolWrapped(symbol: ReelSymbol): void {
+    const index = this.symbols.indexOf(symbol);
     let newSymbolId: string;
     if (this._nudgeQueue && this._nudgeQueue.length > 0) {
       // Nudge queue is exhaustively pre-built by `nudge()` to cover every
@@ -2167,13 +2179,20 @@ export class Reel implements Disposable {
       // wins over the stop sequencer so a queued slam-stop on a stale spin
       // can't bleed symbols into a fresh nudge.
       newSymbolId = this._nudgeQueue.shift()!;
+    } else if (this._feedQueue.length > 0) {
+      // A tall block is half-way onto the strip: finish it before the stop
+      // frame starts. The frame is exactly one strip long, so it still
+      // pushes every random symbol out; the landing just comes a few wraps
+      // later.
+      newSymbolId = this._feedQueue.shift()!;
     } else if (this._isStopping && this.stopSequencer.hasRemaining) {
       newSymbolId = this.stopSequencer.next();
     } else {
-      newSymbolId = this._randomProvider.next('spinning', this.reelIndex);
+      newSymbolId = this._drawForStrip(index);
     }
 
-    this._replaceSymbol(this.symbols.indexOf(symbol), newSymbolId);
+    this._replaceSymbol(index, newSymbolId);
+    this._sizeFedAnchor(index);
     // During a nudge tween, defer the O(N) zIndex rescan to `snapToGrid()`
     // in the tween's finalize step. `distance` wraps fire back-to-back
     // and a single refresh at the end produces the same final state.
@@ -2184,6 +2203,47 @@ export class Reel implements Disposable {
       // array index of every remaining symbol changed. refresh all zIndexes.
       this.refreshZIndex();
     }
+  }
+
+  /**
+   * Draw the next random symbol for the strip. A tall block comes back as
+   * its first cell, with the rest queued in `_feedQueue` in the order the
+   * strip will show them. New symbols arrive at index `0` (the start edge,
+   * smaller main coordinate) or at the last index (the end edge). The anchor
+   * is the block's start-most cell, so a block entering at the start edge
+   * shows its tail first and its anchor last; entering at the end edge, the
+   * anchor leads and the OCCUPIED cells follow.
+   */
+  private _drawForStrip(index: number): string {
+    const id = this._randomProvider.nextForStrip(this.reelIndex);
+    const h = this._symbolsData[id]?.size?.cells ?? 1;
+    if (h <= 1) return id;
+    if (h > this.symbols.length) {
+      throw new Error(
+        `big symbol '${id}' (1x${h}) cannot be drawn at random on reel ${this.reelIndex}: ` +
+          `its ${h} cells do not fit on a strip of ${this.symbols.length} slots ` +
+          `(bufferStart + visibleCells + bufferEnd). Give it weight 0 on this reel, or add ` +
+          `buffer slots.`,
+      );
+    }
+    const stubs = new Array<string>(h - 1).fill(OCCUPIED_SENTINEL);
+    const sequence = index === 0 ? [...stubs, id] : [id, ...stubs];
+    this._feedQueue = sequence.slice(1);
+    return sequence[0];
+  }
+
+  /**
+   * Size a big-symbol anchor the moment it is fed onto the strip, so it
+   * scrolls in at its full block size. `_finalizeFrame` sizes the same
+   * anchors again at rest; this keeps them right while in motion.
+   */
+  private _sizeFedAnchor(index: number): void {
+    const sym = this.symbols[index];
+    if (sym instanceof OccupiedStub) return;
+    const size = this._symbolsData[sym.symbolId]?.size;
+    if (!size || (size.reels === 1 && size.cells === 1)) return;
+    const block = this._blockSize(size.reels, size.cells);
+    sym.resize(block.width, block.height);
   }
 
   private _replaceSymbol(index: number, newSymbolId: string): void {

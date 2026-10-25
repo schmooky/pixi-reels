@@ -668,6 +668,10 @@ export class ReelSetBuilder {
    * .randomSymbols({ exclude: ['EMPTY'] })                       // every reel
    * .randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' })   // buffers only
    * .randomSymbols({ weights: { WILD: 40 } }, { reel: 2 })       // reel 2 only
+   * // Scatter on reel 4 only: a weight of 0 everywhere, re-raised on one
+   * // reel. (An `exclude` could not be lifted again by a narrower layer.)
+   * .randomSymbols({ weights: { SCATTER: 0 } })
+   * .randomSymbols({ weights: { SCATTER: 6 } }, { reel: 4 })
    */
   randomSymbols(pool: SymbolPool, scope: SymbolPoolScope = {}): this {
     this._symbolPools.push({ pool, scope });
@@ -1056,8 +1060,11 @@ export class ReelSetBuilder {
     const symbolIds = this._symbolRegistry.symbolIds;
     for (const id of symbolIds) {
       const override = this._symbolDataOverrides[id] ?? {};
+      // A big symbol the game gave no weight is placed by setResult() only.
+      // A tall one opts into the random fill by naming a weight.
+      const isBig = !!override.size && (override.size.reels > 1 || override.size.cells > 1);
       symbolsData[id] = {
-        weight: override.weight ?? this._weights[id] ?? 10,
+        weight: override.weight ?? this._weights[id] ?? (isBig ? 0 : 10),
         zIndex: override.zIndex ?? 1,
         unmask: override.unmask,
         size: override.size,
@@ -1512,20 +1519,22 @@ export class ReelSetBuilder {
       }
     }
 
-    // Big symbols (size > 1x1) are placed by the server at anchor cells
-    // only. random fill skips them in v1 (a 2x2 with a non-zero weight
-    // would silently never get picked, since RandomFillMiddleware can't
-    // place blocks). Throw to surface the misunderstanding.
+    // A wide block (size.reels > 1) is placed by the server at its anchor
+    // cell only: the random fill feeds one reel at a time and cannot paint
+    // the other reels of the block, so a weight on one would silently never
+    // draw. Throw to surface the misunderstanding. A tall block (one reel
+    // wide) may carry a weight: the strip feed streams it in whole.
     for (const id of this._symbolRegistry.symbolIds) {
       const override = this._symbolDataOverrides[id] ?? {};
       const size = override.size;
       if (!size || (size.reels === 1 && size.cells === 1)) continue;
       const weight = override.weight ?? this._weights[id];
-      if (weight !== undefined && weight > 0) {
+      if (size.reels > 1 && weight !== undefined && weight > 0) {
         errors.push(
           `big symbol '${id}' (size ${size.reels}x${size.cells}) must have weight 0. ` +
-          'big symbols are placed by the server at anchor cells only and never enter ' +
-          'random fill. Set weight to 0 (or omit it) and place the symbol via setResult().',
+          'A block wider than one reel is placed by the server at its anchor cell and never ' +
+          'enters random fill. Set weight to 0 (or omit it) and place the symbol via ' +
+          'setResult(). Only blocks one reel wide (size.reels === 1) may carry a weight.',
         );
       }
       // Cross-reel blocks vs per-reel direction (ADR 016 section 6.7). The
