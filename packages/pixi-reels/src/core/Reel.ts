@@ -2199,7 +2199,6 @@ export class Reel implements Disposable {
     }
 
     this._replaceSymbol(index, newSymbolId);
-    this._sizeFedAnchor(index);
     // During a nudge tween, defer the O(N) zIndex rescan to `snapToGrid()`
     // in the tween's finalize step. `distance` wraps fire back-to-back
     // and a single refresh at the end produces the same final state.
@@ -2255,20 +2254,17 @@ export class Reel implements Disposable {
   }
 
   /**
-   * Size a tall anchor the moment it is fed onto the strip, so it scrolls in
-   * at its full block size. `_finalizeFrame` sizes the same anchors again at
-   * rest; this keeps them right while in motion.
+   * The screen size a symbol takes the moment it is placed on the strip. A
+   * tall block (one reel wide) gets its whole block, so it scrolls in at
+   * full height and a snapshot symbol captures it at that size once. A
+   * wider block gets one cell here and its block at the landing, as before:
+   * its neighbours are still spinning their own strips while this reel
+   * feeds its anchor. `_finalizeFrame` sizes every anchor again at rest.
    */
-  private _sizeFedAnchor(index: number): void {
-    const sym = this.symbols[index];
-    if (sym instanceof OccupiedStub) return;
-    const size = this._symbolsData[sym.symbolId]?.size;
-    // One reel wide only. A wider block's neighbours are still spinning
-    // their own strips while this reel feeds its anchor, so it keeps
-    // growing at the landing, as before.
-    if (!size || size.reels !== 1 || size.cells === 1) return;
-    const block = this._blockSize(size.reels, size.cells);
-    sym.resize(block.width, block.height);
+  private _placedSize(symbolId: string): { width: number; height: number } {
+    const size = this._symbolsData[symbolId]?.size;
+    if (size && size.reels === 1 && size.cells > 1) return this._blockSize(1, size.cells);
+    return { width: this.symbolWidth, height: this.symbolHeight };
   }
 
   private _replaceSymbol(index: number, newSymbolId: string): void {
@@ -2314,7 +2310,8 @@ export class Reel implements Disposable {
       this._releaseOccupiedStub(oldSymbol);
       const newSymbol = this._symbolFactory.acquire(newSymbolId);
       const newIsUnmasked = this._effectiveUnmask(newSymbolId, index);
-      newSymbol.resize(this.symbolWidth, this.symbolHeight);
+      const placed = this._placedSize(newSymbolId);
+      newSymbol.resize(placed.width, placed.height);
       newSymbol.view.alpha = 1;
       // Reset BEFORE placing: on a curved reel the placement is what writes
       // the cell's scale, and a reset after it would flatten the symbol back
@@ -2335,6 +2332,13 @@ export class Reel implements Disposable {
     // container in case the pool moved it elsewhere since the last
     // activation (e.g. spotlight promotion above the mask).
     if (oldSymbol.symbolId === newSymbolId) {
+      // A tall anchor is re-sized even on reuse: the instance may have been
+      // placed at one cell by a frame whose block never reached the window.
+      const size = this._symbolsData[newSymbolId]?.size;
+      if (size && size.reels === 1 && size.cells > 1) {
+        const placed = this._placedSize(newSymbolId);
+        oldSymbol.resize(placed.width, placed.height);
+      }
       // The instance is reused WITHOUT deactivate/activate, so nothing else
       // resets its animation pose. A symbol that just played a one-shot win
       // is still parked on that animation's final frame, and the reset below
@@ -2371,7 +2375,8 @@ export class Reel implements Disposable {
     this._symbolFactory.release(oldSymbol);
     const newSymbol = this._symbolFactory.acquire(newSymbolId);
     const newIsUnmasked = this._effectiveUnmask(newSymbolId, index);
-    newSymbol.resize(this.symbolWidth, this.symbolHeight);
+    const placed = this._placedSize(newSymbolId);
+    newSymbol.resize(placed.width, placed.height);
     newSymbol.view.alpha = 1;
     // Reset before placing. see the stub-replacement path above.
     newSymbol.view.scale.set(1, 1);
