@@ -38,6 +38,20 @@ A 1x3 block with a weight scrolls on reel 0 while it spins, and a scatter only e
 
 <RecipeDemo code="tall-symbols-in-spin" height={340} />
 
+<a id="tall-peek"></a>
+
+## Tall block in an anticipation tease, landing peeking, then up
+
+Two scatters put reel 4 into a crawl, and the weighted 1x3 keeps sliding past while it crawls. The result lands the block with its head on the last visible cell and its body in `bufferEnd` (so `bufferSymbols({ start: 3, end: 2 })`: `start` for the weight, `end` for the peek). Then the game brings it up, two ways:
+
+- **Nudge up.** `nudge(reel, { distance: 2, direction: 'reverse' })` moves the whole column; the two cards above scroll out through the top.
+- **Expand up.** The landed anchor is already one sprite three cells tall with its body under the mask. Tween its view up two cells and it grows over the cards, then `setColumn(reel, { visible: ['tall', ...] })` commits the block at the top of the column while the rest of the board stays put. An expanding wild, in engine terms.
+
+**Gotcha:** `getBlockBounds` reports the whole block even while part of it hangs in a buffer; the mask does the clipping.
+
+<RecipeDemo code="tall-peek-nudge-up" height={320} />
+<RecipeDemo code="tall-peek-expand-up" height={320} />
+
 <a id="big-symbol-cascade-fall"></a>
 
 ## Big symbol falls into view through a cascade
