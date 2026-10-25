@@ -14,7 +14,7 @@
     "pixi.js": "^8.20.1"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vite": "^8.2.2"
   }
 }
