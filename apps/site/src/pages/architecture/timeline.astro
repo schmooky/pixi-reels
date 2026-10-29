@@ -188,12 +188,12 @@ const BOTTOM = laneY(4) + LANE_H;
             ['1000', 'The server answers: setResult(). Big symbols are coordinated, one frame is built and cached per reel, and every spin phase is told it may finish. Reel 0 has spun 650 ms and reel 1 550 ms, both past their 500 ms minimum, so both complete now. Reel 2 has only 450 on its clock, reel 3 350, reel 4 250; they keep blurring.', 'reels 0 and 1: phase:exit spin, spin:stopping'],
             ['1000', 'Reel 0 enters stop with a delay of 0, so its spin-out starts at once: the result symbols begin scrolling in. Reel 1 enters stop with a 140 ms delay and keeps spinning at full speed for now.', 'phase:enter stop'],
             ['1050, 1150, 1250', 'Reels 2, 3 and 4 reach their minimum one after another and complete spin. Their stop delays (280, 420, 560) start counting now, not at 1000.', 'spin:stopping(2), (3), (4)'],
-            ['about 1167', 'The first landing. Reel 0 has scrolled its last result symbol into place: it halts, snaps to the grid, and the bounce begins (56 px out and back over 600 ms, power1.out). The player sees the first column settle while four are still flying.', 'spin:reelLanding(0)'],
+            ['about 1167', 'The first landing. Reel 0 has scrolled its last result symbol into place: it halts, snaps to the grid, and the bounce begins (22 px out and back over 220 ms, power1.out). The player sees the first column settle while four are still flying.', 'spin:reelLanding(0)'],
             ['1140, 1330, 1570, 1810', 'Reels 1 to 4 finish their stop delays and begin spinning out.', 'phase:step spinOut start'],
             ['about 1307, 1497, 1737, 1977', 'Reels 1 to 4 land and start bouncing, left to right.', 'spin:reelLanding(1..4)'],
-            ['about 1767', 'Reel 0 finishes its bounce. Its stop phase completes and the controller marks it landed.', 'phase:exit stop, spin:reelLanded(0)'],
-            ['about 1907, 2097, 2337', 'Reels 1, 2 and 3 finish their bounces.', 'spin:reelLanded(1..3)'],
-            ['about 2577', 'Reel 4 settles. Marking it landed, the controller sees every reel down and finishes the spin. Your await returns.', 'spin:reelLanded(4), spin:allLanded, spin:complete; the promise resolves'],
+            ['about 1387', 'Reel 0 finishes its bounce. Its stop phase completes and the controller marks it landed.', 'phase:exit stop, spin:reelLanded(0)'],
+            ['about 1527, 1717, 1957', 'Reels 1, 2 and 3 finish their bounces.', 'spin:reelLanded(1..3)'],
+            ['about 2197', 'Reel 4 settles. Marking it landed, the controller sees every reel down and finishes the spin. Your await returns.', 'spin:reelLanded(4), spin:allLanded, spin:complete; the promise resolves'],
           ].map(([t, what, ev]) => (
             <tr class="border-t border-border/60">
               <td class="px-4 py-2.5 font-mono text-primary text-xs whitespace-nowrap">{t}</td>

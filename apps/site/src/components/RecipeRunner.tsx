@@ -1,7 +1,8 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { RefreshCw, ExternalLink, SkipForward, Bug, Volume2, VolumeX } from 'lucide-react';
+import { ExternalLink, Bug, Volume2, VolumeX } from 'lucide-react';
+import { TapHint } from './TapHint';
 import { Application } from 'pixi.js';
 import type { Texture, Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
@@ -649,14 +650,26 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     // goes under the canvas.
     <div className="flex w-full flex-col bg-background" style={{ '--recipe-h': `${height}px` } as CSSProperties}>
     <div className={cn('flex w-full', debugOn && 'flex-col sm:flex-row')}>
+    {/*
+      The canvas is the button: a tap spins, a tap while running skips. The
+      role and label sit on this wrapper (the host's children are replaced
+      when the app mounts), and the e2e suite presses it as "Spin".
+    */}
     <div
-      className="relative flex min-w-0 flex-1 items-center justify-center bg-[#111114]"
+      role="button"
+      tabIndex={0}
+      aria-label={spinning ? 'Skip' : 'Spin'}
+      aria-disabled={!!error || !ready}
+      onClick={() => void handleSpin()}
+      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); void handleSpin(); } }}
+      className="relative flex min-w-0 flex-1 cursor-pointer select-none items-center justify-center bg-[#111114] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
       style={{ height }}
     >
         <div
           ref={hostRef}
           className="h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full"
         />
+        <TapHint spinning={spinning} hidden={!ready || !!error} />
         {showSkeleton && !error && <CanvasSkeleton label="Compiling recipe…" />}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center bg-card/90 p-6 font-mono text-xs text-destructive">
@@ -738,19 +751,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         >
           <ExternalLink size={11} strokeWidth={2.25} />
           Studio
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleSpin()}
-          disabled={!!error || !ready}
-          title={spinning ? 'Skip' : 'Spin'}
-          aria-label={spinning ? 'Skip' : 'Spin'}
-          className={cn(TOOL_BUTTON, 'border-brand bg-brand text-brand-foreground')}
-        >
-          {spinning
-            ? <SkipForward size={11} strokeWidth={2.5} />
-            : <RefreshCw size={11} strokeWidth={2.5} />}
-          {spinning ? 'Skip' : 'Spin'}
         </button>
     </div>
     </div>
