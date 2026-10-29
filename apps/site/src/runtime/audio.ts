@@ -1,5 +1,14 @@
 import { createEngine, type Engine } from '@schmooky/zvuk';
-import { attachReelSounds, zvukPort, type ReelCues, type ReelSet, type ReelSoundsHandle } from 'pixi-reels';
+import {
+  attachBoardSounds,
+  attachReelSounds,
+  zvukPort,
+  type BoardCues,
+  type HoldAndWinBoard,
+  type ReelCues,
+  type ReelSet,
+  type ReelSoundsHandle,
+} from 'pixi-reels';
 
 /**
  * One zvuk engine for every demo on the page, and the default cue table the
@@ -60,20 +69,38 @@ export function readyAudio(): Promise<void> {
   return loading;
 }
 
+const onCascade = (full: number, quiet: number) => ({ mode }: { mode?: string }) => (mode === 'cascade' ? quiet : full);
+
 /**
- * The cues every recipe gets unless it brings its own. The spin is one soft
- * whoosh on `spin:start`, not a bed: a loop under every spin of a demo page
- * wears thin fast, and the reel stops carry the rhythm.
+ * The cues every recipe gets unless it brings its own. The spin is one kick
+ * on `spin:start`, not a bed: a loop under every spin of a demo page wears
+ * thin fast, and the reel stops carry the rhythm. The thud waits for the
+ * bottom of the landing bounce (half its duration), the frame the reel
+ * visibly hits, not the frame it snaps on. A tumble keeps both, quieter:
+ * its symbols fall out and drop in one by one, and the pop on the destroyed
+ * winners is its beat.
  */
 export const DEFAULT_CUES: ReelCues = {
-  // A tumble has no reels to launch or land: its symbols fall out and drop
-  // in one by one, and the pop on the destroyed winners is its beat.
-  spin: { play: 'spin', volume: 0.7, pitch: ({ speed }) => (speed === 'normal' ? 1 : 1.12), when: ({ mode }) => mode !== 'cascade' },
-  reelStop: { play: 'reel-stop', volume: { base: 0.9, jitter: 0.08 }, pitch: { jitter: 0.04 }, when: ({ mode }) => mode !== 'cascade' },
+  spin: { play: 'spin', volume: onCascade(0.7, 0.35), pitch: ({ speed }) => (speed === 'normal' ? 1 : 1.12) },
+  reelStop: {
+    play: 'reel-stop',
+    volume: ({ mode }) => ({ base: mode === 'cascade' ? 0.4 : 0.9, jitter: 0.08 }),
+    pitch: { jitter: 0.04 },
+    delay: ({ profile, mode }) => (mode === 'cascade' ? 0 : (profile?.bounceDuration ?? 0) / 2000),
+  },
   anticipation: { loop: 'anticipation', fadeIn: 0.12, fadeOut: 0.25, pitch: ({ order }) => 1 + 0.08 * (order ?? 0) },
   skip: { play: 'skip' },
   win: { play: 'win', volume: 0.8 },
   cascadeDestroy: { play: 'pop', volume: { base: 0.8, jitter: 0.1 }, pitch: { jitter: 0.08 } },
+};
+
+/** The cues a Hold & Win board gets: a kick per respin, a thud per cell, a pop per lock. */
+export const DEFAULT_BOARD_CUES: BoardCues = {
+  respinStart: { play: 'spin', volume: 0.5 },
+  cellLanded: { play: 'reel-stop', volume: ({ hit }) => ({ base: hit ? 0.7 : 0.4, jitter: 0.08 }), pitch: { jitter: 0.05 } },
+  coinLocked: { play: 'pop', volume: 0.7, pitch: { base: 1.1, jitter: 0.06 } },
+  boardFull: { play: 'win' },
+  featureEnd: { play: 'win', volume: 0.8 },
 };
 
 /**
@@ -84,6 +111,12 @@ export const DEFAULT_CUES: ReelCues = {
 export function reelSounds(reelSet: ReelSet, cues: ReelCues = DEFAULT_CUES): ReelSoundsHandle {
   const port = zvukPort(getAudio(), { warn: () => {} });
   return attachReelSounds(reelSet, port, cues);
+}
+
+/** The same for a Hold & Win board. */
+export function boardSounds(board: HoldAndWinBoard, cues: BoardCues = DEFAULT_BOARD_CUES): ReelSoundsHandle {
+  const port = zvukPort(getAudio(), { warn: () => {} });
+  return attachBoardSounds(board, port, cues);
 }
 
 /** Whether sound is on for this visitor. Remembered per browser; on by default. */

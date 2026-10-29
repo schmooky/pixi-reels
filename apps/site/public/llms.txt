@@ -207,6 +207,10 @@ Cascade/tumble spinning mode. Symbols fall from above with gravity-like accelera
 URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadePlacePhase/
 Identity-swap half of the tumble cascade. Runs after `CascadeFallPhase` (Moment A) or right at the start of `refill()` (Moment B).
 
+### CuePlayer
+URL: https://pixi-reels.schmooky.dev/api/classes/index.CuePlayer/
+Fires cues through a port and keeps every loop and pending delay so `destroy()` can silence the lot.
+
 ### EmptySymbol
 URL: https://pixi-reels.schmooky.dev/api/classes/index.EmptySymbol/
 A [ReelSymbol](/api/classes/index.ReelSymbol/) that renders nothing and never animates.
@@ -373,6 +377,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/debug.roundRectPath/
 ### anticipationForScatters()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.anticipationForScatters/
 ```ts function anticipationForScatters(grid: ColumnTarget[], opts: ScatterAnticipationOptions): number[]; ```
+
+### attachBoardSounds()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.attachBoardSounds/
+```ts function attachBoardSounds<TData = unknown>( board: HoldAndWinBoard<TData>, port: ReelAudioPort, cues: BoardCues ): ReelSoundsHandle; ```
 
 ### attachReelSounds()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.attachReelSounds/
@@ -664,6 +672,9 @@ What a cell-mask factory is told about the cell it builds for.
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCellZIndexContext/
 What a [BoardCellZIndexResolver](/api/types/index.BoardCellZIndexResolver/) is asked about.
 
+### BoardCues
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCues/
+
 ### BoardGridOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
 
@@ -720,7 +731,7 @@ Per-reel target shape for `ReelSet.setResult` and `ReelSetBuilder.initialFrame`.
 
 ### CueBase
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CueBase/
-What every cue shares: the bus, a level, a pitch and a guard.
+What every cue shares: the bus, a level, a pitch, a delay and a guard.
 
 ### CueContext
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CueContext/
@@ -804,7 +815,7 @@ Per-side inset for [inset](/api/functions/index.inset/). SCREEN sides in every o
 
 ### LoopCue
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.LoopCue/
-What every cue shares: the bus, a level, a pitch and a guard.
+What every cue shares: the bus, a level, a pitch, a delay and a guard.
 
 ### MaskConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskConfig/
@@ -848,7 +859,7 @@ Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition that shif
 
 ### OneShotCue
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.OneShotCue/
-What every cue shares: the bus, a level, a pitch and a guard.
+What every cue shares: the bus, a level, a pitch, a delay and a guard.
 
 ### PhaseCardSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseCardSymbolOptions/
@@ -1195,6 +1206,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStepContext/
 ### BoardCellZIndexResolver
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardCellZIndexResolver/
 ```ts type BoardCellZIndexResolver = (ctx: BoardCellZIndexContext) => number; ```
+
+### BoardEventCue
+URL: https://pixi-reels.schmooky.dev/api/types/index.BoardEventCue/
+```ts type BoardEventCue =
 
 ### BoardProfile
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardProfile/

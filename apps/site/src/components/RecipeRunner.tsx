@@ -55,8 +55,8 @@ import {
   fitText,
 } from '../runtime/holdAndWinFx.ts';
 import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
-import { reelSounds, readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
-import type { ReelSoundsHandle } from 'pixi-reels';
+import { reelSounds, boardSounds, readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
+import type { HoldAndWinBoard, ReelSoundsHandle } from 'pixi-reels';
 import {
   loadGeneratedSpines,
   buildSpineMap,
@@ -275,7 +275,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   // One recorder per reel set, running from mount: the timeline and metrics
   // panels can then show the spin that made you reach for the Debug button.
   const metricsRef = useRef<Map<ReelSet, SpinMetrics>>(new Map());
-  const soundsRef = useRef<ReelSoundsHandle | null>(null);
+  const soundsRef = useRef<ReelSoundsHandle[]>([]);
   // Re-fit after the overlay grows the set's bounds (panels under the mask).
   const fitRef = useRef<(() => void) | null>(null);
   const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
@@ -370,7 +370,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       // The default cue table on the recipe's set: spin bed, reel thuds,
       // tease, skip, win, cascade pop. A recipe wanting its own calls
       // `reelSounds(reelSet, cues)` itself; both run, so keep them apart.
-      if (result.reelSet) soundsRef.current = reelSounds(result.reelSet);
+      if (result.reelSet) soundsRef.current.push(reelSounds(result.reelSet));
+      if (result.board && 'respinsLeft' in result.board) soundsRef.current.push(boardSounds(result.board as HoldAndWinBoard));
       nextResultRef.current = result.nextResult ?? null;
       onSpinRef.current = result.onSpin ?? null;
       onSkipRef.current = result.onSkip ?? null;
@@ -521,8 +522,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       for (const m of metricsRef.current.values()) m.destroy();
       metricsRef.current.clear();
       fitRef.current = null;
-      try { soundsRef.current?.destroy(); } catch { /* ignore */ }
-      soundsRef.current = null;
+      for (const s of soundsRef.current) { try { s.destroy(); } catch { /* ignore */ } }
+      soundsRef.current = [];
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
       if (app) {

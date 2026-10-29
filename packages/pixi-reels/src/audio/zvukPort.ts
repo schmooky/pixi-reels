@@ -1,4 +1,4 @@
-import type { ReelAudioLoop, ReelAudioPort, SoundValue } from './ReelSounds.js';
+import type { ReelAudioLoop, ReelAudioPort, SoundValue } from './cues.js';
 
 /**
  * The slice of a `@schmooky/zvuk` `Engine` the port uses. Structural, so the

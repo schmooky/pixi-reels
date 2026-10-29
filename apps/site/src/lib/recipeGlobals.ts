@@ -54,8 +54,8 @@ import {
   resolveTumbleConfig,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
-import { attachReelSounds, zvukPort } from 'pixi-reels';
-import { getAudio, reelSounds, DEFAULT_CUES } from '../runtime/audio.ts';
+import { attachReelSounds, attachBoardSounds, zvukPort } from 'pixi-reels';
+import { getAudio, reelSounds, boardSounds, DEFAULT_CUES, DEFAULT_BOARD_CUES } from '../runtime/audio.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD, PhaseCardSymbol, PHASE_CARD_COLORS } from 'pixi-reels';
 import { step, insertBefore, insertAfter, replaceStep, removeStep, runStep } from 'pixi-reels';
 import {
@@ -308,9 +308,12 @@ export function buildRecipeGlobals(
     // (the runner already does this with DEFAULT_CUES for the set a recipe
     // returns); `audio()` is the page's zvuk engine for anything beyond that.
     reelSounds,
+    boardSounds,
     DEFAULT_CUES,
+    DEFAULT_BOARD_CUES,
     audio: getAudio,
     attachReelSounds,
+    attachBoardSounds,
     zvukPort,
 
     // Heavy optional groups (Spine, hold-and-win FX) are merged in only for

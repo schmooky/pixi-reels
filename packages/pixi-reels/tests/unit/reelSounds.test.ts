@@ -3,9 +3,10 @@
  * that records every call. The anticipation and win beats are emitted by
  * hand: the headless harness slams, so no reel ever teases.
  */
-import { describe, it, expect } from 'vitest';
-import { createTestReelSet, spinAndLand } from '../../src/testing/index.js';
-import { attachReelSounds, zvukPort } from '../../src/index.js';
+import { describe, it, expect, vi } from 'vitest';
+import type { Ticker } from 'pixi.js';
+import { createTestReelSet, spinAndLand, FakeTicker, HeadlessSymbol } from '../../src/testing/index.js';
+import { attachReelSounds, attachBoardSounds, zvukPort, HoldAndWinBuilder } from '../../src/index.js';
 import type { ReelAudioPort, ReelSoundsHandle } from '../../src/index.js';
 
 interface Call { kind: 'play' | 'loop' | 'stop'; name: string; opts: Record<string, unknown> }
@@ -138,5 +139,64 @@ describe('zvukPort', () => {
     ]);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('"missing"');
+  });
+});
+
+describe('cue delay', () => {
+  it('fires a delayed one-shot after its seconds and drops it on destroy', async () => {
+    vi.useFakeTimers();
+    const { reelSet, destroy } = createTestReelSet({ reels: 3, cells: 3 });
+    const { port, calls } = recordingPort();
+    const handle = attachReelSounds(reelSet, port, {
+      reelStop: { play: 'thud', delay: ({ profile }) => profile!.bounceDuration / 2000 },
+    });
+    reelSet.events.emit('spin:reelLanding', 0, []);
+    expect(calls).toHaveLength(0);
+    vi.advanceTimersByTime(reelSet.speed.active.bounceDuration / 2 + 1);
+    expect(calls.map((c) => c.name)).toEqual(['thud']);
+    reelSet.events.emit('spin:reelLanding', 1, []);
+    handle.destroy();
+    vi.advanceTimersByTime(5000);
+    expect(calls).toHaveLength(1);
+    vi.useRealTimers();
+    destroy();
+  });
+});
+
+describe('attachBoardSounds', () => {
+  it('maps the board beats with the cell and the hit in the context', () => {
+    const ticker = new FakeTicker();
+    const board = new HoldAndWinBuilder()
+      .grid(2, 2)
+      .cellSize({ width: 40, height: 30 })
+      .symbols((r) => r.register('coin', HeadlessSymbol, {}))
+      .weights({ coin: 1, empty: 1 })
+      .ticker(ticker as unknown as Ticker)
+      .build();
+    const { port, calls } = recordingPort();
+    const handle = attachBoardSounds(board, port, {
+      respinStart: { loop: 'bed' },
+      cellLanded: { play: 'thud', volume: ({ hit }) => (hit ? 0.7 : 0.4) },
+      coinLocked: { play: 'lock', pitch: ({ cell }) => 1 + cell! * 0.1 },
+      featureEnd: { play: 'win', when: ({ speed }) => speed === 'normal' },
+    });
+    const coin = { cell: { reel: 1, cell: 1 }, id: 'coin', data: undefined };
+    board.events.emit('respin:start', { round: 1, respinsLeft: 3, spinning: [] });
+    board.events.emit('cell:landed', { cell: { reel: 0, cell: 0 }, coin: null });
+    board.events.emit('cell:landed', { cell: { reel: 1, cell: 1 }, coin });
+    board.events.emit('coin:locked', { coin, locked: 1, capacity: 4 });
+    board.events.emit('respin:end', { round: 1, hits: [coin], respinsLeft: 2 });
+    board.events.emit('feature:end', { coins: [coin], rounds: 1, full: false });
+    expect(calls.map((c) => [c.kind, c.name, c.opts.volume ?? c.opts.pitch ?? c.opts.fade])).toEqual([
+      ['loop', 'bed', undefined],
+      ['play', 'thud', 0.4],
+      ['play', 'thud', 0.7],
+      ['play', 'lock', 1.1],
+      ['stop', 'bed', 0.1],
+      ['play', 'win', undefined],
+    ]);
+    handle.destroy();
+    board.destroy();
+    ticker.destroy();
   });
 });

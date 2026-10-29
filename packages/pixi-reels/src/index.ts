@@ -338,20 +338,22 @@ export type { Gsap } from './utils/gsap.js';
 
 // Audio: cues snapped onto a reel set's events, and a port for @schmooky/zvuk
 export { attachReelSounds } from './audio/ReelSounds.js';
+export type { ReelCues, EventCue } from './audio/ReelSounds.js';
+export { attachBoardSounds } from './audio/BoardSounds.js';
+export type { BoardCues, BoardEventCue } from './audio/BoardSounds.js';
+export { CuePlayer } from './audio/cues.js';
 export type {
-  ReelCues,
   Cue,
   CueBase,
   OneShotCue,
   LoopCue,
-  EventCue,
   CueContext,
   CueValue,
   SoundValue,
   ReelAudioPort,
   ReelAudioLoop,
   ReelSoundsHandle,
-} from './audio/ReelSounds.js';
+} from './audio/cues.js';
 export { zvukPort } from './audio/zvukPort.js';
 export type { ZvukEngineLike, ZvukPlayOptions, ZvukVoiceLike } from './audio/zvukPort.js';
 
