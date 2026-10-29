@@ -300,10 +300,6 @@
   from { opacity: 0; transform: translateY(10px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-@keyframes live-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
 
 .motion-slam, .motion-appear {
   opacity: 0; /* before the animation starts: nothing pops in late */
@@ -324,11 +320,9 @@
   animation: appear var(--f-base) var(--ease-pop) both;
   animation-delay: var(--motion-delay, 0ms);
 }
-.live-dot { animation: live-dot 1.83s var(--ease-glide) infinite; } /* 110 f */
 
 @media (prefers-reduced-motion: reduce) {
   .motion-slam, .motion-appear, .reveal, .reveal.is-in { animation: none; opacity: 1; }
-  .live-dot { animation: none; }
 }
 /* No JS (or a very old browser): never hide content behind a reveal. */
 html:not(.js) .reveal { opacity: 1; }
