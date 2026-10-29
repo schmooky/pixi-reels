@@ -46,7 +46,7 @@ export function readyAudio(): Promise<void> {
   loading = (async () => {
     await e.unlock();
     await Promise.all([
-      e.loadSound('spin-loop', ladder('spin-loop'), { bus: 'reels' }),
+      e.loadSound('spin', ladder('spin'), { bus: 'reels' }),
       e.loadVariants('reel-stop', [ladder('reel-stop.1'), ladder('reel-stop.2'), ladder('reel-stop.3')], {
         bus: 'reels',
         strategy: 'shuffle-bag',
@@ -60,9 +60,13 @@ export function readyAudio(): Promise<void> {
   return loading;
 }
 
-/** The cues every recipe gets unless it brings its own. */
+/**
+ * The cues every recipe gets unless it brings its own. The spin is one soft
+ * whoosh on `spin:start`, not a bed: a loop under every spin of a demo page
+ * wears thin fast, and the reel stops carry the rhythm.
+ */
 export const DEFAULT_CUES: ReelCues = {
-  spin: { loop: 'spin-loop', fadeIn: 0.05, fadeOut: 0.08, pitch: ({ speed }) => (speed === 'normal' ? 1 : 1.12) },
+  spin: { play: 'spin', volume: 0.7, pitch: ({ speed }) => (speed === 'normal' ? 1 : 1.12) },
   reelStop: { play: 'reel-stop', volume: { base: 0.9, jitter: 0.08 }, pitch: { jitter: 0.04 } },
   anticipation: { loop: 'anticipation', fadeIn: 0.12, fadeOut: 0.25, pitch: ({ order }) => 1 + 0.08 * (order ?? 0) },
   skip: { play: 'skip' },

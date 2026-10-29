@@ -106,19 +106,24 @@ function finish(x, { peakDb = -1, fade = 0.005 } = {}) {
 
 // --- the sounds --------------------------------------------------------------
 
-/** The strip going round: a low rumble with a faint tick eight times a second. */
-function spinLoop() {
-  const n = samples(1);
-  const rumble = new Float64Array(n);
-  const a = 1 - Math.exp((-2 * Math.PI * 160) / RATE);
+/**
+ * The reels launching: one soft whoosh, over in a third of a second. No bed
+ * under the spin: a loop that runs for every spin of a demo wears thin fast,
+ * and the reel stops carry the rhythm on their own.
+ */
+function spin() {
+  const n = samples(0.36);
+  const out = new Float64Array(n);
   let y = 0;
   for (let i = 0; i < n; i++) {
+    const t = i / RATE;
+    const cutoff = 250 + 1400 * Math.sin((Math.PI * t) / 0.36);
+    const a = 1 - Math.exp((-2 * Math.PI * cutoff) / RATE);
     y += a * (rand() * 2 - y);
-    rumble[i] = y * 0.9 + 0.25 * Math.sin((2 * Math.PI * 48 * i) / RATE);
+    const env = Math.sin((Math.PI * t) / 0.36) ** 1.6;
+    out[i] = y * env;
   }
-  const ticks = [];
-  for (let k = 0; k < 8; k++) ticks.push([k / 8, gain(noise(0.02, { cutoff: 3200, tau: 0.006 }), 0.35)]);
-  return finish(seamless(mix(rumble, place(1, ...ticks))), { peakDb: -6, fade: 0 });
+  return finish(out, { peakDb: -9 });
 }
 
 /** A reel landing: a short pitch drop with a knock on top. */
@@ -164,7 +169,7 @@ function pop() {
 }
 
 const SOUNDS = {
-  'spin-loop': spinLoop,
+  spin,
   'reel-stop.1': () => reelStop(150, 70),
   'reel-stop.2': () => reelStop(165, 78),
   'reel-stop.3': () => reelStop(138, 64),

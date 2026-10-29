@@ -19,7 +19,7 @@ import { attachReelSounds, zvukPort } from 'pixi-reels';
 
 const engine = createEngine({ buses: { reels: {}, anticipation: {}, wins: {}, ui: {} } });
 await engine.unlock(); // from a gesture
-await engine.loadSound('spin-loop', ['/sfx/spin-loop.webm', '/sfx/spin-loop.m4a'], { bus: 'reels' });
+await engine.loadSound('spin', ['/sfx/spin.webm', '/sfx/spin.m4a'], { bus: 'reels' });
 await engine.loadVariants('reel-stop', [
   ['/sfx/reel-stop.1.webm', '/sfx/reel-stop.1.m4a'],
   ['/sfx/reel-stop.2.webm', '/sfx/reel-stop.2.m4a'],
@@ -27,7 +27,7 @@ await engine.loadVariants('reel-stop', [
 // ... anticipation, skip, win, pop
 
 const sounds = attachReelSounds(reelSet, zvukPort(engine), {
-  spin: { loop: 'spin-loop', fadeIn: 0.05, fadeOut: 0.08 },
+  spin: { play: 'spin' },
   reelStop: { play: 'reel-stop', pitch: { jitter: 0.04 } },
   anticipation: { loop: 'anticipation', fadeIn: 0.12, fadeOut: 0.25,
                   pitch: ({ order }) => 1 + 0.08 * order },
@@ -41,6 +41,11 @@ sounds.destroy(); // when the reel set goes
 
 Every demo on this site runs that table. The Sound button under a demo mutes
 it; the files load on the first press.
+
+The spin cue is a one-shot on purpose. A bed that loops under every spin
+(`spin: { loop: 'spin-loop', fadeIn: 0.05, fadeOut: 0.08 }`) is supported and
+fades out on the last landing, but on a page of demos it wears thin fast; the
+reel stops carry the rhythm.
 
 ## The beats
 
