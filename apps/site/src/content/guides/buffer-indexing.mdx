@@ -6,6 +6,9 @@ description: How ColumnTarget indices map to cells in initialFrame and
   setResult. Visible cells, buffer start, buffer end.
 ---
 
+import Tree from '../../components/docs/Tree.astro';
+import Strip from '../../components/docs/Strip.astro';
+
 A reel is longer than what you see. `ColumnTarget` addresses the whole thing.
 
 ## Why buffers exist
@@ -21,12 +24,14 @@ unusual.
 
 ## ColumnTarget
 
-```text
-ColumnTarget
-├─ visible       : string[]                    # length = visibleCells
-├─ bufferStart?  : (string | undefined)[]      # [0] closest to visible
-└─ bufferEnd?    : (string | undefined)[]      # [0] closest to visible
-```
+<Tree
+  root="ColumnTarget"
+  items={[
+    { label: 'visible: string[]', note: 'length = visibleCells' },
+    { label: 'bufferStart?: (string | undefined)[]', note: '[0] closest to visible' },
+    { label: 'bufferEnd?: (string | undefined)[]', note: '[0] closest to visible' },
+  ]}
+/>
 
 One object per reel. Hand an array of them to `ReelSet.setResult` or
 `ReelSetBuilder.initialFrame`. Same shape, both places.
@@ -39,19 +44,18 @@ horizontal one. It does NOT follow travel direction. See
 
 One reel. `bufferSymbols(2)`, `visibleCells(3)`. Seven cells total:
 
-```text
-┌────────────────────┬──────────────────┬────────────────────────────┐
-│ ColumnTarget field │ Cell             │ Player sees it at rest?    │
-├────────────────────┼──────────────────┼────────────────────────────┤
-│ bufferStart[1]     │ buffer start 1   │ no, furthest past the edge │
-│ bufferStart[0]     │ buffer start 0   │ no, just past the edge     │
-│ visible[0]         │ visible cell 0   │ yes, first                 │
-│ visible[1]         │ visible cell 1   │ yes, middle                │
-│ visible[2]         │ visible cell 2   │ yes, last                  │
-│ bufferEnd[0]       │ buffer end 0     │ no, just past the edge     │
-│ bufferEnd[1]       │ buffer end 1     │ no, furthest past the edge │
-└────────────────────┴──────────────────┴────────────────────────────┘
-```
+<Strip
+  headers={['ColumnTarget field', 'Cell', 'Player sees it at rest?']}
+  cells={[
+    { index: 'bufferStart[1]', label: 'buffer start 1', band: 'start', note: 'no, furthest past the edge' },
+    { index: 'bufferStart[0]', label: 'buffer start 0', band: 'start', note: 'no, just past the edge' },
+    { index: 'visible[0]', label: 'visible cell 0', band: 'visible', note: 'yes, first' },
+    { index: 'visible[1]', label: 'visible cell 1', band: 'visible', note: 'yes, middle' },
+    { index: 'visible[2]', label: 'visible cell 2', band: 'visible', note: 'yes, last' },
+    { index: 'bufferEnd[0]', label: 'buffer end 0', band: 'end', note: 'no, just past the edge' },
+    { index: 'bufferEnd[1]', label: 'buffer end 1', band: 'end', note: 'no, furthest past the edge' },
+  ]}
+/>
 
 Buffers hide behind the mask at rest. They flash through during a spin.
 

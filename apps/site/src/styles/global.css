@@ -168,7 +168,9 @@
     color: hsl(var(--code-fg));
   }
   .prose-docs pre code { @apply bg-transparent p-0; color: inherit; }
-  .prose-docs table { @apply w-full my-6 text-sm border-collapse; }
+  /* A bare markdown table scrolls inside its own box instead of widening the
+     page: on a phone a four-column table is wider than the screen. */
+  .prose-docs table { @apply my-6 block w-full max-w-full overflow-x-auto text-sm border-collapse; }
   .prose-docs .table-wrap { @apply overflow-x-auto; }
   .prose-docs .table-wrap table { @apply my-0; }
   .prose-docs thead tr { @apply border-b border-border; }

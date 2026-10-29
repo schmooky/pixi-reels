@@ -6,15 +6,20 @@ description: START, SPIN, ANTICIPATION, STOP. the four lifecycle phases and how
   to extend them.
 ---
 
+import Tree from '../../components/docs/Tree.astro';
+import Timeline from '../../components/docs/Timeline.astro';
+
 A phase is one slice of a reel's lifecycle. Extend `ReelPhase<TConfig>`,
 implement three hooks.
 
-```
-ReelPhase<TConfig, TProfile = SpeedProfile>
-├─ onEnter(config)   // set up tweens, set reel.speed
-├─ update(deltaMs)   // called every frame while active
-└─ onSkip(ctx)       // a press reached the phase: ctx.mode says slam or quicken
-```
+<Tree
+  root="ReelPhase<TConfig, TProfile = SpeedProfile>"
+  items={[
+    { label: 'onEnter(config)', note: 'set up tweens, set reel.speed' },
+    { label: 'update(deltaMs)', note: 'called every frame while active' },
+    { label: 'onSkip(ctx)', note: 'a press reached the phase: ctx.mode says slam or quicken' },
+  ]}
+/>
 
 Every phase runs on ONE reel. Five reels in `StopPhase` are five instances, and
 `SpinController` builds them per reel per spin through the `PhaseFactory` -
@@ -251,9 +256,7 @@ phase's steps by name under `steps`, and carries a `whenAnticipated` half that
 is merged on top for a reel that ran an anticipation tease earlier in the
 spin. Resolution, lowest first:
 
-```
-flat field  →  profile[phase]  →  profile[phase].whenAnticipated  →  speed.tune()
-```
+<Timeline beats={['flat field', 'profile[phase]', 'profile[phase].whenAnticipated', 'speed.tune()']} />
 
 A phase reads the result as `this.timing`, a step as `ctx.profile`, and its
 own entry as `ctx.step` — the segments configured for that step, in order. A

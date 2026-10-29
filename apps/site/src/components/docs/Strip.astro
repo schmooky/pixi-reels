@@ -1,0 +1,123 @@
+---
+/**
+ * One reel column as a list of cells, top to bottom: an optional index chip,
+ * the cell, an optional note. `band: 'visible'` cells sit on the brand fill
+ * (what the player sees at rest); buffer cells stay on the card surface. A
+ * `hot` cell gets an arrowhead pointing at it (a winner, a target).
+ *
+ * Headers, when given, label the rendered columns in order: index (if any
+ * cell has one), cell, note (if any cell has one). On a phone the notes move
+ * under their cell, so the strip never scrolls sideways.
+ */
+interface Cell {
+  label: string;
+  index?: string;
+  note?: string;
+  band?: 'start' | 'visible' | 'end';
+  hot?: boolean;
+}
+interface Props {
+  cells: Cell[];
+  /** One per rendered column; shorter lists are padded. */
+  headers?: string[];
+  /** Accessible name for the figure. */
+  title?: string;
+}
+const { cells, headers = [], title } = Astro.props as Props;
+const hasIndex = cells.some((c) => c.index !== undefined);
+const hasNote = cells.some((c) => c.note !== undefined);
+const columns = [
+  hasIndex && { kind: 'index', width: 'auto' },
+  { kind: 'cell', width: 'auto' },
+  hasNote && { kind: 'note', width: 'minmax(0, 1fr)' },
+].filter((c): c is { kind: string; width: string } => Boolean(c));
+const cols = columns.map((c) => c.width).join(' ');
+const colsNarrow = columns.filter((c) => c.kind !== 'note').map((c) => c.width).join(' ');
+const heads = headers.length ? columns.map((c, i) => ({ kind: c.kind, text: headers[i] ?? '' })) : [];
+---
+<div class="docs-strip not-prose font-mono" aria-label={title} style={`--cols: ${cols}; --cols-narrow: ${colsNarrow}`}>
+  {heads.map((h) => <span class:list={['strip-head', `head-${h.kind}`]}>{h.text}</span>)}
+  {cells.map((c) => (
+    <>
+      {hasIndex && <span class="strip-index">{c.index}</span>}
+      <span class:list={['strip-cell', c.band && `band-${c.band}`, { hot: c.hot }]}>{c.label}</span>
+      {hasNote && <span class="strip-note font-sans">{c.note}</span>}
+    </>
+  ))}
+</div>
+
+<style>
+  .docs-strip {
+    display: grid;
+    grid-template-columns: var(--cols);
+    column-gap: 0.75rem;
+    align-items: center;
+    font-size: 12px;
+    line-height: 1.25;
+    color: hsl(var(--foreground));
+  }
+  .strip-head {
+    padding-bottom: 0.375rem;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+  .strip-index {
+    color: hsl(var(--muted-foreground));
+    white-space: nowrap;
+  }
+  .strip-cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0.25rem 0.5rem;
+    margin-top: -1px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 2px;
+    background: hsl(var(--card));
+    text-align: center;
+  }
+  .strip-cell.band-start,
+  .strip-cell.band-end {
+    color: hsl(var(--muted-foreground));
+  }
+  .strip-cell.band-visible {
+    z-index: 1;
+    border-color: hsl(var(--brand));
+    background: hsl(var(--brand));
+    color: hsl(var(--brand-foreground));
+  }
+  .strip-cell.hot::after {
+    content: '';
+    position: absolute;
+    left: calc(100% + 0.375rem);
+    top: 50%;
+    width: 0;
+    height: 0;
+    margin-top: -5px;
+    border: 5px solid transparent;
+    border-right: 7px solid hsl(var(--brand-text));
+  }
+  .strip-note {
+    padding-left: 0.25rem;
+    font-size: 13px;
+    line-height: 1.35;
+    color: hsl(var(--muted-foreground));
+  }
+  /* Phone: the note goes under its cell instead of into a starved column. */
+  @media (max-width: 639.98px) {
+    .docs-strip {
+      grid-template-columns: var(--cols-narrow);
+    }
+    .strip-note,
+    .head-note {
+      grid-column: 1 / -1;
+      padding: 0.125rem 0 0.5rem;
+    }
+  }
+</style>
