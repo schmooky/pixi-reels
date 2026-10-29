@@ -409,7 +409,8 @@ async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boole
   const win = !still && Math.random() < 0.55;
   const row = Math.floor(Math.random() * cfg.cells);
   const id = pick(cfg.ids.filter((s) => s !== cfg.scatter && !s.startsWith('wild/')));
-  const reelsHit = win ? [0, 1, 2].concat(Math.random() < 0.4 ? [3] : []) : [];
+  // A fourth reel only where the set has one (the horizontal variant has three).
+  const reelsHit = win ? [0, 1, 2].concat(cfg.reels > 3 && Math.random() < 0.4 ? [3] : []) : [];
   const grid = randomGrid(cfg, win ? { id, row, reels: reelsHit } : undefined);
 
   let tease: number[] = [];
@@ -441,7 +442,7 @@ async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boole
     const wows: Promise<void>[] = [];
     for (let i = 0; i < positions.length; i++) {
       const pos = positions[i]!;
-      const symbol = reelSet.getReel(pos.reelIndex).getSymbolAt(pos.cellIndex);
+      const symbol = reelSet.getReel(pos.reelIndex)?.getSymbolAt(pos.cellIndex);
       if (!symbol) continue;
       if (i > 0) await sleep(67, { kicked: false });
       wows.push(symbol.playWin());

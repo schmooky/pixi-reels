@@ -63,18 +63,21 @@ describe('attachReelSounds', () => {
     destroy();
   });
 
-  it('fires skip, win and cascadeDestroy one-shots, with the active speed in the context', () => {
+  it('fires skip, win and cascadeDestroy one-shots, with the speed and spin mode in the context', () => {
     const { reelSet, destroy } = createTestReelSet({ reels: 3, cells: 3 });
     const { port, calls } = recordingPort();
+    const modes: string[] = [];
     const handle = attachReelSounds(reelSet, port, {
       skip: { play: 'skip', volume: ({ speed }) => (speed === 'normal' ? 0.5 : 1) },
-      win: { play: 'win' },
-      cascadeDestroy: { play: 'pop' },
+      win: { play: 'win', when: ({ mode }) => { modes.push(mode); return true; } },
+      cascadeDestroy: { play: 'pop', when: ({ mode }) => mode === 'cascade' },
     });
     reelSet.events.emit('skip:requested', { reels: [0], partial: false, mode: 'slam' } as never);
     reelSet.events.emit('spotlight:start', []);
+    // No cascade has run on this set, so the pop's `when` keeps it quiet.
     reelSet.events.emit('cascade:destroy:start', { cells: [] });
-    expect(calls.map((c) => [c.name, c.opts.volume])).toEqual([['skip', 0.5], ['win', undefined], ['pop', undefined]]);
+    expect(calls.map((c) => [c.name, c.opts.volume])).toEqual([['skip', 0.5], ['win', undefined]]);
+    expect(modes).toEqual(['standard']);
     handle.destroy();
     destroy();
   });

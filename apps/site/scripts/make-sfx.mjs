@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 /**
- * Synthesize the recipe sound effects into public/sfx.
+ * Synthesize the reel sounds into public/sfx: the start kick and the three
+ * stop thuds. Sine waves, filtered noise and envelopes, so there is no sample
+ * library and no licence to track, and every one hits on its first sample.
+ * The WAVs are written to a scratch folder and ffmpeg encodes each to WebM
+ * (Opus) + M4A (AAC), the codec pair zvuk's source ladder expects. Only the
+ * encoded files are committed.
  *
- * Every sound is sine waves, filtered noise and envelopes, so there is no
- * sample library and no licence to track. The WAVs are written to a scratch
- * folder and ffmpeg encodes each to WebM (Opus) + M4A (AAC), the codec pair
- * zvuk's source ladder expects. Only the encoded files are committed.
+ * The other four (win, pop, skip, the anticipation bed) are authored takes
+ * encoded by scripts/encode-sfx.mjs.
  *
  *   node scripts/make-sfx.mjs           # needs ffmpeg on PATH
  */
@@ -68,30 +71,10 @@ function gain(x, g) {
   return x.map((v) => v * g);
 }
 
-/** Start `part` at `at` seconds inside a buffer of `total` seconds. */
-function place(total, ...items) {
-  const out = new Float64Array(samples(total));
-  for (const [at, part] of items) {
-    const o = samples(at);
-    for (let i = 0; i < part.length && o + i < out.length; i++) out[o + i] += part[i];
-  }
-  return out;
-}
 
-/** Cross-fade the tail into the head so a loop has no seam. */
-function seamless(x, fade = 0.05) {
-  const f = samples(fade);
-  const n = x.length - f;
-  const out = x.slice(0, n);
-  for (let i = 0; i < f; i++) {
-    const t = i / f;
-    out[i] = out[i] * t + x[n + i] * (1 - t);
-  }
-  return out;
-}
 
 /** Peak-normalize to `peakDb` and fade both ends by `fade` seconds. */
-function finish(x, { peakDb = -1, fade = 0.005 } = {}) {
+function finish(x, { peakDb = -1, fade = 0.002 } = {}) {
   let peak = 0;
   for (const v of x) peak = Math.max(peak, Math.abs(v));
   const g = peak > 0 ? Math.pow(10, peakDb / 20) / peak : 1;
@@ -106,77 +89,25 @@ function finish(x, { peakDb = -1, fade = 0.005 } = {}) {
 
 // --- the sounds --------------------------------------------------------------
 
-/**
- * The reels launching: one soft whoosh, over in a third of a second. No bed
- * under the spin: a loop that runs for every spin of a demo wears thin fast,
- * and the reel stops carry the rhythm on their own.
- */
+/** The reels launching: a kick with a click on its face, over in 150 ms. */
 function spin() {
-  const n = samples(0.36);
-  const out = new Float64Array(n);
-  let y = 0;
-  for (let i = 0; i < n; i++) {
-    const t = i / RATE;
-    const cutoff = 250 + 1400 * Math.sin((Math.PI * t) / 0.36);
-    const a = 1 - Math.exp((-2 * Math.PI * cutoff) / RATE);
-    y += a * (rand() * 2 - y);
-    const env = Math.sin((Math.PI * t) / 0.36) ** 1.6;
-    out[i] = y * env;
-  }
-  return finish(out, { peakDb: -9 });
+  const kick = tone(0.16, (t) => 90 + 260 * Math.exp(-t / 0.028), { tau: 0.06 });
+  const click = gain(noise(0.012, { cutoff: 5000, tau: 0.003 }), 0.6);
+  return finish(mix(kick, click));
 }
 
-/** A reel landing: a short pitch drop with a knock on top. */
-function reelStop(top, bottom) {
-  const body = tone(0.16, (t) => bottom + (top - bottom) * Math.exp(-t / 0.03), { tau: 0.07 });
-  const knock = gain(noise(0.03, { cutoff: 2400, tau: 0.01 }), 0.5);
+/** A reel landing: one dry thud, a short pitch drop with a knock on top. */
+function thud(top, bottom) {
+  const body = tone(0.14, (t) => bottom + (top - bottom) * Math.exp(-t / 0.025), { tau: 0.055 });
+  const knock = gain(noise(0.02, { cutoff: 2600, tau: 0.007 }), 0.45);
   return finish(mix(body, knock));
-}
-
-/** The tease: a minor dyad with a slow tremolo, looping. */
-function anticipation() {
-  const n = samples(1.2);
-  const out = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    const t = i / RATE;
-    const trem = 0.65 + 0.35 * Math.sin(2 * Math.PI * 5 * t);
-    out[i] = (Math.sin(2 * Math.PI * 220 * t) + 0.6 * Math.sin(2 * Math.PI * 261.6 * t) + 0.3 * Math.sin(2 * Math.PI * 440 * t)) * trem;
-  }
-  const shimmer = new Float64Array(n);
-  const a = 1 - Math.exp((-2 * Math.PI * 4000) / RATE);
-  let y = 0;
-  for (let i = 0; i < n; i++) {
-    y += a * (rand() * 2 - y);
-    shimmer[i] = (y - (shimmer[i - 1] ?? 0) * 0.5) * 0.08;
-  }
-  return finish(seamless(mix(out, shimmer), 0.1), { peakDb: -8, fade: 0 });
-}
-
-/** A skip press: a dry click. */
-function skip() {
-  return finish(mix(gain(noise(0.012, { cutoff: 6000, tau: 0.003 }), 0.8), tone(0.05, 1800, { tau: 0.012 })));
-}
-
-/** A win: three bells up a major chord. */
-function win() {
-  const bell = (f) => mix(tone(0.5, f, { tau: 0.28 }), gain(tone(0.5, f * 2.76, { tau: 0.09 }), 0.3));
-  return finish(place(0.75, [0, bell(1046.5)], [0.11, bell(1318.5)], [0.22, bell(1568)]));
-}
-
-/** A cascade destroying its winners: a soft pop. */
-function pop() {
-  return finish(mix(tone(0.09, (t) => 180 + 520 * Math.exp(-t / 0.012), { tau: 0.04 }), gain(noise(0.03, { cutoff: 1800, tau: 0.012 }), 0.4)));
 }
 
 const SOUNDS = {
   spin,
-  'reel-stop.1': () => reelStop(150, 70),
-  'reel-stop.2': () => reelStop(165, 78),
-  'reel-stop.3': () => reelStop(138, 64),
-  anticipation,
-  skip,
-  win,
-  pop,
+  'reel-stop.1': () => thud(150, 70),
+  'reel-stop.2': () => thud(165, 78),
+  'reel-stop.3': () => thud(138, 64),
 };
 
 // --- writing -----------------------------------------------------------------

@@ -718,6 +718,10 @@ Options accepted by `reelSet.pin()`.
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ColumnTarget/
 Per-reel target shape for `ReelSet.setResult` and `ReelSetBuilder.initialFrame`. One object per reel.
 
+### CueBase
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CueBase/
+What every cue shares: the bus, a level, a pitch and a guard.
+
 ### CueContext
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CueContext/
 What a cue knows about the beat it fires on.
@@ -800,6 +804,7 @@ Per-side inset for [inset](/api/functions/index.inset/). SCREEN sides in every o
 
 ### LoopCue
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.LoopCue/
+What every cue shares: the bus, a level, a pitch and a guard.
 
 ### MaskConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskConfig/
@@ -843,6 +848,7 @@ Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition that shif
 
 ### OneShotCue
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.OneShotCue/
+What every cue shares: the bus, a level, a pitch and a guard.
 
 ### PhaseCardSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseCardSymbolOptions/

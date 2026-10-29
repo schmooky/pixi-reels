@@ -39,25 +39,30 @@ export interface CueContext {
   total?: number;
   /** The active speed profile's name (`'normal'`, `'turbo'`, ...). */
   speed: string;
+  /** The spin's mode: `'standard'`, or `'cascade'` for a tumble and its refills. */
+  mode: 'standard' | 'cascade';
 }
 
 /** A value, or a function of the beat (a pitch that climbs with each teasing reel). */
 export type CueValue = SoundValue | ((ctx: CueContext) => SoundValue);
 
-export interface OneShotCue {
-  /** The sound to fire. A variants set plays its next take. */
-  play: string;
+/** What every cue shares: the bus, a level, a pitch and a guard. */
+export interface CueBase {
   bus?: string;
   volume?: CueValue;
   pitch?: CueValue;
+  /** Fire only when this says so: a thud that stays quiet on a cascade. */
+  when?: (ctx: CueContext) => boolean;
 }
 
-export interface LoopCue {
+export interface OneShotCue extends CueBase {
+  /** The sound to fire. A variants set plays its next take. */
+  play: string;
+}
+
+export interface LoopCue extends CueBase {
   /** The sound to loop for as long as the beat lasts. */
   loop: string;
-  bus?: string;
-  volume?: CueValue;
-  pitch?: CueValue;
   /** Seconds. Default 0.05. */
   fadeIn?: number;
   /** Seconds. Default 0.1. */
@@ -138,13 +143,15 @@ export function attachReelSounds(
   const loops = new Map<string, ReelAudioLoop>();
   let disposed = false;
 
-  const ctxFor = (extra?: Omit<CueContext, 'speed'>): CueContext => ({
+  const ctxFor = (extra?: Omit<CueContext, 'speed' | 'mode'>): CueContext => ({
     ...extra,
     speed: reelSet.speed.activeName,
+    mode: reelSet.spinMode,
   });
 
   const fire = (cue: Cue, key: string, ctx: CueContext): void => {
     if (disposed) return;
+    if (cue.when && !cue.when(ctx)) return;
     const volume = resolve(cue.volume, ctx);
     const pitch = resolve(cue.pitch, ctx);
     if ('play' in cue) {

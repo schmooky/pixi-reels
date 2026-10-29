@@ -341,6 +341,7 @@ export { attachReelSounds } from './audio/ReelSounds.js';
 export type {
   ReelCues,
   Cue,
+  CueBase,
   OneShotCue,
   LoopCue,
   EventCue,

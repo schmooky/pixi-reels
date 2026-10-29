@@ -66,8 +66,10 @@ export function readyAudio(): Promise<void> {
  * wears thin fast, and the reel stops carry the rhythm.
  */
 export const DEFAULT_CUES: ReelCues = {
-  spin: { play: 'spin', volume: 0.7, pitch: ({ speed }) => (speed === 'normal' ? 1 : 1.12) },
-  reelStop: { play: 'reel-stop', volume: { base: 0.9, jitter: 0.08 }, pitch: { jitter: 0.04 } },
+  // A tumble has no reels to launch or land: its symbols fall out and drop
+  // in one by one, and the pop on the destroyed winners is its beat.
+  spin: { play: 'spin', volume: 0.7, pitch: ({ speed }) => (speed === 'normal' ? 1 : 1.12), when: ({ mode }) => mode !== 'cascade' },
+  reelStop: { play: 'reel-stop', volume: { base: 0.9, jitter: 0.08 }, pitch: { jitter: 0.04 }, when: ({ mode }) => mode !== 'cascade' },
   anticipation: { loop: 'anticipation', fadeIn: 0.12, fadeOut: 0.25, pitch: ({ order }) => 1 + 0.08 * (order ?? 0) },
   skip: { play: 'skip' },
   win: { play: 'win', volume: 0.8 },

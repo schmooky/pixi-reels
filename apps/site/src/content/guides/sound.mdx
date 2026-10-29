@@ -51,19 +51,25 @@ reel stops carry the rhythm.
 
 | Cue | Starts on | A loop ends on | Context |
 |---|---|---|---|
-| `spin` | `spin:start` | `spin:allLanded` | `speed` |
-| `reelStop` | `spin:reelLanding`, every landing path, cascade refills too | | `reelIndex`, `speed` |
+| `spin` | `spin:start` | `spin:allLanded` | |
+| `reelStop` | `spin:reelLanding`, every landing path, cascade refills too | | `reelIndex` |
 | `anticipation` | `anticipation:reel`, one per teasing reel | that reel's `anticipation:reelEnd` | `order`, `total`, `reelIndex` |
-| `skip` | `skip:requested` | | `speed` |
+| `skip` | `skip:requested` | | |
 | `win` | `spotlight:start`, and `win:group` per presented win | | |
 | `cascadeDestroy` | `cascade:destroy:start` | | |
-| `on[event]` | the named event | its `until` event | `speed` |
+| `on[event]` | the named event | its `until` event | |
+
+Every context also carries `speed` (the active profile's name) and `mode`
+(`'standard'`, or `'cascade'` for a tumble and its refills).
 
 A cue is `{ play: name }` for a one-shot or `{ loop: name, fadeIn, fadeOut }`
 for a bed. `volume` and `pitch` take a number, a `{ base, jitter }` spread so
 repeated thuds do not sound cloned, or a function of the context: the tease
 above climbs a semitone-ish per reel, and a `spin` cue can read `speed` to
-pitch the bed up in turbo.
+pitch up in turbo. `when(ctx)` keeps a cue quiet: the demos skip the launch
+whoosh and the reel thuds when `ctx.mode` is `'cascade'`, because a tumble
+has nothing to launch or land, and let the pop on the destroyed winners carry
+it.
 
 Loops are keyed per beat (one tease loop per reel), fade out when their beat
 ends, and stop dead on `destroy()` or when the reel set is destroyed.
