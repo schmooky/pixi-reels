@@ -231,7 +231,7 @@ const HW_METHODS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>Method</th><th class={th}>Behaviour</th></tr></thead>
         <tbody>
@@ -283,7 +283,7 @@ const HW_METHODS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>Method</th><th class={th}>What it does</th><th class={th}>Rules and edges</th></tr></thead>
         <tbody>
@@ -339,7 +339,7 @@ const HW_METHODS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>BoardGridOptions</th><th class={th}>Default</th><th class={th}>Meaning</th></tr></thead>
         <tbody>
@@ -362,7 +362,7 @@ const HW_METHODS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>BoardGrid API</th><th class={th}>Behaviour</th></tr></thead>
         <tbody>
@@ -480,7 +480,7 @@ const HW_METHODS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>HoldAndWinBuilder</th><th class={th}>Default</th></tr></thead>
         <tbody>
@@ -493,7 +493,7 @@ const HW_METHODS: [string, string][] = [
         </tbody>
       </table>
     </div>
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>HoldAndWinBoard</th><th class={th}>Behaviour</th></tr></thead>
         <tbody>
@@ -574,16 +574,16 @@ const HW_METHODS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6 grid gap-3 md:grid-cols-3">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">WinPresenter</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">WinPresenter</div>
       <p class="text-sm text-foreground/80"><code>wins/WinPresenter.ts</code>. <code>show(wins)</code> aborts any previous run, sorts by value (<code>sortByValue: true</code>), emits <code>win:start</code>, then per win per cycle dims losers (<code>dimLosers</code> alpha <code>0.35</code>), emits <code>win:group</code>, then <code>win:symbol</code> per cell spaced by <code>stagger</code> (0) and plays <code>symbolAnim</code> (<code>'win'</code>, a named animation, or a function). <code>cycleGap</code> 400 ms, <code>cycles</code> 1 (<code>-1</code> infinite). <code>win:end</code> fires in <code>finally</code>. In a cascade, call it from <code>presentWinners</code>.</p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">SymbolSpotlight</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">SymbolSpotlight</div>
       <p class="text-sm text-foreground/80"><code>reelSet.spotlight</code>. <code>show(positions)</code> emits <code>spotlight:start</code>, dims the viewport (<code>dimAmount</code> 0.5), reparents each view into <code>viewport.spotlightContainer</code> (<code>promoteAboveMask</code> true), and awaits <code>playWin()</code> (<code>playWinAnimation</code> true). <code>hide()</code> reparents back, skipping views the pool recycled, and emits <code>spotlight:end</code>. <code>cycle(lines)</code> shows each for <code>displayDuration</code> 2000 ms with <code>gapDuration</code> 300 ms, <code>cycles</code> 1.</p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">promote()</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">promote()</div>
       <p class="text-sm text-foreground/80"><code>ReelSet.promote(positions) → release</code> is the non-reparenting alternative. It attaches the views to <code>viewport.promotedLayer</code> (a RenderLayer), prunes itself on <code>symbol:created</code> when a swap hands the cell a new instance, and does no dim and no <code>playWin</code>. The engine never computes or draws wins (ADR 007); a <code>Win</code> is <code>{'{ cells, value?, kind?, id? }'}</code> and the order of <code>cells</code> matters when <code>stagger &gt; 0</code>.</p>
     </div>
   </div>
@@ -591,16 +591,16 @@ const HW_METHODS: [string, string][] = [
   <h2>Where this lives</h2>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>pins/CellPin.ts</code> CellPin, CellPinOptions, MovePinOptions, PinExpireReason, pinKey</li>
         <li><code>core/ReelSet.ts</code> pin, unpin, movePin, _onSpinStart, _onSpinLanded, _applyPinsToGrid, _migratePinsForReel, nudge, expand, setColumn, splitSymbol, resetColumns, promote</li>
         <li><code>core/expand.ts</code> ExpandStep, ExpandStepLanded, ExpandResult, planExpandSteps</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">board/, wins/, spotlight/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">board/, wins/, spotlight/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>board/BoardGrid.ts</code> the grid · <code>board/HwTypes.ts</code> events and coin types</li>
         <li><code>board/HoldAndWinState.ts</code> the reducer · <code>board/HoldAndWinBoard.ts</code> the driver · <code>board/HoldAndWinBuilder.ts</code></li>

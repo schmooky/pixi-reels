@@ -180,8 +180,8 @@ const R2 = 196;
     trace.
   </p>
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Per spin, reset by spin()</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Per spin, reset by spin()</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>_isSpinning</code>, <code>_spinStartTime</code>, <code>_resultSymbols</code>, <code>_cachedFrames</code></li>
         <li><code>_activePhases: Map&lt;reelIndex, ReelPhase&gt;</code>, <code>_landedReels</code>, <code>_slammedReels</code>, <code>_heldReels</code></li>
@@ -191,8 +191,8 @@ const R2 = 196;
         <li>skip state for the press: <code>_wasSkipped</code>, <code>_skipMode</code>, <code>_skipCtx</code>, <code>_skipPending</code>, <code>_quickenedReels</code>, <code>_quickenBatches</code></li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Persisting across spins</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Persisting across spins</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>_stopDelayOverride</code> and <code>_dropOrder</code> (<code>setStopDelays</code>, <code>setDropOrder</code>)</li>
         <li><code>_reelGroups</code> and <code>_groupOfReel</code> (<code>setReelGroups</code>)</li>
@@ -366,7 +366,7 @@ const R2 = 196;
     from the first rule that applies, top to bottom.
   </p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -560,7 +560,7 @@ const R2 = 196;
     on it are in the table.
   </p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -616,8 +616,8 @@ const R2 = 196;
     can see while it runs and what it reports.
   </p>
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">StepContext</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">StepContext</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>reel</code>, <code>container</code>, <code>main</code> (<code>'x' | 'y'</code>), <code>gsap</code></li>
         <li><code>profile</code>: the phase's <code>timing</code></li>
@@ -627,8 +627,8 @@ const R2 = 196;
         <li><code>until(predicate)</code>: checked from <code>tickSteps()</code> each update</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">phase:step statuses</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">phase:step statuses</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>start</code>, <code>end</code>: the step ran normally</li>
         <li><code>skipped</code>: a <code>cut</code> step a quicken never started</li>
@@ -701,7 +701,7 @@ const R2 = 196;
     <code>spin:complete</code>, and resolves with the object in the table.
   </p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -738,7 +738,7 @@ const R2 = 196;
   <h2>Defaults</h2>
   <p>The numbers this page mentions, in one place, with the step that reads each.</p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -772,8 +772,8 @@ const R2 = 196;
     </div>
   </div>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card p-4">
-    <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Where this lives</div>
+  <div class="not-prose my-6 rounded-lg border border-border bg-card p-4">
+    <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Where this lives</div>
     <ul class="text-sm space-y-1 text-foreground/80">
       <li><code>packages/pixi-reels/src/spin/SpinController.ts</code>: spin(), _startReel, _runReelTask, _isStale, _tryBeginStopSequence, _stopDelayFor, _markLanded, _finishSpin, _abortSpin</li>
       <li><code>packages/pixi-reels/src/spin/phases/ReelPhase.ts</code>, <code>steps.ts</code>, <code>PhaseFactory.ts</code></li>

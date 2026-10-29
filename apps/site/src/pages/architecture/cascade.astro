@@ -153,7 +153,7 @@ const api = [
     for a new symbol that is a virtual cell outside the window.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -195,7 +195,7 @@ const api = [
     table.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -278,20 +278,20 @@ const api = [
   </p>
 
   <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">Winner at the top</div>
+    <div class="rounded-lg border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-brand-text mb-2">Winner at the top</div>
       <p class="text-sm text-muted-foreground">One new symbol enters at cell 0 and travels one cell. <strong>Every survivor stays put.</strong></p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">Winner in the middle</div>
+    <div class="rounded-lg border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-brand-text mb-2">Winner in the middle</div>
       <p class="text-sm text-muted-foreground">Survivors above the winner each fall one cell. <strong>Survivors below do not move.</strong></p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">Winner at the bottom</div>
+    <div class="rounded-lg border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-brand-text mb-2">Winner at the bottom</div>
       <p class="text-sm text-muted-foreground">Every survivor falls exactly one cell. The new symbol fills cell 0.</p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">Two stacked winners at the top</div>
+    <div class="rounded-lg border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-brand-text mb-2">Two stacked winners at the top</div>
       <p class="text-sm text-muted-foreground">Two new symbols enter, each travelling two cells. <strong>No survivor moves.</strong></p>
     </div>
   </div>
@@ -309,7 +309,7 @@ const api = [
     default.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -514,7 +514,7 @@ const api = [
     still to come. The table collects them.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -583,7 +583,7 @@ const api = [
     a whole chain.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -611,25 +611,25 @@ const api = [
   <h2>Where this lives</h2>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/cascade/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/cascade/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>tumbleAlgorithm.ts</code> computeDropOffsets, DropOffset, Cell</li>
         <li><code>TumbleConfig.ts</code> TumbleConfig, resolveGravity, gravitySign, resolveCellOrder, merge helpers</li>
       </ul>
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">packages/pixi-reels/src/spin/</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mt-4 mb-1">packages/pixi-reels/src/spin/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>phases/CascadeFallPhase.ts</code>, <code>CascadePlacePhase.ts</code>, <code>CascadeDropInPhase.ts</code></li>
         <li><code>SpinController.ts</code> refill, the cascade branch of _startReel, auto-slam</li>
         <li><code>modes/CascadeMode.ts</code> legacy</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/core/ReelSet.ts</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/core/ReelSet.ts</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>destroySymbols</code>, <code>refill</code>, <code>runCascade</code>, <code>setDropOrder</code>, <code>setShape</code></li>
       </ul>
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">docs/adr/</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mt-4 mb-1">docs/adr/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>010-cascade-physics.md</code> (table and names out of date), <code>015-cascade-multiways-interplay.md</code></li>
       </ul>

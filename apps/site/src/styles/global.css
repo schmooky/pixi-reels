@@ -40,7 +40,9 @@
     --input: 240 5.9% 90%;
     --ring: 240 5.9% 10%;
 
-    --radius: 0.75rem;
+    /* Corners are square unless something is a dot. `rounded-lg/md/sm` map
+       onto this token, so one number keeps every box on the site honest. */
+    --radius: 0.125rem;
 
     /* The one hue on the site: acid lime, the colour of a win. `--brand` is a
        fill (ink text on it), `--brand-text` is the same hue dark enough to
@@ -144,7 +146,7 @@
     .prose-docs .heading-anchor { @apply opacity-60; }
   }
 
-  .prose-docs h2 { @apply text-xl font-semibold tracking-tight mt-10 mb-3 text-foreground; }
+  .prose-docs h2 { @apply font-display text-2xl font-bold tracking-tight mt-10 mb-3 text-foreground; }
   .prose-docs h3 { @apply text-lg font-semibold tracking-tight mt-8 mb-2 text-foreground; }
   .prose-docs h4 { @apply text-sm font-semibold uppercase tracking-wider mt-6 mb-2 text-muted-foreground; }
   .prose-docs p  { @apply text-foreground/80 leading-7 my-4; }
@@ -153,14 +155,14 @@
   .prose-docs ul, .prose-docs ol { @apply text-foreground/80 my-4 ml-6 list-disc [&>li]:mt-1; }
   .prose-docs ol { @apply list-decimal; }
   .prose-docs blockquote {
-    @apply border-l-2 border-foreground/25 bg-muted/50 text-foreground/80 px-4 py-2 my-4 rounded-r-md;
+    @apply border-l-2 border-foreground/25 bg-muted/50 text-foreground/80 px-4 py-2 my-4;
   }
   .prose-docs hr { @apply my-8 border-border; }
   .prose-docs code:not(pre code) {
-    @apply rounded bg-muted px-1.5 py-0.5 text-[0.85em] font-mono text-foreground;
+    @apply rounded-sm bg-muted px-1.5 py-0.5 text-[0.85em] font-mono text-foreground;
   }
   .prose-docs pre {
-    @apply rounded-lg px-4 py-3 overflow-x-auto my-5 text-sm;
+    @apply rounded-sm px-4 py-3 overflow-x-auto my-5 text-sm;
     background: hsl(var(--code-bg));
     border: 1px solid hsl(var(--code-border));
     color: hsl(var(--code-fg));

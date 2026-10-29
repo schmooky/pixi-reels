@@ -1,7 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { ARCH_PAGES, ARCH_SECTIONS } from '../../content/architectureNav.ts';
-import { ArrowRight, Sparkles } from 'lucide-react';
 import { SITE, articleLd, breadcrumbLd } from '../../lib/seo.ts';
 
 const title = 'Architecture. how pixi-reels is put together';
@@ -24,16 +23,13 @@ const blurbs: Record<(typeof ARCH_SECTIONS)[number], string> = {
     breadcrumbLd([{ name: SITE.name, url: '/' }, { name: 'Architecture', url: '/architecture/' }]),
   ]}
 >
-  <section class="border-b border-border/60 py-20">
-    <div class="container max-w-3xl text-center">
-      <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-        <Sparkles size={12} strokeWidth={2.5} />
-        Architecture
-      </div>
-      <h1 class="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
-        A tour, <span class="gradient-text">in pictures.</span>
+  <section class="border-b border-border/60 py-16 sm:py-20">
+    <div class="container">
+      <p class="eyebrow">Architecture</p>
+      <h1 class="display mt-5 text-[clamp(2.75rem,6.5vw,5.5rem)] leading-[0.95]">
+        A tour, in pictures.
       </h1>
-      <p class="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+      <p class="mt-7 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
         How pixi-reels works, told the way you would explain it to a new
         teammate: what the player sees, what the engine does about it, and
         then the names in the code. {ARCH_PAGES.length} pages, each with its
@@ -43,29 +39,32 @@ const blurbs: Record<(typeof ARCH_SECTIONS)[number], string> = {
     </div>
   </section>
 
-  <section class="py-14">
-    <div class="container space-y-12">
-      {ARCH_SECTIONS.map((section) => (
-        <div>
-          <div class="mb-5 flex items-baseline gap-3">
-            <h2 class="text-xl font-semibold tracking-tight">{section}</h2>
-            <p class="text-sm text-muted-foreground">{blurbs[section]}</p>
+  <section class="py-14 sm:py-16">
+    <div class="container space-y-16">
+      {ARCH_SECTIONS.map((section, si) => (
+        <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
+          <div>
+            <p class="eyebrow">0{si + 1} / {section}</p>
+            <p class="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">{blurbs[section]}</p>
           </div>
-          <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {ARCH_PAGES.filter((p) => p.section === section).map((p) => (
               <a
                 href={`/architecture/${p.slug}/`}
-                class="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:-translate-y-0.5"
+                class="group flex flex-col border border-border bg-card p-5 transition-colors duration-[217ms] hover:border-brand"
               >
-                <div class="absolute top-4 right-4 font-mono text-[10px] text-muted-foreground/70">
-                  {String(ARCH_PAGES.indexOf(p) + 1).padStart(2, '0')}
+                <div class="flex items-baseline justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em]">
+                  <span class="text-brand-text">{p.eyebrow}</span>
+                  <span class="text-muted-foreground/70">{String(ARCH_PAGES.indexOf(p) + 1).padStart(2, '0')}</span>
                 </div>
-                <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">{p.eyebrow}</div>
-                <h3 class="mt-2 text-xl font-semibold tracking-tight">{p.title}</h3>
-                <p class="mt-2 text-sm text-muted-foreground">{p.subtitle}</p>
-                <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
-                  Read <ArrowRight size={13} strokeWidth={2} />
-                </div>
+                <h3 class="mt-3 font-display text-xl font-bold tracking-tight">{p.title}</h3>
+                <p class="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{p.subtitle}</p>
+                <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  Read
+                  <svg class="h-4 w-4 transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </span>
               </a>
             ))}
           </div>

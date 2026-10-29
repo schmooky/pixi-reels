@@ -13,18 +13,20 @@ import { ARCH_PAGES } from '../../content/architectureNav.ts';
     Looking for a how-to? Start with <a href="/guides/getting-started/">Getting started</a> or a <a href="/recipes/">recipe</a>.
   </p>
 
-  <div class="mt-8 space-y-8">
-    {WIKI_NAV.map((section) => (
+  <div class="mt-12 space-y-12">
+    {WIKI_NAV.map((section, i) => (
       <section>
-        <h2 class="mb-3">{section.title}</h2>
-        <div class="grid gap-2 not-prose">
+        <h2 class="eyebrow mb-4 mt-0">{String(i + 1).padStart(2, '0')} / {section.title}</h2>
+        <div class="divide-y divide-border border-y border-border">
           {section.items.map((item) => (
             <a
               href={item.href}
-              class="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm transition-colors hover:border-primary/40 hover:bg-secondary/30"
+              class="group flex items-center justify-between gap-4 py-3 text-sm font-medium text-foreground no-underline"
             >
-              <span class="font-medium">{item.label}</span>
-              <span class="text-muted-foreground transition-transform group-hover:translate-x-0.5">→</span>
+              <span>{item.label}</span>
+              <svg class="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1 group-hover:text-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
             </a>
           ))}
         </div>
@@ -32,19 +34,21 @@ import { ARCH_PAGES } from '../../content/architectureNav.ts';
     ))}
 
     <section>
-      <h2 class="mb-3">Architecture</h2>
-      <p class="mb-3 text-sm text-muted-foreground">A tour of the internals: construction, ownership, the viewport, symbols, motion, the spin lifecycle and its timeline, skipping, anticipation, events, cascades, pins and boards, debug and testing. Hand-laid SVG, no UML, no mermaid.</p>
-      <div class="grid gap-2 not-prose">
+      <h2 class="eyebrow mb-4 mt-0">{String(WIKI_NAV.length + 1).padStart(2, '0')} / Architecture</h2>
+      <p class="mb-4 mt-0 text-sm text-muted-foreground">A tour of the internals: construction, ownership, the viewport, symbols, motion, the spin lifecycle and its timeline, skipping, anticipation, events, cascades, pins and boards, debug and testing. Hand-laid SVG, no UML, no mermaid.</p>
+      <div class="divide-y divide-border border-y border-border">
         {ARCH_PAGES.map((p) => (
           <a
             href={`/architecture/${p.slug}/`}
-            class="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm transition-colors hover:border-primary/40 hover:bg-secondary/30"
+            class="group flex items-center justify-between gap-4 py-3 text-sm no-underline"
           >
-            <span>
-              <span class="font-medium">{p.title}</span>
-              <span class="ml-2 text-[11px] text-muted-foreground">{p.subtitle}</span>
+            <span class="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+              <span class="font-medium text-foreground">{p.title}</span>
+              <span class="truncate text-[13px] font-normal text-muted-foreground">{p.subtitle}</span>
             </span>
-            <span class="text-muted-foreground transition-transform group-hover:translate-x-0.5">→</span>
+            <svg class="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1 group-hover:text-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
           </a>
         ))}
       </div>

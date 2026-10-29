@@ -1,6 +1,6 @@
 ---
 /**
- * A cluster outline inside a `<Diagram>`: a soft rounded panel with a small
+ * A cluster outline inside a `<Diagram>`: a panel with a small
  * uppercase label in its top-left corner. Boxes placed inside it (by
  * coordinates) read as members of the group. Leave 40 units at the top for
  * the label.
@@ -18,7 +18,7 @@ interface Props {
   labelBottom?: boolean;
   class?: string;
 }
-const { x, y, w, h, label, note, kind = 'dashed', r = 14, labelBottom = false, class: className } = Astro.props as Props;
+const { x, y, w, h, label, note, kind = 'dashed', r = 2, labelBottom = false, class: className } = Astro.props as Props;
 const ly = labelBottom ? y + h - 12 : y + 24;
 ---
 <g class:list={['group', `group-${kind}`, className]}>

@@ -214,7 +214,7 @@ const pillDx = (label: string) => 20 + (7.6 * label.length + 18) / 2;
     what is in it.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -287,7 +287,7 @@ const pillDx = (label: string) => 20 + (7.6 * label.length + 18) / 2;
           <Label x={px + PANEL_W / 2} y={py + PANEL_H - 12} text={note} anchor="middle" tone="fg" />
           {L.xs.map((x, k) => (
             <g>
-              <rect x={ox + x} y={oy + L.offsets[k] - BUF} width={L.cross} height={L.extents[k] + 2 * BUF} rx="3" class="lane-bg" />
+              <rect x={ox + x} y={oy + L.offsets[k] - BUF} width={L.cross} height={L.extents[k] + 2 * BUF} rx="2" class="lane-bg" />
               {Array.from({ length: L.extents[k] / CM + 1 }, (_, t) => (
                 <line x1={ox + x} x2={ox + x + L.cross} y1={oy + L.offsets[k] - BUF + (t + 1) * CM} y2={oy + L.offsets[k] - BUF + (t + 1) * CM} class="guide" />
               ))}
@@ -317,7 +317,7 @@ const pillDx = (label: string) => 20 + (7.6 * label.length + 18) / 2;
     rules and every caveat.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>

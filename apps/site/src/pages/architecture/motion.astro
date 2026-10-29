@@ -138,7 +138,7 @@ const geometry = [
     {stripMain.map((m, i) => (
       <Label x={470} y={sy(i) + 29} text={m} anchor="end" mono tone="fg" />
     ))}
-    <rect x={94} y={sy(2) - 6} width={60} height={3 * 56 - 8 + 12} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <rect x={94} y={sy(2) - 6} width={60} height={3 * 56 - 8 + 12} rx="2" class="guide-strong" style="stroke-dasharray: 4 3" />
     <Label x={176} y={sy(0) + 29} text="bufferStart (2)" />
     <Label x={176} y={sy(1) + 29} text="feed edge, forward" tone="faint" />
     <Label x={176} y={sy(3) + 29} text="visible (3): the window" />
@@ -216,7 +216,7 @@ const geometry = [
     laws below in CI against all four orientation and direction combinations.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -442,7 +442,7 @@ const geometry = [
     builder throws if they are. The table shows both and how each resolves.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -556,7 +556,7 @@ const geometry = [
     the steps; the order matters because each one assumes the previous.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -664,7 +664,7 @@ const geometry = [
     The table lists them and the reason behind each.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -697,7 +697,7 @@ const geometry = [
     assuming a uniform grid.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -750,7 +750,7 @@ const geometry = [
     The numbers this page relies on, with the file each one is set in.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -787,8 +787,8 @@ const geometry = [
   <h2>Where this lives</h2>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/core/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/core/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>ReelMotion.ts</code> advance, snapToGrid, getCellMain, odometer, _render</li>
         <li><code>ReelAxis.ts</code> ReelAxis, reelAxis(), VERTICAL_FORWARD</li>
@@ -797,15 +797,15 @@ const geometry = [
         <li><code>Reel.ts</code> update, _onSymbolWrapped, _replaceSymbol, nudge, _finalizeFrame, geometry getters</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/spin/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/spin/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>SpinController.ts</code> _onTick</li>
         <li><code>modes/StandardMode.ts</code> computeDelta and the half-slot cap</li>
         <li><code>phases/StopPhase.ts</code> delay, spinOut, land, bounce; onSkip</li>
         <li><code>phases/ReelPhase.ts</code> land(), bounce(), defaultBounce</li>
       </ul>
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">docs/adr/</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mt-4 mb-1">docs/adr/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>016-orientation-axis.md</code>, <code>017-facing-travel-and-the-reel-stage.md</code>, <code>018-motion-contract.md</code></li>
       </ul>

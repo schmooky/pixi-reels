@@ -210,7 +210,7 @@ const PLAQUE_OPTS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>DebugSnapshot field</th><th class={th}>Meaning</th></tr></thead>
         <tbody>
@@ -238,7 +238,7 @@ const PLAQUE_OPTS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>__PIXI_REELS_DEBUG</th><th class={th}>Returns</th></tr></thead>
         <tbody>
@@ -303,7 +303,7 @@ const PLAQUE_OPTS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>Layer</th><th class={th}>Colour</th><th class={th}>Draws</th><th class={th}>Makes visible</th></tr></thead>
         <tbody>
@@ -423,7 +423,7 @@ const PLAQUE_OPTS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>DebugPlaque option</th><th class={th}>Default / meaning</th></tr></thead>
         <tbody>
@@ -476,12 +476,12 @@ const PLAQUE_OPTS: [string, string][] = [
 
   <Diagram height={236} caption="One reel's lane in one round. A round runs from one spin:start to the next, so every cascade refill is its own round; the phase spans and the six marks are stamped in ms since the round opened, and speed samples ride along the lane at about 30 Hz.">
     <Label x={20} y={128} text="r0" mono tone="fg" weight={600} />
-    <rect x={60} y={100} width={600} height={48} rx="8" class="lane-bg" />
-    <g class="span-start"><rect x={60} y={108} width={80} height={32} rx="4" class="span-start" /><text x={100} y={128.5} text-anchor="middle" font-size="13" class="span-text">start</text></g>
+    <rect x={60} y={100} width={600} height={48} rx="2" class="lane-bg" />
+    <g class="span-start"><rect x={60} y={108} width={80} height={32} rx="2" class="span-start" /><text x={100} y={128.5} text-anchor="middle" font-size="13" class="span-text">start</text></g>
     <g class="span-spin"><rect x={140} y={108} width={240} height={32} class="span-spin" /><text x={260} y={128.5} text-anchor="middle" font-size="13" class="span-text">spin</text></g>
     <g class="span-anticipation"><rect x={380} y={108} width={100} height={32} class="span-anticipation" /><text x={430} y={128.5} text-anchor="middle" font-size="13" class="span-text">tease</text></g>
     <g class="span-stop"><rect x={480} y={108} width={100} height={32} class="span-stop" /><text x={530} y={128.5} text-anchor="middle" font-size="13" class="span-text">stop</text></g>
-    <g class="span-bounce"><rect x={580} y={108} width={60} height={32} rx="4" class="span-bounce" /><text x={610} y={128.5} text-anchor="middle" font-size="13" class="span-text">bounce</text></g>
+    <g class="span-bounce"><rect x={580} y={108} width={60} height={32} rx="2" class="span-bounce" /><text x={610} y={128.5} text-anchor="middle" font-size="13" class="span-text">bounce</text></g>
 
     <line x1={60} y1={88} x2={60} y2={100} class="guide-strong" />
     <Label x={60} y={80} text="spin:start" mono tone="fg" />
@@ -510,7 +510,7 @@ const PLAQUE_OPTS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>Per reel</th><th class={th}>Meaning</th></tr></thead>
         <tbody>
@@ -523,7 +523,7 @@ const PLAQUE_OPTS: [string, string][] = [
         </tbody>
       </table>
     </div>
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>Per round</th><th class={th}>Meaning</th></tr></thead>
         <tbody>
@@ -587,7 +587,7 @@ const PLAQUE_OPTS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>Kind</th><th class={th}>Code</th><th class={th}>Raised in</th></tr></thead>
         <tbody>
@@ -612,16 +612,16 @@ const PLAQUE_OPTS: [string, string][] = [
   </p>
 
   <div class="not-prose my-6 grid gap-3 md:grid-cols-3">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Disposable and TickerRef (ADR 004)</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Disposable and TickerRef (ADR 004)</div>
       <p class="text-sm text-foreground/80"><code>Disposable</code> is <code>{'{ destroy(): void; readonly isDestroyed }'}</code>. Any class that subscribes to tickers, creates display objects or holds references implements it. The original library's main leak was <code>ticker.add</code> without a matching <code>remove</code>, so no class may call <code>ticker.add()</code> directly: it goes through <code>TickerRef</code>, which keeps its own callback list, ignores <code>add</code> after destroy, only removes callbacks it tracks, and on an idempotent <code>destroy()</code> removes every tracked callback. <code>ReelSet.destroy()</code> cascades through every subsystem; <code>SpinMetrics</code> and the overlay both use <code>TickerRef</code>.</p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">gsap injection</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">gsap injection</div>
       <p class="text-sm text-foreground/80">With symlinked workspaces (vite with a linked package, pnpm, esbuild chains) the library's <code>gsap</code> import and yours can resolve to different module instances, each with its own root timeline; the engine's tweens then sit on a timeline nobody drives and stall at progress 0. <code>ReelSetBuilder.gsap(myGsap)</code> hands the engine your instance. It is held per reel set (carried down through <code>ReelConfig.gsap</code>), so composed stages can use different instances. <code>DEFAULT_GSAP</code> is the instance resolved when the library loaded.</p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">driveGsapWithTicker</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">driveGsapWithTicker</div>
       <p class="text-sm text-foreground/80"><code>driveGsapWithTicker(ticker, instance = DEFAULT_GSAP) → dispose</code> removes <code>gsap.updateRoot</code> from gsap's own ticker and calls it from a Pixi ticker callback with <code>ticker.lastTime / 1000</code>. Why: gsap's requestAnimationFrame loop is throttled or frozen in hidden tabs and iframes (casino lobbies) while the Pixi ticker keeps going, so easing and bounces would freeze mid-flight. Call it once per app, with the same instance you gave the builder; driving from two sources runs animations at double speed. The disposer is idempotent and re-adds <code>updateRoot</code>.</p>
     </div>
   </div>
@@ -629,16 +629,16 @@ const PLAQUE_OPTS: [string, string][] = [
   <h2>Where this lives</h2>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/debug/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/debug/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>debug.ts</code> debugSnapshot, debugGrid, the frame recorder, enableDebug (main entry)</li>
         <li><code>index.ts</code> the pixi-reels/debug barrel: debugOverlay, OVERLAY_LABEL, DebugPlaque, DEBUG_FONT, WinLines, roundRectPath, SpinMetrics</li>
         <li><code>debugOverlay.ts</code> · <code>SpinMetrics.ts</code> · <code>DebugPlaque.ts</code> · <code>roundRectPath.ts</code> · <code>WinLines.ts</code></li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/utils/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/utils/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>notify.ts</code> log levels, onNotice, noticeError/Warn/WarnOnce/Info</li>
         <li><code>Disposable.ts</code> · <code>TickerRef.ts</code> · <code>gsap.ts</code> · <code>gsapTicker.ts</code></li>

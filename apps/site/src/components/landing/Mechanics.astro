@@ -49,7 +49,7 @@ const cards = [
       {cards.map((c, i) => (
         <div class="reveal group flex min-w-0 flex-col" style={`--motion-delay: ${i * 50}ms`}>
           <div
-            class="mech-well relative aspect-[4/3] w-full overflow-hidden rounded-2xl ring-1 ring-border transition-[box-shadow] duration-[217ms] group-hover:ring-brand"
+            class="mech-well relative aspect-[4/3] w-full overflow-hidden rounded-lg ring-1 ring-border transition-[box-shadow] duration-[217ms] group-hover:ring-brand"
             data-mechanic={c.variant}
           >
             <LandingReels variant={c.variant} client:only="react" />
@@ -57,7 +57,7 @@ const cards = [
           <div class="flex flex-1 flex-col pt-5">
             <h3 class="font-display text-2xl font-bold tracking-tight">{c.title}</h3>
             <p class="mt-2 text-[15px] leading-relaxed text-muted-foreground">{c.body}</p>
-            <code class="mt-4 block truncate rounded-md bg-muted px-3 py-2 font-mono text-[11.5px] text-foreground/80">{c.code}</code>
+            <code class="mt-4 block truncate rounded-sm bg-muted px-3 py-2 font-mono text-[11.5px] text-foreground/80">{c.code}</code>
             <a href={c.href} class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
               See the recipes
               <svg class="h-4 w-4 transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>

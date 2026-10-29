@@ -26,7 +26,7 @@ const { width = 720, height, title, caption, class: className } = Astro.props as
 const markers = ['muted', 'primary', 'accent'] as const;
 const minWidth = Math.min(width, 640);
 ---
-<figure class:list={['arch-diagram not-prose my-8 rounded-2xl border border-border bg-card', className]}>
+<figure class:list={['arch-diagram not-prose my-8 rounded-lg border border-border bg-card', className]}>
   <div class="arch-scroll overflow-x-auto p-4 sm:p-6">
     <svg
       viewBox={`0 0 ${width} ${height}`}

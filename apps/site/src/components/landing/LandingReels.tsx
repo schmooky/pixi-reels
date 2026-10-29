@@ -185,9 +185,11 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
   };
   for (let i = 0; i < cfg.reels; i++) {
     const reel = reelSet.getReel(i);
+    // Only SPIN blurs. Every other phase is crisp, including the cascade
+    // phases (fall, place, dropIn), which never pass through STOP.
     reel.events.on('phase:enter', (name) => {
-      if (name === 'spin') { blurring[i] = true; setBlur(i, true); }
-      else if (name === 'stop' || name === 'anticipation') { blurring[i] = false; setBlur(i, false); }
+      blurring[i] = name === 'spin';
+      setBlur(i, blurring[i]);
     });
     reel.events.on('symbol:created', () => { if (blurring[i]) setBlur(i, true); });
   }

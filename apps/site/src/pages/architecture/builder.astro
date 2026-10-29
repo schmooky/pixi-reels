@@ -91,7 +91,7 @@ const FIGURES: [number, number, string][] = [
     returns the builder, so you chain them however reads best.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -276,7 +276,7 @@ const FIGURES: [number, number, string][] = [
     The formulas, for when you need the exact number.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -384,8 +384,8 @@ const FIGURES: [number, number, string][] = [
   </p>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Grid shape</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Grid shape</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>reels(count)</code> required.</li>
         <li><code>visibleCells(n)</code> uniform window; cannot be combined with <code>visibleCellsPerReel</code>.</li>
@@ -397,8 +397,8 @@ const FIGURES: [number, number, string][] = [
         <li><code>bufferSymbols(n | {'{ start, end }'})</code> default <code>1 / 1</code>; values below 1 are clamped to 1 with a one-time <code>buffer-clamped</code> warning; <code>end: 0</code> only on tumble sets.</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Orientation, direction, layering</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Orientation, direction, layering</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>orientation('vertical'|'horizontal')</code> default <code>'vertical'</code>.</li>
         <li><code>direction('forward'|'reverse')</code> default <code>'forward'</code>; <code>directionPerReel([...])</code> per reel.</li>
@@ -406,7 +406,7 @@ const FIGURES: [number, number, string][] = [
         <li><code>reelStacking(order)</code> default <code>'ascending'</code>, which draws the last reel in front.</li>
         <li><code>symbolZIndex(resolver)</code> default <code>null</code>; replaces <code>zIndex * 100 + cellIndex</code> as the only draw-order source.</li>
       </ul>
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">Curvature</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mt-4 mb-1">Curvature</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>curve(input)</code>, <code>curvePerReel([...])</code>.</li>
         <li><code>curveFocus('reel'|'set-lean'|'set')</code> default <code>'reel'</code>; anything else auto-shares the mask.</li>
@@ -414,8 +414,8 @@ const FIGURES: [number, number, string][] = [
         <li><code>curveBleed(px)</code> default <code>0</code>, warp only. See <a href="/architecture/curvature/">curvature</a>.</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Masking and motion</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Masking and motion</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>maskStrategy(s)</code> default <code>new RectMaskStrategy()</code>; rejects null, objects without <code>build</code>/<code>update</code>, and any <code>version !== 2</code>. Marks the choice explicit.</li>
         <li><code>motionModel('tween')</code> default, or <code>motionModel('drive', config)</code>; the config is validated by <code>assertDriveConfig</code> and there is no runtime toggle.</li>
@@ -424,8 +424,8 @@ const FIGURES: [number, number, string][] = [
         <li><code>pinMigrationDuration(ms | fn)</code> default <code>200</code>; <code>pinMigrationEase(s)</code> default <code>'power2.out'</code>. MultiWays AdjustPhase only.</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Symbols and fill</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Symbols and fill</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>symbols(cb)</code> required; the registry is created eagerly and <code>cb</code> runs immediately.</li>
         <li><code>weights(record)</code> default <code>{'{}'}</code>; unset ids weigh <code>10</code>.</li>
@@ -434,7 +434,7 @@ const FIGURES: [number, number, string][] = [
         <li><code>rng(fn)</code> default <code>Math.random</code>; <code>poolCapacity(n)</code> default derived.</li>
         <li><code>initialFrame(ColumnTarget[])</code> stored raw, validated at build.</li>
       </ul>
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">Spin pipeline and infrastructure</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mt-4 mb-1">Spin pipeline and infrastructure</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>spinningMode(mode)</code> default <code>new StandardMode()</code>; <code>frameMiddleware(mw)</code> pushed in call order.</li>
         <li><code>phases(cb)</code> deferred to the end of <code>build()</code>; <code>tumble(config?)</code> flips the default spin mode to <code>'cascade'</code>.</li>
@@ -492,7 +492,7 @@ initialSpeed 'x' does not match any registered speed profile. Available: ...   (
     side.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -553,7 +553,7 @@ initialSpeed 'x' does not match any registered speed profile. Available: ...   (
     that defines it.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>

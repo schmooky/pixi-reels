@@ -114,7 +114,7 @@ const mutations = [
         <Label x={200} y={ry(i) + 29} text={r.slot} mono tone="fg" />
       </>
     ))}
-    <rect x={114} y={ry(2) - 6} width={60} height={3 * 56 - 8 + 12} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <rect x={114} y={ry(2) - 6} width={60} height={3 * 56 - 8 + 12} rx="2" class="guide-strong" style="stroke-dasharray: 4 3" />
     <Label x={400} y={ry(0) + 57} text="bufferStart[-1 - cell]" mono />
     <Label x={400} y={ry(3) + 29} text="visible[cell]" mono />
     <Label x={400} y={ry(5) + 57} text="bufferEnd[cell - visible.length]" mono />
@@ -149,7 +149,7 @@ const mutations = [
     helpers read and write it; the table lists them with what each is for.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -380,7 +380,7 @@ const mutations = [
     The table lists the ways the pools can change.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -448,7 +448,7 @@ const mutations = [
     The values this page relies on, with the file each one is set in.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -482,8 +482,8 @@ const mutations = [
   <h2>Where this lives</h2>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/frame/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/frame/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>ColumnTarget.ts</code> the shape, getTargetSlot, setTargetSlot, columnTargetToStrip, cloneColumnTarget, assertColumnTargets, assertBufferCountsInRange</li>
         <li><code>FrameBuilder.ts</code> FrameContext, FrameMiddleware, build, buildAll, the two built-ins</li>
@@ -492,8 +492,8 @@ const mutations = [
         <li><code>OffsetCalculator.ts</code> dead code</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">callers</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">callers</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>spin/SpinController.ts</code> _tryBeginStopSequence, _cachedFrames, _frameFor, refill</li>
         <li><code>spin/bigSymbolBlocks.ts</code> coordinateBigSymbols</li>

@@ -123,7 +123,7 @@ function TypeButton({ label, icon, hint, onClick, disabled }: TypeButtonProps): 
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex flex-col items-center gap-1 rounded-lg border border-border bg-background/50 p-3 text-xs transition-colors',
+        'flex flex-col items-center gap-1 rounded-sm border border-border bg-background/50 p-3 text-xs transition-colors',
         disabled
           ? 'cursor-not-allowed opacity-50'
           : 'hover:border-primary hover:bg-primary/5',
@@ -229,13 +229,13 @@ function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Elem
   const accept = type === 'sprite' ? 'image/png,image/webp,image/jpeg' : 'image/png,image/webp';
 
   return (
-    <div className="rounded-lg border border-border bg-background/40 p-3">
+    <div className="rounded-sm border border-border bg-background/40 p-3">
       <div className="mb-3 flex items-center justify-between">
         <div className="text-xs font-semibold">Add a {typeLabel} symbol</div>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded p-1 text-muted-foreground hover:text-foreground"
+          className="rounded-sm p-1 text-muted-foreground hover:text-foreground"
           aria-label="Cancel"
         >
           <X size={14} />
@@ -249,7 +249,7 @@ function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Elem
             value={id}
             onChange={(e) => setId(e.target.value)}
             placeholder="wild"
-            className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-sm border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
           />
         </Field>
 
@@ -275,7 +275,7 @@ function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Elem
         )}
 
         {error && (
-          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
+          <div className="flex items-start gap-2 rounded-sm border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
             <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -285,7 +285,7 @@ function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Elem
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="rounded-sm border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
           >
             Cancel
           </button>
@@ -293,7 +293,7 @@ function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Elem
             type="button"
             onClick={() => void handleSave()}
             disabled={busy}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
+            className="rounded-sm bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-[transform,background-color] duration-[133ms] hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
           >
             {busy ? 'Saving…' : 'Add symbol'}
           </button>
@@ -316,7 +316,7 @@ function Field({
 }): JSX.Element {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="mb-1 block font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </span>
       {children}
@@ -343,7 +343,7 @@ function NumberInput({
       onChange={(e) => onChange(Number(e.target.value) || 0)}
       min={min}
       max={max}
-      className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+      className="w-full rounded-sm border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
     />
   );
 }
@@ -363,7 +363,7 @@ function FilePicker({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground hover:border-primary"
+        className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-background px-2.5 py-1.5 text-xs text-foreground hover:border-primary"
       >
         <Upload size={12} />
         {file ? 'Replace…' : 'Pick a file…'}
@@ -418,8 +418,8 @@ function SymbolRow({
           })();
 
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-background/40 p-2">
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-background/60">
+    <div className="flex items-center gap-3 rounded-sm border border-border bg-background/40 p-2">
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-sm border border-border bg-background/60">
         {thumb ? (
           <img src={thumb} alt="" className="max-h-full max-w-full object-contain" />
         ) : symbol.type === 'spine' ? (
@@ -442,7 +442,7 @@ function SymbolRow({
         type="button"
         onClick={() => onUpdate({ ...symbol, unmask: !symbol.unmask })}
         className={cn(
-          'rounded px-2 py-0.5 text-[10px] font-mono transition-colors',
+          'rounded-sm px-2 py-0.5 text-[10px] font-mono transition-colors',
           symbol.unmask
             ? 'bg-primary/15 text-primary'
             : 'bg-muted/60 text-muted-foreground hover:bg-muted',
@@ -454,7 +454,7 @@ function SymbolRow({
       <button
         type="button"
         onClick={onDelete}
-        className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        className="rounded-sm p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         aria-label={`Delete ${symbol.id}`}
         title={`Delete ${symbol.id}`}
       >
@@ -480,11 +480,11 @@ function ScaleStepper({
 }): JSX.Element {
   const v = Math.max(0.05, Math.min(10, value));
   return (
-    <div className="flex items-center gap-0.5 rounded border border-border bg-muted/40 px-1 py-0.5 text-[10px] font-mono">
+    <div className="flex items-center gap-0.5 rounded-sm border border-border bg-muted/40 px-1 py-0.5 text-[10px] font-mono">
       <button
         type="button"
         onClick={() => onChange(Math.max(0.05, +(v * 0.85).toFixed(3)))}
-        className="rounded px-1 text-muted-foreground hover:text-foreground"
+        className="rounded-sm px-1 text-muted-foreground hover:text-foreground"
         title="Scale down"
       >
         -
@@ -495,7 +495,7 @@ function ScaleStepper({
       <button
         type="button"
         onClick={() => onChange(Math.min(10, +(v / 0.85).toFixed(3)))}
-        className="rounded px-1 text-muted-foreground hover:text-foreground"
+        className="rounded-sm px-1 text-muted-foreground hover:text-foreground"
         title="Scale up"
       >
         +
@@ -543,14 +543,14 @@ function hex(n: number): string {
 
 function BuiltInSymbols(): JSX.Element {
   return (
-    <details className="group mb-4 rounded-lg border border-border bg-background/30" open>
-      <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs hover:bg-background/50">
+    <details className="group mb-4 rounded-sm border border-border bg-background/30" open>
+      <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-sm px-3 py-2 text-xs hover:bg-background/50">
         <div className="flex items-center gap-2">
           <Lock size={11} className="text-muted-foreground" />
           <span className="font-semibold">Built-in</span>
           <span className="text-muted-foreground">
-            cards · use <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[10px]">CARD_DECK</code> /{' '}
-            <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[10px]">WILD_CARD</code>
+            cards · use <code className="rounded-sm bg-muted/60 px-1 py-0.5 font-mono text-[10px]">CARD_DECK</code> /{' '}
+            <code className="rounded-sm bg-muted/60 px-1 py-0.5 font-mono text-[10px]">WILD_CARD</code>
           </span>
         </div>
         <span className="text-[10px] text-muted-foreground/60">{BUILT_IN_CARDS.length}</span>
@@ -560,7 +560,7 @@ function BuiltInSymbols(): JSX.Element {
           {BUILT_IN_CARDS.map((card) => (
             <div
               key={card.id}
-              className="flex aspect-square items-center justify-center rounded border border-black/20 text-[11px] font-bold shadow-sm"
+              className="flex aspect-square items-center justify-center rounded-sm border border-black/20 text-[11px] font-bold"
               style={{
                 backgroundColor: hex(card.color),
                 color: hex(card.textColor ?? 0xffffff),

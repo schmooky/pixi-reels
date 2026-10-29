@@ -102,7 +102,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
   // ── render ──
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog">
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-sm border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Share2 size={14} /> Share this studio
@@ -110,7 +110,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-muted-foreground hover:text-foreground"
+            className="rounded-sm p-1 text-muted-foreground hover:text-foreground"
             aria-label="Close"
           >
             <X size={14} />
@@ -128,7 +128,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
                     <label
                       key={p.id}
                       className={cn(
-                        'flex cursor-pointer items-start gap-2 rounded-md border border-border/60 bg-background/40 p-2',
+                        'flex cursor-pointer items-start gap-2 rounded-sm border border-border/60 bg-background/40 p-2',
                         preset === p.id && 'border-primary bg-primary/5',
                       )}
                     >
@@ -155,7 +155,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
                     value={viewPassword}
                     onChange={(e) => setViewPassword(e.target.value)}
                     placeholder="At least 6 characters"
-                    className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-sm border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
                   />
                 </FieldGroup>
               )}
@@ -167,7 +167,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
                     value={savePassword}
                     onChange={(e) => setSavePassword(e.target.value)}
                     placeholder="Must differ from view password"
-                    className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-sm border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
                   />
                 </FieldGroup>
               )}
@@ -180,7 +180,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
                       type="button"
                       onClick={() => setTtl(days)}
                       className={cn(
-                        'flex-1 rounded-md border border-border px-3 py-1.5 text-xs',
+                        'flex-1 rounded-sm border border-border px-3 py-1.5 text-xs',
                         ttl === days
                           ? 'border-primary bg-primary/10 text-foreground'
                           : 'bg-background/40 text-muted-foreground hover:text-foreground',
@@ -193,7 +193,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
               </FieldGroup>
 
               {error && (
-                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
+                <div className="flex items-start gap-2 rounded-sm border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
                   <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -207,7 +207,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="rounded-sm border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
               Cancel
             </button>
@@ -215,7 +215,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
               type="button"
               onClick={() => void handleCreate()}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-sm bg-brand px-3 py-1.5 text-xs font-semibold text-brand-foreground transition-[transform,background-color] duration-[133ms] hover:bg-brand/90 active:scale-[0.97] disabled:opacity-50"
             >
               {busy ? <Loader2 size={12} className="animate-spin" /> : <Share2 size={12} />}
               {busy ? 'Creating…' : 'Create share'}
@@ -233,7 +233,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
 function FieldGroup({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
   return (
     <div>
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="mb-1 block font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </span>
       {children}
@@ -253,24 +253,24 @@ function ResultBlock({
   const expires = new Date(expiresAt).toLocaleString();
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
+      <div className="flex items-center gap-2 text-sm font-semibold text-brand-text">
         <CheckCircle2 size={14} /> Share created
       </div>
       <div>
-        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <span className="mb-1 block font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           Share link
         </span>
         <div className="flex items-center gap-2">
           <input
             readOnly
             value={url}
-            className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 font-mono text-xs"
+            className="flex-1 rounded-sm border border-border bg-background px-2.5 py-1.5 font-mono text-xs"
             onFocus={(e) => e.currentTarget.select()}
           />
           <button
             type="button"
             onClick={onCopy}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-transparent px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground"
             title="Copy to clipboard"
             aria-label="Copy to clipboard"
           >

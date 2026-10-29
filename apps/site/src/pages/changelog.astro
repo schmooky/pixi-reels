@@ -24,12 +24,10 @@ const jsonLd = [
   jsonLd={jsonLd}
 >
   <div class="container py-12">
-    <article class="prose-docs mx-auto min-w-0 max-w-3xl animate-fade-in">
-      <div class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-        Reference
-      </div>
-      <h1 class="mb-3 text-4xl font-semibold tracking-tight">Changelog</h1>
-      <p class="!mt-0 text-muted-foreground">
+    <article class="changelog prose-docs mx-auto min-w-0 max-w-3xl animate-fade-in">
+      <p class="eyebrow my-0 leading-none">Reference</p>
+      <h1 class="display mb-5 mt-4 text-4xl sm:text-5xl">Changelog</h1>
+      <p class="!mt-0 text-lg text-muted-foreground">
         Latest published version: <a
           href="https://www.npmjs.com/package/pixi-reels"
           class="font-mono"
@@ -47,3 +45,22 @@ const jsonLd = [
     </article>
   </div>
 </Base>
+
+<style>
+  /* The generated notes open with their own "# pixi-reels" title, already
+     said by the page heading. */
+  .changelog :global(h1:not(.display)) { display: none; }
+  /* The newest release is the first version heading in the generated notes;
+     it gets a lime "Latest" eyebrow above it. */
+  .changelog :global(h2:first-of-type)::before {
+    content: 'Latest';
+    display: block;
+    margin-bottom: 0.5rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Cascadia Mono', 'Roboto Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: hsl(var(--brand-text));
+  }
+</style>

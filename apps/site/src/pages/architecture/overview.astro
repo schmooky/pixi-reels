@@ -102,7 +102,7 @@ import Callout from '../../components/arch/Callout.astro';
         sub={['ReelAxis', 'ReelMotion', 'StopSequencer', 'ReelSymbol[]']}
       />
     ))}
-    <rect x={30} y={100} width={660} height={74} rx="10" class="guide-strong" style="stroke-dasharray: 6 4" />
+    <rect x={30} y={100} width={660} height={74} rx="2" class="guide-strong" style="stroke-dasharray: 6 4" />
     <Label x={360} y={244} text="dashed = the visible window (the mask)" anchor="middle" tone="fg" />
     <Label x={360} y={268} text="the symbols above and below it are buffer cells, drawn but clipped" anchor="middle" />
   </Diagram>
@@ -185,8 +185,8 @@ import Callout from '../../components/arch/Callout.astro';
   </p>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>core/</code> the set, the builder, one reel and its motion, axis, curve and viewport</li>
         <li><code>spin/</code> the controller, the phases and their steps, the spinning modes</li>
@@ -199,8 +199,8 @@ import Callout from '../../components/arch/Callout.astro';
         <li><code>debug/</code>, <code>testing/</code> the two subpaths</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">apps/site/src/runtime/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">apps/site/src/runtime/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>BlurSpriteSymbol.ts</code> a sprite symbol that swaps to a motion-blur texture while spinning</li>
         <li><code>CoinSymbol.ts</code> a coin drawn with Graphics, for Hold &amp; Win demos</li>
@@ -208,7 +208,7 @@ import Callout from '../../components/arch/Callout.astro';
         <li><code>prototypeSpriteLoader.ts</code> the open-licensed symbol atlas the demos use</li>
         <li><code>spineSets.ts</code> the bundled Spine sets behind one interface</li>
       </ul>
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">packages/cheats/src/</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mt-4 mb-1">packages/cheats/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>cheats.ts</code> forced results for demos and tests</li>
         <li><code>seededRng.ts</code> a tiny seeded random number generator</li>

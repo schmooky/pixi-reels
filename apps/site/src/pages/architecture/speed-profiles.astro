@@ -137,7 +137,7 @@ const presets = [
     column produces in milliseconds.
   </p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -306,7 +306,7 @@ const presets = [
     two settings wins.
   </p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -342,8 +342,8 @@ const presets = [
     not do matters as much as what it does.
   </p>
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">API</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">API</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>new SpeedManager(profiles: Map, initialSpeed)</code>: throws on an unknown initial name</li>
         <li><code>active</code>: the active profile with tunes merged in, cached in <code>_tuned</code></li>
@@ -354,8 +354,8 @@ const presets = [
         <li><code>addProfile(name, profile)</code>, <code>getProfile(name)</code>, <code>profileNames</code></li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">What it does not do</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">What it does not do</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li>It emits nothing. <code>speed:changed(current, previous)</code> comes from <code>ReelSet.setSpeed</code>, which also calls <code>notifyManualSpeedChange()</code> on the controller.</li>
         <li>It does not affect a running spin. <code>spin()</code> reads <code>active</code> once into <code>_activeSpinSpeed</code> and every phase of that spin gets the same object, so a <code>set()</code> or <code>tune()</code> takes effect on the next spin.</li>
@@ -381,7 +381,7 @@ reelSet.speed.clearTune('stop');`}</code></pre>
   <h2>Defaults</h2>
   <p>The fallbacks when neither the profile nor a section sets a field.</p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -414,8 +414,8 @@ reelSet.speed.clearTune('stop');`}</code></pre>
     </div>
   </div>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card p-4">
-    <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Where this lives</div>
+  <div class="not-prose my-6 rounded-lg border border-border bg-card p-4">
+    <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Where this lives</div>
     <ul class="text-sm space-y-1 text-foreground/80">
       <li><code>packages/pixi-reels/src/config/types.ts</code>: SpeedProfileBase, PhaseTiming, StepTiming, PhaseSection, PhaseProfiles, the step-name interfaces</li>
       <li><code>packages/pixi-reels/src/config/phaseProfile.ts</code>: resolvePhaseProfile, resolveStepTiming, mergeSection, mergeBody, tuneProfile, configuredStepNames</li>

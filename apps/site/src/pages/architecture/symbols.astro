@@ -109,7 +109,7 @@ const inBlock = (r: number, c: number) => r >= 1 && r <= 2 && c >= 0 && c <= 1;
     sequence of each template method.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>{['Template method', 'What it does, in order'].map((h) => <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>)}</tr>
@@ -141,7 +141,7 @@ const inBlock = (r: number, c: number) => r >= 1 && r <= 2 && c >= 0 && c <= 1;
     a symbol can relax or sharpen its art as it spins, teases and lands.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>{['Member', 'Required', 'Default and contract'].map((h) => <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>)}</tr>
@@ -310,7 +310,7 @@ poolCapacity = builder.poolCapacity(n) ?? max(20, sum over reels of (visible + b
       return <Cell x={cx(r)} y={cy(c)} size={CS} label={inBlock(r, c) ? 'stub' : `${r},${c}`} sub={inBlock(r, c) ? 'OCCUPIED' : undefined} kind={inBlock(r, c) ? 'empty' : 'plain'} />;
     }))}
     <Cell x={cx(1)} y={cy(0)} size={CS} label="anchor" sub="'bonus'" kind="hot" />
-    <rect x={cx(1) - 4} y={cy(0) - 4} width={2 * CS + GAP + 8} height={2 * CS + GAP + 8} rx="10" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <rect x={cx(1) - 4} y={cy(0) - 4} width={2 * CS + GAP + 8} height={2 * CS + GAP + 8} rx="2" class="guide-strong" style="stroke-dasharray: 4 3" />
     <Edge from={[cx(1), 60]} to={[cx(2) + CS, 60]} arrow="both" label="size.reels = 2" labelDy={-30} />
     <Edge from={[cx(4) + CS + 20, cy(0)]} to={[cx(4) + CS + 20, cy(1) + CS]} arrow="both" label="size.cells = 2" labelDx={86} />
   </Diagram>
@@ -354,7 +354,7 @@ poolCapacity = builder.poolCapacity(n) ?? max(20, sum over reels of (visible + b
     art is rigged.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>{['Class', 'Options and defaults', 'Behaviour'].map((h) => <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>)}</tr>
@@ -391,7 +391,7 @@ poolCapacity = builder.poolCapacity(n) ?? max(20, sum over reels of (visible + b
     each role, its default name, and what triggers it.
   </p>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>{['Role', 'Default name', 'Loops', 'How it plays'].map((h) => <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>)}</tr>

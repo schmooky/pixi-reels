@@ -32,17 +32,17 @@ const placeholderTitle = alt || monogram(src ?? 'preview');
 ---
 <figure class="not-prose my-6">
   {media?.kind === 'image' && (
-    <img src={media.src} alt={alt} loading="lazy" decoding="async" class="w-full rounded-xl border border-border bg-muted/30" />
+    <img src={media.src} alt={alt} loading="lazy" decoding="async" class="w-full rounded-lg border border-border bg-muted/30" />
   )}
   {media?.kind === 'video' && (
-    <video autoplay muted loop playsinline preload="metadata" aria-label={alt} class="w-full rounded-xl border border-border bg-muted/30">
+    <video autoplay muted loop playsinline preload="metadata" aria-label={alt} class="w-full rounded-lg border border-border bg-muted/30">
       <source src={media.src} />
     </video>
   )}
   {!media && (
-    <div class="overflow-hidden rounded-xl border border-dashed border-border" style={`aspect-ratio: ${ratio};`}>
+    <div class="overflow-hidden rounded-lg border border-dashed border-border" style={`aspect-ratio: ${ratio};`}>
       <RecipePlaceholder title={placeholderTitle} caption={alt} hint={src ? `public${src}` : undefined} />
     </div>
   )}
-  {caption && <figcaption class="mt-2 text-center text-xs text-muted-foreground">{caption}</figcaption>}
+  {caption && <figcaption class="mt-3 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{caption}</figcaption>}
 </figure>

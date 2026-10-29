@@ -118,15 +118,15 @@ const BOTTOM = laneY(4) + LANE_H;
           {/* lanes */}
           {normal.map((l) => (
             <>
-              <rect x={X0} y={laneY(l.i)} width={X1 - X0} height={LANE_H} rx={6} class="lane-bg" />
+              <rect x={X0} y={laneY(l.i)} width={X1 - X0} height={LANE_H} rx={2} class="lane-bg" />
               <Label x={20} y={laneY(l.i) + 23} text={`reel ${l.i}`} mono tone="fg" weight={600} />
-              <rect x={X(l.delay)} y={spanY(l.i)} width={X(l.spinIn) - X(l.delay)} height={SPAN_H} rx={4} class="span-start" />
-              <rect x={X(l.spinIn)} y={spanY(l.i)} width={X(l.spinDone) - X(l.spinIn)} height={SPAN_H} rx={4} class="span-spin" />
+              <rect x={X(l.delay)} y={spanY(l.i)} width={X(l.spinIn) - X(l.delay)} height={SPAN_H} rx={2} class="span-start" />
+              <rect x={X(l.spinIn)} y={spanY(l.i)} width={X(l.spinDone) - X(l.spinIn)} height={SPAN_H} rx={2} class="span-spin" />
               {l.spinOutAt > l.spinDone && (
-                <rect x={X(l.spinDone)} y={spanY(l.i)} width={X(l.spinOutAt) - X(l.spinDone)} height={SPAN_H} rx={4} class="span-rest" />
+                <rect x={X(l.spinDone)} y={spanY(l.i)} width={X(l.spinOutAt) - X(l.spinDone)} height={SPAN_H} rx={2} class="span-rest" />
               )}
-              <rect x={X(l.spinOutAt)} y={spanY(l.i)} width={X(l.land) - X(l.spinOutAt)} height={SPAN_H} rx={4} class="span-stop" />
-              <rect x={X(l.land)} y={spanY(l.i)} width={X(l.landed) - X(l.land)} height={SPAN_H} rx={4} class="span-bounce" />
+              <rect x={X(l.spinOutAt)} y={spanY(l.i)} width={X(l.land) - X(l.spinOutAt)} height={SPAN_H} rx={2} class="span-stop" />
+              <rect x={X(l.land)} y={spanY(l.i)} width={X(l.landed) - X(l.land)} height={SPAN_H} rx={2} class="span-bounce" />
               {/* event ticks: spin:stopping, spin:reelLanding, spin:reelLanded */}
               <line x1={X(l.spinDone)} y1={laneY(l.i) - 3} x2={X(l.spinDone)} y2={laneY(l.i) + 4} class="guide-strong" />
               <line x1={X(l.land)} y1={laneY(l.i) - 3} x2={X(l.land)} y2={laneY(l.i) + 4} class="guide-strong" />
@@ -153,7 +153,7 @@ const BOTTOM = laneY(4) + LANE_H;
             ['span-bounce', 'bounce', 580],
           ] as const).map(([cls, label, x]) => (
             <>
-              <rect x={x} y={BOTTOM + 68} width={14} height={13} rx={3} class={cls} />
+              <rect x={x} y={BOTTOM + 68} width={14} height={13} rx={2} class={cls} />
               <Label x={x + 20} y={BOTTOM + 79} text={label} />
             </>
           ))}
@@ -169,7 +169,7 @@ const BOTTOM = laneY(4) + LANE_H;
     events your game would hear at each moment.
   </p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -212,7 +212,7 @@ const BOTTOM = laneY(4) + LANE_H;
     the handy form when you are checking your own event log against it.
   </p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -300,21 +300,21 @@ const BOTTOM = laneY(4) + LANE_H;
           <Label x={STAMP_X} y={40} text="landed" mono tone="faint" />
           {teased.map((l) => (
             <>
-              <rect x={X0} y={laneY(l.i)} width={X1 - X0} height={LANE_H} rx={6} class="lane-bg" />
+              <rect x={X0} y={laneY(l.i)} width={X1 - X0} height={LANE_H} rx={2} class="lane-bg" />
               <Label x={20} y={laneY(l.i) + 23} text={`reel ${l.i}`} mono tone="fg" weight={600} />
-              <rect x={X(l.delay)} y={spanY(l.i)} width={X(l.spinIn) - X(l.delay)} height={SPAN_H} rx={4} class="span-start" />
-              <rect x={X(l.spinIn)} y={spanY(l.i)} width={X(l.spinDone) - X(l.spinIn)} height={SPAN_H} rx={4} class="span-spin" />
+              <rect x={X(l.delay)} y={spanY(l.i)} width={X(l.spinIn) - X(l.delay)} height={SPAN_H} rx={2} class="span-start" />
+              <rect x={X(l.spinIn)} y={spanY(l.i)} width={X(l.spinDone) - X(l.spinIn)} height={SPAN_H} rx={2} class="span-spin" />
               {l.teaseStart !== undefined && l.teaseEnd !== undefined && (
-                <rect x={X(l.teaseStart)} y={spanY(l.i)} width={X(l.teaseEnd) - X(l.teaseStart)} height={SPAN_H} rx={4} class="span-anticipation" />
+                <rect x={X(l.teaseStart)} y={spanY(l.i)} width={X(l.teaseEnd) - X(l.teaseStart)} height={SPAN_H} rx={2} class="span-anticipation" />
               )}
               {(() => {
                 const from = l.teaseEnd ?? l.spinDone;
                 return l.spinOutAt > from ? (
-                  <rect x={X(from)} y={spanY(l.i)} width={X(l.spinOutAt) - X(from)} height={SPAN_H} rx={4} class="span-rest" />
+                  <rect x={X(from)} y={spanY(l.i)} width={X(l.spinOutAt) - X(from)} height={SPAN_H} rx={2} class="span-rest" />
                 ) : null;
               })()}
-              <rect x={X(l.spinOutAt)} y={spanY(l.i)} width={X(l.land) - X(l.spinOutAt)} height={SPAN_H} rx={4} class="span-stop" />
-              <rect x={X(l.land)} y={spanY(l.i)} width={X(l.landed) - X(l.land)} height={SPAN_H} rx={4} class="span-bounce" />
+              <rect x={X(l.spinOutAt)} y={spanY(l.i)} width={X(l.land) - X(l.spinOutAt)} height={SPAN_H} rx={2} class="span-stop" />
+              <rect x={X(l.land)} y={spanY(l.i)} width={X(l.landed) - X(l.land)} height={SPAN_H} rx={2} class="span-bounce" />
               <line x1={X(l.spinDone)} y1={laneY(l.i) - 3} x2={X(l.spinDone)} y2={laneY(l.i) + 4} class="guide-strong" />
               <line x1={X(l.land)} y1={laneY(l.i) - 3} x2={X(l.land)} y2={laneY(l.i) + 4} class="guide-strong" />
               <line x1={X(l.landed)} y1={laneY(l.i) - 3} x2={X(l.landed)} y2={laneY(l.i) + 4} class="guide-strong" />
@@ -334,7 +334,7 @@ const BOTTOM = laneY(4) + LANE_H;
             ['span-bounce', 'bounce', 506],
           ] as const).map(([cls, label, x]) => (
             <>
-              <rect x={x} y={BOTTOM + 68} width={14} height={13} rx={3} class={cls} />
+              <rect x={x} y={BOTTOM + 68} width={14} height={13} rx={2} class={cls} />
               <Label x={x + 20} y={BOTTOM + 79} text={label} />
             </>
           ))}
@@ -412,7 +412,7 @@ const BOTTOM = laneY(4) + LANE_H;
     replay above it bites.
   </p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -477,8 +477,8 @@ const BOTTOM = laneY(4) + LANE_H;
     NORMAL that is a 600 ms gap per reel.
   </Callout>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card p-4">
-    <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Where this lives</div>
+  <div class="not-prose my-6 rounded-lg border border-border bg-card p-4">
+    <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Where this lives</div>
     <ul class="text-sm space-y-1 text-foreground/80">
       <li><code>packages/pixi-reels/src/config/SpeedPresets.ts</code>: the three presets</li>
       <li><code>packages/pixi-reels/src/spin/SpinController.ts</code>: <code>_startReel</code>, <code>_stopDelayFor</code>, <code>_tryBeginStopSequence</code>, <code>_markLanded</code></li>

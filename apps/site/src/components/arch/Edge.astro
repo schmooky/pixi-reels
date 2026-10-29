@@ -2,7 +2,7 @@
 /**
  * A connector inside a `<Diagram>`. Straight, orthogonal (via `via` points)
  * or a gentle curve, with an arrow head at the end (or both ends, or none)
- * and an optional label pill placed at a point along the path.
+ * and an optional label box placed at a point along the path.
  *
  * Route edges so they leave and enter box EDGES (x+w, y+h/2 ...), never box
  * centres, and never pass under text. Put a label where there is empty
@@ -75,7 +75,7 @@ const labelW = label ? label.length * (mono ? 7.6 : 7) + 18 : 0;
   />
   {label && (
     <g transform={`translate(${lx + labelDx} ${ly + labelDy})`}>
-      <rect x={-labelW / 2} y={-12} width={labelW} height="24" rx="12" class="edge-label-bg" />
+      <rect x={-labelW / 2} y={-12} width={labelW} height="24" rx="2" class="edge-label-bg" />
       <text x="0" y="4.5" text-anchor="middle" font-size="13" font-weight="500" class:list={['edge-label', { mono }]}>{label}</text>
     </g>
   )}

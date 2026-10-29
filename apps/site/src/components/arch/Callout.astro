@@ -26,8 +26,8 @@ const tone: Record<string, string> = {
   remember: 'border-l-primary',
 };
 ---
-<aside class:list={['not-prose my-6 rounded-r-xl border border-border border-l-4 bg-card px-5 py-4', tone[kind]]}>
-  <div class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{heading}</div>
+<aside class:list={['not-prose my-6 rounded-r-sm border border-border border-l-4 bg-card px-5 py-4', tone[kind]]}>
+  <div class="mb-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{heading}</div>
   <div class="text-[15px] leading-7 text-foreground/85 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_p+p]:mt-2">
     <slot />
   </div>

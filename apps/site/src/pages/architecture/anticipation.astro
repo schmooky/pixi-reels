@@ -154,7 +154,7 @@ const orders = [0, 1, 2].map((order) => {
       [LX.out, LX.end, 'span-bounce', 'bounce'],
     ] as const).map(([a, b, cls, name]) => (
       <>
-        <rect x={a} y={252} width={b - a} height={14} rx={3} class={cls} />
+        <rect x={a} y={252} width={b - a} height={14} rx={2} class={cls} />
         <Label x={(a + b) / 2} y={284} text={name} anchor="middle" />
       </>
     ))}
@@ -199,7 +199,7 @@ const orders = [0, 1, 2].map((order) => {
 
   <p>The options, with their defaults.</p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -376,10 +376,10 @@ const orders = [0, 1, 2].map((order) => {
             return (
               <>
                 <Label x={36} y={y + 21} text={`#${order}`} mono tone="faint" />
-                <rect x={LANE_X0} y={y} width={LANE_W} height={32} rx={5} class="lane-bg" />
-                {off > 0 && <rect x={LANE_X0} y={y + 4} width={tStart} height={24} rx={3} class="span-spin" />}
-                <rect x={LANE_X0 + tStart} y={y + 4} width={tEnd - tStart} height={24} rx={3} class="span-anticipation" />
-                <rect x={LANE_X0 + tEnd} y={y + 4} width={sEnd - tEnd} height={24} rx={3} class="span-stop" />
+                <rect x={LANE_X0} y={y} width={LANE_W} height={32} rx={2} class="lane-bg" />
+                {off > 0 && <rect x={LANE_X0} y={y + 4} width={tStart} height={24} rx={2} class="span-spin" />}
+                <rect x={LANE_X0 + tStart} y={y + 4} width={tEnd - tStart} height={24} rx={2} class="span-anticipation" />
+                <rect x={LANE_X0 + tEnd} y={y + 4} width={sEnd - tEnd} height={24} rx={2} class="span-stop" />
               </>
             );
           })}
@@ -392,7 +392,7 @@ const orders = [0, 1, 2].map((order) => {
       ['span-stop', 'stop delay 250 ms', 390],
     ] as const).map(([cls, label, x]) => (
       <>
-        <rect x={x} y={594} width={14} height={13} rx={3} class={cls} />
+        <rect x={x} y={594} width={14} height={13} rx={2} class={cls} />
         <Label x={x + 20} y={605} text={label} />
       </>
     ))}
@@ -522,7 +522,7 @@ const orders = [0, 1, 2].map((order) => {
   <h2>Events</h2>
   <p>What your game hears from a teasing reel, in order.</p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -552,7 +552,7 @@ const orders = [0, 1, 2].map((order) => {
   <h2>Defaults</h2>
   <p>Every number on this page, and the file that owns it.</p>
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -586,8 +586,8 @@ const orders = [0, 1, 2].map((order) => {
     </div>
   </div>
 
-  <div class="not-prose my-6 rounded-xl border border-border bg-card p-4">
-    <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">Where this lives</div>
+  <div class="not-prose my-6 rounded-lg border border-border bg-card p-4">
+    <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Where this lives</div>
     <ul class="text-sm space-y-1 text-foreground/80">
       <li><code>packages/pixi-reels/src/spin/phases/AnticipationPhase.ts</code>: the tease step, both shapes, _runSegment, _endTease, the travel check</li>
       <li><code>packages/pixi-reels/src/spin/SpinController.ts</code>: setAnticipation, assertAnticipationOptions, _anticipationConfigFor, _awaitAnticipationOffset, the tease decision in _startReel</li>

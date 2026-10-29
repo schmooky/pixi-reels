@@ -211,7 +211,7 @@ const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider t
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>The player experiences</th><th class={th}>Listen for</th><th class={th}>What to do there</th></tr></thead>
         <tbody>
@@ -237,8 +237,8 @@ const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider t
   </p>
 
   <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-2">Pattern: Skip button</div>
+    <div class="rounded-lg border border-border bg-card p-5">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-2">Pattern: Skip button</div>
       <p class="text-sm text-muted-foreground mb-3">
         Use <code>isSpinning</code> to branch the same button between "start" and "skip".
       </p>
@@ -248,8 +248,8 @@ const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider t
 });`}</code></pre>
     </div>
 
-    <div class="rounded-xl border border-border bg-card p-5">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-2">Pattern: Fetch + stop</div>
+    <div class="rounded-lg border border-border bg-card p-5">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-2">Pattern: Fetch + stop</div>
       <p class="text-sm text-muted-foreground mb-3">
         Real slots fetch the server answer while the reels are spinning, then call
         setResult() to release the stop.
@@ -295,7 +295,7 @@ await p;`}</code></pre>
   <Diagram height={H1} caption="From spin() to the result. phase:exit 'start' is followed at once by phase:enter 'spin', and phase:exit 'spin' by phase:enter 'anticipation' on a teasing reel. spin:start fires again on every cascade refill.">
     {LANE_X.map((x, i) => (
       <>
-        <rect x={x} y={48} width={LANE_W} height={H1 - 60} rx="12" class="lane-bg" />
+        <rect x={x} y={48} width={LANE_W} height={H1 - 60} rx="2" class="lane-bg" />
         <Label x={x + LANE_W / 2} y={36} text={LANES[i]} anchor="middle" mono tone="fg" weight={600} size={14} />
       </>
     ))}
@@ -334,11 +334,11 @@ await p;`}</code></pre>
   <Diagram height={H2} caption="From the first stop to spin:complete. The dashed window repeats per reel in stop order and on every cascade stage; held reels skip it. The solid arrow is SpinController.attachReel() relaying landing as spin:reelLanding on the result frame, before the bounce; spin:reelLanded follows the reel's landed one bounce later (same tick on a slam), right after phase:exit 'stop'.">
     {LANE_X.map((x, i) => (
       <>
-        <rect x={x} y={48} width={LANE_W} height={H2 - 60} rx="12" class="lane-bg" />
+        <rect x={x} y={48} width={LANE_W} height={H2 - 60} rx="2" class="lane-bg" />
         <Label x={x + LANE_W / 2} y={36} text={LANES[i]} anchor="middle" mono tone="fg" weight={600} size={14} />
       </>
     ))}
-    <rect x={LANE_X[1] - 6} y={row(0) - 10} width={LANE_X[2] + LANE_W + 6 - (LANE_X[1] - 6)} height={row(5) + BH + 10 - (row(0) - 10)} rx="12" class="guide-strong" style="stroke-dasharray: 5 4" />
+    <rect x={LANE_X[1] - 6} y={row(0) - 10} width={LANE_X[2] + LANE_W + 6 - (LANE_X[1] - 6)} height={row(5) + BH + 10 - (row(0) - 10)} rx="2" class="guide-strong" style="stroke-dasharray: 5 4" />
     <Label x={bx(0)} y={row(2)} text={['dashed window:', 'per reel, in stop order,', 'again per cascade stage']} tone="fg" />
 
     <Box x={bx(1)} y={row(0)} w={BW} h={BH} title="spin:stopping" kind="primary" />
@@ -415,7 +415,7 @@ await p;`}</code></pre>
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -471,7 +471,7 @@ await p;`}</code></pre>
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr>
@@ -542,7 +542,7 @@ await p;`}</code></pre>
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr><th class={th}>Method</th><th class={th}>Behaviour</th></tr>
@@ -565,7 +565,7 @@ await p;`}</code></pre>
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60">
           <tr><th class={th}>Rule</th><th class={th}>What it means for you</th></tr>
@@ -620,15 +620,15 @@ await p;`}</code></pre>
   <h2>Where this lives</h2>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/events/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/events/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>EventEmitter.ts</code> the class, 145 lines, no dependencies</li>
         <li><code>ReelEvents.ts</code> ReelSetEvents, ReelEvents, SpinResult, SkipInfo, RunCascadeResult</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">emitters</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">emitters</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>core/ReelSet.ts</code> owns <code>_events</code>; pin, nudge, expand, column, cascade chain events</li>
         <li><code>spin/SpinController.ts</code> spin, skip, anticipation, adjust events and the landing relay</li>

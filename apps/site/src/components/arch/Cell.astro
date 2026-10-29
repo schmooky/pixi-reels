@@ -20,7 +20,7 @@ interface Props {
   mono?: boolean;
   class?: string;
 }
-const { x, y, size = 48, w, h, label, sub, kind = 'plain', r = 8, mono = true, class: className } = Astro.props as Props;
+const { x, y, size = 48, w, h, label, sub, kind = 'plain', r = 2, mono = true, class: className } = Astro.props as Props;
 const cw = w ?? size;
 const ch = h ?? size;
 const fs = Math.min(16, Math.max(13, Math.round(Math.min(cw, ch) * 0.32)));

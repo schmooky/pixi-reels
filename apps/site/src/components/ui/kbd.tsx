@@ -15,7 +15,7 @@ interface KbdProps {
  * unicode glyphs the repo's fancy-unicode guard forbids.
  */
 export function Kbd({ children, icon, className }: KbdProps) {
-  const base = 'inline-flex h-5 min-w-[1.25rem] items-center justify-center gap-0.5 rounded border border-border bg-background/80 px-1 font-mono text-[10px] font-medium text-muted-foreground shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)]';
+  const base = 'inline-flex h-5 min-w-[1.25rem] items-center justify-center gap-0.5 rounded-sm border border-border bg-background/80 px-1 font-mono text-[10px] font-medium text-muted-foreground';
   return (
     <kbd className={cn(base, className)}>
       {icon === 'cmd' ? <Command size={10} strokeWidth={2.5} /> : null}

@@ -191,11 +191,11 @@ export default function ShareViewer(): JSX.Element {
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void handleUnlock(); }}
             placeholder="Password"
-            className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-sm border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
             autoFocus
           />
           {decryptError && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
+            <div className="flex items-start gap-2 rounded-sm border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
               <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
               <span>{decryptError}</span>
             </div>
@@ -204,7 +204,7 @@ export default function ShareViewer(): JSX.Element {
             type="button"
             onClick={() => void handleUnlock()}
             disabled={decryptBusy || password.length === 0}
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-sm bg-brand px-3 py-1.5 text-xs font-semibold text-brand-foreground transition-[transform,background-color] duration-[133ms] hover:bg-brand/90 active:scale-[0.97] disabled:opacity-50"
           >
             {decryptBusy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
             {decryptBusy ? 'Decrypting…' : 'Unlock'}
@@ -410,9 +410,9 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]">
-      <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-        <div className="relative flex-1 min-h-[480px]">
-          <div ref={canvasHostRef} className="h-full w-full bg-background" />
+      <div className="flex flex-col overflow-hidden rounded-sm border border-border bg-card">
+        <div className="theme-ink relative flex-1 min-h-[480px]">
+          <div ref={canvasHostRef} className="h-full w-full bg-[#111114]" />
           <button
             type="button"
             onClick={() => void handleSpin()}
@@ -420,10 +420,10 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
             title={isSpinning ? 'Stop' : 'Spin'}
             aria-label={isSpinning ? 'Stop' : 'Spin'}
             className={cn(
-              'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
-              'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
-              'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
-              isSpinning && 'bg-primary text-primary-foreground border-primary',
+              'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-sm',
+              'bg-brand text-brand-foreground',
+              'transition-[transform,background-color,color] duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] hover:bg-brand/90 active:scale-[0.97]',
+              isSpinning && 'bg-foreground text-background hover:bg-foreground/90',
               'disabled:cursor-not-allowed disabled:opacity-50',
             )}
           >
@@ -438,14 +438,14 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
             </>
           ) : (
             <>
-              <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0 text-emerald-500" />
+              <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0 text-brand-text" />
               <span className="text-muted-foreground">{status}</span>
             </>
           )}
           <button
             type="button"
             onClick={() => void run()}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-sm bg-brand px-3 py-1 text-xs font-semibold text-brand-foreground transition-[transform,background-color] duration-[133ms] hover:bg-brand/90 active:scale-[0.97]"
           >
             Run
           </button>
@@ -453,8 +453,8 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
       </div>
 
       {codeAccessible && (
-        <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-          <div className="border-b border-border/60 bg-background/40 px-3 py-2 text-xs font-semibold text-muted-foreground">
+        <div className="flex flex-col overflow-hidden rounded-sm border border-border bg-card">
+          <div className="border-b border-border/60 bg-background/40 px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             Code (read-only)
           </div>
           <div className="h-[560px]">
@@ -487,7 +487,7 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
 
 function CenteredCard({ children }: { children: React.ReactNode }): JSX.Element {
   return (
-    <div className="flex min-h-[480px] items-center justify-center rounded-xl border border-border bg-card p-8">
+    <div className="flex min-h-[480px] items-center justify-center rounded-sm border border-border bg-card p-8">
       {children}
     </div>
   );

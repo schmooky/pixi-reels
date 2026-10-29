@@ -37,7 +37,7 @@ interface Props {
   class?: string;
 }
 const {
-  x, y, w, h, title, sub, kind = 'subtle', badge, href, r = 10, size = 15, subSize = 13, mono = true, align = 'center', class: className,
+  x, y, w, h, title, sub, kind = 'subtle', badge, href, r = 2, size = 15, subSize = 13, mono = true, align = 'center', class: className,
 } = Astro.props as Props;
 
 const subLines = sub === undefined ? [] : Array.isArray(sub) ? sub : [sub];
@@ -54,7 +54,7 @@ const badgeW = badge ? badge.length * 7.6 + 14 : 0;
     <rect x={x} y={y} width={w} height={h} rx={r} class="box-bg" />
     {badge && (
       <g>
-        <rect x={x + 8} y={y + 8} width={badgeW} height="18" rx="6" class="box-badge-bg" />
+        <rect x={x + 8} y={y + 8} width={badgeW} height="18" rx="2" class="box-badge-bg" />
         <text x={x + 8 + badgeW / 2} y={y + 21} text-anchor="middle" font-size="12" font-weight="700" class="box-badge mono">{badge}</text>
       </g>
     )}
@@ -69,7 +69,7 @@ const badgeW = badge ? badge.length * 7.6 + 14 : 0;
     <rect x={x} y={y} width={w} height={h} rx={r} class="box-bg" />
     {badge && (
       <g>
-        <rect x={x + 8} y={y + 8} width={badgeW} height="18" rx="6" class="box-badge-bg" />
+        <rect x={x + 8} y={y + 8} width={badgeW} height="18" rx="2" class="box-badge-bg" />
         <text x={x + 8 + badgeW / 2} y={y + 21} text-anchor="middle" font-size="12" font-weight="700" class="box-badge mono">{badge}</text>
       </g>
     )}

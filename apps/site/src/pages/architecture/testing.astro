@@ -248,7 +248,7 @@ it('lands the grid it was given and fires the round events', async () => {
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>FakeTicker</th><th class={th}>Behaviour</th></tr></thead>
         <tbody>
@@ -299,7 +299,7 @@ it('lands the grid it was given and fires the round events', async () => {
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>Option</th><th class={th}>Default</th><th class={th}>Meaning</th></tr></thead>
         <tbody>
@@ -323,7 +323,7 @@ it('lands the grid it was given and fires the round events', async () => {
   </p>
 
   <div class="not-prose my-6">
-    <div class="rounded-xl border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-muted/60"><tr><th class={th}>Helper</th><th class={th}>Behaviour</th></tr></thead>
         <tbody>
@@ -392,16 +392,16 @@ it('lands the grid it was given and fires the round events', async () => {
   </p>
 
   <div class="not-prose my-6 grid gap-3 md:grid-cols-3">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">tests/integration</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">tests/integration</div>
       <p class="text-sm text-foreground/80">Mechanic tests built on <code>createTestReelSet</code>: pins, movePin, expand, cascade, big symbols, columns, rows, hold reels, the spin watchdog, spotlight, teardown, and the cheats. <code>mechanics.test.ts</code> is the template every new mechanic test copies.</p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">tests/contract</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">tests/contract</div>
       <p class="text-sm text-foreground/80">The fourteen laws of ADR 018 as fast-check properties, run against the shipping <code>ReelMotion</code> in all four orientation x direction combinations, plus the isomorphism and mirror laws one level up at the <code>ReelSet</code>, and frame-by-frame golden position traces as inline snapshots. Deliberately driven from <code>ReelMotion</code> directly, not a full spin, because GSAP tweens are wall-clock driven and would make the baseline flap.</p>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">tests/e2e</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">tests/e2e</div>
       <p class="text-sm text-foreground/80"><code>orientation-matrix.spec.ts</code> runs the four travel combinations in a real browser with Playwright: WebGL, a real requestAnimationFrame, GSAP on the Pixi ticker, the full async lifecycle. It asserts engine state through <code>__PIXI_REELS_DEBUG</code>, not screenshots, because WebGL baselines are GPU- and platform-dependent. <code>cascade-rounds</code> and <code>recipes-mount</code> sit beside it.</p>
     </div>
   </div>
@@ -428,16 +428,16 @@ it('lands the grid it was given and fires the round events', async () => {
   <h2>Where this lives</h2>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/testing/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/testing/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>FakeTicker.ts</code> · <code>HeadlessSymbol.ts</code></li>
         <li><code>testHarness.ts</code> createTestReelSet, spinAndLand, captureEvents, expectGrid, countSymbol</li>
         <li><code>index.ts</code> the pixi-reels/testing barrel · <code>debug/debug.ts</code> the recorder</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">suites and decisions</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">suites and decisions</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>packages/pixi-reels/tests/</code> unit, integration, contract · <code>tests/e2e/</code> Playwright</li>
         <li><code>packages/cheats/src/</code> cheats.ts, seededRng.ts, ways.ts</li>

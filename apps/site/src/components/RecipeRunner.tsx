@@ -197,6 +197,12 @@ const LAYER_GROUPS = {
 type LayerGroup = keyof typeof LAYER_GROUPS;
 const DEFAULT_GROUPS: readonly LayerGroup[] = ['info', 'grid'];
 
+/** One toolbar voice: mono, 11px, uppercase; the primary action is the brand fill. */
+const TOOL_BUTTON =
+  'inline-flex h-6 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[11px] uppercase tracking-[0.14em] '
+  + 'transition-[color,background-color,border-color,transform] duration-[133ms] active:scale-[0.97] '
+  + 'disabled:cursor-not-allowed disabled:opacity-50';
+
 function layersFor(groups: readonly LayerGroup[]): DebugOverlayLayer[] {
   return groups.flatMap((g) => [...LAYER_GROUPS[g]]);
 }
@@ -613,12 +619,15 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   return (
     // Outer card frame + my-5 margin are supplied by the surrounding
     // <RecipeFrame> Astro wrapper so the layout is stable before JS
-    // hydrates. Don't add a duplicate card here. With the events panel open
-    // the canvas keeps its height and gives up width to the panel on the
-    // right; below the `sm` breakpoint the panel goes under the canvas.
-    <div className={cn('flex w-full bg-background', debugOn && 'flex-col sm:flex-row')} style={{ '--recipe-h': `${height}px` } as CSSProperties}>
+    // hydrates. Don't add a duplicate card here. The well keeps `height`;
+    // the toolbar under it is the strip RecipeFrame's skeleton reserves.
+    // With the events panel open the canvas keeps its height and gives up
+    // width to the panel on the right; below the `sm` breakpoint the panel
+    // goes under the canvas.
+    <div className="flex w-full flex-col bg-background" style={{ '--recipe-h': `${height}px` } as CSSProperties}>
+    <div className={cn('flex w-full', debugOn && 'flex-col sm:flex-row')}>
     <div
-      className="relative flex min-w-0 flex-1 items-center justify-center"
+      className="relative flex min-w-0 flex-1 items-center justify-center bg-[#111114]"
       style={{ height }}
     >
         <div
@@ -631,50 +640,36 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
             {error}
           </div>
         )}
+    </div>
+    {debugOn && (
+      <EventsPanel
+        entries={eventsRef.current}
+        tick={eventsTick}
+        onClear={clearEvents}
+        className="h-[220px] w-full shrink-0 border-t sm:h-[var(--recipe-h)] sm:w-[360px] sm:max-w-[46%] sm:border-l sm:border-t-0"
+      />
+    )}
+    </div>
+    <div className="flex min-h-9 flex-wrap items-center gap-1.5 border-t border-border px-1.5 py-1.5">
         <button
           type="button"
-          onClick={() => void handleSpin()}
+          onClick={toggleDebug}
           disabled={!!error || !ready}
-          title={spinning ? 'Skip' : 'Spin'}
-          aria-label={spinning ? 'Skip' : 'Spin'}
+          title={debugOn ? 'Hide the events panel and overlay' : canDebug ? 'Show the events panel and overlay' : 'Show the events panel'}
+          aria-label={debugOn ? 'Hide debug' : 'Show debug'}
+          aria-pressed={debugOn}
           className={cn(
-            // Right edge, vertically centered. Bigger touch target than
-            // the corner bottom-right pill. easier to hit on mobile, more
-            // obvious as the primary action on the canvas.
-            'absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-14 w-14 items-center justify-center rounded-full',
-            'border border-border/70 bg-background/80 text-foreground shadow-md backdrop-blur',
-            'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
-            spinning && 'bg-primary text-primary-foreground border-primary',
-            'disabled:cursor-not-allowed disabled:opacity-50',
+            TOOL_BUTTON,
+            debugOn
+              ? 'border-foreground bg-foreground text-background'
+              : 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground',
           )}
         >
-          {spinning
-            ? <SkipForward size={22} strokeWidth={2.25} />
-            : <RefreshCw size={22} strokeWidth={2.25} />}
+          <Bug size={11} strokeWidth={2.25} />
+          Debug
         </button>
-        {(
-          <button
-            type="button"
-            onClick={toggleDebug}
-            disabled={!!error || !ready}
-            title={debugOn ? 'Hide the events panel and overlay' : canDebug ? 'Show the events panel and overlay' : 'Show the events panel'}
-            aria-label={debugOn ? 'Hide debug' : 'Show debug'}
-            aria-pressed={debugOn}
-            className={cn(
-              'absolute left-2 top-2 inline-flex items-center gap-1 rounded-md border px-2 py-1',
-              'text-[10px] backdrop-blur transition-colors',
-              debugOn
-                ? 'border-primary bg-primary/90 text-primary-foreground'
-                : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
-            <Bug size={10} />
-            Debug
-          </button>
-        )}
         {debugOn && canDebug && (
-          <div className="absolute left-2 top-9 flex flex-col gap-1" role="group" aria-label="Overlay layers">
+          <div className="inline-flex h-6 divide-x divide-border rounded-sm border border-border" role="group" aria-label="Overlay layers">
             {(Object.keys(LAYER_GROUPS) as LayerGroup[]).map((group) => (
               <button
                 key={group}
@@ -683,10 +678,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
                 aria-pressed={groups.includes(group)}
                 title={`Overlay: ${LAYER_GROUPS[group].join(', ')}`}
                 className={cn(
-                  'rounded-md border px-2 py-0.5 text-left font-mono text-[10px] backdrop-blur transition-colors',
+                  'px-2 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors duration-[133ms]',
                   groups.includes(group)
-                    ? 'border-primary/70 bg-primary/20 text-foreground'
-                    : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
+                    ? 'bg-foreground text-background'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {group}
@@ -699,20 +694,25 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           onClick={openInStudio}
           title="Open in Studio"
           aria-label="Open in Studio"
-          className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
+          className={cn(TOOL_BUTTON, 'ml-auto border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground')}
         >
-          <ExternalLink size={10} />
+          <ExternalLink size={11} strokeWidth={2.25} />
           Studio
         </button>
+        <button
+          type="button"
+          onClick={() => void handleSpin()}
+          disabled={!!error || !ready}
+          title={spinning ? 'Skip' : 'Spin'}
+          aria-label={spinning ? 'Skip' : 'Spin'}
+          className={cn(TOOL_BUTTON, 'border-brand bg-brand text-brand-foreground')}
+        >
+          {spinning
+            ? <SkipForward size={11} strokeWidth={2.5} />
+            : <RefreshCw size={11} strokeWidth={2.5} />}
+          {spinning ? 'Skip' : 'Spin'}
+        </button>
     </div>
-    {debugOn && (
-      <EventsPanel
-        entries={eventsRef.current}
-        tick={eventsTick}
-        onClear={clearEvents}
-        className="h-[220px] w-full shrink-0 border-t sm:h-[var(--recipe-h)] sm:w-[360px] sm:max-w-[46%] sm:border-l sm:border-t-0"
-      />
-    )}
     </div>
   );
 }

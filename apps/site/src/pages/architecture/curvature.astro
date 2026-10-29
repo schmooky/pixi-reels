@@ -95,7 +95,7 @@ const modes = [
     {[0, 1, 2, 3, 4].map((i) => (
       <Cell x={40} y={70 + i * 54} size={48} label={['buf', 'A', 'B', 'C', 'buf'][i]} kind={i === 0 || i === 4 ? 'buffer' : 'plain'} />
     ))}
-    <rect x={34} y={118} width={60} height={162} rx="8" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <rect x={34} y={118} width={60} height={162} rx="2" class="guide-strong" style="stroke-dasharray: 4 3" />
 
     <Label x={CX - 40} y={42} text="side view" anchor="middle" weight={600} tone="fg" />
     <Box x={130} y={188} w={90} h={44} kind="ghost" title="camera" mono={false} />
@@ -177,7 +177,7 @@ const modes = [
     figure's caption says the buffers "continue on a straight line".
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -270,7 +270,7 @@ const modes = [
     reel per frame.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -415,9 +415,9 @@ const modes = [
             const lean = (focus - colCentre) * 0.35;
             return (
               <>
-                <g class="cell cell-buffer"><rect x={colCentre - 18 + lean} y={y0} width={36} height={44} rx="6" class="cell-bg" /></g>
+                <g class="cell cell-buffer"><rect x={colCentre - 18 + lean} y={y0} width={36} height={44} rx="2" class="cell-bg" /></g>
                 <Cell x={colCentre - 22} y={y0 + 52} size={44} kind="plain" />
-                <g class="cell cell-buffer"><rect x={colCentre - 18 + lean} y={y0 + 104} width={36} height={44} rx="6" class="cell-bg" /></g>
+                <g class="cell cell-buffer"><rect x={colCentre - 18 + lean} y={y0 + 104} width={36} height={44} rx="2" class="cell-bg" /></g>
                 <line x1={colCentre + lean} y1={y0 - 8} x2={colCentre} y2={y0 + 74} class="guide-strong" style="stroke-dasharray: 3 3" />
                 <line x1={colCentre} y1={y0 + 74} x2={colCentre + lean} y2={y0 + 156} class="guide-strong" style="stroke-dasharray: 3 3" />
               </>
@@ -463,7 +463,7 @@ const modes = [
     The values this page relies on, with the file each one is set in.
   </p>
 
-  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-muted/60">
         <tr>
@@ -498,8 +498,8 @@ const modes = [
   <h2>Where this lives</h2>
 
   <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/core/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/core/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>ReelCurve.ts</code> ReelCurveConfig, resolveCurveConfig, CurveFocus, CurveMode, CURVE_FOCUS_WEIGHT, quadFor, mapMain, scaleAt</li>
         <li><code>ReelWarp.ts</code> the render-to-texture mesh, update, resize, _displace</li>
@@ -509,14 +509,14 @@ const modes = [
         <li><code>ReelSetBuilder.ts</code> curve, curvePerReel, curveFocus, curveMode, curveBleed, renderer, the mask auto-pick</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/symbols/</div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/symbols/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>PerspectiveCell.ts</code> textureCellInset, canProjectTexture, PerspectiveCell</li>
         <li><code>ReelSymbol.ts</code> cellInset, applyCellQuad (affine fallback)</li>
         <li><code>SpriteSymbol.ts</code>, <code>AnimatedSpriteSymbol.ts</code> the two built-ins that project</li>
       </ul>
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mt-4 mb-1">config/types.ts</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mt-4 mb-1">config/types.ts</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>ReelCellQuad</code> (box plus x0..y3), <code>ReelCellInset</code> (left, top, right, bottom as fractions)</li>
       </ul>
