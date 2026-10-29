@@ -1453,7 +1453,7 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.PHASE_CARD_COLORS/
 
 ### SpeedPresets
 URL: https://pixi-reels.schmooky.dev/api/variables/index.SpeedPresets/
-```ts const SpeedPresets: { NORMAL: { accelerationDuration: 300; accelerationEase: "power2.in"; anticipationDelay: 450; bounceDistance: 56; bounceDuration: 600; decelerationEase: "power2.out"; minimum
+```ts const SpeedPresets: { NORMAL: { accelerationDuration: 300; accelerationEase: "power2.in"; anticipationDelay: 450; bounceDistance: 22; bounceDuration: 220; decelerationEase: "power2.out"; minimum
 
 ### VERTICAL\_FORWARD
 URL: https://pixi-reels.schmooky.dev/api/variables/index.VERTICAL_FORWARD/
