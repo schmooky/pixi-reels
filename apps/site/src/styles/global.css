@@ -42,6 +42,14 @@
 
     --radius: 0.75rem;
 
+    /* The one hue on the site: acid lime, the colour of a win. `--brand` is a
+       fill (ink text on it), `--brand-text` is the same hue dark enough to
+       read as text on the page background. Use it for the CTA, the live dot,
+       section eyebrows and the second line of the hero. Nothing else. */
+    --brand: 76 100% 50%;
+    --brand-foreground: 240 10% 4%;
+    --brand-text: 76 80% 27%;
+
     /* One dark surface used by every code-ish element (code blocks, reel
        well). Neutral, no warmth. */
     --code-bg: 240 10% 7%;
@@ -80,6 +88,10 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
+
+    --brand: 76 100% 58%;
+    --brand-foreground: 240 10% 4%;
+    --brand-text: 76 100% 62%;
 
     /* Code surface sits one step above the page so blocks read as elevated. */
     --code-bg: 240 6% 11%;
@@ -202,4 +214,119 @@
       radial-gradient(900px 300px at 50% 40%, hsl(0 0% 100% / 0.05), transparent 60%),
       hsl(var(--code-bg));
   }
+
+  /* A block that is ink in BOTH themes (the landing hero). It re-declares the
+     dark token set, so every token-driven class inside (bg-card, text-muted-
+     foreground, border-border, the CopyCommand pill) renders dark without a
+     `dark:` variant. */
+  .theme-ink {
+    color-scheme: dark;
+    --background: 240 10% 4.5%;
+    --foreground: 0 0% 98%;
+    --card: 240 8% 7%;
+    --card-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 68%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --border: 240 4% 18%;
+    --input: 240 4% 18%;
+    --ring: 76 100% 58%;
+    --brand: 76 100% 58%;
+    --brand-text: 76 100% 62%;
+    --code-bg: 240 8% 7%;
+    --code-border: 240 4% 20%;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Section eyebrow: a mono index in the brand hue. */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-brand-text;
+  }
+  .eyebrow::before {
+    content: '';
+    @apply inline-block h-1.5 w-1.5 rounded-full bg-brand;
+  }
+
+  /* Display headline: the landing's one loud voice. */
+  .display {
+    @apply font-display font-extrabold tracking-[-0.035em];
+    font-variation-settings: 'opsz' 96;
+    text-wrap: balance;
+  }
 }
+
+/* ---------------------------------------------------------------------------
+   Landing motion. Frames at 60 fps from one scale (5, 8, 13, 21, 34, 55) and
+   four eases (in, out, pop, and a keyed wobble), so DOM motion and the reels
+   on the canvas share one rhythm. Every rule is cancelled under
+   prefers-reduced-motion: nothing moves until it is asked to.
+   ------------------------------------------------------------------------- */
+:root {
+  --f-tick: 83ms;    /* 5 */
+  --f-quick: 133ms;  /* 8 */
+  --f-snappy: 217ms; /* 13 */
+  --f-base: 350ms;   /* 21 */
+  --f-settle: 567ms; /* 34 */
+  --f-slow: 917ms;   /* 55 */
+  --ease-in: cubic-bezier(0.333, 0, 0.667, 0);
+  --ease-out: cubic-bezier(0.333, 1, 0.667, 1);
+  --ease-pop: cubic-bezier(0.333, 1.6, 0.667, 1);
+  --ease-glide: cubic-bezier(0.364, 0, 0.636, 1);
+}
+
+/* slam: hit (8 f, in) -> impact (5 f, out) -> decrease (34 f, keyed wobble).
+   47 frames = 783 ms. Scale 2.2 -> 1 -> 0.92 -> 1, angle -8 -> 0. */
+@keyframes slam {
+  0%    { opacity: 0; transform: scale(2.2) rotate(-8deg); animation-timing-function: var(--ease-in); }
+  10.6% { opacity: 1; }
+  17%   { transform: scale(1) rotate(-8deg); animation-timing-function: var(--ease-out); }
+  27.7% { transform: scale(0.92) rotate(-8deg); animation-timing-function: var(--ease-glide); }
+  40.2% { transform: scale(1.022) rotate(2.2deg); animation-timing-function: var(--ease-glide); }
+  54.7% { transform: scale(0.9945) rotate(-0.55deg); animation-timing-function: var(--ease-glide); }
+  69.2% { transform: scale(1.0014) rotate(0.14deg); animation-timing-function: var(--ease-glide); }
+  83.6% { transform: scale(0.9997) rotate(-0.03deg); animation-timing-function: var(--ease-glide); }
+  100%  { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+/* appear: the utility entrance. 21 f pop on scale, 8 f out on alpha. */
+@keyframes appear {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes live-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.motion-slam, .motion-appear {
+  opacity: 0; /* before the animation starts: nothing pops in late */
+}
+.motion-slam {
+  animation: slam 783ms both; /* 8 + 5 + 34 frames */
+  animation-delay: var(--motion-delay, 0ms);
+  transform-origin: 50% 60%;
+}
+.motion-appear {
+  animation: appear var(--f-base) var(--ease-pop) both;
+  animation-delay: var(--motion-delay, 0ms);
+}
+/* Scroll reveal: a block waits unseen, then appears when it enters the view.
+   The observer in the landing page adds `.is-in`. */
+.reveal { opacity: 0; }
+.reveal.is-in {
+  animation: appear var(--f-base) var(--ease-pop) both;
+  animation-delay: var(--motion-delay, 0ms);
+}
+.live-dot { animation: live-dot 1.83s var(--ease-glide) infinite; } /* 110 f */
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-slam, .motion-appear, .reveal, .reveal.is-in { animation: none; opacity: 1; }
+  .live-dot { animation: none; }
+}
+/* No JS (or a very old browser): never hide content behind a reveal. */
+html:not(.js) .reveal { opacity: 1; }

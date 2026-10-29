@@ -33,3 +33,21 @@ const jsonLd = [
   <Partners />
   <FeatureGrid />
 </Base>
+
+<script>
+  // Scroll reveal: a `.reveal` block appears (global.css) once it enters the
+  // view, once. Under reduced motion the CSS shows everything at rest, and
+  // the observer is only a no-op class toggle.
+  const blocks = document.querySelectorAll<HTMLElement>('.reveal');
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        e.target.classList.add('is-in');
+        io.unobserve(e.target);
+      }
+    },
+    { rootMargin: '0px 0px -10% 0px' },
+  );
+  blocks.forEach((b) => io.observe(b));
+</script>

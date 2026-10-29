@@ -1,4 +1,6 @@
 ---
+import { Code } from 'astro:components';
+
 const snippet = `import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
@@ -18,49 +20,64 @@ const result = await reelSet.spin();
 console.log(result.symbols); // [[ 'cherry','seven','bar' ], ...]`;
 
 const bullets = [
-  { bold: 'One import', rest: '. ReelSetBuilder wires every subsystem.' },
-  { bold: 'Runtime validation', rest: '. forget a required call? You\'ll know at build().' },
-  { bold: 'Extension points everywhere', rest: '. custom symbols, phases, spinning modes.' },
-  { bold: 'No PixiJS coupling in your logic', rest: '. tests run in Node.' },
+  { bold: 'One import.', rest: ' ReelSetBuilder wires every subsystem.' },
+  { bold: 'Runtime validation.', rest: " Forget a required call? You'll know at build()." },
+  { bold: 'Extension points everywhere.', rest: ' Custom symbols, phases, spinning modes.' },
+  { bold: 'No PixiJS coupling in your logic.', rest: ' Tests run in Node.' },
 ];
 ---
-<section class="border-b border-border/60 py-20">
+<section class="border-b border-border/60 py-20 sm:py-24">
   <div class="container">
-    <div class="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-      <div>
-        <h2 class="text-3xl font-semibold tracking-tight sm:text-4xl">
+    <div class="grid items-center gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
+      <div class="reveal min-w-0">
+        <p class="eyebrow">02 / API</p>
+        <h2 class="display mt-4 text-4xl sm:text-5xl lg:text-6xl">
           One fluent builder wires the whole engine.
         </h2>
-        <ul class="mt-6 space-y-3">
+        <ul class="mt-8 divide-y divide-border border-y border-border">
           {bullets.map((b) => (
-            <li class="flex items-start gap-2.5 text-muted-foreground">
-              <span class="mt-[7px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary"></span>
-              <span><strong class="text-foreground font-semibold">{b.bold}</strong>{b.rest}</span>
+            <li class="py-3.5 text-[15px] leading-relaxed text-muted-foreground">
+              <strong class="font-semibold text-foreground">{b.bold}</strong>{b.rest}
             </li>
           ))}
         </ul>
         <div class="mt-8">
           <a
             href="/guides/your-first-reelset/"
-            class="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground shadow transition-colors hover:bg-primary/90"
+            class="group inline-flex h-11 items-center gap-2 rounded-full bg-primary pl-5 pr-4 text-sm font-semibold text-primary-foreground transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] hover:scale-[1.03] active:scale-[0.97]"
           >
-            Build your first reelset →
+            Build your first reelset
+            <svg class="h-4 w-4 transition-transform duration-[133ms] group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
           </a>
         </div>
       </div>
 
-      <div class="relative">
-        <div class="absolute -inset-4 rounded-2xl bg-foreground/5 blur-2xl opacity-70" aria-hidden></div>
-        <div class="surface-code relative overflow-hidden rounded-xl shadow-2xl shadow-black/20">
-          <div class="flex items-center gap-1.5 border-b px-4 py-2.5" style="border-color: hsl(var(--code-border));">
-            <span class="h-2.5 w-2.5 rounded-full bg-white/20"></span>
-            <span class="h-2.5 w-2.5 rounded-full bg-white/30"></span>
-            <span class="h-2.5 w-2.5 rounded-full bg-white/40"></span>
-            <span class="ml-2 font-mono text-[11px]" style="color: hsl(var(--code-muted));">your-first-reelset.ts</span>
+      <div class="reveal relative min-w-0" style="--motion-delay: 80ms">
+        <div class="code-window surface-code relative overflow-hidden rounded-2xl">
+          <div class="flex items-center gap-3 border-b px-5 py-3" style="border-color: hsl(var(--code-border));">
+            <span class="h-2 w-2 rounded-full bg-brand"></span>
+            <span class="font-mono text-[11.5px]" style="color: hsl(var(--code-fg));">your-first-reelset.ts</span>
+            <span class="ml-auto rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider" style="color: hsl(var(--code-muted)); border-color: hsl(var(--code-border));">TypeScript</span>
           </div>
-          <pre class="m-0 overflow-x-auto p-5 font-mono text-[12.5px] leading-[1.65]" style="color: hsl(var(--code-fg));"><code>{snippet}</code></pre>
+          <Code code={snippet} lang="ts" theme="vesper" class="code-window__pre" />
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<style>
+  /* The Shiki block paints its own background; ours is the shared code
+     surface, so the theme's is dropped. */
+  .code-window :global(.code-window__pre) {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    background: transparent !important;
+    font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.75px;
+    line-height: 1.7;
+  }
+</style>

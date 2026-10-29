@@ -41,7 +41,7 @@ export class BlurSpriteSymbol extends ReelSymbol {
   private _cellW = 0;
   private _cellH = 0;
   private _blurred = false;
-  private _winTween: gsap.core.Tween | null = null;
+  private _winTween: gsap.core.Timeline | null = null;
   private _perspective: PerspectiveCell;
 
   constructor(options: BlurSpriteSymbolOptions) {
@@ -124,18 +124,24 @@ export class BlurSpriteSymbol extends ReelSymbol {
     return this._blurred;
   }
 
+  /**
+   * The win beat is a "wow": anticipate (5 f), wow (8 f), wait (13 f),
+   * decrease (34 f) with an elastic settle, at 60 fps. The hold is what the
+   * eye reads; a plain up-and-back pulse of the same length only flickers.
+   * Scale is relative to the fitted rest scale, so it survives a blur swap.
+   */
   async playWin(): Promise<void> {
     this._killWinTween();
+    this._rescale();
+    const rest = this._sprite.scale.x;
+    const at = (k: number) => ({ x: rest * k, y: rest * k });
     return new Promise<void>((resolve) => {
-      this._winTween = gsap.to(this._sprite.scale, {
-        x: this._sprite.scale.x * 1.15,
-        y: this._sprite.scale.y * 1.15,
-        duration: 0.15,
-        yoyo: true,
-        repeat: 1,
-        ease: 'power2.inOut',
-        onComplete: resolve,
-      });
+      this._winTween = gsap
+        .timeline({ onComplete: resolve })
+        .to(this._sprite.scale, { ...at(0.95), duration: 5 / 60, ease: 'sine.inOut' })
+        .to(this._sprite.scale, { ...at(1.15), duration: 8 / 60, ease: 'power2.out' })
+        .to(this._sprite.scale, { ...at(1.165), duration: 13 / 60, ease: 'sine.inOut' })
+        .to(this._sprite.scale, { ...at(1), duration: 34 / 60, ease: 'elastic.out(1, 0.4)' });
     });
   }
 

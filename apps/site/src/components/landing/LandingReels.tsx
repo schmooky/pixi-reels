@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
-import { Application, Container, Graphics } from 'pixi.js';
+import { Application, Container, FillGradient, Graphics } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import { gsap } from 'gsap';
 import {
@@ -82,10 +82,11 @@ const VARIANTS: Record<LandingVariant, VariantConfig> = {
 
 // The dark "well" every variant sits in. Same surface the site uses for code
 // blocks (`--code-bg` / `--code-border` in global.css), so the canvas reads as
-// one more elevated panel in either theme.
+// one more elevated panel in either theme. One backing for the whole field and
+// a thin divider between neighbouring reels: no box per cell, so the symbols
+// are the only thing with an edge.
 const WELL_FILL = 0x111114;
 const WELL_STROKE = 0x2a2a31;
-const PLATE_FILL = 0x1c1c21;
 
 // Renderer teardown: `{ removeView: true }` and never the bare `true`, which
 // would also release pixi's process-global pools out from under the other live
@@ -209,14 +210,27 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
   const root = new Container();
   const well = new Graphics();
   well.roundRect(0, 0, W, H, 18).fill({ color: WELL_FILL }).stroke({ color: WELL_STROKE, width: 1.5 });
-  for (let x = 0; x < across; x++) {
-    for (let y = 0; y < down; y++) {
-      well.roundRect(
-        cfg.pad + x * (cfg.cell + cfg.gap) - 2,
-        cfg.pad + y * (cfg.cell + cfg.gap) - 2,
-        cfg.cell + 4, cfg.cell + 4, 10,
-      ).fill({ color: PLATE_FILL });
-    }
+  // Dividers run along the travel axis between reels, fading out at both
+  // ends, so the eye keeps the column without ever seeing a cell.
+  const vertical = cfg.orientation === 'vertical';
+  const reelPitch = cfg.cell + cfg.gap;
+  const dividerLen = (vertical ? gridH : gridW) * 0.88;
+  const dividerStart = cfg.pad + (vertical ? gridH : gridW) * 0.06;
+  const divider = new FillGradient({
+    type: 'linear',
+    start: { x: 0, y: 0 },
+    end: vertical ? { x: 0, y: 1 } : { x: 1, y: 0 },
+    colorStops: [
+      { offset: 0, color: 'rgba(255,255,255,0)' },
+      { offset: 0.5, color: 'rgba(255,255,255,0.3)' },
+      { offset: 1, color: 'rgba(255,255,255,0)' },
+    ],
+    textureSpace: 'local',
+  });
+  for (let i = 1; i < cfg.reels; i++) {
+    const at = cfg.pad + i * reelPitch - cfg.gap / 2 - 1;
+    if (vertical) well.rect(at, dividerStart, 2, dividerLen).fill(divider);
+    else well.rect(dividerStart, at, dividerLen, 2).fill(divider);
   }
   root.addChild(well);
   reelSet.x = cfg.pad;
@@ -224,21 +238,40 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
   root.addChild(reelSet);
   app.stage.addChild(root);
 
+  // The whole well sits `thud.dy` below its fitted place while a landing
+  // reel's weight is still in it (see `landed` below).
+  const thud = { dy: 0 };
+  let baseY = 0;
+  let fitScale = 1;
   const fit = () => {
-    const scale = Math.min(app.screen.width / W, app.screen.height / H);
-    root.scale.set(scale);
-    root.x = (app.screen.width - W * scale) / 2;
-    root.y = (app.screen.height - H * scale) / 2;
+    fitScale = Math.min(app.screen.width / W, app.screen.height / H);
+    root.scale.set(fitScale);
+    root.x = (app.screen.width - W * fitScale) / 2;
+    baseY = (app.screen.height - H * fitScale) / 2;
+    root.y = baseY + thud.dy;
   };
   fit();
   app.renderer.on('resize', fit);
   const ro = new ResizeObserver(() => app.resize());
   ro.observe(host);
 
+  // Every reel that lands puts its weight into the well: a 5 f drop and a
+  // 34 f elastic settle, a few screen pixels at most. A slam lands all reels
+  // in one frame, which `overwrite` folds into one heavier thud.
+  const amp = (vertical ? cfg.cell : cfg.cell * 0.8) * 0.045;
+  const landed = () => {
+    gsap.timeline({ overwrite: true })
+      .to(thud, { dy: amp * fitScale, duration: 5 / 60, ease: 'power2.out', onUpdate: () => { root.y = baseY + thud.dy; } })
+      .to(thud, { dy: 0, duration: 34 / 60, ease: 'elastic.out(1, 0.4)', onUpdate: () => { root.y = baseY + thud.dy; } });
+  };
+  reelSet.events.on('spin:reelLanded', landed);
+
   return {
     app,
     reelSet,
     destroy() {
+      try { reelSet.events.off('spin:reelLanded', landed); } catch { /* ignore */ }
+      gsap.killTweensOf(thud);
       try { ro.disconnect(); } catch { /* ignore */ }
       try { app.renderer.off('resize', fit); } catch { /* ignore */ }
       try { reelSet.destroy(); } catch { /* ignore */ }
@@ -404,8 +437,19 @@ async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boole
 
   if (win && !kick.kicked) {
     const positions: SymbolPosition[] = reelsHit.map((r) => ({ reelIndex: r, cellIndex: row }));
-    await reelSet.spotlight.show(positions, { dimAmount: 0.55 });
-    await sleep(700, kick);
+    // Losers fade to 30 %; the winners play their wow left to right, 4 f
+    // apart, and the line is held for a beat before the next round.
+    void reelSet.spotlight.show(positions, { dimAmount: 0.7, playWinAnimation: false });
+    const wows: Promise<void>[] = [];
+    for (let i = 0; i < positions.length; i++) {
+      const pos = positions[i]!;
+      const symbol = reelSet.getReel(pos.reelIndex).getSymbolAt(pos.cellIndex);
+      if (!symbol) continue;
+      if (i > 0) await sleep(67, { kicked: false });
+      wows.push(symbol.playWin());
+    }
+    await Promise.all(wows);
+    await sleep(500, kick);
     reelSet.spotlight.hide();
   }
 }

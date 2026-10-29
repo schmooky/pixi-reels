@@ -13,6 +13,11 @@ const config: Config = {
     extend: {
       colors: {
         border: 'hsl(var(--border))',
+        brand: {
+          DEFAULT: 'hsl(var(--brand))',
+          foreground: 'hsl(var(--brand-foreground))',
+          text: 'hsl(var(--brand-text))',
+        },
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
@@ -52,6 +57,16 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
+        display: [
+          'Bricolage Grotesque',
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif',
+        ],
         sans: [
           'Inter',
           'ui-sans-serif',

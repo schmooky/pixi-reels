@@ -37,6 +37,8 @@ const ogImage = image ?? ogUrlForPath(path ?? Astro.url.pathname);
         const stored = localStorage.getItem('theme');
         const dark = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.classList.toggle('dark', dark);
+        // Lets CSS keep scroll-reveal blocks visible when scripts never run.
+        document.documentElement.classList.add('js');
       })();
     </script>
     <SEO
@@ -50,13 +52,15 @@ const ogImage = image ?? ogUrlForPath(path ?? Astro.url.pathname);
       noIndex={noIndex}
     />
     {/*
+      Bricolage Grotesque is the display face for landing headlines (the
+      optical-size axis keeps it tight at 96px and open at 24px).
       Roboto Condensed is used by the debug CardSymbol inside recipe canvases;
       Fira Code is the readout face for recipe HUDs and per-reel labels, where
       its ligatures turn an ASCII `->` into a single arrow glyph - which both
       reads better and is narrower, and narrow matters when a label has to fit
       inside one reel's width.
 
-      Both are in ONE request so this stays a single stylesheet, loaded
+      All three are in ONE request so this stays a single stylesheet, loaded
       asynchronously so it never blocks first paint on pages that render
       neither. Pattern: preload + onload-promote, with a no-JS fallback.
       https://web.dev/articles/defer-non-critical-css
@@ -66,13 +70,13 @@ const ogImage = image ?? ogUrlForPath(path ?? Astro.url.pathname);
     <link
       rel="preload"
       as="style"
-      href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Roboto+Condensed:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Fira+Code:wght@400;500&family=Roboto+Condensed:wght@400;700&display=swap"
       onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Roboto+Condensed:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Fira+Code:wght@400;500&family=Roboto+Condensed:wght@400;700&display=swap"
       />
     </noscript>
   </head>
