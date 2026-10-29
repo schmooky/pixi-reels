@@ -80,13 +80,10 @@ const VARIANTS: Record<LandingVariant, VariantConfig> = {
   },
 };
 
-// The dark "well" every variant sits in. Same surface the site uses for code
-// blocks (`--code-bg` / `--code-border` in global.css), so the canvas reads as
-// one more elevated panel in either theme. One backing for the whole field and
-// a thin divider between neighbouring reels: no box per cell, so the symbols
-// are the only thing with an edge.
-const WELL_FILL = 0x111114;
-const WELL_STROKE = 0x2a2a31;
+// The host element paints the dark well (`.hero-well` / `.mech-well`) and owns
+// its corners; the canvas is transparent and draws only the thin dividers
+// between neighbouring reels. No frame inside a frame, no box per cell: the
+// symbols are the only thing with an edge.
 
 // Renderer teardown: `{ removeView: true }` and never the bare `true`, which
 // would also release pixi's process-global pools out from under the other live
@@ -209,7 +206,6 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
 
   const root = new Container();
   const well = new Graphics();
-  well.roundRect(0, 0, W, H, 18).fill({ color: WELL_FILL }).stroke({ color: WELL_STROKE, width: 1.5 });
   // Dividers run along the travel axis between reels, fading out at both
   // ends, so the eye keeps the column without ever seeing a cell.
   const vertical = cfg.orientation === 'vertical';
