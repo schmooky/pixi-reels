@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { RefreshCw, ExternalLink, SkipForward, Bug } from 'lucide-react';
+import { RefreshCw, ExternalLink, SkipForward, Bug, Volume2, VolumeX } from 'lucide-react';
 import { Application } from 'pixi.js';
 import type { Texture, Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
@@ -55,6 +55,8 @@ import {
   fitText,
 } from '../runtime/holdAndWinFx.ts';
 import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
+import { reelSounds, readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
+import type { ReelSoundsHandle } from 'pixi-reels';
 import {
   loadGeneratedSpines,
   buildSpineMap,
@@ -273,6 +275,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   // One recorder per reel set, running from mount: the timeline and metrics
   // panels can then show the spin that made you reach for the Debug button.
   const metricsRef = useRef<Map<ReelSet, SpinMetrics>>(new Map());
+  const soundsRef = useRef<ReelSoundsHandle | null>(null);
   // Re-fit after the overlay grows the set's bounds (panels under the mask).
   const fitRef = useRef<(() => void) | null>(null);
   const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
@@ -280,6 +283,13 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [debugOn, setDebugOn] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
+  // The remembered choice, read after mount so the server and first client
+  // render agree; every runner on the page follows one toggle.
+  useEffect(() => {
+    setSoundOn(soundEnabled());
+    return onSoundEnabled(setSoundOn);
+  }, []);
   // The overlay draws into a container on the ReelSet, so a recipe that
   // returns only `onSpin` (HoldAndWinBoard, BoardGrid) has nothing to draw on.
   const [canDebug, setCanDebug] = useState(false);
@@ -357,6 +367,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       }
 
       reelSetRef.current = result.reelSet ?? null;
+      // The default cue table on the recipe's set: spin bed, reel thuds,
+      // tease, skip, win, cascade pop. A recipe wanting its own calls
+      // `reelSounds(reelSet, cues)` itself; both run, so keep them apart.
+      if (result.reelSet) soundsRef.current = reelSounds(result.reelSet);
       nextResultRef.current = result.nextResult ?? null;
       onSpinRef.current = result.onSpin ?? null;
       onSkipRef.current = result.onSkip ?? null;
@@ -507,6 +521,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       for (const m of metricsRef.current.values()) m.destroy();
       metricsRef.current.clear();
       fitRef.current = null;
+      try { soundsRef.current?.destroy(); } catch { /* ignore */ }
+      soundsRef.current = null;
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
       if (app) {
@@ -522,6 +538,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
   async function handleSpin() {
     if (!ready || !!error) return;
+    // A press is the gesture that lets audio start; the first one also loads
+    // the files. Not awaited: the spin must not wait on a fetch.
+    void readyAudio().catch(() => {});
     if (spinning) {
       // Recipe-supplied skip handler wins. lets a nudge / cascade / custom
       // timeline recipe intercept the player's mid-action tap. Otherwise
@@ -691,10 +710,27 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         )}
         <button
           type="button"
+          onClick={() => { setSoundEnabled(!soundOn); if (!soundOn) void readyAudio().catch(() => {}); }}
+          title={soundOn ? 'Mute the demos' : 'Unmute the demos'}
+          aria-label={soundOn ? 'Mute' : 'Unmute'}
+          aria-pressed={soundOn}
+          className={cn(
+            TOOL_BUTTON,
+            'ml-auto',
+            soundOn
+              ? 'border-border text-foreground hover:border-foreground/60'
+              : 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground',
+          )}
+        >
+          {soundOn ? <Volume2 size={11} strokeWidth={2.25} /> : <VolumeX size={11} strokeWidth={2.25} />}
+          Sound
+        </button>
+        <button
+          type="button"
           onClick={openInStudio}
           title="Open in Studio"
           aria-label="Open in Studio"
-          className={cn(TOOL_BUTTON, 'ml-auto border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground')}
+          className={cn(TOOL_BUTTON, 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground')}
         >
           <ExternalLink size={11} strokeWidth={2.25} />
           Studio

@@ -1,0 +1,72 @@
+---
+title: Sound
+order: 15
+eyebrow: Building blocks
+description: Snap a table of sound cues onto a reel set's events, with a port
+  for @schmooky/zvuk.
+---
+
+The engine knows the beats: a spin starts, each reel lands, a reel teases, a
+press skips, winners show, a cascade pops. Your audio engine knows the sounds.
+`attachReelSounds` is the table between them: which sound fires on which beat,
+when a loop starts and when it fades out.
+
+## The cue table
+
+```ts
+import { createEngine } from '@schmooky/zvuk';
+import { attachReelSounds, zvukPort } from 'pixi-reels';
+
+const engine = createEngine({ buses: { reels: {}, anticipation: {}, wins: {}, ui: {} } });
+await engine.unlock(); // from a gesture
+await engine.loadSound('spin-loop', ['/sfx/spin-loop.webm', '/sfx/spin-loop.m4a'], { bus: 'reels' });
+await engine.loadVariants('reel-stop', [
+  ['/sfx/reel-stop.1.webm', '/sfx/reel-stop.1.m4a'],
+  ['/sfx/reel-stop.2.webm', '/sfx/reel-stop.2.m4a'],
+], { bus: 'reels' });
+// ... anticipation, skip, win, pop
+
+const sounds = attachReelSounds(reelSet, zvukPort(engine), {
+  spin: { loop: 'spin-loop', fadeIn: 0.05, fadeOut: 0.08 },
+  reelStop: { play: 'reel-stop', pitch: { jitter: 0.04 } },
+  anticipation: { loop: 'anticipation', fadeIn: 0.12, fadeOut: 0.25,
+                  pitch: ({ order }) => 1 + 0.08 * order },
+  skip: { play: 'skip' },
+  win: { play: 'win' },
+  cascadeDestroy: { play: 'pop' },
+});
+
+sounds.destroy(); // when the reel set goes
+```
+
+Every demo on this site runs that table. The Sound button under a demo mutes
+it; the files load on the first press.
+
+## The beats
+
+| Cue | Starts on | A loop ends on | Context |
+|---|---|---|---|
+| `spin` | `spin:start` | `spin:allLanded` | `speed` |
+| `reelStop` | `spin:reelLanding`, every landing path, cascade refills too | | `reelIndex`, `speed` |
+| `anticipation` | `anticipation:reel`, one per teasing reel | that reel's `anticipation:reelEnd` | `order`, `total`, `reelIndex` |
+| `skip` | `skip:requested` | | `speed` |
+| `win` | `spotlight:start`, and `win:group` per presented win | | |
+| `cascadeDestroy` | `cascade:destroy:start` | | |
+| `on[event]` | the named event | its `until` event | `speed` |
+
+A cue is `{ play: name }` for a one-shot or `{ loop: name, fadeIn, fadeOut }`
+for a bed. `volume` and `pitch` take a number, a `{ base, jitter }` spread so
+repeated thuds do not sound cloned, or a function of the context: the tease
+above climbs a semitone-ish per reel, and a `spin` cue can read `speed` to
+pitch the bed up in turbo.
+
+Loops are keyed per beat (one tease loop per reel), fade out when their beat
+ends, and stop dead on `destroy()` or when the reel set is destroyed.
+
+## Any engine
+
+`attachReelSounds` only needs a `ReelAudioPort`: `play(name, { bus, volume,
+pitch })` and `loop(name, { ..., fadeIn })` returning `{ stop({ fade }) }`.
+`zvukPort` is that port over a zvuk engine (a variants set plays its next take,
+a missing name is skipped with one warning). Wrap Howler or raw Web Audio the
+same way.

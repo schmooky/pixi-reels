@@ -336,6 +336,24 @@ export { driveGsapWithTicker } from './utils/gsapTicker.js';
 // the `Reel.gsap` accessor.
 export type { Gsap } from './utils/gsap.js';
 
+// Audio: cues snapped onto a reel set's events, and a port for @schmooky/zvuk
+export { attachReelSounds } from './audio/ReelSounds.js';
+export type {
+  ReelCues,
+  Cue,
+  OneShotCue,
+  LoopCue,
+  EventCue,
+  CueContext,
+  CueValue,
+  SoundValue,
+  ReelAudioPort,
+  ReelAudioLoop,
+  ReelSoundsHandle,
+} from './audio/ReelSounds.js';
+export { zvukPort } from './audio/zvukPort.js';
+export type { ZvukEngineLike, ZvukPlayOptions, ZvukVoiceLike } from './audio/zvukPort.js';
+
 // Debug
 export {
   debugSnapshot,

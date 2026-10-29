@@ -117,6 +117,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.16
         version: 1.2.16(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@schmooky/zvuk':
+        specifier: ^1.14.1
+        version: 1.14.1
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.2.2(@types/node@26.5.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
@@ -196,6 +199,31 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+
+  apps/timeline-lab:
+    dependencies:
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
+      pixi-reels:
+        specifier: workspace:*
+        version: link:../../packages/pixi-reels
+      pixi-silk:
+        specifier: ^0.1.0
+        version: 0.1.0(pixi.js@8.20.1)
+      pixi.js:
+        specifier: ^8.20.1
+        version: 8.20.1
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.2
+        version: 8.2.2(@types/node@26.5.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0)
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@26.5.0)(vite@8.2.2(@types/node@26.5.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/cheats:
     dependencies:
@@ -2222,6 +2250,11 @@ packages:
 
   '@rushstack/ts-command-line@5.3.8':
     resolution: {integrity: sha512-vKL4fVR2TdnMdCmlP71nZUzbNANOYlR7NfN+J/YL9UIvicDIEB+ZtH38LcJECOZUwHia8C5Mg98kc4kPt/ev5w==}
+
+  '@schmooky/zvuk@1.14.1':
+    resolution: {integrity: sha512-x1ESQNee/nHItpJMN/ICxH1Y2qpHMBFGv1yEYEgX5G4UKq9jSckBbCbjnmBpchS3imG/fI0NMB59FFOV8iAZmg==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@shikijs/core@4.0.2':
     resolution: {integrity: sha512-hxT0YF4ExEqB8G/qFdtJvpmHXBYJ2lWW7qTHDarVkIudPFE6iCIrqdgWxGn5s+ppkGXI0aEGlibI0PAyzP3zlw==}
@@ -5301,7 +5334,7 @@ snapshots:
       '@types/hast': 3.0.4
       '@types/mdast': 4.0.4
       js-yaml: 4.3.2
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       retext-smartypants: 6.2.0
       shiki: 4.0.2
       smol-toml: 1.6.1
@@ -6168,7 +6201,7 @@ snapshots:
       '@commitlint/top-level': 21.2.0
       '@commitlint/types': 21.2.0
       '@conventional-changelog/git-client': 3.1.2(conventional-commits-parser@7.1.2)
-      tinyexec: 1.1.1
+      tinyexec: 1.3.1
     transitivePeerDependencies:
       - conventional-commits-filter
       - conventional-commits-parser
@@ -7147,7 +7180,7 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.8
       estree-walker: 2.0.2
-      picomatch: 4.0.4
+      picomatch: 4.0.7
     optionalDependencies:
       rollup: 4.60.2
 
@@ -7269,6 +7302,8 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
     optional: true
+
+  '@schmooky/zvuk@1.14.1': {}
 
   '@shikijs/core@4.0.2':
     dependencies:
@@ -8346,10 +8381,6 @@ snapshots:
   fast-wrap-ansi@0.2.2:
     dependencies:
       fast-string-width: 3.0.2
-
-  fdir@6.5.0(picomatch@4.0.4):
-    optionalDependencies:
-      picomatch: 4.0.4
 
   fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
@@ -10378,8 +10409,8 @@ snapshots:
 
   tinyglobby@0.2.16:
     dependencies:
-      fdir: 6.5.0(picomatch@4.0.4)
-      picomatch: 4.0.4
+      fdir: 6.5.0(picomatch@4.0.7)
+      picomatch: 4.0.7
 
   tinyglobby@0.2.17:
     dependencies:
@@ -10537,7 +10568,7 @@ snapshots:
     dependencies:
       '@jridgewell/remapping': 2.3.5
       acorn: 8.16.0
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       webpack-virtual-modules: 0.6.2
 
   unstorage@1.17.5(idb-keyval@6.2.5):

@@ -36,6 +36,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'Speed modes', href: '/guides/speed-modes/' },
       { label: 'Win animations', href: '/guides/win-animations/' },
       { label: 'Hold & Win', href: '/guides/hold-and-win/' },
+      { label: 'Sound', href: '/guides/sound/' },
     ],
   },
   {
