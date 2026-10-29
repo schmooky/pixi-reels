@@ -370,8 +370,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       // The default cue table on the recipe's set: spin bed, reel thuds,
       // tease, skip, win, cascade pop. A recipe wanting its own calls
       // `reelSounds(reelSet, cues)` itself; both run, so keep them apart.
-      if (result.reelSet) soundsRef.current.push(reelSounds(result.reelSet));
-      if (result.board && 'respinsLeft' in result.board) soundsRef.current.push(boardSounds(result.board as HoldAndWinBoard));
+      // `??=`: a dev hot update keeps the ref's old value (null) across the
+      // component swap, and a recipe must still mount.
+      const sounds = (soundsRef.current ??= []);
+      if (result.reelSet) sounds.push(reelSounds(result.reelSet));
+      if (result.board && 'respinsLeft' in result.board) sounds.push(boardSounds(result.board as HoldAndWinBoard));
       nextResultRef.current = result.nextResult ?? null;
       onSpinRef.current = result.onSpin ?? null;
       onSkipRef.current = result.onSkip ?? null;
@@ -522,7 +525,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       for (const m of metricsRef.current.values()) m.destroy();
       metricsRef.current.clear();
       fitRef.current = null;
-      for (const s of soundsRef.current) { try { s.destroy(); } catch { /* ignore */ } }
+      for (const s of soundsRef.current ?? []) { try { s.destroy(); } catch { /* ignore */ } }
       soundsRef.current = [];
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
