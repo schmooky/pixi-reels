@@ -1,0 +1,96 @@
+---
+/**
+ * A root with its members hanging off a hairline: a type and its fields, a
+ * class and its hooks, an event and what it fires. One level of nesting.
+ * Notes sit beside the label and wrap under it on a phone.
+ */
+interface Item { label: string; note?: string; children?: Item[] }
+interface Props {
+  root: string;
+  items: Item[];
+  /** Accessible name for the figure. */
+  title?: string;
+}
+const { root, items, title } = Astro.props as Props;
+---
+<div class="docs-tree not-prose my-6 font-mono" aria-label={title}>
+  <span class="tree-root">{root}</span>
+  <ul class="tree">
+    {items.map((it) => (
+      <li>
+        <span class="tree-label">{it.label}</span>
+        {it.note && <span class="tree-note font-sans">{it.note}</span>}
+        {it.children && (
+          <ul class="tree">
+            {it.children.map((c) => (
+              <li>
+                <span class="tree-label">{c.label}</span>
+                {c.note && <span class="tree-note font-sans">{c.note}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    ))}
+  </ul>
+</div>
+
+<style>
+  .docs-tree {
+    font-size: 12px;
+    line-height: 1.4;
+    color: hsl(var(--foreground));
+  }
+  .tree-root,
+  .tree-label {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 2px;
+    background: hsl(var(--card));
+  }
+  .tree-root {
+    border-color: hsl(var(--brand));
+    background: hsl(var(--brand));
+    color: hsl(var(--brand-foreground));
+  }
+  .tree {
+    list-style: none;
+    margin: 0 0 0 0.75rem;
+    padding: 0 0 0 1rem;
+  }
+  .tree > li {
+    position: relative;
+    padding: 0.25rem 0;
+  }
+  /* trunk: from the row above down to the bottom of this row */
+  .tree > li::before {
+    content: '';
+    position: absolute;
+    left: -1rem;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: hsl(var(--border));
+  }
+  .tree > li:last-child::before {
+    bottom: auto;
+    height: 1.05rem;
+  }
+  /* branch: a tick from the trunk to the label */
+  .tree > li::after {
+    content: '';
+    position: absolute;
+    left: -1rem;
+    top: 1.05rem;
+    width: 0.75rem;
+    height: 1px;
+    background: hsl(var(--border));
+  }
+  .tree-note {
+    display: inline-block;
+    margin-left: 0.5rem;
+    font-size: 13px;
+    color: hsl(var(--muted-foreground));
+  }
+</style>

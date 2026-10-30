@@ -1,6 +1,5 @@
 ---
 import Base from './Base.astro';
-import { ChevronLeft } from 'lucide-react';
 import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
 import RealGameVideo from '../components/RealGameVideo.astro';
 
@@ -52,17 +51,20 @@ const jsonLd = [
   jsonLd={jsonLd}
 >
   <div class="container max-w-[880px] py-10 animate-fade-in">
-    <header class="mb-6">
-      <a href="/recipes/" class="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
-        <ChevronLeft size={14} strokeWidth={2} />
+    <header class="mb-10 border-b border-border pb-8">
+      <a href="/recipes/" class="group inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
+        <svg class="h-3.5 w-3.5 transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5M11 6l-6 6 6 6" />
+        </svg>
         All recipes
       </a>
-      <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
-      {description && <p class="mt-2 text-muted-foreground max-w-[620px]">{description}</p>}
+      <p class="eyebrow mt-8 flex">Recipe</p>
+      <h1 class="display mt-4 text-4xl sm:text-5xl lg:text-6xl">{title}</h1>
+      {description && <p class="mt-5 max-w-[620px] text-lg leading-relaxed text-muted-foreground">{description}</p>}
     </header>
 
     {realGameVideo && (
-      <div class="mb-4">
+      <div class="mb-8">
         <RealGameVideo
           webm={realGameVideo.webm}
           mp4={realGameVideo.mp4}

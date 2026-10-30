@@ -18,8 +18,7 @@ export interface RecipeBoardProps {
 
 /**
  * Canvas host for a recipe demo. The chrome is intentionally minimal: just
- * the canvas and a small circular "spin" button in the bottom-right corner
- * that re-runs the recipe.
+ * the canvas well and a one-button toolbar under it that re-runs the recipe.
  */
 export default function RecipeBoard(props: RecipeBoardProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -70,13 +69,15 @@ export default function RecipeBoard(props: RecipeBoardProps) {
   const title = props.label ?? 'Spin again';
 
   return (
-    <div className="my-5 overflow-hidden rounded-xl border border-border bg-card">
-      <div className="relative flex w-full items-center justify-center bg-card" style={{ height: props.height ?? 260 }}>
+    <div className="my-5 overflow-hidden rounded-lg border border-border">
+      <div className="relative flex w-full items-center justify-center bg-[#111114]" style={{ height: props.height ?? 260 }}>
         <div
           ref={hostRef}
           className="flex h-full w-full items-center justify-center [&_canvas]:block [&_canvas]:max-w-full [&_canvas]:h-auto"
         />
         {showSkeleton && <CanvasSkeleton />}
+      </div>
+      <div className="flex min-h-9 items-center justify-end border-t border-border px-1.5 py-1.5">
         <button
           type="button"
           onClick={run}
@@ -84,17 +85,17 @@ export default function RecipeBoard(props: RecipeBoardProps) {
           title={title}
           aria-label={title}
           className={cn(
-            'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
-            'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
-            'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
+            'inline-flex h-6 items-center gap-1.5 rounded-sm bg-brand px-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-brand-foreground',
+            'transition-transform duration-[133ms] active:scale-[0.97]',
             'disabled:cursor-wait disabled:opacity-70',
           )}
         >
           <RefreshCw
-            size={16}
-            strokeWidth={2.25}
-            className={cn('transition-transform', running && 'animate-spin')}
+            size={11}
+            strokeWidth={2.5}
+            className={cn(running && 'animate-spin')}
           />
+          {title}
         </button>
       </div>
     </div>

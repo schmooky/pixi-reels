@@ -35,7 +35,7 @@ export interface DebugPlaqueOptions {
   fill?: number;
   /** Plate opacity, 0..1. Default 0.84. */
   fillAlpha?: number;
-  /** Corner radius, or `'pill'` for fully round ends. Default `fontSize * 0.7`. */
+  /** Corner radius, or `'pill'` for fully round ends. Default `0`: a square plate. */
   radius?: number | 'pill';
   /** Inner padding, one number or `[x, y]`. */
   padding?: number | readonly [number, number];
@@ -258,7 +258,7 @@ export class DebugPlaque extends Container implements Disposable {
     // Plate.
     const g = this._gfx;
     g.clear();
-    const radius = o.radius === 'pill' ? height / 2 : (o.radius ?? size * 0.7);
+    const radius = o.radius === 'pill' ? height / 2 : (o.radius ?? 0);
     if (o.shadow ?? true) {
       g.roundRect(0, 1.5, width, height, radius, 0.6).fill({ color: 0x000000, alpha: 0.35, blur: 3 });
     }
@@ -298,7 +298,7 @@ export class DebugPlaque extends Container implements Disposable {
       t.x = x + swatchCol;
       t.y = textY(rowTop);
       if (row.swatch !== null) {
-        g.roundRect(x, rowTop + (lineHeight - swatchSize) / 2, swatchSize, swatchSize, swatchSize * 0.3)
+        g.rect(x, rowTop + (lineHeight - swatchSize) / 2, swatchSize, swatchSize)
           .fill(row.swatch);
       }
       if (row.meter !== null) {

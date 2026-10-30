@@ -29,8 +29,8 @@ export function CanvasSkeleton({
     <div
       className={cn(
         'absolute inset-0 flex flex-col items-center justify-center gap-4',
-        'bg-card/95 backdrop-blur-sm',
-        'animate-in fade-in duration-200',
+        'bg-[#111114]',
+        'animate-fade-in',
         className,
       )}
       role="status"
@@ -38,7 +38,7 @@ export function CanvasSkeleton({
       aria-label={label}
     >
       <div
-        className="flex gap-2 opacity-30"
+        className="flex gap-2"
         style={{ ['--cell' as string]: '32px' }}
         aria-hidden
       >
@@ -47,7 +47,7 @@ export function CanvasSkeleton({
             {Array.from({ length: cells }, (_, r) => (
               <div
                 key={r}
-                className="rounded-md bg-muted-foreground/30 animate-pulse"
+                className="animate-pulse bg-white/10"
                 style={{
                   width: 'var(--cell)',
                   height: 'var(--cell)',
@@ -58,7 +58,7 @@ export function CanvasSkeleton({
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white/40">
         <Loader2 size={14} className="animate-spin" strokeWidth={2.25} />
         <span>{label}</span>
       </div>

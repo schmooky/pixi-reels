@@ -31,20 +31,24 @@ interface Props {
 const { height = 300 } = Astro.props;
 ---
 <div
-  class="recipe-frame relative my-5 overflow-hidden rounded-xl border border-border bg-card"
+  class="recipe-frame relative my-5 overflow-hidden rounded-lg border border-border"
   data-recipe-frame
 >
-  <div
-    class="recipe-frame__skeleton relative flex w-full items-center justify-center bg-background"
-    style={`height: ${height}px`}
-  >
-    <div class="flex flex-col items-center gap-3 text-muted-foreground/50">
-      <div
-        class="h-10 w-10 animate-spin rounded-full border-2 border-current border-t-transparent"
-        aria-hidden="true"
-      ></div>
-      <p class="font-mono text-xs uppercase tracking-wider">Loading recipe…</p>
+  <div class="recipe-frame__skeleton">
+    <div
+      class="relative flex w-full items-center justify-center bg-[#111114]"
+      style={`height: ${height}px`}
+    >
+      <div class="flex flex-col items-center gap-3 text-white/40">
+        <div
+          class="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"
+          aria-hidden="true"
+        ></div>
+        <p class="font-mono text-[11px] uppercase tracking-[0.14em]">Loading recipe…</p>
+      </div>
     </div>
+    {/* Reserves the runner's toolbar strip so the mount is a content swap. */}
+    <div class="h-9 border-t border-border" aria-hidden="true"></div>
   </div>
   <slot />
 </div>

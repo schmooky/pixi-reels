@@ -133,13 +133,13 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-background/40 p-3">
+    <div className="rounded-sm border border-border bg-background/40 p-3">
       <div className="mb-3 flex items-center justify-between">
         <div className="text-xs font-semibold">Add a Spine symbol</div>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded p-1 text-muted-foreground hover:text-foreground"
+          className="rounded-sm p-1 text-muted-foreground hover:text-foreground"
           aria-label="Cancel"
         >
           <X size={14} />
@@ -148,7 +148,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
 
       <div className="space-y-3">
         <label className="block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="mb-1 block font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             Symbol id
           </span>
           <input
@@ -156,10 +156,10 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
             value={id}
             onChange={(e) => setId(e.target.value)}
             placeholder="wild"
-            className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-sm border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
           />
           <span className="mt-1 block text-[11px] text-muted-foreground">
-            e.g. "wild". referenced as <code className="rounded bg-muted px-1">userSymbols.wild</code> in your code.
+            e.g. "wild". referenced as <code className="rounded-sm bg-muted px-1">userSymbols.wild</code> in your code.
           </span>
         </label>
 
@@ -190,18 +190,18 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
         {requiredTextures.length > 0 && (
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 Texture pages
               </span>
               <MultiPick onPick={ingestTextures} />
             </div>
-            <ul className="space-y-1 rounded-md border border-border/60 bg-background/40 p-2">
+            <ul className="space-y-1 rounded-sm border border-border/60 bg-background/40 p-2">
               {requiredTextures.map((filename) => {
                 const file = textureFiles[filename];
                 return (
                   <li key={filename} className="flex items-center gap-2 text-xs">
                     {file
-                      ? <Check size={12} className="flex-shrink-0 text-emerald-500" />
+                      ? <Check size={12} className="flex-shrink-0 text-brand-text" />
                       : <Circle size={12} className="flex-shrink-0 text-muted-foreground/40" />}
                     <span className="font-mono">{filename}</span>
                     {file && (
@@ -218,17 +218,17 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
 
         {animations.length > 0 && (
           <div>
-            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="mb-1.5 block font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Animation events
             </span>
-            <div className="space-y-1.5 rounded-md border border-border/60 bg-background/40 p-2">
+            <div className="space-y-1.5 rounded-sm border border-border/60 bg-background/40 p-2">
               {(['idle', 'spin', 'landing', 'win', 'destroy'] as const).map((evt) => (
                 <label key={evt} className="flex items-center gap-2 text-xs">
                   <span className="w-16 font-mono text-muted-foreground">{evt}</span>
                   <select
                     value={events[evt] ?? ''}
                     onChange={(e) => setEvents((p) => ({ ...p, [evt]: e.target.value || undefined }))}
-                    className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                    className="flex-1 rounded-sm border border-border bg-background px-2 py-1 text-xs focus:border-primary focus:outline-none"
                   >
                     <option value="">(none)</option>
                     {animations.map((a) => <option key={a} value={a}>{a}</option>)}
@@ -237,13 +237,13 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
               ))}
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              "spin" maps to the engine's <code className="rounded bg-muted px-1">blur</code> slot; "destroy" maps to <code className="rounded bg-muted px-1">out</code>. Pick "(none)" to leave a slot unbound.
+              "spin" maps to the engine's <code className="rounded-sm bg-muted px-1">blur</code> slot; "destroy" maps to <code className="rounded-sm bg-muted px-1">out</code>. Pick "(none)" to leave a slot unbound.
             </p>
           </div>
         )}
 
         {error && (
-          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
+          <div className="flex items-start gap-2 rounded-sm border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
             <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -253,7 +253,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="rounded-sm border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
           >
             Cancel
           </button>
@@ -261,7 +261,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
             type="button"
             onClick={() => void handleSave()}
             disabled={busy}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
+            className="rounded-sm bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-[transform,background-color] duration-[133ms] hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
           >
             {busy ? 'Saving…' : 'Add symbol'}
           </button>
@@ -301,7 +301,7 @@ function FilePickField({
 }): JSX.Element {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="mb-1 block font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </span>
       <div className="flex items-center gap-2">
@@ -312,7 +312,7 @@ function FilePickField({
             onChange={(e) => onPick(e.target.files?.[0] ?? null)}
             className="absolute inset-0 cursor-pointer opacity-0"
           />
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground hover:border-primary">
+          <span className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-background px-2.5 py-1.5 text-xs text-foreground hover:border-primary">
             <Upload size={12} />
             {file ? 'Replace…' : 'Pick a file…'}
           </span>
@@ -338,7 +338,7 @@ function MultiPick({ onPick }: { onPick: (files: FileList) => void }): JSX.Eleme
         onChange={(e) => { if (e.target.files?.length) onPick(e.target.files); }}
         className="absolute inset-0 cursor-pointer opacity-0"
       />
-      <span className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] text-foreground hover:border-primary">
+      <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-background px-2 py-1 text-[11px] text-foreground hover:border-primary">
         <Upload size={10} />
         Pick textures…
       </span>

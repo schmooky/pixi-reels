@@ -1,0 +1,78 @@
+---
+import { LandingReels } from './LandingReels.tsx';
+
+/**
+ * Three more live sets under the hero, one per mechanic family the engine is
+ * known for. Each is a real ReelSet (see LandingReels.tsx) that loops while it
+ * is on screen and idles when it is not. The cards share one aspect ratio and
+ * the island letterboxes its well inside, so the row stays even.
+ */
+const cards = [
+  {
+    variant: 'cascade',
+    title: 'Cascades',
+    body: 'Winners pop, survivors fall by exactly the holes beneath them, new symbols drop in. One call: runCascade().',
+    href: '/recipes/cascade/',
+    code: 'reelSet.runCascade({ detectWinners, nextGrid })',
+  },
+  {
+    variant: 'anticipation',
+    title: 'Anticipation',
+    body: 'Two scatters land, the remaining reels slow and tease. Driven from the result grid with anticipationForScatters().',
+    href: '/recipes/anticipation/',
+    code: "reelSet.setAnticipation(reels, { stagger: 'sequential' })",
+  },
+  {
+    variant: 'horizontal',
+    title: 'Any orientation',
+    body: 'Strips that scroll sideways, upward, or each their own way. Travel changes motion; facing never changes the art.',
+    href: '/recipes/orientation-and-direction/',
+    code: ".orientation('horizontal').direction('reverse')",
+  },
+] as const;
+---
+<section class="border-b border-border/60 py-20 sm:py-24">
+  <div class="container">
+    <div class="reveal grid gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:items-end">
+      <div>
+        <p class="eyebrow">01 / Mechanics</p>
+        <h2 class="display mt-4 text-4xl sm:text-5xl lg:text-6xl">
+          Mechanics that ship in the box.
+        </h2>
+      </div>
+      <p class="max-w-sm text-lg text-muted-foreground md:justify-self-end md:text-right">
+        Every panel below is live. Click one to spin it.
+      </p>
+    </div>
+
+    <div class="mt-12 grid gap-6 md:grid-cols-3 lg:gap-8">
+      {cards.map((c, i) => (
+        <div class="reveal group flex min-w-0 flex-col" style={`--motion-delay: ${i * 50}ms`}>
+          <div
+            class="mech-well relative aspect-[4/3] w-full overflow-hidden rounded-lg ring-1 ring-border transition-[box-shadow] duration-[217ms] group-hover:ring-brand"
+            data-mechanic={c.variant}
+          >
+            <LandingReels variant={c.variant} client:only="react" />
+          </div>
+          <div class="flex flex-1 flex-col pt-5">
+            <h3 class="font-display text-2xl font-bold tracking-tight">{c.title}</h3>
+            <p class="mt-2 text-[15px] leading-relaxed text-muted-foreground">{c.body}</p>
+            <code class="mt-4 block truncate rounded-sm bg-muted px-3 py-2 font-mono text-[11.5px] text-foreground/80">{c.code}</code>
+            <a href={c.href} class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+              See the recipes
+              <svg class="h-4 w-4 transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .mech-well {
+    background: #111114;
+  }
+</style>

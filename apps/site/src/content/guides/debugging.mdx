@@ -5,6 +5,8 @@ eyebrow: For authors
 description: Snapshot the reel state as JSON, render an ASCII grid, trace every event.
 ---
 
+import Grid from '../../components/docs/Grid.astro';
+
 PixiJS draws to a canvas, so AI agents and automated tooling can't *see* the
 reels. pixi-reels ships three utilities that solve this: `debugSnapshot`,
 `debugGrid`, and `enableDebug`. They are data only and live in the main entry.
@@ -26,12 +28,17 @@ In the browser devtools console:
 ```js
 __PIXI_REELS_DEBUG.log();
 // [pixi-reels debug] spinning=false speed=normal
-// ┌────────┬────────┬────────┬────────┬────────┐
-// │ cherry │ lemon  │ bar    │ seven  │ cherry │
-// │ plum   │ cherry │ wild   │ lemon  │ orange │
-// │ orange │ bell   │ cherry │ plum   │ bell   │
-// └────────┴────────┴────────┴────────┴────────┘
+```
 
+<Grid
+  rows={[
+    ['cherry', 'lemon', 'bar', 'seven', 'cherry'],
+    ['plum', 'cherry', 'wild', 'lemon', 'orange'],
+    ['orange', 'bell', 'cherry', 'plum', 'bell'],
+  ]}
+/>
+
+```js
 const stop = __PIXI_REELS_DEBUG.trace();  // logs every event on the set bus from now on
 stop();                                    // and stops
 
@@ -100,12 +107,15 @@ Grid mismatch:
   reel 0 cell 1: expected "seven" got "cherry"
 
 Current grid:
-┌────────┬────────┬────────┬────────┬────────┐
-│ cherry │ bar    │ wild   │ plum   │ seven  │
-│ cherry │ lemon  │ orange │ bell   │ seven  │
-│ bar    │ bell   │ wild   │ bar    │ cherry │
-└────────┴────────┴────────┴────────┴────────┘
 ```
+
+<Grid
+  rows={[
+    ['cherry', 'bar', 'wild', 'plum', 'seven'],
+    ['cherry', 'lemon', 'orange', 'bell', 'seven'],
+    ['bar', 'bell', 'wild', 'bar', 'cherry'],
+  ]}
+/>
 
 The snapshot shapes are typed as `DebugSnapshot` and `DebugReelSnapshot`. they're plain data so they survive `structuredClone` / `postMessage` / `JSON.stringify` without losing fidelity.
 

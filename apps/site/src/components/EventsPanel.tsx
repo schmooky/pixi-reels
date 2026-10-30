@@ -236,18 +236,18 @@ export function EventsPanel({ entries, tick, onClear, className, style }: Events
 
   return (
     <div
-      className={cn('flex min-h-0 flex-col border-border/60 bg-card font-mono text-[10px] text-foreground', className)}
+      className={cn('flex min-h-0 flex-col border-border bg-card font-mono text-[10px] text-foreground', className)}
       style={style}
       data-events-panel
     >
-      <div className="flex shrink-0 items-center gap-1 border-b border-border/60 px-1.5 py-1">
+      <div className="flex shrink-0 items-center gap-1 border-b border-border px-1.5 py-1">
         <input
           type="text"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="filter: skip !symbol:created"
           aria-label="Filter events"
-          className="min-w-0 flex-1 rounded border border-border/60 bg-background/60 px-1.5 py-0.5 text-[10px] outline-none focus:border-primary"
+          className="min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 py-0.5 text-[10px] outline-none focus:border-foreground"
         />
         <span className="shrink-0 tabular-nums text-muted-foreground" title="shown / recorded">
           {visible.length}/{shown.length}
@@ -258,7 +258,7 @@ export function EventsPanel({ entries, tick, onClear, className, style }: Events
           title={paused ? 'Resume' : 'Pause'}
           aria-label={paused ? 'Resume events' : 'Pause events'}
           aria-pressed={paused}
-          className={cn('rounded border border-border/60 p-1 hover:text-foreground', paused ? 'text-primary' : 'text-muted-foreground')}
+          className={cn('rounded-sm border border-border p-1 transition-colors hover:text-foreground active:scale-[0.97]', paused ? 'bg-foreground text-background hover:text-background' : 'text-muted-foreground')}
         >
           {paused ? <Play size={10} /> : <Pause size={10} />}
         </button>
@@ -267,7 +267,7 @@ export function EventsPanel({ entries, tick, onClear, className, style }: Events
           onClick={() => void copy()}
           title="Copy visible rows as JSON"
           aria-label="Copy events as JSON"
-          className="rounded border border-border/60 p-1 text-muted-foreground hover:text-foreground"
+          className="rounded-sm border border-border p-1 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.97]"
         >
           {copied ? <Check size={10} /> : <Copy size={10} />}
         </button>
@@ -276,7 +276,7 @@ export function EventsPanel({ entries, tick, onClear, className, style }: Events
           onClick={() => { onClear(); frozenRef.current = paused ? [] : null; }}
           title="Clear"
           aria-label="Clear events"
-          className="rounded border border-border/60 p-1 text-muted-foreground hover:text-foreground"
+          className="rounded-sm border border-border p-1 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.97]"
         >
           <Trash2 size={10} />
         </button>
@@ -303,7 +303,7 @@ const Row = memo(function Row({ entry: e }: { entry: EventEntry }) {
   const blocks = rendered.filter((r) => r.includes('\n'));
   return (
     <div
-      className="border-b border-border/30 px-1.5 py-0.5 hover:bg-background/60"
+      className="border-b border-border/40 px-1.5 py-0.5 hover:bg-background"
       title={new Date(performance.timeOrigin + e.t).toISOString()}
     >
       <div className="flex gap-1.5">

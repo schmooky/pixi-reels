@@ -3100,6 +3100,15 @@ export class ReelSet extends Container implements Disposable {
     };
   }
 
+  /**
+   * The mode of the spin running now, or of the last one: `'standard'` or
+   * `'cascade'` (a cascade refill counts as `'cascade'`). What a sound cue
+   * reads to stay quiet on a tumble.
+   */
+  get spinMode(): 'standard' | 'cascade' {
+    return this._spinController.currentSpinMode;
+  }
+
   // ─── Speed API ────────────────────────────────────────────
 
   /** Speed profile manager. */

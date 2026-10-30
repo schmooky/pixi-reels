@@ -1,0 +1,608 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
+import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
+
+// (a) Legacy shape. y: 100% at 60, 0% at 240 (1.8 units per percent).
+const yOf = (m: number) => 240 - m * 180;
+const pow2out = (t: number) => 1 - (1 - t) * (1 - t);
+const LX = { spin: 70, drop: 180, dropEnd: 264, hold: 420, delay: 492, out: 594, end: 690 };
+const legacyDrop = Array.from({ length: 11 }, (_, k) => {
+  const t = k / 10;
+  return [LX.drop + (LX.dropEnd - LX.drop) * t, yOf(1 - 0.7 * pow2out(t))] as [number, number];
+});
+const legacyPts: [number, number][] = [
+  [LX.spin, yOf(1)], [LX.drop, yOf(1)], ...legacyDrop, [LX.hold, yOf(0.3)], [LX.delay, yOf(0.3)],
+  [LX.out, yOf(0.3)], [LX.out, yOf(0)], [LX.end, yOf(0)],
+];
+const legacyPath = legacyPts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+
+// (b) Curve shape: three segments at 0.38 units per ms. y: 0% at 240, 100% at 120.
+const yC = (m: number) => 240 - m * 120;
+const pow2inout = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+type Seg = { name: string; speed: number; duration: number; hold: number };
+const segs: Seg[] = [
+  { name: 'surge', speed: 1.5, duration: 150, hold: 100 },
+  { name: 'crawl', speed: 0.15, duration: 350, hold: 250 },
+  { name: 'final', speed: 0.3, duration: 150, hold: 300 },
+];
+const PX = 0.38;
+let cx0 = 140;
+let cur = 1;
+const curvePts: [number, number][] = [[70, yC(1)], [140, yC(1)]];
+const segMarks: { x: number; xEnd: number; xHold: number; seg: Seg; from: number }[] = [];
+for (const seg of segs) {
+  const from = cur;
+  const xEnd = cx0 + seg.duration * PX;
+  for (let k = 1; k <= 10; k++) {
+    const t = k / 10;
+    curvePts.push([cx0 + (xEnd - cx0) * t, yC(from + (seg.speed - from) * pow2inout(t))]);
+  }
+  const xHold = xEnd + seg.hold * PX;
+  curvePts.push([xHold, yC(seg.speed)]);
+  segMarks.push({ x: cx0, xEnd, xHold, seg, from });
+  cx0 = xHold;
+  cur = seg.speed;
+}
+curvePts.push([cx0, yC(0)], [cx0 + 40, yC(0)]);
+const curvePath = curvePts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+
+// (c) Stagger modes: three stacked panels on one time scale, 0.29 units per ms.
+const S = 0.29;
+const TEASE = 450;
+const STOP = 250;
+const LANE_X0 = 70;
+const LANE_W = 614;
+const panels = [
+  { title: 'stagger: 200', note: 'order * 200 ms', offsets: [0, 200, 400] },
+  { title: 'stagger: [0, 100, 500]', note: 'arr[order] ?? 0', offsets: [0, 100, 500] },
+  { title: "stagger: 'sequential'", note: 'waits for the previous tease reel to land', offsets: [0, TEASE + STOP, 2 * (TEASE + STOP)] },
+];
+const PANEL_H = 164;
+const PANEL_Y = (i: number) => 60 + i * (PANEL_H + 12);
+
+// (d) Slowdown interpolation example.
+const slow = { from: 0.5, to: 0.2, holdFrom: 1, holdTo: 1.6 };
+const count = 3;
+const orders = [0, 1, 2].map((order) => {
+  const f = count === 1 ? 0 : order / (count - 1);
+  const mult = slow.from + (slow.to - slow.from) * f;
+  const hold = slow.holdFrom + (slow.holdTo - slow.holdFrom) * f;
+  return { order, f, mult, hold, duration: Math.round(450 * hold) };
+});
+---
+<Architecture
+  title="Anticipation"
+  subtitle="The hesitation before a big reveal: how a reel slows, holds and creeps onto its symbols."
+  eyebrow="Tension"
+>
+  <p>
+    Two scatter symbols have landed and a third would trigger the bonus. The
+    remaining columns do not drop the way they usually do. They slow to a
+    crawl, hold there for half a second while the music swells, and then inch
+    onto their symbols one cell at a time. That hesitation is
+    <strong>anticipation</strong>, or a <strong>tease</strong>, and it is one of
+    the most important pieces of feel in a slot. Done well it makes a near
+    miss exciting; done badly it looks like lag.
+  </p>
+
+  <p>
+    In pixi-reels a tease is a per-spin list of reels that slow down and hold
+    before they stop. You name the reels with <code>setAnticipation()</code>
+    after <code>spin()</code>; the controller slots an anticipation phase into
+    each of those reels' chains, between the group barrier and the stop; and
+    the stop phase that follows creeps onto the result at the tease speed
+    instead of snapping back to full speed. This page covers the shape of the
+    slowdown, how several teasing reels are spaced out, how a tease survives a
+    skip press, and how the stop takes over at the end. ADR 020
+    (<code>docs/adr/020-anticipation-feel.md</code>) records why the curve
+    looks the way it does.
+  </p>
+
+  <Callout kind="plain">
+    A tease is three things the player feels in a row: the drop (the reel
+    visibly brakes), the hold (it crawls at a fixed slow speed), and the creep
+    (it stays slow while the result symbols roll in). Everything on this page
+    is a knob on one of those three.
+  </Callout>
+
+  <h2>The default shape</h2>
+
+  <p>
+    Figure 1 plots a teasing reel's speed over time on the NORMAL profile,
+    with the phases it passes through underneath. Follow the line from the
+    left. It runs at full speed, brakes sharply to 30% over the first third of
+    the hold, stays there for the rest of it, keeps that speed through the
+    stop delay, and then through the spin-out as well, until the reel lands
+    and bounces. The two dashed guides are the clamp the spin-out applies:
+    whatever speed the tease leaves behind is kept, but never below 8% or
+    above 100% of <code>spinSpeed</code>.
+  </p>
+
+  <Diagram height={300} caption="The legacy shape on NORMAL. Speed drops to 30% over the first 35% of the hold with power2.out, holds for the remaining 65%, keeps that speed through the stop delay, and the spin-out inherits it through preserveSpeed, clamped between 8% and 100% of spinSpeed. anticipation:reel fires at the tease start; anticipation:reelEnd fires from _markLanded, just before spin:reelLanded.">
+    <line x1={70} y1={240} x2={690} y2={240} class="guide-strong" />
+    <line x1={70} y1={40} x2={70} y2={240} class="guide-strong" />
+    <Label x={64} y={yOf(1) + 4} text="100%" anchor="end" mono tone="faint" />
+    <Label x={64} y={yOf(0.3) + 4} text="30%" anchor="end" mono tone="faint" />
+    <Label x={64} y={yOf(0.08) + 4} text="8%" anchor="end" mono tone="faint" />
+    <Label x={64} y={yOf(0) + 6} text="0" anchor="end" mono tone="faint" />
+    <Label x={22} y={150} text="speed / spinSpeed" anchor="middle" rotate={-90} />
+
+    <line x1={70} y1={yOf(1)} x2={690} y2={yOf(1)} class="guide" style="stroke-dasharray:4 3" />
+    <line x1={70} y1={yOf(0.08)} x2={690} y2={yOf(0.08)} class="guide" style="stroke-dasharray:4 3" />
+    {[LX.drop, LX.hold, LX.delay, LX.out].map((x) => (
+      <line x1={x} y1={58} x2={x} y2={240} class="guide" />
+    ))}
+    <path d={legacyPath} class="edge edge-primary" />
+
+    <Label x={222} y={48} text="drop 35%, power2.out" anchor="middle" />
+    <Label x={688} y={52} text="preserveSpeed cap" anchor="end" tone="faint" />
+    <Label x={342} y={174} text="hold 65% at 30%" anchor="middle" tone="fg" weight={600} />
+    <Label x={543} y={174} text="preserveSpeed" anchor="middle" tone="fg" weight={600} />
+    <Label x={272} y={220} text="preserveSpeed floor" tone="faint" />
+
+    {([
+      [LX.spin, LX.drop, 'span-spin', 'spin'],
+      [LX.drop, LX.hold, 'span-anticipation', 'tease'],
+      [LX.hold, LX.delay, 'span-rest', 'stop delay'],
+      [LX.delay, LX.out, 'span-stop', 'spin-out'],
+      [LX.out, LX.end, 'span-bounce', 'bounce'],
+    ] as const).map(([a, b, cls, name]) => (
+      <>
+        <rect x={a} y={252} width={b - a} height={14} rx={2} class={cls} />
+        <Label x={(a + b) / 2} y={284} text={name} anchor="middle" />
+      </>
+    ))}
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'subtle', label: 'tease', note: 'one cut step; a quicken ends it, a slam cancels it' },
+      { kind: 'muted', label: 'stop.delay', note: 'runs after the tease at the tease speed' },
+      { kind: 'primary', label: 'spinOut', note: 'preserveSpeed only when the tease played to its end and no quicken touched the reel' },
+    ]} />
+  </div>
+
+  <p>
+    This is the <strong>legacy shape</strong>, the one you get with no
+    <code>curve</code>: a target of <code>spinSpeed * 0.3</code>, reached over
+    35% of the hold with <code>power2.out</code>, then held for the remaining
+    65%. ADR 020 explains the ease choice: an ease-out applied to a speed puts
+    the jerk spike, the moment the braking changes fastest, at the very start,
+    which is where the player expects a brake to bite. Under the tween motion model that
+    is a GSAP timeline followed by an empty tween; under the drive model it
+    sets a target speed and waits out the duration.
+  </p>
+
+  <h2>Calling setAnticipation</h2>
+
+  <p>
+    <code>setAnticipation(reelIndices, options = 0)</code> takes the reels to
+    tease and either a bare stagger value or an options object. Two rules
+    about when to call it. It must come <strong>after</strong>
+    <code>spin()</code>, because <code>spin()</code> wipes every anticipation
+    setting, and <strong>before</strong> <code>setResult()</code>, so that a
+    queued <code>requestSkip()</code> firing inside <code>setResult</code> can
+    see the protection you set. Reels that this spin holds are dropped
+    silently. If you pass functions for <code>curve</code> or
+    <code>cells</code>, they are called right away, once per reel, with
+    <code>(order, total)</code>, where <code>order</code> is the reel's
+    position in your list; a function that returns nothing throws, and because
+    they run once, a random choice or a counter inside them behaves
+    predictably. <code>protect: true</code> is normalised to <code>'once'</code>.
+  </p>
+
+  <p>The options, with their defaults.</p>
+  <div class="not-prose my-6">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Option</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Type</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Default</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['stagger', "number | number[] | 'sequential'", '0', 'offset between tease starts, by tease order, not reel index'],
+            ['slowdown', '{ from?, to?, holdFrom?, holdTo? }', 'from 0.3, to = from, holdFrom 1, holdTo = holdFrom', 'linear interpolation across tease order'],
+            ['protect', "boolean | 'once' | 'stepwise' | 'always'", 'false', 'what a skip() press may end; true means once'],
+            ['duration', 'number (ms)', "profile anticipationDelay", 'the hold; a positive value keeps the tease alive on TURBO and SUPER_TURBO'],
+            ['curve', 'AnticipationSegment[] | (order, total) => segments', 'none (legacy shape)', 'segments of { speed, duration, ease?, hold? }; ease defaults to power2.inOut'],
+            ['cells', 'number | (order, total) => number', 'none', 'travel target in symbol pitches for the final leg, with duration as the backstop'],
+          ].map(([k, t, d, m]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{t}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-foreground/80">{d}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{m}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    The options are validated at the call, so a mistake shows up where you made
+    it rather than mid-spin. It throws if you give both <code>curve</code> and
+    <code>slowdown</code> (they describe the same thing two ways), if
+    <code>cells</code> is neither a function nor a positive number, if the
+    <code>curve</code> is empty, or if any segment has a negative or NaN
+    <code>speed</code>, a <code>duration</code> of 0 or less, or a negative
+    <code>hold</code>. It warns (<code>anticipation-cells-unreachable</code>)
+    if the final curve segment has speed 0 while <code>cells</code> is set,
+    because a reel that is not moving can never reach a travel target.
+  </p>
+
+  <h2>When a reel decides to tease</h2>
+
+  <p>
+    The decision is made inside the reel's chain, after the group barrier.
+    The controller works out the effective hold: the <code>duration</code> you
+    passed, else the profile's <code>anticipationDelay</code>. A reel teases
+    only if it is on the list, that hold is above zero, and no quicken has
+    reached it yet. NORMAL holds 450 ms and TURBO 250 ms, so both tease;
+    SUPER_TURBO's <code>anticipationDelay</code> is 0, so it never teases
+    unless you pass a <code>duration</code>.
+  </p>
+
+  <p>
+    A reel that will tease first waits out its stagger offset at full speed.
+    Then it joins the teasing set, tells the reel the tease is starting
+    (<code>notifyAnticipationStart</code>, which lets a symbol relax its spin
+    look, for example fading out a motion blur, through its
+    <code>onReelAnticipationStart</code> hook), emits
+    <code>anticipation:reel {'{ reelIndex, order, total }'}</code> and then
+    <code>spin:stopping</code>, and runs the anticipation phase. Inside the
+    phase there is a single step, the tease, and its length is
+    <code>config.duration ?? step.duration ?? timing.anticipationDelay</code>;
+    if that comes out at 0 or less the tease ends at once. When the step
+    resolves the phase completes, and the controller creates the stop phase
+    with <code>preserveSpeed</code> set if the tease played to its end and
+    nothing quickened it.
+  </p>
+
+  <h2>The curve shape</h2>
+
+  <p>
+    When one brake-and-hold is not enough, a <code>curve</code> replaces the
+    legacy shape with a list of segments the reel plays in order. Figure 2 is
+    a three-segment example: a surge above full speed, a long crawl, and a
+    final leg at 30%. Each segment eases to its target speed over its duration
+    and then holds. Look at the last hold: with <code>cells</code> set it ends
+    when the reel has travelled that many cells, so the reel always creeps the
+    same visible distance no matter what speed it reached.
+  </p>
+
+  <Diagram height={296} caption="A curve shape with three segments. Each leg tweens speed to spinSpeed x seg.speed over seg.duration with power2.inOut and then holds; anticipation:segment fires at each leg start. With cells set, the final hold ends when the odometer has moved that many cells, or when max(hold, backstop) runs out.">
+    <line x1={70} y1={240} x2={690} y2={240} class="guide-strong" />
+    <line x1={70} y1={40} x2={70} y2={240} class="guide-strong" />
+    {[0, 0.5, 1, 1.5].map((m) => (
+      <>
+        <line x1={70} y1={yC(m)} x2={690} y2={yC(m)} class="guide" style="stroke-dasharray:4 3" />
+        <Label x={64} y={yC(m) + 4} text={`${Math.round(m * 100)}%`} anchor="end" mono tone="faint" />
+      </>
+    ))}
+    <path d={curvePath} class="edge edge-primary" />
+    {segMarks.map((m, i) => (
+      <>
+        <circle cx={m.x} cy={yC(m.from)} r={5} class="span-bounce" />
+        <rect x={m.x} y={252} width={m.xEnd - m.x} height={8} rx={2} class="span-anticipation" />
+        <rect x={m.xEnd} y={252} width={m.xHold - m.xEnd} height={8} rx={2} class="span-rest" />
+        <Label x={(m.x + m.xHold) / 2} y={280} text={`${m.seg.name} ${m.seg.speed}`} anchor="middle" mono />
+      </>
+    ))}
+    <Label x={134} y={142} text="segment 0" anchor="end" mono />
+    <Label x={segMarks[1].x} y={48} text="segment 1" anchor="middle" mono />
+    <Label x={segMarks[2].x - 8} y={210} text="segment 2" anchor="end" mono />
+    <Label x={105} y={108} text="full speed" anchor="middle" tone="faint" />
+    <Edge from={[segMarks[2].xEnd, 170]} to={[segMarks[2].xHold, 170]} arrow="both" />
+    <Label x={(segMarks[2].xEnd + segMarks[2].xHold) / 2} y={156} text="cells or backstop" anchor="middle" />
+  </Diagram>
+
+  <p>
+    For each segment the phase emits
+    <code>anticipation:segment {'{ reelIndex, index, total, speed, targetSpeed }'}</code>,
+    tweens the speed to <code>spinSpeed * seg.speed</code> over
+    <code>seg.duration</code> with <code>seg.ease</code> (default
+    <code>power2.inOut</code>), holds for <code>seg.hold</code>, and moves on.
+    Earlier legs always play in full; only the final leg can be shortened or
+    stretched by a travel target. With <code>cells</code> the phase notes the
+    reel's odometer when the final hold begins and keeps holding until the
+    reel has moved that many cells, or until <code>max(hold, backstop)</code>
+    has passed, where the backstop is the effective hold in milliseconds. On
+    every update the phase ticks its steps and then runs that travel check.
+  </p>
+
+  <p>
+    A press ends the phase cleanly whichever shape is running. For a slam or a
+    quicken the phase kills its tween or delayed call and forces the reel back
+    to full speed; under a quicken the step runner then cuts the tease step,
+    which completes the phase, and the reel is <em>not</em> counted as having
+    anticipated. Under the drive model a segment's <code>duration</code> is a
+    time budget rather than a tween length, and if the drive misses the target
+    by more than 0.5 the phase warns once (<code>anticipation-drive-budget</code>).
+  </p>
+
+  <Callout kind="why">
+    A <code>duration</code> is a time budget, so how far the reel travels
+    during a tease depends on the speed curve: two reels with different
+    slowdowns pass a different number of symbols. <code>cells</code> anchors
+    the tease to travel instead, and it measures only the final leg, because
+    arming the odometer at the start would let a surge leg burn through the
+    budget before the crawl ever played. The time stays as a backstop because
+    a reel at rest can never reach a travel target, and a tease that never
+    ends is a hung spin.
+  </Callout>
+
+  <h2>Spacing out several teases</h2>
+
+  <p>
+    When two or three reels tease at once, starting them all in the same
+    instant looks mechanical. The <code>stagger</code> option offsets their
+    starts, and the offset is by <strong>tease order</strong>, the position in
+    the list you passed, not by reel index. Figure 3 shows the three forms on
+    three tease reels. In every panel the first reel never waits, and a
+    waiting reel keeps spinning at full speed. Notice how much longer the
+    third panel is: <code>'sequential'</code> waits for the previous tease
+    reel to land completely, bounce included, before the next one starts.
+  </p>
+
+  <Diagram height={620} caption="The three stagger forms on three tease reels (tease order 0, 1, 2), on one time scale in ms. The offset is by tease order, the first reel never waits, and a waiting reel spins at full speed. 'sequential' waits for the previous tease reel's landing promise, so it is the slowest.">
+    {[0, 500, 1000, 1500, 2000].map((t) => (
+      <Label x={LANE_X0 + t * S} y={40} text={`${t}`} anchor="middle" mono tone="faint" />
+    ))}
+    {panels.map((p, pi) => {
+      const py = PANEL_Y(pi);
+      return (
+        <>
+          <Group x={20} y={py} w={680} h={PANEL_H} label={p.title} note={p.note} />
+          {[0, 500, 1000, 1500, 2000].map((t) => (
+            <line x1={LANE_X0 + t * S} y1={py + 36} x2={LANE_X0 + t * S} y2={py + 156} class="guide" />
+          ))}
+          {p.offsets.map((off, order) => {
+            const y = py + 40 + order * 40;
+            const tStart = off * S;
+            const tEnd = (off + TEASE) * S;
+            const sEnd = (off + TEASE + STOP) * S;
+            return (
+              <>
+                <Label x={36} y={y + 21} text={`#${order}`} mono tone="faint" />
+                <rect x={LANE_X0} y={y} width={LANE_W} height={32} rx={2} class="lane-bg" />
+                {off > 0 && <rect x={LANE_X0} y={y + 4} width={tStart} height={24} rx={2} class="span-spin" />}
+                <rect x={LANE_X0 + tStart} y={y + 4} width={tEnd - tStart} height={24} rx={2} class="span-anticipation" />
+                <rect x={LANE_X0 + tEnd} y={y + 4} width={sEnd - tEnd} height={24} rx={2} class="span-stop" />
+              </>
+            );
+          })}
+        </>
+      );
+    })}
+    {([
+      ['span-spin', 'wait at full speed', 70],
+      ['span-anticipation', 'tease 450 ms', 250],
+      ['span-stop', 'stop delay 250 ms', 390],
+    ] as const).map(([cls, label, x]) => (
+      <>
+        <rect x={x} y={594} width={14} height={13} rx={2} class={cls} />
+        <Label x={x + 20} y={605} text={label} />
+      </>
+    ))}
+  </Diagram>
+
+  <p>
+    A number gives <code>order * n</code> milliseconds, waited out with
+    <code>setTimeout</code>. An array gives <code>arr[order] ?? 0</code>, so
+    you can hand-place each start. <code>'sequential'</code> awaits the
+    previous tease reel's landing promise. Those landing promises are created
+    once per round at the start of <code>spin()</code>, not inside
+    <code>setAnticipation</code>, so a waiter can never be handed a promise for
+    a reel that has already landed. The
+    <a href="/architecture/timeline/">timeline page</a> shows that
+    <code>'sequential'</code> on two reels pushes the end of the spin from
+    about 3.4 s to about 4.9 s.
+  </p>
+
+  <h2>Making later teases slower</h2>
+
+  <p>
+    A common feel is for each successive tease to be a little slower and a
+    little longer than the last, so the tension builds. The
+    <code>slowdown</code> option does that by interpolating linearly across
+    tease order: <code>f</code> runs from 0 on the first tease reel to 1 on
+    the last, the speed multiplier goes from <code>from</code> to
+    <code>to</code>, and the hold multiplier from <code>holdFrom</code> to
+    <code>holdTo</code>. Figure 4 works one example through.
+  </p>
+
+  <Diagram height={196} caption="slowdown interpolates linearly across tease order with f = order / (count - 1). This example uses { from: 0.5, to: 0.2, holdFrom: 1, holdTo: 1.6 } on three reels with a 450 ms base hold.">
+    {orders.map((o) => (
+      <Box x={20 + o.order * 232} y={20} w={216} h={78} title={`tease order ${o.order}`} mono={false} kind={o.order === 1 ? 'accent' : 'subtle'} sub={[
+        `f = ${o.f.toFixed(2)}, speed x ${o.mult.toFixed(2)}`,
+        `hold x ${o.hold.toFixed(2)} = ${o.duration} ms`,
+      ]} />
+    ))}
+    <Label x={20} y={136} text={[
+      'speedMultiplier = from + (to - from) * f',
+      'holdMult = holdFrom + (holdTo - holdFrom) * f',
+      'duration = base * holdMult',
+    ]} mono tone="fg" />
+  </Diagram>
+
+  <p>
+    The defaults are <code>from</code> 0.3, <code>to</code> equal to
+    <code>from</code>, <code>holdFrom</code> 1 and <code>holdTo</code> equal to
+    <code>holdFrom</code>. The base hold is the
+    <code>duration</code> you passed, else the profile's
+    <code>anticipationDelay</code>; with a single tease reel <code>f</code> is
+    0. The controller builds the per-reel phase config from these: with a
+    curve it passes the resolved segments, the cells, and a
+    <code>duration</code> that only decides whether the tease runs and serves
+    as the travel backstop; with no slowdown it passes nothing extra so the
+    phase defaults apply; with a slowdown it passes the two multipliers, and
+    writes a <code>duration</code> only when the hold multiplier differs from
+    1 or an override exists.
+  </p>
+
+  <h2>Protecting the tease from a press</h2>
+
+  <p>
+    A player who taps skip during a tease usually wants the boring columns to
+    drop, not the exciting ones. <code>protect</code> says what a
+    <code>skip()</code> or a queued <code>requestSkip()</code> press may end.
+    <code>'once'</code> (or <code>true</code>) lets the first press land only
+    the non-tease reels and the next press land the tease. <code>'stepwise'</code>
+    releases one tease reel per later press, in tease order. <code>'always'</code>
+    never lets a press end a tease, which leaves the skip stage at 1 for the
+    rest of the round. <code>slamStop()</code> ignores all of it. Protection
+    does nothing when the effective hold is 0 or less, and it reads the profile
+    captured for this spin, not the live one. The press algorithm, the stage
+    values and the full table are on the
+    <a href="/architecture/skipping/">skipping page</a>.
+  </p>
+
+  <h2>Handing over to the stop</h2>
+
+  <p>
+    After a tease that played to its end, the reel is marked as having
+    anticipated, and two things follow. First, its stop phase is created with
+    <code>preserveSpeed</code>, so instead of returning to <code>spinSpeed</code>
+    the spin-out keeps the current speed, clamped between 8% and 100% of
+    <code>spinSpeed</code>; a surge above full speed is clamped at once, even
+    under a drive. That is the creep. Second, every phase created afterwards
+    for this reel sees <code>anticipated</code> in its context, so the
+    profile's <code>whenAnticipated</code> sections apply to its timing and
+    step settings; this is how a teased reel can get a longer, softer bounce
+    (see <a href="/architecture/speed-profiles/">speed profiles</a>). A tease
+    cut short by a quicken sets neither: the spin-out runs at full speed and
+    <code>whenAnticipated</code> is ignored.
+  </p>
+
+  <p>
+    In cascade mode the tease is a pure hold at speed 0, because a falling
+    reel cannot crawl. <code>curve</code> and <code>cells</code> are dropped
+    with a one-time warning, the speed multiplier is forced to 0, and after
+    the tease the reel is halted and snapped before <code>cascade:place</code>
+    runs.
+  </p>
+
+  <Callout kind="gotcha">
+    The creep only happens when the tease ran to the end. If a quicken press
+    cuts it short, the stop phase gets no <code>preserveSpeed</code> and the
+    reel snaps back to full speed for its spin-out, which can look like the
+    tease never happened. If that matters to your game, protect the tease, or
+    use a slam for the press so the reel lands at once instead.
+  </Callout>
+
+  <h2>Picking the reels from the grid</h2>
+
+  <p>
+    Most games tease "every reel after the one that completed the scatter
+    count", and there is a helper for exactly that.
+    <code>anticipationForScatters(grid, {'{ symbol, trigger = 2, mode = \'all-remaining\' }'})</code>,
+    in <code>spin/anticipationRecipes.ts</code>, counts <code>symbol</code> in
+    each reel's visible cells from left to right; the trigger reel is the first
+    one where the running total reaches <code>trigger</code>. It returns the
+    reels after that one: all of them for <code>'all-remaining'</code>, or only
+    those that hold at least one <code>symbol</code> for
+    <code>'scatter-only'</code>, and an empty list if the trigger is never
+    reached. Pass the result straight to <code>setAnticipation</code>. Worked
+    examples live under the <a href="/recipes/anticipation/">anticipation
+    recipes</a>.
+  </p>
+
+  <h2>Events</h2>
+  <p>What your game hears from a teasing reel, in order.</p>
+  <div class="not-prose my-6">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Event</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Payload</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">When</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['anticipation:reel', '{ reelIndex, order, total }', 'the tease starts, after the stagger offset; spin:stopping follows at once'],
+            ['anticipation:segment', '{ reelIndex, index, total, speed, targetSpeed }', 'each curve leg begins (curve shape only)'],
+            ['anticipation:reelEnd', '{ reelIndex }', 'from _markLanded, after the bounce, just before spin:reelLanded'],
+            ['reel: anticipationStart', '(none)', 'notifyAnticipationStart(); symbols get onReelAnticipationStart'],
+          ].map(([e, p, w]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{e}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{p}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{w}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>Defaults</h2>
+  <p>Every number on this page, and the file that owns it.</p>
+  <div class="not-prose my-6">
+    <div class="rounded-lg border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Setting</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Default</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Where</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['anticipationDelay', '450 NORMAL, 250 TURBO, 0 SUPER_TURBO', 'SpeedPresets'],
+            ['speedMultiplier', '0.3', 'AnticipationPhase'],
+            ['legacy split', '0.35 drop / 0.65 hold, power2.out', 'AnticipationPhase'],
+            ['curve ease', 'power2.inOut', 'AnticipationPhase'],
+            ['segment hold', '0', 'AnticipationSegment'],
+            ['drive arrival tolerance', '0.5', 'AnticipationPhase'],
+            ['slowdown from / holdFrom', '0.3 / 1', 'SpinController _anticipationConfigFor'],
+            ['stagger', '0', 'SpinController'],
+            ['protect', 'false', 'SpinController; true normalizes to once'],
+            ['preserveSpeed floor / cap', '0.08 / 1.0 x spinSpeed', 'StopPhase'],
+            ['anticipationForScatters trigger / mode', "2 / 'all-remaining'", 'anticipationRecipes'],
+          ].map(([k, v, w]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{k}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{v}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{w}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="not-prose my-6 rounded-lg border border-border bg-card p-4">
+    <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">Where this lives</div>
+    <ul class="text-sm space-y-1 text-foreground/80">
+      <li><code>packages/pixi-reels/src/spin/phases/AnticipationPhase.ts</code>: the tease step, both shapes, _runSegment, _endTease, the travel check</li>
+      <li><code>packages/pixi-reels/src/spin/SpinController.ts</code>: setAnticipation, assertAnticipationOptions, _anticipationConfigFor, _awaitAnticipationOffset, the tease decision in _startReel</li>
+      <li><code>packages/pixi-reels/src/spin/anticipationRecipes.ts</code>: anticipationForScatters</li>
+      <li><code>packages/pixi-reels/src/config/types.ts</code>: AnticipationOptions, AnticipationSegment, AnticipationProtect</li>
+      <li><code>docs/adr/020-anticipation-feel.md</code>. Recipes: <a href="/recipes/anticipation/">anticipation</a>. Related: <a href="/architecture/skipping/">skipping</a>, <a href="/architecture/speed-profiles/">speed profiles</a></li>
+    </ul>
+  </div>
+
+  <Callout kind="remember">
+    A tease is a brake, a hold and a creep, set per spin with
+    <code>setAnticipation</code> after <code>spin()</code> and before
+    <code>setResult()</code>. The default shape brakes to 30% and holds; a
+    curve lets you script the braking; stagger and slowdown space out and
+    deepen several teases; protect keeps a press from ending them. The creep
+    only happens when the tease ran to its end.
+  </Callout>
+</Architecture>

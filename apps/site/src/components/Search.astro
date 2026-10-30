@@ -9,8 +9,8 @@
  * use search don't pay for the index download.
  */
 ---
-<div id="search-root" class="hidden fixed inset-0 z-[100] flex items-start justify-center bg-background/80 backdrop-blur-sm pt-24">
-  <div class="w-full max-w-xl rounded-xl border border-border bg-card shadow-lg">
+<div id="search-root" class="hidden fixed inset-0 z-[100] flex items-start justify-center bg-background/80 pt-24">
+  <div class="w-full max-w-xl rounded-sm border border-border bg-card">
     <div class="flex items-center gap-2 border-b border-border px-4 py-2">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input
@@ -20,20 +20,20 @@
         class="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
         autocomplete="off"
       />
-      <kbd class="ml-auto rounded border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">esc</kbd>
+      <kbd class="ml-auto rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">esc</kbd>
     </div>
     <ol id="search-results" class="max-h-[60vh] overflow-y-auto px-2 py-2 text-sm"></ol>
   </div>
 </div>
 <button
   id="search-trigger"
-  class="hidden md:inline-flex h-8 items-center gap-2 rounded-md border border-border bg-transparent px-3 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50"
+  class="hidden md:inline-flex h-8 items-center gap-2 rounded-sm border border-border bg-transparent px-3 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50"
   type="button"
   aria-label="Open search"
 >
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
   Search
-  <kbd class="ml-1 rounded border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+  <kbd class="ml-1 rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
 </button>
 
 <!--
@@ -109,7 +109,7 @@
       if (!results) return;
       results.innerHTML = data.map(function (d) {
         var title = escapeHtml((d.meta && d.meta.title) || d.url);
-        return '<li class="rounded-md hover:bg-secondary/40"><a href="' + d.url + '" class="block px-3 py-2"><div class="text-sm font-semibold">' + title + '</div><div class="text-xs text-muted-foreground line-clamp-2">' + d.excerpt + '</div></a></li>';
+        return '<li class="rounded-sm hover:bg-secondary/40"><a href="' + d.url + '" class="block px-3 py-2"><div class="text-sm font-semibold">' + title + '</div><div class="text-xs text-muted-foreground line-clamp-2">' + d.excerpt + '</div></a></li>';
       }).join('');
     });
 

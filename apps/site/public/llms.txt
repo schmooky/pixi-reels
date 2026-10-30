@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 4.1.0 is a reel engine for PixiJS v8.
+pixi-reels 4.2.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -90,6 +90,10 @@ CellPin is the cell-persistence primitive. It survives spins,
 ### Recipe previews
 URL: https://pixi-reels.schmooky.dev/guides/recipe-previews/
 How to give a recipe a card thumbnail and inline body images.
+
+### Sound
+URL: https://pixi-reels.schmooky.dev/guides/sound/
+Snap a table of sound cues onto a reel set's events, with a port
 
 ### Speed modes
 URL: https://pixi-reels.schmooky.dev/guides/speed-modes/
@@ -202,6 +206,10 @@ Cascade/tumble spinning mode. Symbols fall from above with gravity-like accelera
 ### CascadePlacePhase\<TProfile *extends* [`SpeedProfile`](/api/types/index.SpeedProfile/) = [`SpeedProfile`](/api/types/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadePlacePhase/
 Identity-swap half of the tumble cascade. Runs after `CascadeFallPhase` (Moment A) or right at the start of `refill()` (Moment B).
+
+### CuePlayer
+URL: https://pixi-reels.schmooky.dev/api/classes/index.CuePlayer/
+Fires cues through a port and keeps every loop and pending delay so `destroy()` can silence the lot.
 
 ### EmptySymbol
 URL: https://pixi-reels.schmooky.dev/api/classes/index.EmptySymbol/
@@ -370,6 +378,14 @@ URL: https://pixi-reels.schmooky.dev/api/functions/debug.roundRectPath/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.anticipationForScatters/
 ```ts function anticipationForScatters(grid: ColumnTarget[], opts: ScatterAnticipationOptions): number[]; ```
 
+### attachBoardSounds()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.attachBoardSounds/
+```ts function attachBoardSounds<TData = unknown>( board: HoldAndWinBoard<TData>, port: ReelAudioPort, cues: BoardCues ): ReelSoundsHandle; ```
+
+### attachReelSounds()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.attachReelSounds/
+```ts function attachReelSounds( reelSet: ReelSet, port: ReelAudioPort, cues: ReelCues ): ReelSoundsHandle; ```
+
 ### canProjectTexture()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.canProjectTexture/
 ```ts function canProjectTexture(texture: Texture): boolean; ```
@@ -526,6 +542,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.textureCellInset/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.whenSpineReady/
 ```ts function whenSpineReady(): Promise<void>; ```
 
+### zvukPort()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.zvukPort/
+```ts function zvukPort(engine: ZvukEngineLike, opts?: { warn?: (message: string) => void; }): ReelAudioPort; ```
+
 ### captureEvents()
 URL: https://pixi-reels.schmooky.dev/api/functions/testing.captureEvents/
 ```ts function captureEvents(reelSet: ReelSet, names: keyof ReelSetEvents[]): { args: unknown[]; event: string; }[]; ```
@@ -652,6 +672,9 @@ What a cell-mask factory is told about the cell it builds for.
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCellZIndexContext/
 What a [BoardCellZIndexResolver](/api/types/index.BoardCellZIndexResolver/) is asked about.
 
+### BoardCues
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCues/
+
 ### BoardGridOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
 
@@ -705,6 +728,14 @@ Options accepted by `reelSet.pin()`.
 ### ColumnTarget
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ColumnTarget/
 Per-reel target shape for `ReelSet.setResult` and `ReelSetBuilder.initialFrame`. One object per reel.
+
+### CueBase
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CueBase/
+What every cue shares: the bus, a level, a pitch, a delay and a guard.
+
+### CueContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CueContext/
+What a cue knows about the beat it fires on.
 
 ### CycleOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CycleOptions/
@@ -782,6 +813,10 @@ Resolution of one [HoldAndWinBoard.respin](/api/classes/index.HoldAndWinBoard/#r
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.InsetSides/
 Per-side inset for [inset](/api/functions/index.inset/). SCREEN sides in every orientation, so `top` trims the top edge of the drawn mask on a horizontal set too. A side left out is `0`; negative grow
 
+### LoopCue
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.LoopCue/
+What every cue shares: the bus, a level, a pitch, a delay and a guard.
+
 ### MaskConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskConfig/
 Mask configuration for the reel viewport.
@@ -822,6 +857,10 @@ One notice as [onNotice](/api/functions/index.onNotice/) hands it over.
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.NudgeOptions/
 Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition that shifts the reel by `distance` symbol positions and reveals new caller-supplied symbols.
 
+### OneShotCue
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.OneShotCue/
+What every cue shares: the bus, a level, a pitch, a delay and a guard.
+
 ### PhaseCardSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseCardSymbolOptions/
 
@@ -859,6 +898,13 @@ Runtime control over the random symbol draw, reachable as `reelSet.randomSymbols
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RecordedFrame/
 One captured frame from `startRecording()`. a `DebugSnapshot` plus the tag the recording was started with and the spin event that triggered the capture.
 
+### ReelAudioLoop
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelAudioLoop/
+
+### ReelAudioPort
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelAudioPort/
+The audio engine as the cues see it.
+
 ### ReelAxis
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelAxis/
 Immutable projection between screen space and a reel''s travel/cross axes.
@@ -877,6 +923,9 @@ One cell''s projected footprint on a curved reel: the four corners of the quad t
 
 ### ReelConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelConfig/
+
+### ReelCues
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelCues/
 
 ### ReelCurveConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelCurveConfig/
@@ -913,6 +962,10 @@ Bounding rectangle for one reel. what `MaskStrategy` builds the clip geometry fr
 ### ReelSetEvents
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelSetEvents/
 Events emitted by a ReelSet.
+
+### ReelSoundsHandle
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelSoundsHandle/
+Contract for objects that allocate resources and need cleanup. Every class that subscribes to tickers, creates display objects, or holds references must implement this to prevent memory leaks.
 
 ### RefillOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RefillOptions/
@@ -1090,6 +1143,16 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.WinLine/
 ### WinPresenterOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.WinPresenterOptions/
 
+### ZvukEngineLike
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ZvukEngineLike/
+The slice of a `@schmooky/zvuk` `Engine` the port uses. Structural, so the library needs no dependency on zvuk: pass the engine `createEngine()` gave you and it fits.
+
+### ZvukPlayOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ZvukPlayOptions/
+
+### ZvukVoiceLike
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ZvukVoiceLike/
+
 ### OneShotOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/spine.OneShotOptions/
 Options for [SpineReelSymbol.playOneShot](/api/classes/spine.SpineReelSymbol/#playoneshot).
@@ -1144,6 +1207,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStepContext/
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardCellZIndexResolver/
 ```ts type BoardCellZIndexResolver = (ctx: BoardCellZIndexContext) => number; ```
 
+### BoardEventCue
+URL: https://pixi-reels.schmooky.dev/api/types/index.BoardEventCue/
+```ts type BoardEventCue =
+
 ### BoardProfile
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardProfile/
 ```ts type BoardProfile =
@@ -1151,6 +1218,14 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.BoardProfile/
 ### CrossOffsetMode
 URL: https://pixi-reels.schmooky.dev/api/types/index.CrossOffsetMode/
 ```ts type CrossOffsetMode = "none" | "trapezoid"; ```
+
+### Cue
+URL: https://pixi-reels.schmooky.dev/api/types/index.Cue/
+```ts type Cue =
+
+### CueValue
+URL: https://pixi-reels.schmooky.dev/api/types/index.CueValue/
+```ts type CueValue =
 
 ### CurveFocus
 URL: https://pixi-reels.schmooky.dev/api/types/index.CurveFocus/
@@ -1163,6 +1238,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.CurveMode/
 ### Direction
 URL: https://pixi-reels.schmooky.dev/api/types/index.Direction/
 ```ts type Direction = "forward" | "reverse"; ```
+
+### EventCue
+URL: https://pixi-reels.schmooky.dev/api/types/index.EventCue/
+```ts type EventCue =
 
 ### Gsap
 URL: https://pixi-reels.schmooky.dev/api/types/index.Gsap/
@@ -1276,6 +1355,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.RunCascadeResult/
 URL: https://pixi-reels.schmooky.dev/api/types/index.SkipMode/
 ```ts type SkipMode = "slam" | "quicken"; ```
 
+### SoundValue
+URL: https://pixi-reels.schmooky.dev/api/types/index.SoundValue/
+```ts type SoundValue =
+
 ### SpeedProfile
 URL: https://pixi-reels.schmooky.dev/api/types/index.SpeedProfile/
 ```ts type SpeedProfile = SpeedProfileBase & PhaseSections; ```
@@ -1370,7 +1453,7 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.PHASE_CARD_COLORS/
 
 ### SpeedPresets
 URL: https://pixi-reels.schmooky.dev/api/variables/index.SpeedPresets/
-```ts const SpeedPresets: { NORMAL: { accelerationDuration: 300; accelerationEase: "power2.in"; anticipationDelay: 450; bounceDistance: 56; bounceDuration: 600; decelerationEase: "power2.out"; minimum
+```ts const SpeedPresets: { NORMAL: { accelerationDuration: 300; accelerationEase: "power2.in"; anticipationDelay: 450; bounceDistance: 22; bounceDuration: 220; decelerationEase: "power2.out"; minimum
 
 ### VERTICAL\_FORWARD
 URL: https://pixi-reels.schmooky.dev/api/variables/index.VERTICAL_FORWARD/
@@ -1386,23 +1469,59 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.Z_INDEX_BUDGET/
 
 ## Architecture deep-dives
 
+### architecture/anticipation
+URL: https://pixi-reels.schmooky.dev/architecture/anticipation/
+
+### architecture/builder
+URL: https://pixi-reels.schmooky.dev/architecture/builder/
+
 ### architecture/cascade
 URL: https://pixi-reels.schmooky.dev/architecture/cascade/
 
 ### architecture/classes
 URL: https://pixi-reels.schmooky.dev/architecture/classes/
 
+### architecture/curvature
+URL: https://pixi-reels.schmooky.dev/architecture/curvature/
+
+### architecture/debug
+URL: https://pixi-reels.schmooky.dev/architecture/debug/
+
 ### architecture/events
 URL: https://pixi-reels.schmooky.dev/architecture/events/
+
+### architecture/frame-pipeline
+URL: https://pixi-reels.schmooky.dev/architecture/frame-pipeline/
+
+### architecture/motion
+URL: https://pixi-reels.schmooky.dev/architecture/motion/
 
 ### architecture/overview
 URL: https://pixi-reels.schmooky.dev/architecture/overview/
 
+### architecture/pins-and-boards
+URL: https://pixi-reels.schmooky.dev/architecture/pins-and-boards/
+
+### architecture/skipping
+URL: https://pixi-reels.schmooky.dev/architecture/skipping/
+
+### architecture/speed-profiles
+URL: https://pixi-reels.schmooky.dev/architecture/speed-profiles/
+
 ### architecture/spin-lifecycle
 URL: https://pixi-reels.schmooky.dev/architecture/spin-lifecycle/
 
+### architecture/symbols
+URL: https://pixi-reels.schmooky.dev/architecture/symbols/
+
 ### architecture/testing
 URL: https://pixi-reels.schmooky.dev/architecture/testing/
+
+### architecture/timeline
+URL: https://pixi-reels.schmooky.dev/architecture/timeline/
+
+### architecture/viewport-and-masks
+URL: https://pixi-reels.schmooky.dev/architecture/viewport-and-masks/
 
 ## Recipes
 

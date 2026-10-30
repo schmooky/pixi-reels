@@ -6,6 +6,9 @@ description: Two moments, three phases, gravity-correct refills. The mental
   model behind .tumble() so you stop fighting the API.
 ---
 
+import Timeline from '../../components/docs/Timeline.astro';
+import Strip from '../../components/docs/Strip.astro';
+
 A cascade looks like one mechanic. It is two.
 
 Split them in your head and [`.tumble()`](/docs/api-builder/#tumble) and
@@ -28,13 +31,20 @@ Same animation engine. The split matters because:
 - **B** is N beats, one per cascade level, until nothing wins. Each beat
   starts on whatever the last one landed.
 
-```text
-[CLICK]                          [WIN!]              [WIN!]              [no wins]
-   │                               │                    │                    │
-   ▼                               ▼                    ▼                    ▼
-fall ── wait ── place ── dropIn ── refill ── ── ── ── ── refill ── ── ── ── ── (end)
-└────────── Moment A ──────────┘└── Moment B ──┘└────── Moment B ──────┘
-```
+<Timeline
+  beats={['fall', 'wait', 'place', 'dropIn', 'refill', 'refill', '(end)']}
+  markers={[
+    { at: 0, label: 'CLICK' },
+    { at: 4, label: 'WIN!' },
+    { at: 5, label: 'WIN!' },
+    { at: 6, label: 'no wins' },
+  ]}
+  spans={[
+    { from: 0, to: 3, label: 'Moment A' },
+    { from: 4, to: 4, label: 'Moment B' },
+    { from: 5, to: 5, label: 'Moment B' },
+  ]}
+/>
 
 ## Three phases, one pipeline
 
@@ -82,14 +92,28 @@ That is what server-side gravity sims already emit.
 
 Reel `['A','B','C','D','E']`, winners at cells `1` and `3`:
 
-```text
-Pre-refill:        Post-refill:        Why:
-  cell 0: A           cell 0: ?(new)     ── new symbol enters from above
-  cell 1: B   ←       cell 1: ?(new)     ── new symbol enters from above
-  cell 2: C           cell 2: A          ── survivor cell 0 slid down 2
-  cell 3: D   ←       cell 3: C          ── survivor cell 2 slid down 1
-  cell 4: E           cell 4: E          ── survivor cell 4, no movement
-```
+<div class="not-prose my-6 flex flex-wrap gap-x-10 gap-y-6">
+  <Strip
+    headers={['Pre-refill']}
+    cells={[
+      { index: 'cell 0', label: 'A' },
+      { index: 'cell 1', label: 'B', hot: true },
+      { index: 'cell 2', label: 'C' },
+      { index: 'cell 3', label: 'D', hot: true },
+      { index: 'cell 4', label: 'E' },
+    ]}
+  />
+  <Strip
+    headers={['Post-refill', '', 'Why']}
+    cells={[
+      { index: 'cell 0', label: '?(new)', note: 'new symbol enters from above' },
+      { index: 'cell 1', label: '?(new)', note: 'new symbol enters from above' },
+      { index: 'cell 2', label: 'A', note: 'survivor cell 0 slid down 2' },
+      { index: 'cell 3', label: 'C', note: 'survivor cell 2 slid down 1' },
+      { index: 'cell 4', label: 'E', note: 'survivor cell 4, no movement' },
+    ]}
+  />
+</div>
 
 Follows the convention? Pass it straight to `refill({ winners, grid })`.
 Does not? Do the transform client-side first.

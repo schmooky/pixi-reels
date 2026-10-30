@@ -36,13 +36,13 @@ if (!webm && !mp4) {
     loop
     playsinline
     preload="metadata"
-    class="max-h-[320px] w-auto rounded-xl border border-border bg-muted/40"
+    class="max-h-[320px] w-auto rounded-lg border border-border bg-muted/40"
     aria-label={caption}
   >
     {webm && <source src={webm} type="video/webm" />}
     {mp4 && <source src={mp4} type="video/mp4" />}
   </video>
-  <figcaption class="mt-2 text-center text-xs text-muted-foreground">
+  <figcaption class="mt-3 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
     As seen in <span class="font-medium text-foreground/80">{caption}</span>
   </figcaption>
 </figure>

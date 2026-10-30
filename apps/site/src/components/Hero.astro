@@ -1,36 +1,90 @@
 ---
 import CopyCommand from './CopyCommand.astro';
+import { PIXI_REELS_VERSION } from '../lib/version.ts';
+import { LandingReels, landingAspect } from './landing/LandingReels.tsx';
+
+const aspect = landingAspect('hero');
 ---
-<section class="relative overflow-hidden border-b border-border/60">
-  <div class="grid-bg absolute inset-0 opacity-50 pointer-events-none" aria-hidden></div>
+{/*
+  The hero is ink in both themes (`.theme-ink` re-declares the dark tokens),
+  so the reel well reads as part of the page instead of a dark box on white,
+  and the one brand hue has something to hit against.
+*/}
+<section class="theme-ink relative overflow-hidden border-b border-border">
+  <div class="container relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14 lg:py-24">
+    <div class="flex min-w-0 flex-col items-start">
+      <p class="motion-appear eyebrow" style="--motion-delay: 500ms">
+        v{PIXI_REELS_VERSION}
+        <span class="text-muted-foreground/60">/</span>
+        PixiJS v8
+        <span class="text-muted-foreground/60">/</span>
+        MIT
+      </p>
 
-  <div class="container relative flex flex-col items-center py-24 text-center sm:py-32">
-    <h1 class="max-w-3xl text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
-      Slot reels, <span class="text-muted-foreground">ready to spin.</span>
-    </h1>
+      <h1 class="display mt-5 text-[clamp(3.25rem,7.4vw,6rem)] leading-[0.92]">
+        <span class="motion-slam block">Slot reels,</span>
+        <span class="motion-slam block text-brand" style="--motion-delay: 133ms">ready to spin.</span>
+      </h1>
 
-    <p class="mt-5 max-w-xl text-balance text-lg text-muted-foreground">
-      A fluent reel engine for PixiJS v8.<br/>Go from <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground">npm install</code> to a
-      spinning slot in ten lines.<br/>Fully typed, headless-testable, MIT.
-    </p>
+      <p class="motion-appear mt-7 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl" style="--motion-delay: 420ms">
+        A fluent reel engine for PixiJS v8. From install to a spinning slot in ten lines. Fully typed, headless-testable, open source.
+      </p>
 
-    <div class="mt-8 flex flex-col items-center gap-3 sm:flex-row">
-      <a
-        href="/guides/getting-started/"
-        class="inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
-      >
-        Get started
-      </a>
-      <a
-        href="/recipes/"
-        class="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-6 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-      >
-        Browse recipes 👉
-      </a>
+      <div class="motion-appear mt-9 flex flex-wrap items-center gap-3" style="--motion-delay: 500ms">
+        <a
+          href="/guides/getting-started/"
+          class="group inline-flex h-12 items-center gap-2 rounded-lg bg-brand pl-6 pr-5 text-[15px] font-semibold text-brand-foreground transition-[transform,background-color] duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] hover:scale-[1.03] active:scale-[0.97]"
+        >
+          Get started
+          <svg class="h-4 w-4 transition-transform duration-[133ms] group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </a>
+        <a
+          href="/recipes/"
+          class="inline-flex h-12 items-center rounded-lg border border-border px-6 text-[15px] font-semibold text-foreground transition-colors duration-[133ms] hover:border-foreground/60 hover:bg-secondary/60"
+        >
+          Browse 130 recipes
+        </a>
+      </div>
+
+      <div class="motion-appear mt-6" style="--motion-delay: 580ms">
+        <CopyCommand command="npm i pixi-reels" />
+      </div>
     </div>
 
-    <div class="mt-6">
-      <CopyCommand command="npm i pixi-reels" />
+    {/*
+      The reels on the right are the engine itself: a 5x3 ReelSet built with
+      the public builder, spinning on a loop while it is on screen. The well
+      behind it is drawn by the island; this wrapper only reserves the exact
+      box (via aspect-ratio) so the hero never reflows when the canvas mounts.
+    */}
+    <div class="motion-appear relative mx-auto w-full min-w-0 max-w-[640px]" style="--motion-delay: 250ms">
+      <div
+        class="hero-well relative overflow-hidden rounded-lg"
+        style={`aspect-ratio: ${aspect};`}
+        data-hero-reels
+      >
+        <div class="hero-well__skeleton absolute inset-0 flex items-center justify-center" aria-hidden="true">
+          <div class="flex flex-col items-center gap-3 text-foreground/30">
+            <div class="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+            <p class="font-mono text-[11px] uppercase tracking-wider">Warming up the reels</p>
+          </div>
+        </div>
+        <LandingReels variant="hero" client:only="react" />
+      </div>
     </div>
   </div>
 </section>
+
+<style>
+  /* Same surface as every code-ish element (global.css --code-bg). */
+  .hero-well {
+    background: #111114;
+    box-shadow: 0 0 0 1px hsl(var(--code-border)), 0 30px 80px -30px hsl(0 0% 0% / 0.8);
+  }
+  /* Hide the skeleton once the React island has rendered its host. */
+  .hero-well:has(astro-island > *) .hero-well__skeleton {
+    display: none;
+  }
+</style>

@@ -1,7 +1,8 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { RefreshCw, ExternalLink, SkipForward, Bug } from 'lucide-react';
+import { ExternalLink, Bug, Volume2, VolumeX } from 'lucide-react';
+import { TapHint } from './TapHint';
 import { Application } from 'pixi.js';
 import type { Texture, Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
@@ -55,6 +56,8 @@ import {
   fitText,
 } from '../runtime/holdAndWinFx.ts';
 import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
+import { reelSounds, boardSounds, readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
+import type { HoldAndWinBoard, ReelSoundsHandle } from 'pixi-reels';
 import {
   loadGeneratedSpines,
   buildSpineMap,
@@ -197,6 +200,12 @@ const LAYER_GROUPS = {
 type LayerGroup = keyof typeof LAYER_GROUPS;
 const DEFAULT_GROUPS: readonly LayerGroup[] = ['info', 'grid'];
 
+/** One toolbar voice: mono, 11px, uppercase; the primary action is the brand fill. */
+const TOOL_BUTTON =
+  'inline-flex h-6 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[11px] uppercase tracking-[0.14em] '
+  + 'transition-[color,background-color,border-color,transform] duration-[133ms] active:scale-[0.97] '
+  + 'disabled:cursor-not-allowed disabled:opacity-50';
+
 function layersFor(groups: readonly LayerGroup[]): DebugOverlayLayer[] {
   return groups.flatMap((g) => [...LAYER_GROUPS[g]]);
 }
@@ -267,6 +276,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   // One recorder per reel set, running from mount: the timeline and metrics
   // panels can then show the spin that made you reach for the Debug button.
   const metricsRef = useRef<Map<ReelSet, SpinMetrics>>(new Map());
+  const soundsRef = useRef<ReelSoundsHandle[]>([]);
   // Re-fit after the overlay grows the set's bounds (panels under the mask).
   const fitRef = useRef<(() => void) | null>(null);
   const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
@@ -274,6 +284,13 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [debugOn, setDebugOn] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
+  // The remembered choice, read after mount so the server and first client
+  // render agree; every runner on the page follows one toggle.
+  useEffect(() => {
+    setSoundOn(soundEnabled());
+    return onSoundEnabled(setSoundOn);
+  }, []);
   // The overlay draws into a container on the ReelSet, so a recipe that
   // returns only `onSpin` (HoldAndWinBoard, BoardGrid) has nothing to draw on.
   const [canDebug, setCanDebug] = useState(false);
@@ -351,6 +368,14 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       }
 
       reelSetRef.current = result.reelSet ?? null;
+      // The default cue table on the recipe's set: spin bed, reel thuds,
+      // tease, skip, win, cascade pop. A recipe wanting its own calls
+      // `reelSounds(reelSet, cues)` itself; both run, so keep them apart.
+      // `??=`: a dev hot update keeps the ref's old value (null) across the
+      // component swap, and a recipe must still mount.
+      const sounds = (soundsRef.current ??= []);
+      if (result.reelSet) sounds.push(reelSounds(result.reelSet));
+      if (result.board && 'respinsLeft' in result.board) sounds.push(boardSounds(result.board as HoldAndWinBoard));
       nextResultRef.current = result.nextResult ?? null;
       onSpinRef.current = result.onSpin ?? null;
       onSkipRef.current = result.onSkip ?? null;
@@ -501,6 +526,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       for (const m of metricsRef.current.values()) m.destroy();
       metricsRef.current.clear();
       fitRef.current = null;
+      for (const s of soundsRef.current ?? []) { try { s.destroy(); } catch { /* ignore */ } }
+      soundsRef.current = [];
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
       if (app) {
@@ -516,6 +543,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
   async function handleSpin() {
     if (!ready || !!error) return;
+    // A press is the gesture that lets audio start; the first one also loads
+    // the files. Not awaited: the spin must not wait on a fetch.
+    void readyAudio().catch(() => {});
     if (spinning) {
       // Recipe-supplied skip handler wins. lets a nudge / cascade / custom
       // timeline recipe intercept the player's mid-action tap. Otherwise
@@ -613,97 +643,39 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   return (
     // Outer card frame + my-5 margin are supplied by the surrounding
     // <RecipeFrame> Astro wrapper so the layout is stable before JS
-    // hydrates. Don't add a duplicate card here. With the events panel open
-    // the canvas keeps its height and gives up width to the panel on the
-    // right; below the `sm` breakpoint the panel goes under the canvas.
-    <div className={cn('flex w-full bg-background', debugOn && 'flex-col sm:flex-row')} style={{ '--recipe-h': `${height}px` } as CSSProperties}>
+    // hydrates. Don't add a duplicate card here. The well keeps `height`;
+    // the toolbar under it is the strip RecipeFrame's skeleton reserves.
+    // With the events panel open the canvas keeps its height and gives up
+    // width to the panel on the right; below the `sm` breakpoint the panel
+    // goes under the canvas.
+    <div className="flex w-full flex-col bg-background" style={{ '--recipe-h': `${height}px` } as CSSProperties}>
+    <div className={cn('flex w-full', debugOn && 'flex-col sm:flex-row')}>
+    {/*
+      The canvas is the button: a tap spins, a tap while running skips. The
+      role and label sit on this wrapper (the host's children are replaced
+      when the app mounts), and the e2e suite presses it as "Spin".
+    */}
     <div
-      className="relative flex min-w-0 flex-1 items-center justify-center"
+      role="button"
+      tabIndex={0}
+      aria-label={spinning ? 'Skip' : 'Spin'}
+      aria-disabled={!!error || !ready}
+      onClick={() => void handleSpin()}
+      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); void handleSpin(); } }}
+      className="relative flex min-w-0 flex-1 cursor-pointer select-none items-center justify-center bg-[#111114] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
       style={{ height }}
     >
         <div
           ref={hostRef}
           className="h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full"
         />
+        <TapHint spinning={spinning} hidden={!ready || !!error} />
         {showSkeleton && !error && <CanvasSkeleton label="Compiling recipe…" />}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center bg-card/90 p-6 font-mono text-xs text-destructive">
             {error}
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => void handleSpin()}
-          disabled={!!error || !ready}
-          title={spinning ? 'Skip' : 'Spin'}
-          aria-label={spinning ? 'Skip' : 'Spin'}
-          className={cn(
-            // Right edge, vertically centered. Bigger touch target than
-            // the corner bottom-right pill. easier to hit on mobile, more
-            // obvious as the primary action on the canvas.
-            'absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-14 w-14 items-center justify-center rounded-full',
-            'border border-border/70 bg-background/80 text-foreground shadow-md backdrop-blur',
-            'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
-            spinning && 'bg-primary text-primary-foreground border-primary',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-          )}
-        >
-          {spinning
-            ? <SkipForward size={22} strokeWidth={2.25} />
-            : <RefreshCw size={22} strokeWidth={2.25} />}
-        </button>
-        {(
-          <button
-            type="button"
-            onClick={toggleDebug}
-            disabled={!!error || !ready}
-            title={debugOn ? 'Hide the events panel and overlay' : canDebug ? 'Show the events panel and overlay' : 'Show the events panel'}
-            aria-label={debugOn ? 'Hide debug' : 'Show debug'}
-            aria-pressed={debugOn}
-            className={cn(
-              'absolute left-2 top-2 inline-flex items-center gap-1 rounded-md border px-2 py-1',
-              'text-[10px] backdrop-blur transition-colors',
-              debugOn
-                ? 'border-primary bg-primary/90 text-primary-foreground'
-                : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
-            <Bug size={10} />
-            Debug
-          </button>
-        )}
-        {debugOn && canDebug && (
-          <div className="absolute left-2 top-9 flex flex-col gap-1" role="group" aria-label="Overlay layers">
-            {(Object.keys(LAYER_GROUPS) as LayerGroup[]).map((group) => (
-              <button
-                key={group}
-                type="button"
-                onClick={() => toggleGroup(group)}
-                aria-pressed={groups.includes(group)}
-                title={`Overlay: ${LAYER_GROUPS[group].join(', ')}`}
-                className={cn(
-                  'rounded-md border px-2 py-0.5 text-left font-mono text-[10px] backdrop-blur transition-colors',
-                  groups.includes(group)
-                    ? 'border-primary/70 bg-primary/20 text-foreground'
-                    : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {group}
-              </button>
-            ))}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={openInStudio}
-          title="Open in Studio"
-          aria-label="Open in Studio"
-          className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
-        >
-          <ExternalLink size={10} />
-          Studio
-        </button>
     </div>
     {debugOn && (
       <EventsPanel
@@ -713,6 +685,74 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         className="h-[220px] w-full shrink-0 border-t sm:h-[var(--recipe-h)] sm:w-[360px] sm:max-w-[46%] sm:border-l sm:border-t-0"
       />
     )}
+    </div>
+    <div className="flex min-h-9 flex-wrap items-center gap-1.5 border-t border-border px-1.5 py-1.5">
+        <button
+          type="button"
+          onClick={toggleDebug}
+          disabled={!!error || !ready}
+          title={debugOn ? 'Hide the events panel and overlay' : canDebug ? 'Show the events panel and overlay' : 'Show the events panel'}
+          aria-label={debugOn ? 'Hide debug' : 'Show debug'}
+          aria-pressed={debugOn}
+          className={cn(
+            TOOL_BUTTON,
+            debugOn
+              ? 'border-foreground bg-foreground text-background'
+              : 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground',
+          )}
+        >
+          <Bug size={11} strokeWidth={2.25} />
+          Debug
+        </button>
+        {debugOn && canDebug && (
+          <div className="inline-flex h-6 divide-x divide-border rounded-sm border border-border" role="group" aria-label="Overlay layers">
+            {(Object.keys(LAYER_GROUPS) as LayerGroup[]).map((group) => (
+              <button
+                key={group}
+                type="button"
+                onClick={() => toggleGroup(group)}
+                aria-pressed={groups.includes(group)}
+                title={`Overlay: ${LAYER_GROUPS[group].join(', ')}`}
+                className={cn(
+                  'px-2 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors duration-[133ms]',
+                  groups.includes(group)
+                    ? 'bg-foreground text-background'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {group}
+              </button>
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => { setSoundEnabled(!soundOn); if (!soundOn) void readyAudio().catch(() => {}); }}
+          title={soundOn ? 'Mute the demos' : 'Unmute the demos'}
+          aria-label={soundOn ? 'Mute' : 'Unmute'}
+          aria-pressed={soundOn}
+          className={cn(
+            TOOL_BUTTON,
+            'ml-auto',
+            soundOn
+              ? 'border-border text-foreground hover:border-foreground/60'
+              : 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground',
+          )}
+        >
+          {soundOn ? <Volume2 size={11} strokeWidth={2.25} /> : <VolumeX size={11} strokeWidth={2.25} />}
+          Sound
+        </button>
+        <button
+          type="button"
+          onClick={openInStudio}
+          title="Open in Studio"
+          aria-label="Open in Studio"
+          className={cn(TOOL_BUTTON, 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground')}
+        >
+          <ExternalLink size={11} strokeWidth={2.25} />
+          Studio
+        </button>
+    </div>
     </div>
   );
 }

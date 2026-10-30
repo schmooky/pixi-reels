@@ -1,0 +1,509 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Cell from '../../components/arch/Cell.astro';
+import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
+
+// Big-symbol grid: 5 reels across, 3 cells down, 68-unit cells, 6-unit gap.
+const CS = 68;
+const GAP = 6;
+const GX0 = 60;
+const GY0 = 90;
+const cx = (reel: number) => GX0 + reel * (CS + GAP);
+const cy = (cell: number) => GY0 + cell * (CS + GAP);
+const inBlock = (r: number, c: number) => r >= 1 && r <= 2 && c >= 0 && c <= 1;
+---
+<Architecture
+  title="Symbols and pooling"
+  subtitle="The ReelSymbol lifecycle, the registry, the factory, the pool."
+  eyebrow="Cells"
+>
+  <p>
+    A spinning reel is hungry for symbols. Every time the strip scrolls one
+    cell past the edge, the symbol that left comes back at the other end
+    wearing a new identity, and over a five-second spin that happens hundreds
+    of times across five reels. If each of those moments created a new sprite
+    and dropped the old one, the garbage collector would eventually pause the
+    game mid-spin, and the player would see the reels stutter. A Hold &amp;
+    Win board makes it worse: hundreds of cells, each with its own art and
+    maybe its own animation runtime.
+  </p>
+
+  <p>
+    So pixi-reels treats a symbol as a reusable actor rather than a
+    disposable picture. A <code>ReelSymbol</code> is the object that draws
+    one cell. Instances are borrowed from a pool, given an identity (the
+    symbol id, like <code>'cherry'</code>), shown, taken back, and lent out
+    again. The symbol itself knows nothing about its weight, its size in
+    cells or its draw order; that metadata lives in a separate record, <code>SymbolData</code>, which you set on the builder. This page follows
+    one instance around that loop, then the three objects that run it, then
+    the concrete symbol classes the library ships.
+  </p>
+
+  <Callout kind="plain">
+    Think of a symbol as a stage actor and the id as the costume. The theatre
+    keeps a few actors per costume in the wings, and when the script calls
+    for a cherry one of them walks on. The one rule for an actor is that it
+    must never assume this is its first scene: every hook can fire more than
+    once on the same object, so each one has to leave the object in a clean,
+    known state.
+  </Callout>
+
+  <h2>The lifecycle</h2>
+
+  <p>
+    The base class is abstract, lives in <code>packages/pixi-reels/src/symbols/ReelSymbol.ts</code>, and implements <code>Disposable</code>. Everything it shows is a child of one public
+    container, its <code>view</code>. Figure 1 is the loop one instance
+    travels. Notice that the pool is keyed by symbol id: a recycled cherry
+    only ever comes back as a cherry. Notice too that there is one way in
+    (the registry creates it) and one way out (<code>destroy()</code>, when
+    the pool is full or the set is torn down); everything else is a trip
+    around the ring.
+  </p>
+
+  <Diagram height={540} caption="One instance, one identity, many trips around the ring. The registry creates and activates in one go; the pool is keyed by symbol id, so a recycled 'cherry' only ever comes back as 'cherry'; destroy() is the only way out.">
+    <Box x={20} y={30} w={180} h={60} title="create" kind="code" mono={false} sub="registry.create(id)" />
+    <Box x={255} y={30} w={230} h={78} title="activate(id)" kind="primary" sub={['view reset to defaults', 'then onActivate(id)']} />
+    <Box x={510} y={200} w={190} h={78} title="on the reel" kind="accent" mono={false} sub={['resize(w, h), reel hooks', 'playWin() / playDestroy()']} />
+    <Box x={20} y={200} w={180} h={78} title="pooled" kind="muted" mono={false} sub={["symbolId is ''", 'LIFO stack per id']} />
+    <Box x={255} y={360} w={230} h={78} title="deactivate()" kind="primary" sub={['stopAnimation(); onDeactivate()', "id = '', view hidden + reset"]} />
+    <Box x={510} y={460} w={190} h={60} title="destroy()" kind="code" sub="pool full, or teardown" />
+
+    <Edge from={[200, 60]} to={[255, 60]} />
+    <Edge from={[485, 69]} via={[[605, 69]]} to={[605, 200]} label="installed on the strip" labelDx={-105} labelDy={19.5} />
+    <Edge from={[605, 278]} via={[[605, 399]]} to={[485, 399]} label="SymbolFactory.release()" labelDx={-109} labelDy={-8.5} />
+    <Edge from={[255, 399]} via={[[110, 399]]} to={[110, 278]} label="pool.release(id)" labelDx={-10.5} labelDy={30} />
+    <Edge from={[110, 200]} via={[[110, 150], [330, 150]]} to={[330, 108]} label="hit: pop + reset()" labelDy={-18} />
+    <Edge from={[330, 438]} via={[[330, 490]]} to={[510, 490]} label="past maxPerKey" style="dashed" labelDx={-10} labelDy={-28} />
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'primary', label: 'Template methods', note: 'base class; they call your hooks' }, { kind: 'accent', label: 'Reel-driven hooks', note: 'all no-ops by default, all idempotent' },
+      { kind: 'muted', label: 'Pooled', note: 'idle, invisible, id cleared' }, { kind: 'subtle', label: 'Allocation', note: 'dark boxes construct or dispose' },
+    ]} />
+  </div>
+
+  <p>
+    The two primary boxes are template methods: the base class owns them,
+    and they do the housekeeping before and after calling the hook you
+    write. Activation stores the id, makes the view visible, and resets every
+    property a previous life might have changed (alpha, scale, rotation,
+    filters, tint and draw order) before calling your <code>onActivate()</code>. Deactivation does the mirror image: it stops
+    any animation, calls your <code>onDeactivate()</code>, clears the id and
+    the landing promise, hides the view and resets the same properties again.
+    The tint is cleared on both sides, in the source's words, "so neither half
+    has to trust the other".
+  </p>
+
+  <p>
+    Two shortcuts are worth knowing. The pool's reset hook is <code>deactivate()</code>, so a recycled symbol is actually deactivated
+    twice, once when it is released and again on the way out of the pool;
+    that is harmless precisely because the hook is idempotent. And when a
+    symbol wraps around and the next identity is the same id it already has,
+    the reel skips the whole ring: it calls <code>stopAnimation()</code> and
+    nothing else, with no trip through the pool. The table has the exact
+    sequence of each template method.
+  </p>
+
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>{['Template method', 'What it does, in order'].map((h) => <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>)}</tr>
+      </thead>
+      <tbody>
+        {[
+          ['activate(symbolId)', 'stores the id; sets view.visible = true, alpha = 1, scale = (1, 1), rotation = 0, filters = null, tint = 0xffffff, zIndex = 0; then calls onActivate(symbolId)'],
+          ['deactivate()', "calls stopAnimation(), then onDeactivate(); clears the id to '' and landing to null; hides the view and resets the same properties"],
+          ['reset()', 'the pool hook; calls deactivate()'],
+          ['destroy()', 'returns early if already destroyed; runs stopAnimation() and onDeactivate() if the view is still alive (a game can destroy a container that holds it); then onDestroy() and view.destroy({ children: true })'],
+          ['same-id wrap', 'stopAnimation() only; no deactivate, no activate, no pool'],
+        ].map(([m, d]) => (
+          <tr class="border-t border-border align-top">
+            <td class="px-4 py-2 font-mono text-xs">{m}</td>
+            <td class="px-4 py-2 text-foreground/80">{d}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What a subclass implements</h2>
+
+  <p>
+    Five members are required, and the base class provides a no-op or a
+    sensible default for everything else. The optional hooks fall into two
+    groups: presentation one-shots the game calls (landing, destroy, out and
+    in), and reel-driven hooks the engine calls as the reel changes state, so
+    a symbol can relax or sharpen its art as it spins, teases and lands.
+  </p>
+
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>{['Member', 'Required', 'Default and contract'].map((h) => <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>)}</tr>
+      </thead>
+      <tbody>
+        {[
+          ['onActivate(symbolId)', 'yes', 'swap the texture, restart idle, leave any ended pose'],
+          ['onDeactivate()', 'yes', 'pause animations, clear listeners, leave a clean state'],
+          ['playWin(): Promise', 'yes', 'resolves when the one-shot finishes; settle it on recycle or await hangs'],
+          ['stopAnimation()', 'yes', 'return to idle immediately'],
+          ['resize(width, height)', 'yes', 'store the size and reposition children. Runs on every symbol swap. Forgetting it is "the single most common why do my symbols scatter bug"'],
+          ['onDestroy()', 'no', 'no-op; release subclass resources here'],
+          ['playLanding()', 'no', 'resolves immediately; never called by the engine, for callers that land cells one at a time (Hold & Win lockAnimation)'],
+          ['playDestroy({ delay, signal })', 'no', 'the cascade poof: pivot to the bounds centre (position compensated by (c - pivot) * scale), pop to 1.1 over 0.06 s with back.out(2.5), then scale 0 and alpha 0 over 0.14 s with power3.in starting 0.04 s in; about 200 ms. Abort skips to the end. Pivot, position and scale 1 are restored; alpha stays 0'],
+          ['playOut(opts) / playIn(opts)', 'no', 'the mystery-reveal seam. Out: scale 0.72 and alpha 0 over 0.18 s, power2.in. In: owns its start pose (visible, alpha 0, scale 0.72), then scale 1 over 0.2 s with back.out(1.7) and alpha 1 over 0.16 s with power2.out. Scale always returns to 1'],
+          ['cellInset', 'no', 'null, meaning the art fills the whole cell; sprite subclasses derive it from the texture trim'],
+          ['applyCellQuad(quad | null)', 'no', 'curved reels: an affine contain-fit about the quad centre, paid for through the pivot. Must never move view.position'],
+          ['onReelSpinStart(joinedMidSpin?)', 'no', 'fires on every strip symbol, buffers included, when the reel enters spin; again with true for each symbol installed mid-spin'],
+          ['onReelSpinEnd()', 'no', 'fires just before the bounce'],
+          ['onReelAnticipationStart()', 'no', 'fires when the tease begins; relax spin presentation so the strip is readable'],
+          ['onReelLanded(ctx)', 'no', "fires before the reel's landing event; ctx = { reelIndex, reelCount, cell, visibleCells, symbolId }"],
+        ].map(([m, r, d]) => (
+          <tr class="border-t border-border align-top">
+            <td class="px-4 py-2 font-mono text-xs">{m}</td>
+            <td class="px-4 py-2 font-mono text-xs text-muted-foreground">{r}</td>
+            <td class="px-4 py-2 text-foreground/80">{d}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Three more things the base class gives you. The first is <code>this.gsap</code>, a protected getter the factory binds when the
+    symbol is created. Always animate through it rather than through an
+    imported gsap, because a symlinked workspace can load two copies of the
+    library.
+    The second is <code>mainAxis</code> (<code>'x'</code> or <code>'y'</code>),
+    bound the same way; only motion-blur effects read it. The third is <code>landing</code>, the promise started by the latest <code>onReelLanded()</code>. A subclass sets it through <code>trackLanding(run)</code>, the reel clears it when it leaves rest,
+    and a board can <code>await symbol.landing</code> to know when a cell has
+    finished arriving.
+  </p>
+
+  <h2>Registry, factory, pool</h2>
+
+  <p>
+    Three small objects run the loop, and it helps to separate their jobs.
+    The <strong>registry</strong> knows which class draws which id. The <strong>pool</strong> remembers idle instances. The <strong>factory</strong> sits between the reel and the other two: a reel asks it for a symbol by
+    id, and it either pops one from the pool or asks the registry to make a
+    fresh one. Figure 2 follows one request left to right and the return trip
+    underneath. Notice that the registry is only consulted on a miss, and
+    that the dashed arrow is the only place a new object is allocated.
+  </p>
+
+  <Diagram height={360} caption="acquire() flows left to right and release() comes back underneath. The registry creates and activates; the factory binds gsap and the axis; the pool only remembers idle instances.">
+    <Box x={20} y={70} w={180} h={78} title="Reel" sub={['resize, place, zIndex', 'emits symbol:created']} />
+    <Box x={270} y={70} w={200} h={78} title="SymbolFactory" kind="accent" sub={['acquire(id) / release()', 'binds gsap and the axis']} />
+    <Box x={530} y={70} w={170} h={78} title="ObjectPool" kind="code" sub={['Map<id, T[]>, LIFO', 'hit: pop + reset()']} />
+    <Box x={530} y={230} w={170} h={78} title="SymbolRegistry" sub={['register(id, Class)', 'create: new + activate']} />
+
+    <Edge from={[200, 109]} to={[270, 109]} label="acquire(id)" labelDy={-63} />
+    <Edge from={[470, 109]} to={[530, 109]} label="pool.acquire(id)" labelDy={-63} />
+    <Edge from={[615, 148]} to={[615, 230]} label="miss: create(id)" style="dashed" labelDx={-94} />
+    <Edge from={[110, 148]} via={[[110, 300], [370, 300]]} to={[370, 148]} label="release(symbol)" labelDy={28} />
+  </Diagram>
+
+  <p>
+    You meet the <strong>registry</strong> once, inside <code>builder.symbols(registry =&gt; ...)</code>, where you register each
+    id with the class that draws it and that class's options. One entry per
+    id, and a duplicate throws; if one class draws ten ids, that is ten
+    calls. When asked to create an id, the registry constructs the class and
+    activates the instance immediately, so a fresh symbol arrives already
+    dressed; an unknown id throws with the list of registered ones. The
+    registry has no idea of size, weight or draw order, which belong to <code>SymbolData</code>.
+  </p>
+
+  <p>
+    The <strong>factory</strong> has been internal since PR #140; you never
+    construct it, the builder does. When the pool misses, the factory asks
+    the registry for a new instance and binds two things to it for life: the
+    gsap instance and the main axis. They are bound at creation rather than
+    on every acquire because a pooled symbol never moves between reel sets.
+    On acquire, the factory only re-activates a symbol whose current id
+    differs from the one requested, since a fresh instance was already
+    activated by the registry. On release it deactivates the symbol, detaches
+    it from any render layer it was promoted to, removes it from its parent,
+    and hands it to the pool, which keeps it or, if that id's stack is already
+    full, destroys it.
+  </p>
+
+  <p>
+    The <strong>pool</strong>, <code>ObjectPool&lt;T&gt;</code> in <code>pool/ObjectPool.ts</code>, is a public export and is deliberately
+    simple: one last-in-first-out stack per key. Acquiring pops and resets,
+    or calls the factory on a miss. Releasing pushes, unless the item is
+    already in the pool (a guard against the same object being handed out
+    twice) or the stack is at its cap, in which case the item is destroyed.
+    Releasing after the pool is destroyed is a no-op, while acquiring after
+    that throws, because it means a ticker or promise is outliving teardown.
+    There is no pre-allocation and no cap on live objects, only on how many
+    idle ones are kept; <code>setMaxPerKey</code> trims any excess at once.
+  </p>
+
+  <Callout kind="why">
+    Because the pool is keyed by id, an instance never changes identity while
+    it is in reel use: a cherry stays a cherry for its whole life. That is why <code>CardSymbol</code> can get away with a no-op <code>onActivate</code>,
+    and why <code>SpineReelSymbol</code>'s per-id map of Spine objects only
+    ever holds one entry. The only identity swaps in the codebase happen on
+    the <code>prewarmSpinTextures</code> scratch symbol and inside <code>StaticSpinSymbol</code>.
+  </Callout>
+
+  <p>
+    The names, for reference. The factory is constructed as <code>SymbolFactory(registry, maxPoolPerKey = 20, gsap = DEFAULT_GSAP, mainAxis = 'y')</code>;
+    its verbs are <code>acquire(id)</code> and <code>release(symbol)</code>,
+    and release runs <code>deactivate()</code>, <code>view.parentRenderLayer?.detach(view)</code>, <code>view.removeFromParent()</code> and <code>pool.release(id, symbol)</code> in that order. The pool's verbs are <code>acquire(key)</code>, <code>release(key, item)</code>, <code>setMaxPerKey</code> and <code>destroy()</code>. The builder sizes the pool like this:
+  </p>
+
+  <pre><code>{`// pool capacity, set by the builder
+poolCapacity = builder.poolCapacity(n) ?? max(20, sum over reels of (visible + bufferStart + bufferEnd))
+// a MultiWays reel counts at maxCells; the worst case for one id is the whole strip showing it
+// DEFAULTS.maxPoolPerKey = 20; ReelSet.addReels() / removeReels() call setCapacityPerKey`}</code></pre>
+
+  <h2>symbolData and draw order</h2>
+
+  <p>
+    Everything the engine knows about a symbol that is not how to draw it
+    lives in <code>SymbolData</code> (<code>config/types.ts</code>): its <code>weight</code> in random draws, its draw order within the reel, whether
+    it may escape the mask, and its size in cells. You set these on the
+    builder, through <code>weights()</code> and <code>symbolData()</code>, and
+    the builder fills in a weight of 10 and a draw order of 1 for every id
+    you did not mention; the size defaults to one cell. A symbol marked <code>unmask: true</code> is lifted into the viewport's unmasked layer
+    while its reel is at rest, so its art can overhang the cell.
+  </p>
+
+  <pre><code>{`view.zIndex = symbolData.zIndex * 100 + stackingIndex
+// stackingIndex = strip array index (cellStacking 'ascending') or length - 1 - index ('descending')
+// Z_INDEX_BUDGET.symbolLayer = 100; pin overlays sit at 10000; destroy and swap bumps use 1000`}</code></pre>
+
+  <p>
+    That formula is how the engine turns the metadata into a PixiJS zIndex:
+    your draw order, times a hundred, plus the symbol's position in the
+    strip, so cells of the same kind layer in strip order. It only sorts
+    within one reel's container; to draw across reels you need <code>unmask: true</code>. If you need a different rule, pass a resolver
+    to <code>builder.symbolZIndex()</code>; it replaces the formula outright.
+    The resolver receives <code>{'{ symbolId, symbolData, reelIndex, reelCount, arrayIndex, visibleCell | null, visibleCells, atRest, defaultZIndex }'}</code> and must be pure and cheap, because the engine calls it after every
+    wrap, snap, swap and rest transition. One drift to know: the ReelSet doc
+    table says the default draw order is <code>?? 0</code>, but the builder
+    writes <code>?? 1</code>, so built symbols start at <code>100 + index</code>.
+    The code is the source of truth here.
+  </p>
+
+  <h2>Big symbols</h2>
+
+  <p>
+    Some symbols are bigger than one cell: a 2 x 2 bonus tile, a wild that
+    fills a whole reel. The engine handles these without a special symbol
+    class. The server names the symbol in one cell only, the <em>anchor</em>, and the other cells the block covers become invisible
+    placeholders. Figure 3 shows a 2 x 2 block anchored at reel 1, cell 0.
+    Notice that the anchor's view has been resized to cover all four cells,
+    gap included, and that the three other cells are stubs rather than
+    cherries or blanks.
+  </p>
+
+  <Diagram height={330} caption="A 2 x 2 block anchored at reel 1, cell 0. The server sends 'bonus' at the anchor only; the other three cells become invisible OCCUPIED stubs, and the anchor's view is resized to cover the whole block, gap included.">
+    {[0, 1, 2, 3, 4].map((r) => [0, 1, 2].map((c) => {
+      if (r === 1 && c === 0) return null;
+      return <Cell x={cx(r)} y={cy(c)} size={CS} label={inBlock(r, c) ? 'stub' : `${r},${c}`} sub={inBlock(r, c) ? 'OCCUPIED' : undefined} kind={inBlock(r, c) ? 'empty' : 'plain'} />;
+    }))}
+    <Cell x={cx(1)} y={cy(0)} size={CS} label="anchor" sub="'bonus'" kind="hot" />
+    <rect x={cx(1) - 4} y={cy(0) - 4} width={2 * CS + GAP + 8} height={2 * CS + GAP + 8} rx="2" class="guide-strong" style="stroke-dasharray: 4 3" />
+    <Edge from={[cx(1), 60]} to={[cx(2) + CS, 60]} arrow="both" label="size.reels = 2" labelDy={-30} />
+    <Edge from={[cx(4) + CS + 20, cy(0)]} to={[cx(4) + CS + 20, cy(1) + CS]} arrow="both" label="size.cells = 2" labelDx={86} />
+  </Diagram>
+
+  <p>
+    You declare a block on the builder, not in the registry: <code>symbolData({'{ bonus: { size: { reels: 2, cells: 2 }, zIndex: 5 } }'})</code>.
+    Its weight must be 0, because random fill never places blocks; only the
+    server does, and only at anchor cells. <code>size.reels</code> always
+    runs along the cross axis and <code>size.cells</code> along the main
+    axis, whatever the orientation. The anchor's view is resized to the block
+    size, which here is two cells plus one gap on each axis, and <code>getVisibleGrid()</code> reports <code>'bonus'</code> in all four
+    cells, so code that reads the grid sees the block, not the stubs.
+  </p>
+
+  <p>
+    The function that lays blocks out is <code>coordinateBigSymbols</code> in <code>spin/bigSymbolBlocks.ts</code>. It is pure, it runs in the spin
+    controller before any reel builds its frame, it throws with a named
+    message when a block does not fit, and it sits on every path that puts a
+    grid on the reels: landing, the initial frame, adding or removing reels
+    and rows, and pinning or moving pins. A block may be partly off screen:
+    an anchor can sit in the start buffer with its tail visible, and stubs
+    can spill into the end buffer. The stub itself, <code>OccupiedStub</code>,
+    is an internal symbol in <code>core/Reel.ts</code> that sets itself
+    invisible on activate; each reel allocates its own stubs lazily and
+    reuses them rather than going through the factory.
+  </p>
+
+  <p>
+    Three limits: big symbols cannot be combined with <code>multiways()</code>,
+    a non-anchor cell cannot be pinned, and a block spanning reels whose cell
+    sizes differ logs a one-time warning. The recipes use <code>zIndex: 5</code> for anchors so a block draws above its neighbours. See <a href="/guides/big-symbols/">the big symbols guide</a>.
+  </p>
+
+  <h2>The concrete classes</h2>
+
+  <p>
+    The library ships a symbol class for each common kind of art, plus two
+    for debugging and two internal helpers. The table has each one's options
+    with their defaults and what it does with the hooks above; most games
+    start with <code>SpriteSymbol</code> and reach for a Spine class when the
+    art is rigged.
+  </p>
+
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>{['Class', 'Options and defaults', 'Behaviour'].map((h) => <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>)}</tr>
+      </thead>
+      <tbody>
+        {[
+          ['SpriteSymbol', 'textures: Record<id, Texture>; anchor, in code { 0, 0 }', 'onActivate swaps the texture and syncs the perspective mesh. playWin: scale pulse to 1.15 over 0.15 s, yoyo, one repeat, power2.inOut; _killWinTween always settles a pending await. resize sets sprite width and height only. On curved reels it draws through a PerspectiveMesh and falls back to the affine fit for atlas sub-frames; cellInset comes from the texture trim.'],
+          ['AnimatedSpriteSymbol', 'frames: Record<id, Texture[]>; animationSpeed 1; anchor, in code { 0, 0 }; loop = false', 'onActivate sets textures and gotoAndStop(0). playWin is gotoAndPlay(0), returning to frame 0 on complete. onFrameChange pushes every frame to the perspective mesh so a curved win does not freeze. resize sets the size and positions the sprite at size * anchor.'],
+          ['SpineSymbol (core, optional peer)', "skeletonDataMap; idleAnimation 'idle'; winAnimation 'win'; defaultSkin 'default'; strict false", 'Loaded by a dynamic import; constructing before whenSpineReady() resolves throws. One Spine per instance, rebuilt on a new id, idle looped on track 0. playWin plays win once; listener on the TrackEntry. onDeactivate settles the win and clearTracks() only. resize is a non-uniform stretch from getBounds() with no positioning; from reading the code, a second resize at the same size can undo the fit because getBounds() includes the current scale.'],
+          ['SpineReelSymbol (pixi-reels/spine)', "spineMap { skeleton, atlas, skin? }; idle 'idle', win 'win', landing 'landing', out 'disintegration', blur 'blur'; animations overrides per id; scale 1; autoPlayBlur false; autoPlayLanding false | fn", 'One Spine per id, parked (visible false, autoUpdate false) when not on screen, update(0) on activate so a snapshot sees the pose. playOneShot(name, { track = 0, then }) returns a promise settled on complete, interrupt or end; then defaults to idle on track 0 and clear elsewhere, hold keeps an overlay. playWin, playLanding (via trackLanding) and playOut (then: hold) are built on it. playDestroy plays the out animation or falls back to the base poof. playBlur is idempotent. onDeactivate settles one-shots, clearTracks, setToSetupPose, parks. resize re-centres only: no fit-scaling, author at cell size or use scale.'],
+          ['CardSymbol (debug)', 'color; label; textColor 0xffffff; font Roboto Condensed 32 bold', 'identity fixed at construction, so onActivate and onDeactivate are no-ops. playWin: glyph to 1.4 over 0.18 s with back.out(2), a rotation wobble of 0.12 rad, back to 1 at 0.32 s, fill flashes 0xffe168 at 0.06 s and restores at 0.42 s. resize draws a (0, 0, w, h) rect with an inset 2 px stroke at alpha 0.25 and sets fontSize = max(7, floor(min(0.38 * h, 0.7 * w / (len * 0.45)))). Exports CARD_DECK (7, 8, 9, 10, J, Q, K, A) and WILD_CARD.'],
+          ['PhaseCardSymbol (debug)', 'label; textColor; colors; landedMs 350', "extends CardSymbol. setPhase(phase) repaints; 'landed' reverts to 'rest' after landedMs. static watch(reels) subscribes to phase:enter, landed and symbol:created and returns an unsubscribe."],
+          ['EmptySymbol', 'none', 'every hook is a no-op; renders nothing. Hold & Win blanks, cascade holes, placeholders. HoldAndWinBuilder registers it under emptyId.'],
+          ['OccupiedStub (internal)', 'none', 'invisible filler for non-anchor big-symbol cells; allocated by the Reel, not the factory.'],
+          ['StaticSpinSymbol + SpinTextureCache', "createInner; cache; spinTexture 'blurred'; blurRampMs 120; blur (axis = the set's mainAxis)", 'Wraps an inner symbol. On spin start it captures a crisp snapshot while the inner is still live, crossfades to a pre-baked blur over 120 ms, then deactivates the inner so it costs nothing while spinning. Anticipation fades the blur out. On spin end it reactivates the inner on the final id. The cache is one per reel set, keyed by id plus size (rounded to 0.001 px) plus axis; blur strength defaults to 0.2 of the cell, quality 4, padding ceil(strength), baked once with no per-frame filter. prewarmSpinTextures() fills it at load time.'],
+        ].map(([c, o, b]) => (
+          <tr class="border-t border-border align-top">
+            <td class="px-4 py-2 font-mono text-xs">{c}</td>
+            <td class="px-4 py-2 text-foreground/80 text-xs">{o}</td>
+            <td class="px-4 py-2 text-foreground/80">{b}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>The Spine animation vocabulary</h2>
+
+  <p>
+    A Spine symbol is driven by animation names, and the library agrees on a
+    small vocabulary so a rigged symbol works out of the box: one looping
+    idle, a few one-shots for the moments a slot cares about, and a looping
+    blur for fast spins. Every name can be overridden per id. The table lists
+    each role, its default name, and what triggers it.
+  </p>
+
+  <div class="not-prose my-6 rounded-lg border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>{['Role', 'Default name', 'Loops', 'How it plays'].map((h) => <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{h}</th>)}</tr>
+      </thead>
+      <tbody>
+        {[
+          ['Resting', 'idle', 'yes', 'automatically on activate'],
+          ['Reel-stop one-shot', 'landing', 'no', 'playLanding() or autoPlayLanding'],
+          ['Win', 'win', 'no', 'playWin()'],
+          ['Cascade pop / exit', 'disintegration', 'no', 'playOut() / playDestroy()'],
+          ['Fast spin', 'blur', 'yes', 'playBlur() or autoPlayBlur'],
+          ['Neighbour cue', 'reactions/react_{u,d,l,r,ul,ur,dl,dr}', 'no', 'raw spine.state, or playOneShot(name, { track: 1 })'],
+        ].map((row) => (
+          <tr class="border-t border-border">
+            {row.map((v, i) => <td class:list={['px-4 py-2', i === 1 ? 'font-mono text-xs' : 'text-foreground/80']}>{v}</td>)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    A missing animation is a silent no-op. The library never throws because
+    a skeleton lacks a name; the one opt-in exception is the core <code>SpineSymbol</code>'s <code>strict</code> mode (ADR 011). There is
+    one rule about listeners that comes from a real bug. Attach completion
+    listeners to the <code>TrackEntry</code>, never to the whole animation
+    state, and null the listener once it has fired, because Spine pools track
+    entries. Never clear the state's listeners during the symbol's life
+    either, since the game may have added some of its own; <code>clearListeners()</code> runs only in <code>onDestroy</code>.
+    Removing a state listener in the middle of a dispatch once made the other
+    listeners miss their events. The Spine runtime stays out of the core
+    bundle: import <code>SpineReelSymbol</code> only from <code>pixi-reels/spine</code>.
+  </p>
+
+  <p>
+    For completeness, <code>PHASE_CARD_COLORS</code> is the palette <code>PhaseCardSymbol</code> paints with: rest <code>0x4b5563</code>,
+    start <code>0x38bdf8</code>, spin <code>0x2563eb</code>, anticipation <code>0xf59e0b</code>, stop <code>0x8b5cf6</code>,
+    landed <code>0x22c55e</code>, adjust <code>0xec4899</code>, cascade:fall <code>0x0ea5e9</code>, cascade:place <code>0x14b8a6</code>, cascade:dropIn <code>0x06b6d4</code>, other <code>0x9ca3af</code>.
+  </p>
+
+  <h2>Random-draw pools and scopes</h2>
+
+  <p>
+    The word "pool" is used for a second, unrelated thing: the set of ids a
+    reel may draw from at random while it spins, and how likely each one is.
+    A <code>SymbolPool</code> is <code>{'{ weights?, exclude? }'}</code>, and
+    a weight of 0 removes an id as fully as excluding it. A <em>scope</em> says where the pool applies: optionally one reel, and one of four slot
+    kinds. <code>'spinning'</code> is every random draw and the default. <code>'buffer'</code> is both off-window sides. <code>'bufferStart'</code> is the side with the smaller coordinate (above on a vertical set, left on
+    a horizontal one) and <code>'bufferEnd'</code> the other. Pools layer,
+    widest first:
+  </p>
+
+  <pre><code>{`base weights -> global spinning -> per-reel spinning -> global buffer -> per-reel buffer -> global side -> per-reel side
+// weights override per id; exclusions accumulate: a narrower layer can only ban more, never re-admit
+// changes apply to the next draw; symbols already on the strip stay until they wrap out`}</code></pre>
+
+  <p>
+    At build time pools come from <code>builder.randomSymbols(pool, scope)</code>;
+    at runtime <code>reelSet.randomSymbols</code> exposes <code>set(pool | null, scope?)</code>, <code>clear()</code> and <code>weights(scope?)</code>. The provider validates every id, compiles
+    every reachable table, and rolls the change back with the error <code>No symbol left to draw for ... cells on reel N</code> if a scope
+    would end up empty. Each draw is a binary search over a cached
+    cumulative-weight table using the injected <code>rng</code> (<code>builder.rng(fn)</code>, default <code>Math.random</code>), so a
+    weighted draw stays cheap. See <a href="/architecture/frame-pipeline/">the frame pipeline</a>.
+  </p>
+
+  <h2>Conventions and gotchas</h2>
+
+  <p>
+    Most symbol bugs come from one of five habits, and most of those follow
+    from pooling. First, the view's origin is the cell's top-left corner, and the
+    reel owns it: the reel places <code>view</code> there and reads <code>view.position</code> back to find the slot, so a symbol must never
+    move its own position. Curve fits and destroy tweens use the pivot
+    instead. Second, implement <code>resize()</code> properly: it runs on
+    every symbol swap, and it must store the size and reposition children
+    without assuming an anchor centres anything.
+  </p>
+
+  <Callout kind="gotcha">
+    The option docs for <code>SpriteSymbol</code> and <code>AnimatedSpriteSymbol</code> say the anchor defaults to 0.5, but the
+    code defaults to 0,0, and <code>SpriteSymbol.resize</code> does not
+    compensate for an anchor. The code is the source of truth here; anchor
+    0,0 is the safe convention, and a symbol that scatters across its cell
+    has almost always got this or <code>resize()</code> wrong.
+  </Callout>
+
+  <p>
+    Third, settle every promise when a symbol is recycled. Each built-in does
+    this in its own way (<code>_killWinTween</code> in SpriteSymbol, <code>stopAnimation</code> in AnimatedSpriteSymbol, <code>_settleWin</code> and <code>_settleOneShots</code> in the Spine classes, <code>_endWin</code> in CardSymbol), and if yours does not, an <code>await playWin()</code> somewhere in the game hangs forever. Fourth, remember the same-id fast
+    path: it skips deactivate and activate entirely, so the reel calls <code>stopAnimation()</code> itself and resets alpha, scale, rotation,
+    filters and tint, and no <code>symbol:created</code> event fires. Fifth,
+    for Spine, parked skeletons do not tick. Only the on-screen Spine has <code>autoUpdate</code>, which is what makes a Hold &amp; Win board with
+    hundreds of cells affordable, but it means you must reset to the setup
+    pose on deactivate or a disintegrated symbol comes back invisible.
+  </p>
+
+  <p>
+    All of this runs without a renderer. <code>HeadlessSymbol</code> from <code>pixi-reels/testing</code> is a <code>ReelSymbol</code> that draws
+    nothing, and the whole lifecycle above, pool included, runs in Node.
+  </p>
+
+  <h2>Where this lives</h2>
+
+  <p>
+    Under <code>packages/pixi-reels/src/</code>: <code>symbols/ReelSymbol.ts</code> and the <code>Sprite</code>, <code>AnimatedSprite</code>, <code>Spine</code>, <code>Card</code>, <code>PhaseCard</code> and <code>Empty</code> files beside it, with <code>SymbolRegistry.ts</code>, <code>SymbolFactory.ts</code> and <code>PerspectiveCell.ts</code>; <code>pool/ObjectPool.ts</code>; <code>spine/SpineReelSymbol.ts</code>; <code>snapshot/SpinTextureCache.ts</code> and <code>StaticSpinSymbol.ts</code>; <code>frame/SymbolPool.ts</code> and <code>RandomSymbolProvider.ts</code>; <code>spin/bigSymbolBlocks.ts</code>; and the <code>OccupiedStub</code> in <code>core/Reel.ts</code>.
+    Guides: <a href="/guides/symbols/">symbols</a>, <a href="/guides/win-animations/">win animations</a>, <a href="/guides/big-symbols/">big symbols</a>. Recipes: <a href="/recipes/symbols/">symbols</a>, <a href="/recipes/big-symbols/">big symbols</a>.
+  </p>
+
+  <Callout kind="remember">
+    A symbol is borrowed, not made. Every hook can run again on the same
+    object, so each one must leave a clean state; <code>resize()</code> runs
+    on every swap and must position everything; and the view's position
+    belongs to the reel. Get those three right and the pool, the registry and
+    the factory take care of the rest.
+  </Callout>
+</Architecture>

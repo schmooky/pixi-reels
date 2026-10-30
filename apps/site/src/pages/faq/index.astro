@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { FAQ, FAQ_COUNT, FAQ_ANSWERED, FAQ_ANSWERED_COUNT } from '../../content/faq.ts';
-import { Check, ArrowRight, Search } from 'lucide-react';
+import { ArrowRight, Search } from 'lucide-react';
 import { SITE, articleLd, breadcrumbLd, faqLd } from '../../lib/seo.ts';
 
 const title = 'FAQ. how do I build this slot mechanic?';
@@ -32,47 +32,45 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
     ]),
   ]}
 >
-  <section class="border-b border-border/60 py-14">
-    <div class="container max-w-3xl text-center">
-      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+  <section class="border-b border-border py-14 sm:py-16">
+    <div class="container max-w-3xl">
+      <p class="eyebrow">
+        FAQ
+        <span class="text-muted-foreground/60">/</span>
         Knowledge base
-      </div>
-      <h1 class="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
-        <span class="gradient-text">How do I…?</span>
-      </h1>
-      <p class="mx-auto mt-5 max-w-xl text-muted-foreground">
+      </p>
+      <h1 class="display mt-4 text-4xl sm:text-5xl">How do I…?</h1>
+      <p class="mt-5 max-w-xl text-lg text-muted-foreground">
         The questions a slot developer actually asks — answered with pixi-reels.
         Searchable, and growing.
         <span class="font-medium text-foreground/80">{FAQ_ANSWERED_COUNT}</span> of
         <span class="font-medium text-foreground/80">{FAQ_COUNT}</span> answered so far.
       </p>
 
-      <div class="relative mx-auto mt-7 max-w-lg">
-        <Search size={16} strokeWidth={2} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <div class="relative mt-8 max-w-lg">
+        <Search size={16} strokeWidth={2} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           id="faq-search"
           type="search"
           autocomplete="off"
           placeholder={`Search ${FAQ_COUNT} questions — try 'respin', 'mystery', 'collector'…`}
           aria-label="Search the FAQ"
-          class="w-full rounded-full border border-border bg-card py-2.5 pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary/50"
+          class="w-full rounded-sm border border-border bg-background py-2.5 pl-10 pr-4 font-mono text-sm outline-none transition-colors duration-[133ms] placeholder:font-mono placeholder:text-muted-foreground focus:border-foreground"
         />
       </div>
       <p id="faq-noresults" class="mt-4 hidden text-sm text-muted-foreground">
-        No questions match. <a class="text-primary hover:underline" href={editUrl}>Add it →</a>
+        No questions match. <a class="text-foreground underline decoration-brand-text underline-offset-4" href={editUrl}>Add it →</a>
       </p>
     </div>
   </section>
 
   <section class="py-12">
-    <div class="container space-y-12">
-      {FAQ.map((group) => (
+    <div class="container max-w-3xl space-y-14">
+      {FAQ.map((group, i) => (
         <div class="faq-group" id={group.id} data-group={group.id}>
-          <div class="mb-1 flex items-baseline gap-3">
-            <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">{group.title.en}</h2>
-          </div>
-          <p class="mb-4 text-sm text-muted-foreground/80">{group.blurb.en}</p>
-          <ul class="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card">
+          <h2 class="eyebrow">{String(i + 1).padStart(2, '0')} / {group.title.en}</h2>
+          <p class="mb-5 mt-2 max-w-xl text-sm text-muted-foreground">{group.blurb.en}</p>
+          <ul class="divide-y divide-border border-y border-border">
             {group.questions.map((q) => {
               const answered = !!q.answer;
               const Row = answered ? 'a' : 'div';
@@ -85,27 +83,19 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
                 >
                   <Row
                     href={href}
-                    class:list={[
-                      'group flex items-start gap-3 px-4 py-3 transition-colors',
-                      answered ? 'hover:bg-secondary/30' : '',
-                    ]}
+                    class="group flex items-baseline gap-4 py-3"
+                    title={answered ? 'Answered' : 'Open question'}
                   >
                     <span
                       class:list={[
-                        'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
-                        answered ? 'bg-primary/15 text-primary' : 'border border-border text-muted-foreground/50',
+                        'min-w-0 flex-1 text-sm font-medium',
+                        answered ? 'text-foreground' : 'text-muted-foreground',
                       ]}
-                      title={answered ? 'Answered' : 'Open question'}
-                    >
-                      {answered ? <Check size={12} strokeWidth={3} /> : '?'}
-                    </span>
-                    <span class="min-w-0 flex-1">
-                      <span class="block text-sm font-medium text-foreground">{q.en}</span>
-                    </span>
+                    >{q.en}</span>
                     {answered ? (
-                      <ArrowRight size={14} strokeWidth={2} className="mt-1 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
+                      <ArrowRight size={16} strokeWidth={2.5} className="shrink-0 self-center text-muted-foreground transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1 group-hover:text-foreground" />
                     ) : (
-                      <span class="mt-0.5 shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60">open</span>
+                      <span class="shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">open</span>
                     )}
                   </Row>
                 </li>

@@ -588,20 +588,20 @@ export default function Studio() {
   return (
     <div className={cn('flex flex-col gap-3', fullscreen && 'fixed inset-x-0 top-14 bottom-0 z-40 bg-background p-4')}>
       {isEphemeral && (
-        <div className="flex items-center gap-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          <Eye size={13} className="flex-shrink-0" />
+        <div className="flex items-center gap-2 rounded-sm border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+          <Eye size={13} className="flex-shrink-0 text-brand-text" />
           <span>Previewing a recipe. changes won't be saved to your Studio.</span>
           <button
             type="button"
             onClick={savePreviewAsStudio}
-            className="ml-auto rounded-md bg-amber-500/20 px-2 py-0.5 font-semibold text-amber-100 hover:bg-amber-500/30"
+            className="ml-auto rounded-sm border border-foreground/60 px-2 py-0.5 font-semibold text-foreground transition-colors hover:bg-secondary/60"
           >
             Save to my Studio
           </button>
           <button
             type="button"
             onClick={() => void discardPreview()}
-            className="rounded-md border border-amber-400/40 px-2 py-0.5 text-amber-100 hover:bg-amber-500/10"
+            className="rounded-sm border border-border px-2 py-0.5 text-muted-foreground transition-colors hover:text-foreground"
           >
             Discard
           </button>
@@ -617,19 +617,19 @@ export default function Studio() {
       >
       {/* ── Canvas pane ─── */}
       <div className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
+        'flex flex-col overflow-hidden rounded-sm border border-border bg-card',
         fullscreen && 'min-h-0',
       )}>
-        <div className={cn('relative flex-1', !fullscreen && 'min-h-[480px]')}>
-          <div ref={canvasHostRef} className="h-full w-full bg-background" />
+        <div className={cn('theme-ink relative flex-1', !fullscreen && 'min-h-[480px]')}>
+          <div ref={canvasHostRef} className="h-full w-full bg-[#111114]" />
           {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
           {speeds.length > 1 && (
             <div
               role="radiogroup"
               aria-label="Spin speed"
               className={cn(
-                'absolute bottom-3 left-3 inline-flex items-center gap-0.5 rounded-full',
-                'border border-border/70 bg-background/80 p-0.5 pl-2 shadow-sm backdrop-blur',
+                'absolute bottom-3 left-3 inline-flex items-center gap-0.5 rounded-sm',
+                'border border-border/70 bg-background/80 p-0.5 pl-2',
               )}
             >
               <Gauge size={12} strokeWidth={2.25} className="mr-1 flex-shrink-0 text-muted-foreground" />
@@ -641,9 +641,9 @@ export default function Studio() {
                   aria-checked={speedName === name}
                   onClick={() => handleSpeedChange(name)}
                   className={cn(
-                    'rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors',
+                    'rounded-sm px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors',
                     speedName === name
-                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -659,10 +659,10 @@ export default function Studio() {
             title={isSpinning ? 'Stop' : 'Spin'}
             aria-label={isSpinning ? 'Stop' : 'Spin'}
             className={cn(
-              'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
-              'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
-              'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
-              isSpinning && 'bg-primary text-primary-foreground border-primary',
+              'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-sm',
+              'bg-brand text-brand-foreground',
+              'transition-[transform,background-color,color] duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] hover:bg-brand/90 active:scale-[0.97]',
+              isSpinning && 'bg-foreground text-background hover:bg-foreground/90',
               'disabled:cursor-not-allowed disabled:opacity-50',
             )}
           >
@@ -673,7 +673,7 @@ export default function Studio() {
           {status.kind === 'err' ? (
             <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-destructive" />
           ) : status.kind === 'ok' ? (
-            <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0 text-emerald-500" />
+            <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0 text-brand-text" />
           ) : (
             <div className="mt-0.5 h-[13px] w-[13px] flex-shrink-0 rounded-full border border-muted-foreground/40" />
           )}
@@ -685,7 +685,7 @@ export default function Studio() {
 
       {/* ── Editor pane ─── */}
       <div className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
+        'flex flex-col overflow-hidden rounded-sm border border-border bg-card',
         fullscreen && 'min-h-0',
       )}>
         {/* Tab strip */}
@@ -696,7 +696,7 @@ export default function Studio() {
           <TabButton active={tab === 'symbols'} onClick={() => setTab('symbols')} icon={<Boxes size={12} />}>
             Symbols
             {config && config.symbols.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              <span className="ml-1.5 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
                 {config.symbols.length}
               </span>
             )}
@@ -707,7 +707,7 @@ export default function Studio() {
               type="button"
               onClick={() => void run()}
               disabled={isBooting || !config}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-sm bg-brand px-3 py-1.5 text-xs font-semibold text-brand-foreground transition-[transform,background-color] duration-[133ms] hover:bg-brand/90 active:scale-[0.97] disabled:opacity-50"
             >
               <Play size={12} strokeWidth={2.5} /> Run
               <KbdChord className="ml-1">
@@ -720,7 +720,7 @@ export default function Studio() {
             <button
               type="button"
               onClick={() => setCode(DEFAULT_CODE)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
               title="Reset code to the default template"
             >
               <RotateCcw size={12} strokeWidth={2.5} />
@@ -728,7 +728,7 @@ export default function Studio() {
             <button
               type="button"
               onClick={() => setFullscreen((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
               title={fullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen. Monaco and reels fill the viewport 50/50'}
               aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             >
@@ -738,7 +738,7 @@ export default function Studio() {
               type="button"
               onClick={() => setShareOpen(true)}
               disabled={!config || config.symbols.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
               title="Share this studio. uploads encrypted to the share-api, gives you a link"
               aria-label="Share"
             >
@@ -823,9 +823,9 @@ function TabButton({ active, onClick, icon, children }: TabButtonProps): JSX.Ele
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-t-md border-b-2 px-3 py-2 text-xs transition-colors',
+        'inline-flex items-center gap-1.5 border-b-2 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors',
         active
-          ? 'border-primary font-semibold text-foreground'
+          ? 'border-brand font-medium text-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground',
       )}
     >
@@ -881,13 +881,13 @@ interface RecipePromptProps {
 function RecipePrompt({ onCancel, onReplace, onPreview }: RecipePromptProps): JSX.Element {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog">
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+      <div className="w-full max-w-md overflow-hidden rounded-sm border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
           <div className="text-sm font-semibold">Open recipe in Studio?</div>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded p-1 text-muted-foreground hover:text-foreground"
+            className="rounded-sm p-1 text-muted-foreground hover:text-foreground"
             aria-label="Cancel"
           >
             <X size={14} />
@@ -902,21 +902,21 @@ function RecipePrompt({ onCancel, onReplace, onPreview }: RecipePromptProps): JS
             <button
               type="button"
               onClick={onReplace}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-[transform,background-color] duration-[133ms] hover:bg-primary/90 active:scale-[0.97]"
             >
               Replace saved code
             </button>
             <button
               type="button"
               onClick={onPreview}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-transparent px-3 py-2 text-xs text-foreground hover:bg-secondary/50"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm border border-border bg-transparent px-3 py-2 text-xs text-foreground hover:bg-secondary/50"
             >
               <Eye size={12} /> Preview only. don't save
             </button>
             <button
               type="button"
               onClick={onCancel}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border/60 bg-transparent px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm border border-border/60 bg-transparent px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
             >
               Cancel
             </button>

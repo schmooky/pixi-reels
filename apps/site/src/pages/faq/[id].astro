@@ -6,7 +6,7 @@ import {
   FAQ_GROUP_TITLE,
   type FaqQuestionResolved,
 } from '../../content/faq.ts';
-import { ChevronLeft, Check, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ArrowRight } from 'lucide-react';
 import { SITE, qaPageLd, articleLd, breadcrumbLd } from '../../lib/seo.ts';
 
 // One page per ANSWERED question. Adding an answer in faq.ts mints a page
@@ -31,7 +31,7 @@ function renderAnswer(text: string): string {
     .map((p) => {
       const html = escapeHtml(p).replace(
         /`([^`]+)`/g,
-        '<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em]">$1</code>',
+        '<code class="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[0.85em]">$1</code>',
       );
       return `<p class="leading-7 text-foreground/85">${html}</p>`;
     })
@@ -68,35 +68,34 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
     ]),
   ]}
 >
-  <div class="container max-w-[760px] py-10 animate-fade-in">
-    <header class="mb-6">
-      <a href="/faq/" class="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+  <div class="container max-w-[760px] py-12 animate-fade-in">
+    <header class="mb-8">
+      <a href="/faq/" class="mb-6 inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground">
         <ChevronLeft size={14} strokeWidth={2} />
         All questions
       </a>
-      <div class="mb-3 flex items-center gap-2 text-xs">
-        <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary">
-          <Check size={11} strokeWidth={3} /> Answered
-        </span>
-        <a href={`/faq/#${q.group}`} class="rounded-full border border-border px-2.5 py-0.5 text-muted-foreground hover:text-foreground transition-colors">
-          {groupTitle.en}
-        </a>
-      </div>
-      <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{q.en}</h1>
+      <p class="eyebrow">
+        FAQ
+        <span class="text-muted-foreground/60">/</span>
+        <a href={`/faq/#${q.group}`} class="hover:underline">{groupTitle.en}</a>
+        <span class="text-muted-foreground/60">/</span>
+        Answered
+      </p>
+      <h1 class="display mt-4 text-4xl sm:text-5xl">{q.en}</h1>
     </header>
 
     <article class="space-y-4">
       <div class="space-y-3" set:html={renderAnswer(answerEn)} />
 
       {q.links && q.links.length > 0 && (
-        <div class="not-prose rounded-xl border border-border bg-card p-4">
-          <div class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">See it work</div>
+        <div class="not-prose mt-8 border-y border-border py-4">
+          <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">See it work</div>
           <ul class="space-y-1.5">
             {q.links.map((l) => (
               <li>
-                <a href={l.href} class="group inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                <a href={l.href} class="group inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
                   {l.label}
-                  <ArrowRight size={13} strokeWidth={2} className="transition-transform group-hover:translate-x-0.5" />
+                  <ArrowRight size={14} strokeWidth={2.5} className="transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1" />
                 </a>
               </li>
             ))}
@@ -106,27 +105,21 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
     </article>
 
     {related.length > 0 && (
-      <section class="mt-10 border-t border-border/60 pt-6">
-        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          More in {groupTitle.en}
-        </h2>
-        <ul class="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card">
+      <section class="mt-12">
+        <h2 class="eyebrow mb-4">More in {groupTitle.en}</h2>
+        <ul class="divide-y divide-border border-y border-border">
           {related.map((r) => {
             const answered = !!r.answer;
             const href = answered ? `/faq/${r.id}/` : `/faq/#${r.id}`;
             return (
               <li>
-                <a href={href} class="group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-secondary/30">
-                  <span
-                    class:list={[
-                      'flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
-                      answered ? 'bg-primary/15 text-primary' : 'border border-border text-muted-foreground/50',
-                    ]}
-                  >
-                    {answered ? <Check size={10} strokeWidth={3} /> : '?'}
-                  </span>
-                  <span class="min-w-0 flex-1 truncate text-foreground/80">{r.en}</span>
-                  {!answered && <span class="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground/50">open</span>}
+                <a href={href} class="group flex items-center gap-4 py-2.5 text-sm">
+                  <span class:list={['min-w-0 flex-1 truncate', answered ? 'text-foreground' : 'text-muted-foreground']}>{r.en}</span>
+                  {answered ? (
+                    <ArrowRight size={14} strokeWidth={2.5} className="shrink-0 text-muted-foreground transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1 group-hover:text-foreground" />
+                  ) : (
+                    <span class="shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">open</span>
+                  )}
                 </a>
               </li>
             );
@@ -136,7 +129,7 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
     )}
 
     <footer class="mt-8 text-xs text-muted-foreground">
-      Spotted a better answer? <a href={editUrl} class="text-primary hover:underline">Improve this on GitHub →</a>
+      Spotted a better answer? <a href={editUrl} class="text-foreground underline decoration-brand-text underline-offset-4">Improve this on GitHub →</a>
     </footer>
   </div>
 </Base>

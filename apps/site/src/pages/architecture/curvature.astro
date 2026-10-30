@@ -1,0 +1,533 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Diagram from '../../components/arch/Diagram.astro';
+import Box from '../../components/arch/Box.astro';
+import Edge from '../../components/arch/Edge.astro';
+import Group from '../../components/arch/Group.astro';
+import Label from '../../components/arch/Label.astro';
+import Cell from '../../components/arch/Cell.astro';
+import Legend from '../../components/arch/Legend.astro';
+import Callout from '../../components/arch/Callout.astro';
+
+// Side view of the drum: centre (CX, CY), radius R, window = 2 * arc with arc = 1 rad.
+const R = 130;
+const CX = 450;
+const CY = 210;
+const onArc = (phi: number) => [CX - R * Math.cos(phi), CY + R * Math.sin(phi)] as const;
+const ticks = [-1, -1 / 3, 1 / 3, 1].map(onArc);
+
+// Three mini boards for the focus modes, three reels each.
+const focusModes: [string, number, string][] = [
+  ["'reel'", 0, 'weight 0: own centreline'],
+  ["'set-lean'", 0.5, 'weight 0.5: halfway'],
+  ["'set'", 1, 'weight 1: board centre'],
+];
+
+const formulas = [
+  ['halfExtent', '(visibleCells * pitch - (pitch - cellMain)) / 2', 'half the length of the window along the strip'],
+  ['arc', 'amount * MAX_ARC, with MAX_ARC = 1.0 rad', 'how far round the drum each half of the window wraps'],
+  ['r', 'halfExtent / arc', 'the drum radius that makes the half window wrap through exactly arc'],
+  ['phi', '(main - halfExtent) / r', 'a flat coordinate as an angle: 0 at the middle, +-arc at the window edges'],
+  ['k', 'depth / (1 - cos arc)', 'the perspective strength that makes the window edge shrink by exactly depth'],
+  ['scale(phi)', '1 / (1 + k * (1 - cos phi))', '1 at the middle, 1 / (1 + depth) at the window edge'],
+  ['main(phi)', 'halfExtent + halfExtent * sin(phi) * scale(phi) / arc', 'the projected position inside the window; a straight line past it'],
+];
+
+const modes = [
+  ['How', 'Each symbol is handed a quad and keystones its own texture through a small mesh.', 'The whole reel is rendered to a texture every tick and the texture is bent through one mesh.'],
+  ['What bends', 'Only textures that own their whole source: generated textures, single images, render textures. Everything else gets an affine fit.', 'Everything inside the reel container: Spine, atlas sprites, text, effects.'],
+  ['Cost', 'Nothing extra per frame.', 'One extra render pass per reel per frame, plus a resample that makes hairline art slightly softer.'],
+  ['Needs', 'Nothing.', 'builder.renderer(app.renderer); build() throws without it.'],
+  ['Hit testing', 'Symbols are real display objects.', 'Symbols are inside a texture; use getCellQuad instead of screen-space tests.'],
+];
+---
+<Architecture
+  title="Curvature"
+  subtitle="How a flat strip is projected onto a drum, in two modes."
+  eyebrow="Drum"
+>
+  <p>
+    A real slot reel is a cylinder. The cell facing you is full size; the
+    ones above and below have rotated away, so their far edges sit further
+    from your eye, and a camera draws them as trapezoids rather than as
+    smaller rectangles. Flat 2D reels are fine for many games, but when a
+    design calls for that mechanical drum look, every symbol on the reel has
+    to be squashed and keystoned by exactly the right amount, and it has to
+    stay that way while the strip scrolls past at thirty cells a second.
+  </p>
+
+  <p>
+    pixi-reels fakes the drum with one small model per reel, <code>packages/pixi-reels/src/core/ReelCurve.ts</code>, that is a pure
+    function: give it a flat coordinate along the strip and it tells you
+    where that point lands on the drum and how much it has shrunk. The
+    motion layer keeps laying the strip out flat and knows nothing about
+    curvature. The curve is then <em>drawn</em> in one of two ways: per
+    symbol, by handing each one a four-cornered shape to fit itself into, or
+    per reel, by rendering the whole reel to a texture and bending that.
+    This page covers the model, the rule that keeps it from corrupting the
+    motion layer, the two renderers and where the "camera" sits.
+  </p>
+
+  <Callout kind="plain">
+    Wrap the visible window onto an imaginary cylinder. The middle cell faces
+    you and is drawn at its true size. Cells further from the middle have
+    turned away, so they are drawn shorter and narrower, with their far edge
+    the narrowest. The motion code never sees any of this; it keeps placing
+    symbols on a flat line, and a projection step bends the picture.
+  </Callout>
+
+  <h2>The drum</h2>
+
+  <p>
+    Figure 1 is the model from the side. On the left is the flat strip the
+    motion layer produces, three visible cells and a buffer at each end. In
+    the middle is the cylinder, seen edge-on, with the camera off to the
+    left; the window's half extent is wrapped onto the arc, so the middle of
+    the window is the point of the drum nearest the camera. On the right is
+    what the player sees. Notice two things: the middle cell is drawn
+    exactly 1:1, and the edge cells are both shorter along the strip and
+    narrower at their far edge, which is the keystone shape a cylinder
+    really produces.
+  </p>
+
+  <Diagram height={400} caption="Side view. The window's half extent is wrapped onto a cylinder; the middle cell (phi = 0) is drawn 1:1 and everything else is pushed through a perspective divide that shrinks it by how far it has receded. On the right, the keystone you see: far edges narrower, edge cells shorter along the strip; the buffers past the window continue on a straight line.">
+    <Label x={64} y={42} text="flat strip" anchor="middle" weight={600} tone="fg" />
+    {[0, 1, 2, 3, 4].map((i) => (
+      <Cell x={40} y={70 + i * 54} size={48} label={['buf', 'A', 'B', 'C', 'buf'][i]} kind={i === 0 || i === 4 ? 'buffer' : 'plain'} />
+    ))}
+    <rect x={34} y={118} width={60} height={162} rx="2" class="guide-strong" style="stroke-dasharray: 4 3" />
+
+    <Label x={CX - 40} y={42} text="side view" anchor="middle" weight={600} tone="fg" />
+    <Box x={130} y={188} w={90} h={44} kind="ghost" title="camera" mono={false} />
+    <path d={`M ${ticks[0][0]} ${ticks[0][1]} A ${R} ${R} 0 0 0 ${ticks[3][0]} ${ticks[3][1]}`} class="guide-strong" style="stroke-width: 2" />
+    <line x1={ticks[0][0]} y1={ticks[0][1]} x2={ticks[0][0] + 22} y2={ticks[0][1] - 34} class="guide" style="stroke-dasharray: 3 3" />
+    <line x1={ticks[3][0]} y1={ticks[3][1]} x2={ticks[3][0] + 22} y2={ticks[3][1] + 34} class="guide" style="stroke-dasharray: 3 3" />
+    {ticks.map(([x, y]) => <circle cx={x} cy={y} r="4" class="arch-marker-primary" />)}
+    <circle cx={CX} cy={CY} r="3.5" class="arch-marker-muted" />
+    <line x1={CX} y1={CY} x2={CX - R} y2={CY} class="guide" />
+    <line x1={CX} y1={CY} x2={ticks[3][0]} y2={ticks[3][1]} class="guide" style="stroke-dasharray: 3 3" />
+    <line x1={220} y1={210} x2={ticks[0][0]} y2={ticks[0][1]} class="guide" style="stroke-dasharray: 2 4" />
+    <line x1={220} y1={210} x2={ticks[3][0]} y2={ticks[3][1]} class="guide" style="stroke-dasharray: 2 4" />
+    <Label x={CX - R + 14} y={CY + 22} text="phi = 0" mono tone="faint" />
+    <Label x={ticks[3][0] + 16} y={ticks[3][1] + 12} text="phi = -arc" mono tone="faint" />
+    <Label x={CX - R + 14} y={CY - 16} text="r = halfExtent / arc" size={14} mono tone="fg" />
+
+    <Label x={630} y={42} text="what you see" anchor="middle" weight={600} tone="fg" />
+    <g class="cell cell-buffer"><polygon points="608,70 652,70 654,116 606,116" class="cell-bg" /></g>
+    <g class="cell cell-plain"><polygon points="606,120 654,120 660,172 600,172" class="cell-bg" /><text x="630" y="151" text-anchor="middle" font-size="14" font-weight="600" class="cell-text mono">A</text></g>
+    <g class="cell cell-plain"><polygon points="600,176 660,176 660,240 600,240" class="cell-bg" /><text x="630" y="213" text-anchor="middle" font-size="15" font-weight="600" class="cell-text mono">B</text></g>
+    <g class="cell cell-plain"><polygon points="600,244 660,244 654,296 606,296" class="cell-bg" /><text x="630" y="275" text-anchor="middle" font-size="14" font-weight="600" class="cell-text mono">C</text></g>
+    <g class="cell cell-buffer"><polygon points="606,300 654,300 652,346 608,346" class="cell-bg" /></g>
+  </Diagram>
+
+  <div class="not-prose my-8">
+    <Legend items={[
+      { kind: 'subtle', label: 'visible cell', note: 'projected inside the window' },
+      { kind: 'muted', label: 'buffer cell', note: 'fills the band the drum leaves short of the window edge' },
+      { kind: 'primary', label: 'ReelCurve', note: 'pure projection, no positions written' },
+      { kind: 'accent', label: 'renderer', note: 'PerspectiveCell or ReelWarp' },
+    ]} />
+  </div>
+
+  <p>
+    The model has two knobs, both set through the builder. <strong>amount</strong>,
+    from 0 to 1, says how much of the drum you see: at 1 each half of the
+    window wraps through one radian, about 57 degrees, so the window spans
+    nearly a third of the cylinder. <strong>depth</strong> says how much a
+    cell at the very edge of the window has shrunk compared with the middle
+    one, as a fraction; a depth of 0.5 means the edge cell is drawn at two
+    thirds of its true size. Everything else is derived from those two and
+    the reel's geometry. Here is the derivation in words, with the table
+    below giving each step its formula.
+  </p>
+
+  <p>
+    First, measure the window. Its length along the strip is the visible
+    cell count times the pitch, minus one trailing gap, because the gap
+    after the last cell is not part of the window; half of that is the <strong>half extent</strong>. Then decide how far round the drum that
+    half window should wrap, which is the <strong>arc</strong>, simply <code>amount</code> times one radian. Those two fix the drum's radius: an
+    arc of length <code>halfExtent</code> subtending <code>arc</code> radians
+    has radius <code>halfExtent / arc</code>. That means any flat coordinate
+    can be turned into an angle, <strong>phi</strong>: how far it is from the
+    middle of the window, divided by the radius. The middle cell is at phi 0,
+    the window edges are at plus and minus <code>arc</code>, and the buffer
+    cells are beyond that.
+  </p>
+
+  <p>
+    Next, the shrinking. A point on a cylinder that has turned away by an
+    angle phi is <code>1 - cos(phi)</code> radii further from the camera than
+    the front, so the natural perspective shrink is one over one plus some
+    constant times that distance. The constant, <strong>k</strong>, is chosen
+    so that the shrink at the window edge is exactly what you asked for:
+    solving <code>1 / (1 + k(1 - cos arc)) = 1 / (1 + depth)</code> for <code>k</code> gives <code>depth / (1 - cos arc)</code>. That is why <code>depth</code> is defined as "the shrink at the edge": it is the one
+    number a designer can see and judge.
+  </p>
+
+  <p>
+    Finally, the position. Seen from the front, a point at angle phi on a
+    cylinder sits <code>sin(phi)</code> radii from the centre line; multiply
+    by the perspective scale and you have where it lands. The result is
+    then normalised so that the middle cell is drawn exactly 1:1. The
+    alternative, stretching the mapping so the window edges land on the
+    window edges, would stretch the middle row along the strip but not
+    across it, which reads as a squashed centre. The consequence of keeping
+    the centre honest is that the drum's ends fall a little short of the
+    window edges, and the buffer cells fill that band; which is why the
+    figure's caption says the buffers "continue on a straight line".
+  </p>
+
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Quantity</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Formula</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        {formulas.map(([k, v, m]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 font-mono text-xs whitespace-nowrap align-top">{k}</td>
+            <td class="px-4 py-2.5 font-mono text-xs text-primary align-top">{v}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80">{m}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Past the window edge the position continues as a straight line from
+    where the edge actually landed, using the slope the curve had there
+    (<code>_edgeSlope</code>), while the scale keeps following <code>1 - cos(phi)</code>. That keeps a buffer cell from being a flat
+    rectangle sitting next to a hard-curved neighbour.
+  </p>
+
+  <p>
+    In code, the config is <code>ReelCurveConfig</code>, <code>{`{ amount, depth? }`}</code>. <code>builder.curve(0.35)</code> and <code>curve({`{ amount: 0.35 }`})</code> mean the same thing, and <code>curvePerReel([...])</code> sets one per reel. <code>resolveCurveConfig</code> clamps <code>amount</code> to 0..1,
+    defaults <code>depth</code> to <code>amount * 0.5</code>, and caps depth
+    below <code>0.9 * cos(arc)</code>. The cap is not cosmetic: past <code>cos(arc)</code> the projection stops being monotonic and the cells
+    at the window edge fold back over each other. An arc below <code>1e-4</code> reports <code>isFlat</code>, and the builder then does
+    not create a curve object at all, which keeps a flat set byte-identical
+    to an uncurved build.
+  </p>
+
+  <p>
+    The model is bound to real pixel sizes by <code>setGeometry(cellMain, cellCross, pitch, visibleCells)</code>. <code>Reel.setCurve</code> derives <code>cellMain</code> from the pitch
+    the reel is actually spinning on minus the gap, so a MultiWays reel is
+    measured on its spinning strip, and <code>Reel.reshape</code> re-binds it
+    after a reshape. The main entry point for a renderer is <code>quadFor(mainStart, inset)</code>, which projects the rectangle the
+    art really occupies rather than the whole cell. For a trimmed atlas
+    frame the <code>cellInset</code> (from <code>textureCellInset</code>) is
+    much smaller than the cell, and projecting the whole cell would inflate
+    the symbol and give it the cell's keystone instead of its own, milder
+    one. The quad comes back <strong>view-local</strong>, clockwise from the
+    screen's top-left, so art stays upright on a horizontal set. <code>mapMain(main)</code> and <code>scaleAt(main)</code> expose the same
+    projection for overlays you draw yourself.
+  </p>
+
+  <h2>The invariant: the curve never writes a position</h2>
+
+  <p>
+    There is one rule that everything on this page obeys, and it is worth
+    understanding why. The motion layer places each symbol by writing one
+    coordinate on its view, and the reel later reads that coordinate back
+    to work out which seat the view is in (in <code>beginMotion</code>, <code>notifyLanded</code> and <code>_replaceSymbol</code>). If the curve
+    moved the view to its projected position, the reel would read a bent
+    value and treat it as a flat one, and the error would compound on every
+    round trip. So the curve never touches <code>view.position</code>. It
+    hands the symbol a quad, and <code>ReelSymbol.applyCellQuad</code> must
+    fit the art into that quad without moving the view; the base
+    implementation pays for its fit entirely through the pivot.
+  </p>
+
+  <Callout kind="why">
+    Keeping the projection out of the position is what lets the whole
+    motion contract on the <a href="/architecture/motion/">motion page</a> stay true under curvature. Flat positions are the source of truth; the
+    bend is a presentation that can be switched on, changed or switched off
+    at runtime without the reel losing track of a single symbol.
+  </Callout>
+
+  <p>
+    Two set-level helpers measure through the same map so your overlays
+    agree with the drum. <code>ReelSet.getCellBounds(reel, cell)</code> returns the axis-aligned bounding box of the projected quad; a payline
+    drawn through its centre tracks the curve, while a rectangle outline on
+    it is a hair loose on the narrow edge. <code>getCellQuad(reel, cell)</code> returns the four corners in <code>ReelSet</code> space, or <code>null</code> on a flat reel. Use the quad for hit areas in warp mode
+    and for anything that should sit <em>on</em> the curve rather than
+    around it.
+  </p>
+
+  <h2>Two ways to draw it</h2>
+
+  <p>
+    The model says where every point should go; something still has to
+    draw it there. There are two renderers, chosen with <code>curveMode</code>, and the table sums up the trade. Symbol mode is
+    the default and costs nothing, but only content that is a texture can
+    be keystoned, and only when that texture owns its whole source. Warp
+    mode bends anything at all, at the price of an extra render pass per
+    reel per frame.
+  </p>
+
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground"></th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">curveMode('symbol'), the default</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">curveMode('warp')</th>
+        </tr>
+      </thead>
+      <tbody>
+        {modes.map(([k, a, b]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 text-xs font-semibold whitespace-nowrap align-top">{k}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80 align-top">{a}</td>
+            <td class="px-4 py-2.5 text-xs text-foreground/80 align-top">{b}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Figure 2 is symbol mode, one frame for one symbol. Follow it top to
+    bottom: the flat position is written first, as always; the curve
+    converts that position into a quad; and the symbol decides what to do
+    with it. Notice the fork at the bottom. A texture that owns its whole
+    source goes through a small perspective mesh and really keystones.
+    Anything else, including the common case of a sub-frame in a texture
+    atlas, takes the affine fallback: scaled and positioned to fit the quad,
+    but still a rectangle.
+  </p>
+
+  <Diagram height={410} caption="curveMode('symbol'), the default. Each cell is projected on its own and costs nothing extra: the flat position is written first, the curve hands the symbol a quad, and a texture that owns its whole source is keystoned through a mesh while anything else falls back to an affine fit.">
+    <Box x={180} y={20} w={360} h={60} title="ReelMotion._render()" sub="flat main written first, as always" />
+    <Box x={180} y={104} w={360} h={60} title="curve.quadFor(main, inset)" sub="view-local quad, null when flat" />
+    <Box x={180} y={188} w={360} h={60} kind="accent" title="symbol.applyCellQuad(quad)" sub="SpriteSymbol, AnimatedSpriteSymbol" />
+    <Edge from={[360, 80]} to={[360, 104]} />
+    <Edge from={[360, 164]} to={[360, 188]} />
+    <Box x={60} y={308} w={260} h={78} kind="primary" title="PerspectiveCell" sub={['PerspectiveMesh 10 x 10', 'setCorners(quad), own UVs']} />
+    <Box x={400} y={308} w={260} h={78} kind="muted" title="affine fallback" sub={['atlas sub-frames, Spine, Graphics', 'contain-fit via pivot, no bend']} />
+    <Edge from={[360, 248]} via={[[360, 278], [190, 278]]} to={[190, 308]} label="whole-source texture" labelDx={-12} />
+    <Edge from={[360, 248]} via={[[360, 278], [530, 278]]} to={[530, 308]} label="otherwise" />
+  </Diagram>
+
+  <p>
+    The reason for the fork is that a PixiJS <code>Container</code> transform
+    is affine: it can scale, move and rotate a cell, but it can never turn a
+    rectangle into a trapezoid. Only content that <em>is</em> a texture can
+    be keystoned, by drawing it on a mesh whose corners are the quad. <code>PerspectiveCell</code> (<code>packages/pixi-reels/src/symbols/PerspectiveCell.ts</code>) is that
+    mesh, shared by <code>SpriteSymbol</code> and <code>AnimatedSpriteSymbol</code>. It allocates its <code>PerspectiveMesh</code> lazily, re-reads the texture on every <code>apply</code> so an animated symbol can swap frames, and rewrites
+    the mesh's UVs from <code>texture.uvs</code> on every texture swap,
+    because a mesh's 0..1 UVs address the whole sheet where a sprite's do
+    not. It pivots the mesh on the quad's centre so a win pulse scales in
+    place. <code>canProjectTexture</code> accepts only textures that own
+    their whole source: generated textures, single images and render
+    textures. <code>SpriteSymbol.onActivate</code> calls <code>perspective.syncTexture</code> so a pooled symbol keeps its quad
+    when it is reused, and <code>AnimatedSpriteSymbol</code> pushes every
+    frame change through.
+  </p>
+
+  <Callout kind="gotcha">
+    An atlas sub-frame, the usual production case, cannot be keystoned in
+    symbol mode. It still scales and sits correctly in its quad, so the reel
+    looks curved from a distance, but each symbol stays a rectangle. If you
+    pack your art into an atlas and want true keystoning, use warp mode or
+    give the symbols that matter their own single-image textures.
+  </Callout>
+
+  <p>
+    Figure 3 is warp mode, one frame for one reel. The reel's container is
+    taken off the stage and replaced by a mesh; every tick the container is
+    rendered into a texture, and the mesh shows that texture with its
+    vertices displaced onto the drum. Notice the last box: the symbols
+    themselves are never handed a quad in this mode, so there is no risk of
+    bending twice, and anything the engine lifts out of the reel draws flat
+    above the drum.
+  </p>
+
+  <Diagram height={500} caption="curveMode('warp'), which needs builder.renderer(app.renderer). The whole reel is rendered to a texture every tick and the texture is bent, so everything inside follows at one extra render pass per reel per frame; the symbols themselves are never handed a quad.">
+    <Box x={160} y={20} w={400} h={60} title="reel.container leaves the stage" sub="ReelWarp takes its place in maskedContainer" />
+    <Box x={160} y={104} w={400} h={78} title="RenderTexture" sub={['reel box + one slotPitch per strip end', '+ curveBleed per side across it']} />
+    <Box x={160} y={206} w={400} h={60} kind="accent" title="renderer.render(container)" sub="every tick, even at rest" />
+    <Box x={160} y={290} w={400} h={78} kind="primary" title="MeshPlane 16 x 16" sub={['vertices displaced once per geometry', 'cross toward focus, main through mapMain']} />
+    <Box x={160} y={392} w={400} h={78} kind="ghost" title="symbols untouched" sub={['no quads handed out, no double bend', 'lifted content draws flat above the drum']} />
+    <Edge from={[360, 80]} to={[360, 104]} />
+    <Edge from={[360, 182]} to={[360, 206]} />
+    <Edge from={[360, 266]} to={[360, 290]} />
+    <Edge from={[360, 368]} to={[360, 392]} />
+  </Diagram>
+
+  <p>
+    Warp mode (<code>packages/pixi-reels/src/core/ReelWarp.ts</code>) bends
+    whatever is inside the reel, Spine skeletons, atlas sprites, text and
+    effects alike, with no cooperation from the symbol, and it sidesteps the
+    sub-frame problem because a render texture always owns its whole
+    source. The texture is the reel box grown by one <code>slotPitch</code> at each end of the strip, since the drum's ends curve away from the
+    window and the buffer cells fill that band, and by <code>curveBleed</code> per side across it, for art wider than its cell.
+    It is created at the renderer's resolution. Each tick the source
+    container is moved to the texture's origin plus that margin, rendered
+    with <code>clear: true</code>, and moved back within the same
+    synchronous block. The render runs even when the reel is at rest,
+    because win pulses, cascade destroys and the spotlight all animate
+    symbols on a resting reel, and the texture is all the player sees. The
+    mesh's vertices are displaced once per geometry change, not per frame,
+    and <code>resize</code> re-measures after a MultiWays reshape.
+  </p>
+
+  <p>
+    Two things change for your game code in warp mode. Symbols are no
+    longer real display objects as far as the renderer is concerned, so
+    hit-test through <code>getCellQuad</code> rather than against the
+    sprites. And anything the engine <em>lifts</em> out of the reel
+    container, <code>unmask: true</code> symbols at rest, the win spotlight
+    and pin overlays, is not in the texture and draws flat above the drum;
+    the builder tells you so with the <code>warp-skips-unmask</code> notice. <code>build()</code> throws if warp mode is chosen without <code>renderer(...)</code>.
+  </p>
+
+  <h2>Where the camera sits</h2>
+
+  <p>
+    So far each reel has been its own drum with the camera straight in front
+    of it. On a five-reel board that looks like five separate cylinders side
+    by side. A real cabinet has one drum per reel but one pair of eyes, so
+    the outer reels are seen slightly from the side and their cells lean in
+    toward the middle of the board. <code>curveFocus</code> controls that
+    lean. Figure 4 shows three reels under each setting; notice how the
+    buffer cells of the outer reels shift toward the centre line as the
+    weight rises, while the middle reel never changes.
+  </p>
+
+  <Diagram height={300} caption="curveFocus moves the cross coordinate each reel's cells converge on, three reels shown. At weight 0 it is the reel's own centreline; at 1 it is the middle of the board, so the outer reels lean in and the grid reads as one drum.">
+    {focusModes.map(([name, w, note], m) => {
+      const gx = 12 + m * 236;
+      const gw = 224;
+      const y0 = 60;
+      const boardCentre = gx + gw / 2;
+      return (
+        <>
+          <Group x={gx} y={20} w={gw} h={250} kind="solid" label={`curveFocus(${name})`} />
+          {[-1, 0, 1].map((r) => {
+            const colCentre = boardCentre + r * 56;
+            const focus = colCentre + w * (boardCentre - colCentre);
+            const lean = (focus - colCentre) * 0.35;
+            return (
+              <>
+                <g class="cell cell-buffer"><rect x={colCentre - 18 + lean} y={y0} width={36} height={44} rx="2" class="cell-bg" /></g>
+                <Cell x={colCentre - 22} y={y0 + 52} size={44} kind="plain" />
+                <g class="cell cell-buffer"><rect x={colCentre - 18 + lean} y={y0 + 104} width={36} height={44} rx="2" class="cell-bg" /></g>
+                <line x1={colCentre + lean} y1={y0 - 8} x2={colCentre} y2={y0 + 74} class="guide-strong" style="stroke-dasharray: 3 3" />
+                <line x1={colCentre} y1={y0 + 74} x2={colCentre + lean} y2={y0 + 156} class="guide-strong" style="stroke-dasharray: 3 3" />
+              </>
+            );
+          })}
+          <line x1={boardCentre} y1={y0 - 12} x2={boardCentre} y2={y0 + 160} class="guide" style="stroke-dasharray: 1.5 4" />
+          <Label x={boardCentre} y={y0 + 190} text={note} anchor="middle" />
+        </>
+      );
+    })}
+  </Diagram>
+
+  <p>
+    The focus is a point on the cross axis that a reel's cells converge
+    toward as they recede. In words: start at the reel's own centre line,
+    and move toward the centre of the whole board by a weight between 0 and
+    1. The three named settings are just weights: <code>'reel'</code> is 0 (every reel is its own drum), <code>'set'</code> is 1 (every reel converges on the board centre, so the
+    grid reads as one drum) and <code>'set-lean'</code> is halfway. The
+    formula, reel-local, is <code>focusCross = cellCross / 2 + weight * (setCentre - reelIndex * (cellCross + crossGap) - cellCross / 2)</code>,
+    and the weights are <code>CURVE_FOCUS_WEIGHT = {`{ reel: 0, 'set-lean': 0.5, set: 1 }`}</code>.
+    In warp mode the same focus feeds the vertex displacement, so the whole
+    texture leans.
+  </p>
+
+  <p>
+    Leaning has a side effect on masking. A cell that leans toward the board
+    centre crosses out of its own column, and the default per-reel mask, <code>RectMaskStrategy</code>, would clip it at the column boundary. So
+    any focus other than <code>'reel'</code> switches the default mask to <code>SharedRectMaskStrategy</code> and logs the <code>mask-auto-shared</code> notice; an explicit <code>.maskStrategy(...)</code> always wins. The focus only has an effect
+    alongside <code>curve(...)</code> or <code>curvePerReel(...)</code>. The
+    mask side of this is on <a href="/architecture/viewport-and-masks/">viewport and masks</a>.
+  </p>
+
+  <p>
+    The curve can be changed at runtime. <code>ReelSet.setCurve(input)</code> drives <code>Reel.setCurve</code> on every reel, and <code>ReelMotion.setCurve</code> first flattens every symbol with <code>applyCellQuad(null)</code> before dropping to <code>amount: 0</code>;
+    without that, the last quad each symbol was handed would stay on screen.
+    The <a href="/recipes/reel-curvature/">reel curvature recipes</a> show
+    both modes, the focus settings and a payline drawn on the drum.
+  </p>
+
+  <h2>Defaults</h2>
+
+  <p>
+    The values this page relies on, with the file each one is set in.
+  </p>
+
+  <div class="not-prose my-4 rounded-lg border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Item</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Value</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Where</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          ['amount', '0 (flat); clamped to 0..1', 'core/ReelCurve.ts'],
+          ['depth', 'amount * 0.5, then min(depth, 0.9 * cos(amount * MAX_ARC))', 'core/ReelCurve.ts'],
+          ['MAX_ARC / MIN_ARC / DEPTH_SAFETY', '1.0 rad / 1e-4 / 0.9', 'core/ReelCurve.ts'],
+          ['curveFocus', "'reel' (weights reel 0, set-lean 0.5, set 1)", 'core/ReelSetBuilder.ts'],
+          ['curveMode', "'symbol'", 'core/ReelSetBuilder.ts'],
+          ['curveBleed', '0 px per side, warp only', 'core/ReelSetBuilder.ts'],
+          ['PerspectiveCell VERTICES', '10 x 10', 'symbols/PerspectiveCell.ts'],
+          ['ReelWarp GRID', '16 x 16 vertices', 'core/ReelWarp.ts'],
+          ['Warp texture margin', 'slotPitch at each strip end, renderer.resolution', 'core/Reel.ts, core/ReelWarp.ts'],
+          ['Mask when focus != reel', 'SharedRectMaskStrategy (auto, unless explicit)', 'core/ReelSetBuilder.ts'],
+        ].map(([k, v, w]) => (
+          <tr class="border-t border-border/60">
+            <td class="px-4 py-2.5 text-xs">{k}</td>
+            <td class="px-4 py-2.5 font-mono text-xs text-primary">{v}</td>
+            <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{w}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Where this lives</h2>
+
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/core/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>ReelCurve.ts</code> ReelCurveConfig, resolveCurveConfig, CurveFocus, CurveMode, CURVE_FOCUS_WEIGHT, quadFor, mapMain, scaleAt</li>
+        <li><code>ReelWarp.ts</code> the render-to-texture mesh, update, resize, _displace</li>
+        <li><code>Reel.ts</code> _buildCurve, setCurve, _placeSymbolView, the warp hand-off in the constructor</li>
+        <li><code>ReelMotion.ts</code> setCurve, quadFor in _render</li>
+        <li><code>ReelSet.ts</code> getCellBounds, getCellQuad, setCurve</li>
+        <li><code>ReelSetBuilder.ts</code> curve, curvePerReel, curveFocus, curveMode, curveBleed, renderer, the mask auto-pick</li>
+      </ul>
+    </div>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/symbols/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>PerspectiveCell.ts</code> textureCellInset, canProjectTexture, PerspectiveCell</li>
+        <li><code>ReelSymbol.ts</code> cellInset, applyCellQuad (affine fallback)</li>
+        <li><code>SpriteSymbol.ts</code>, <code>AnimatedSpriteSymbol.ts</code> the two built-ins that project</li>
+      </ul>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mt-4 mb-1">config/types.ts</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>ReelCellQuad</code> (box plus x0..y3), <code>ReelCellInset</code> (left, top, right, bottom as fractions)</li>
+      </ul>
+    </div>
+  </div>
+
+  <Callout kind="remember">
+    The curve is a pure function from a flat coordinate to a quad, driven by
+    two numbers: how much of the drum you see and how much the edge cell
+    shrinks. It never moves a symbol; the motion layer stays flat and the
+    bend is drawn on top, per symbol for free or per reel through a texture
+    when you need everything to bend. Measure overlays through <code>getCellQuad</code> so they sit on the drum too.
+  </Callout>
+</Architecture>

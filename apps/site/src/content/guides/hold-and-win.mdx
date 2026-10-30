@@ -6,6 +6,9 @@ description: The Hold & Win lifecycle end to end — the mental model, the state
   machine, the events, and how to wire the board to your game client.
 ---
 
+import Timeline from '../../components/docs/Timeline.astro';
+import Tree from '../../components/docs/Tree.astro';
+
 Hold & Win (a.k.a. Lock & Respin, Hold & Spin) is a feature where coins land,
 **stick**, and refill a respin counter until the board fills or the respins run
 out. `pixi-reels` ships it as a built-in board:
@@ -50,13 +53,20 @@ game code - the board never changes.
 The board is a three-state machine. `board.phase` reports where it is at any
 moment (`'idle' | 'active' | 'spinning'`).
 
-```
- idle ──enter(seed)──▶ active ──respin(hits)──▶ spinning ──cells land──▶ active ──┐
-                          ▲                                                         │
-                          └──────────── respins left, board not full ──────────────┘
+<Timeline
+  beats={['idle', 'active', 'spinning', 'active']}
+  edges={[
+    { after: 0, label: 'enter(seed)' },
+    { after: 1, label: 'respin(hits)' },
+    { after: 2, label: 'cells land' },
+  ]}
+  spans={[{ from: 1, to: 3, label: 'respins left, board not full', loop: true }]}
+/>
 
- spinning ──board fills  OR  respins hit 0──▶  feature:end  ──▶  idle
-```
+<Timeline
+  beats={['spinning', 'feature:end', 'idle']}
+  edges={[{ after: 0, label: 'board fills OR respins hit 0' }]}
+/>
 
 1. **`enter(seed)`** - the trigger coins seed the board. They lock instantly (no
    spin) and the respin counter arms. `idle → active`.
@@ -72,16 +82,22 @@ moment (`'idle' | 'active' | 'spinning'`).
 Events come in a fixed order. Cells land in stagger order, so `cell:landed` /
 `coin:locked` fire progressively, not all at once:
 
-```
-respin(hits)
-  respin:start
-  ├─ cell:landed        per cell, in landing order (coin = null on a miss)
-  └─ coin:locked        only on a hit  →  the board plays the lock animation ('win' by default)
-  respins:changed       reason: 'hit-reset' (full) or 'miss' (-1)
-  respin:end
-  [board:full]          if the last free cell just locked
-  [feature:end]         if full, or the counter reached 0  →  phase returns to idle
-```
+<Tree
+  root="respin(hits)"
+  items={[
+    {
+      label: 'respin:start',
+      children: [
+        { label: 'cell:landed', note: 'per cell, in landing order (coin = null on a miss)' },
+        { label: 'coin:locked', note: "only on a hit → the board plays the lock animation ('win' by default)" },
+      ],
+    },
+    { label: 'respins:changed', note: "reason: 'hit-reset' (full) or 'miss' (-1)" },
+    { label: 'respin:end' },
+    { label: '[board:full]', note: 'if the last free cell just locked' },
+    { label: '[feature:end]', note: 'if full, or the counter reached 0 → phase returns to idle' },
+  ]}
+/>
 
 ## Wiring it to your game client
 

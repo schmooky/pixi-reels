@@ -2,7 +2,6 @@
 import Base from '../../layouts/Base.astro';
 import { RECIPES, RECIPE_GROUPS } from '../../content/recipes.ts';
 import RecipeThumb from '../../components/RecipeThumb.astro';
-import { ArrowRight } from 'lucide-react';
 import { breadcrumbLd, articleLd, SITE } from '../../lib/seo.ts';
 
 const title = 'Recipes. pixi-reels mechanics, grouped and live';
@@ -15,6 +14,7 @@ for (const recipe of RECIPES) {
   list.push(recipe);
   recipesByGroup.set(recipe.group, list);
 }
+const groups = RECIPE_GROUPS.filter((g) => (recipesByGroup.get(g.id) ?? []).length > 0);
 ---
 <Base
   title={`Recipes · ${SITE.name}`}
@@ -28,52 +28,74 @@ for (const recipe of RECIPES) {
     ]),
   ]}
 >
-  <section class="border-b border-border/60 py-16">
-    <div class="container max-w-3xl text-center">
-      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-        Cookbook
+  <section class="overflow-hidden border-b border-border py-16 sm:py-20">
+    <div class="container">
+      <div class="max-w-3xl">
+        <p class="motion-appear eyebrow">
+          Recipes
+          <span class="text-muted-foreground/60">/</span>
+          {RECIPES.length} pages
+        </p>
+        <h1 class="display mt-5 text-4xl sm:text-5xl lg:text-6xl">
+          <span class="motion-slam block">Slot mechanics, grouped and live.</span>
+        </h1>
+        <p class="motion-appear mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl" style="--motion-delay: 350ms">
+          Each page collects a family of mechanics as live, replayable demos,
+          with the minimum code that makes each one work.
+        </p>
       </div>
-      <h1 class="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
-        Slot mechanics, <span class="gradient-text">grouped and live.</span>
-      </h1>
-      <p class="mx-auto mt-5 max-w-xl text-muted-foreground">
-        Each page collects a family of mechanics as live, replayable demos,
-        with the minimum code that makes each one work.
-      </p>
     </div>
   </section>
 
-  <section class="py-14">
-    <div class="container space-y-14">
-      {RECIPE_GROUPS.map((g) => {
-        const groupRecipes = recipesByGroup.get(g.id) ?? [];
-        if (groupRecipes.length === 0) return null;
-        return (
-          <div id={g.id} class="scroll-mt-20">
-            <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
-              {g.label}
-            </div>
-            <p class="mb-5 text-sm text-muted-foreground/80">{g.description}</p>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {groupRecipes.map((r) => (
-                <a
-                  href={`/recipes/${r.slug}/`}
-                  class="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/40 hover:-translate-y-0.5"
-                >
-                  <RecipeThumb slug={r.slug} title={r.title} image={r.image} />
-                  <div class="flex flex-1 flex-col p-5">
-                    <h3 class="text-base font-semibold tracking-tight">{r.title}</h3>
-                    <p class="mt-2 text-sm text-muted-foreground">{r.oneLiner}</p>
-                    <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
-                      Open recipe <ArrowRight size={13} strokeWidth={2} />
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
+  <section class="py-14 sm:py-16">
+    <div class="container space-y-16 sm:space-y-20">
+      {groups.map((g, gi) => (
+        <div id={g.id} class="scroll-mt-20">
+          <div class="reveal max-w-3xl">
+            <p class="eyebrow">0{gi + 1} / {g.label}</p>
+            <h2 class="display mt-4 text-3xl sm:text-4xl">{g.description}</h2>
           </div>
-        );
-      })}
+          <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+            {(recipesByGroup.get(g.id) ?? []).map((r, i) => (
+              <a
+                href={`/recipes/${r.slug}/`}
+                class="group reveal flex min-w-0 flex-col border border-border bg-card transition-colors duration-[217ms] hover:border-brand"
+                style={`--motion-delay: ${(i % 3) * 50}ms`}
+              >
+                <RecipeThumb slug={r.slug} title={r.title} image={r.image} />
+                <div class="flex flex-1 flex-col p-5">
+                  <h3 class="font-display text-xl font-bold tracking-tight">{r.title}</h3>
+                  <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{r.oneLiner}</p>
+                  <span class="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-foreground">
+                    Open recipe
+                    <svg class="h-4 w-4 transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   </section>
 </Base>
+
+<script>
+  // Scroll reveal: a `.reveal` block appears (global.css) once it enters the
+  // view, once. Under reduced motion the CSS shows everything at rest, and
+  // the observer is only a no-op class toggle.
+  const blocks = document.querySelectorAll<HTMLElement>('.reveal');
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        e.target.classList.add('is-in');
+        io.unobserve(e.target);
+      }
+    },
+    { rootMargin: '0px 0px -10% 0px' },
+  );
+  blocks.forEach((b) => io.observe(b));
+</script>

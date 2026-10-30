@@ -581,7 +581,7 @@ class DebugOverlay implements DebugOverlayHandle {
         if (quad) {
           g.poly(quad, true).stroke({ color: COLORS.cells, width: 1, alpha: 0.85 });
         } else {
-          g.roundRect(b.x + 0.5, b.y + 0.5, b.width - 1, b.height - 1, 3).stroke({
+          g.rect(b.x + 0.5, b.y + 0.5, b.width - 1, b.height - 1).stroke({
             color: COLORS.cells,
             width: 1,
             alpha: 0.85,
@@ -593,7 +593,7 @@ class DebugOverlay implements DebugOverlayHandle {
         const lx = (quad ? quad[0].x : b.x) + 3;
         const ly = (quad ? quad[0].y : b.y) + 3;
         // A dark chip under the label, so it reads over any art.
-        g.roundRect(lx - 2, ly - 1, text.length * advance + 4, LABEL_FONT_SIZE + 3, 3).fill({
+        g.rect(lx - 2, ly - 1, text.length * advance + 4, LABEL_FONT_SIZE + 3).fill({
           color: 0x000000,
           alpha: 0.55,
         });
@@ -782,7 +782,7 @@ class DebugOverlay implements DebugOverlayHandle {
         if (fp.size.reels <= 1 && fp.size.cells <= 1) continue;
         if (fp.anchor.reel !== reelIndex || fp.anchor.cell !== cell) continue;
         const rect = this._reelSet.getBlockBounds(reelIndex, cell);
-        g.roundRect(rect.x, rect.y, rect.width, rect.height, 6)
+        g.rect(rect.x, rect.y, rect.width, rect.height)
           .fill({ color: COLORS.blocks, alpha: 0.08 })
           .stroke({ color: COLORS.blocks, width: 3, alignment: 'inside' });
       }
@@ -797,7 +797,7 @@ class DebugOverlay implements DebugOverlayHandle {
         if (!pin) continue;
         const b = this._reelSet.getCellBounds(reelIndex, cell);
         // Pin cell outline.
-        g.roundRect(b.x, b.y, b.width, b.height, 4).stroke({
+        g.rect(b.x, b.y, b.width, b.height).stroke({
           color: COLORS.pins,
           width: 3,
           alignment: 'inside',
@@ -986,8 +986,8 @@ class DebugOverlay implements DebugOverlayHandle {
     const x0 = pad + labelW;
     const x1 = width - pad;
 
-    g.roundRect(0, 1.5, width, height, 8, 0.6).fill({ color: 0x000000, alpha: 0.35, blur: 3 });
-    g.roundRect(0, 0, width, height, 8, 0.6)
+    g.rect(0, 1.5, width, height).fill({ color: 0x000000, alpha: 0.35, blur: 3 });
+    g.rect(0, 0, width, height)
       .fill({ color: 0x0b0e14, alpha: 0.84 })
       .stroke({ color: 0xffffff, alpha: 0.1, width: 1, alignment: 'inside' });
     // Measured as its plate, like a DebugPlaque, not as the shadow's blur.
@@ -1017,7 +1017,7 @@ class DebugOverlay implements DebugOverlayHandle {
       // A cascade round names six phases; stop at the panel edge rather than
       // run past it. The lanes still show every phase in its color.
       if (lx + entry > width - pad) break;
-      g.roundRect(lx, pad + 1, 7, 7, 2).fill(phaseColor(phase));
+      g.rect(lx, pad + 1, 7, 7).fill(phaseColor(phase));
       text(phase, lx + 10, pad - 2, DIM);
       lx += entry + 10;
     }
@@ -1044,13 +1044,13 @@ class DebugOverlay implements DebugOverlayHandle {
     for (let i = 0; i < reels; i++) {
       const y = lanesTop + i * (LANE_H + LANE_GAP);
       text(`r${i}`, pad, y - 2, DIM);
-      g.roundRect(x0, y, x1 - x0, LANE_H, 2).fill({ color: 0xffffff, alpha: 0.05 });
+      g.rect(x0, y, x1 - x0, LANE_H).fill({ color: 0xffffff, alpha: 0.05 });
       const reel = round?.reels[i];
       if (!reel) continue;
       for (const span of reel.phases) {
         const xs = tx(span.start);
         const xe = tx(span.end ?? length);
-        g.roundRect(xs, y, Math.max(1.5, xe - xs), LANE_H, 2).fill({
+        g.rect(xs, y, Math.max(1.5, xe - xs), LANE_H).fill({
           color: phaseColor(span.phase),
           alpha: 0.9,
         });
