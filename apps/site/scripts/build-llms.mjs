@@ -14,6 +14,14 @@
  * code from `src/recipes/`. that's the pattern an LLM most needs to
  * write working code against the library.
  *
+ * MDX pages (guides, docs, recipe umbrellas) are inlined in full: the prose
+ * body with imports and JSX components stripped, body headings demoted two
+ * levels so `##` stays the section marker and `###` the page marker. That
+ * grammar (`## Section`, `### Page` + `URL:`, `####` sub-headings with an
+ * optional `URL:` deep link) is what `@pixi-reels/docs-ask` chunks for the
+ * Ask box, so keep it stable. `.astro` pages (architecture) have no markdown
+ * body and stay title + description only.
+ *
  * Wired into the docs build via `pnpm llms:gen` (run by predev/prebuild).
  *
  * Output is deterministic: stable order, and no build timestamp. The file is
@@ -75,7 +83,11 @@ async function main() {
   }
 
   const pages = [...(await collectPages(PAGES)), ...(await collectPages(CONTENT))];
-  const recipes = await collectRecipes();
+  const demoUrls = demoUrlMap(pages);
+  const recipes = (await collectRecipes()).map((r) => ({
+    ...r,
+    href: demoUrls.get(r.slug) ?? `${SITE_URL}/recipes/${r.slug}/`,
+  }));
   const faq = await collectFaq();
   const version = JSON.parse(await readFile(PKG, 'utf-8')).version;
 
@@ -85,7 +97,7 @@ async function main() {
     items: pages.filter((p) => s.match(p.slug)).sort((a, b) => a.slug.localeCompare(b.slug)),
   })).filter((g) => g.items.length > 0);
 
-  const out = render(grouped, recipes, faq, version);
+  const out = render(grouped, recipes, faq, version, demoUrls);
   await writeFile(OUT, out, 'utf-8');
 
   const total = grouped.reduce((n, g) => n + g.items.length, 0);
@@ -111,13 +123,16 @@ async function collectPages(baseDir) {
     if (!fm) continue;
 
     const slug = relToSlug(rel);
+    const href = `${SITE_URL}/${slug}/`;
     out.push({
       slug,
-      href: `${SITE_URL}/${slug}/`,
+      href,
       title: fm.title ?? slug,
       description: fm.description ?? '',
       tags: fm.tags ?? [],
       realGameVideo: extractRealGameVideo(raw),
+      // TypeDoc pages stay title + signature + URL (see SECTIONS above).
+      body: /\.mdx?$/.test(file) && !slug.startsWith('api/') ? cleanBody(raw, href) : '',
     });
   }
   return out;
@@ -146,6 +161,89 @@ function extractRealGameVideo(raw) {
   }
   if (!out.caption) return null;
   return out;
+}
+
+/**
+ * Markdown body of an MDX page as plain prose: frontmatter, top-level
+ * `import`/`export` lines and JSX components dropped, fenced code kept
+ * verbatim, headings demoted by two so they nest under the `###` page line.
+ *
+ * `<RecipeDemo code="x" />` becomes a `Live demo:` line pointing at the demo's
+ * anchor on this page (the nearest preceding `<a id>`), so a reader of the
+ * text file, human or model, can find the runnable version.
+ */
+function cleanBody(raw, href) {
+  const body = raw.replace(/^---\n[\s\S]*?\n---\n?/, '');
+  const out = [];
+  let inFence = false;
+  let anchor = null;
+  let pending = ''; // a JSX tag that spans lines
+  for (const line of body.split('\n')) {
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    if (inFence) {
+      out.push(line);
+      continue;
+    }
+    if (pending) {
+      pending += ` ${line.trim()}`;
+      if (!/>\s*$/.test(line)) continue;
+      out.push(...jsxToText(pending, href, (a) => { anchor = a; }, () => anchor));
+      pending = '';
+      continue;
+    }
+    if (/^(import|export)\s/.test(line)) continue;
+    if (/^\s*<\/?[A-Za-z]/.test(line)) {
+      if (!/>\s*$/.test(line)) {
+        pending = line.trim();
+        continue;
+      }
+      out.push(...jsxToText(line.trim(), href, (a) => { anchor = a; }, () => anchor));
+      continue;
+    }
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if (h) {
+      out.push(`${'#'.repeat(Math.min(6, h[1].length + 2))} ${h[2]}`);
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function jsxToText(tag, href, setAnchor, getAnchor) {
+  const a = tag.match(/^<a\s+id="([^"]+)"/);
+  if (a) {
+    setAnchor(a[1]);
+    return [];
+  }
+  const demo = tag.match(/<RecipeDemo\b[^>]*\bcode="([^"]+)"/);
+  if (demo) {
+    const anchor = getAnchor();
+    return [`Live demo (${demo[1]}): ${href}${anchor ? `#${anchor}` : ''}`];
+  }
+  // Inline components with text children (`<Timeline>...</Timeline>`) keep
+  // their inner text on the lines between; the tags themselves go.
+  return [];
+}
+
+/**
+ * Where each `*.recipe.ts` is shown live: scans every page body for the
+ * `Live demo (code): url` lines cleanBody wrote. Recipe umbrella pages win
+ * over guides when a demo appears on both.
+ */
+function demoUrlMap(pages) {
+  const map = new Map();
+  const ranked = [...pages].sort((a, b) => Number(b.slug.startsWith('recipes/')) - Number(a.slug.startsWith('recipes/')));
+  for (const p of ranked) {
+    for (const m of p.body.matchAll(/^Live demo \(([^)]+)\): (\S+)$/gm)) {
+      if (!map.has(m[1])) map.set(m[1], m[2]);
+    }
+  }
+  return map;
 }
 
 async function collectRecipes() {
@@ -267,7 +365,7 @@ function parseFrontmatter(raw) {
   return out;
 }
 
-function render(sections, recipes, faq, version) {
+function render(sections, recipes, faq, version, demoUrls) {
   const lines = [];
   lines.push('# pixi-reels');
   lines.push('');
@@ -321,6 +419,10 @@ function render(sections, recipes, faq, version) {
         const url = v.webm ?? v.mp4;
         lines.push(`Real game example: ${v.caption}${url ? ` (${SITE_URL}${url})` : ''}`);
       }
+      if (item.body) {
+        lines.push('');
+        lines.push(item.body);
+      }
       lines.push('');
     }
   }
@@ -332,12 +434,16 @@ function render(sections, recipes, faq, version) {
     lines.push('');
     for (const group of faq) {
       lines.push(`### ${group.title}`);
+      lines.push(`URL: ${SITE_URL}/faq/#${group.id}`);
       if (group.blurb) lines.push(group.blurb);
       lines.push('');
       for (const q of group.questions) {
-        lines.push(`Q (${q.id}): ${q.question}`);
+        // One `####` per question with its own page URL, so a chunker can
+        // cite the answer page rather than the group.
+        lines.push(`#### Q: ${q.question}`);
+        lines.push(`URL: ${SITE_URL}/faq/${q.id}/`);
         lines.push(`A: ${String(q.answer).trim()}`);
-        if (q.recipe) lines.push(`Recipe: ${SITE_URL}/recipes/${q.recipe}/`);
+        if (q.recipe) lines.push(`Recipe: ${demoUrls.get(q.recipe) ?? `${SITE_URL}/recipes/${q.recipe}/`}`);
         lines.push('');
       }
     }
@@ -350,7 +456,7 @@ function render(sections, recipes, faq, version) {
     lines.push('');
     for (const r of recipes) {
       lines.push(`### ${r.slug}`);
-      lines.push(`URL: ${SITE_URL}/recipes/${r.slug}/`);
+      lines.push(`URL: ${r.href}`);
       lines.push('```ts');
       lines.push(r.code);
       lines.push('```');

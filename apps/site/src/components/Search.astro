@@ -1,28 +1,31 @@
 ---
 /**
- * ⌘K search modal backed by Pagefind. The static index is built into
- * dist/pagefind/* by the docs build pipeline (`pagefind --site dist`),
- * which runs after Astro emits HTML.
+ * Cmd+K search modal backed by Pagefind. The index is written into
+ * dist/pagefind/* by scripts/build-search.mjs after Astro emits HTML, with
+ * topic pages weighted above the generated API reference and each page's
+ * section stored as meta, so every hit shows where it comes from. A hit
+ * inside a page (a recipe demo, a guide section) deep-links to its heading
+ * through Pagefind's sub_results.
  *
- * The modal listens for ⌘K / Ctrl+K everywhere; it fetches
- * `/pagefind/pagefind.js` lazily on first open so readers who never
- * use search don't pay for the index download.
+ * `/pagefind/pagefind.js` is fetched lazily on first open so readers who
+ * never search pay nothing for the index.
  */
 ---
-<div id="search-root" class="hidden fixed inset-0 z-[100] flex items-start justify-center bg-background/80 pt-24">
+<div id="search-root" class="hidden fixed inset-0 z-[100] flex items-start justify-center bg-background/80 pt-24" role="dialog" aria-modal="true" aria-label="Search">
   <div class="w-full max-w-xl rounded-sm border border-border bg-card">
     <div class="flex items-center gap-2 border-b border-border px-4 py-2">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input
         id="search-input"
         type="search"
-        placeholder="Search docs, recipes, guides…"
+        placeholder="Search guides, recipes, FAQ, API..."
         class="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
         autocomplete="off"
+        aria-label="Search the docs"
       />
       <kbd class="ml-auto rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">esc</kbd>
     </div>
-    <ol id="search-results" class="max-h-[60vh] overflow-y-auto px-2 py-2 text-sm"></ol>
+    <ol id="search-results" class="max-h-[60vh] overflow-y-auto px-2 py-2 text-sm" aria-live="polite"></ol>
   </div>
 </div>
 <button
@@ -31,14 +34,14 @@
   type="button"
   aria-label="Open search"
 >
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
   Search
-  <kbd class="ml-1 rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+  <kbd class="ml-1 rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px]">&#8984;K</kbd>
 </button>
 
 <!--
   Inline + raw JS so Vite doesn't try to resolve /pagefind/pagefind.js at build
-  time. that file is emitted by `pagefind --site dist` AFTER Astro finishes,
+  time. that file is emitted by scripts/build-search.mjs AFTER Astro finishes,
   so a normal ESM import would fail the build. The dynamic import sits inside
   a string template literal hidden from the bundler.
 -->
@@ -105,13 +108,63 @@
       if (!pf || id !== last) return;
       var search = await pf.search(q);
       if (id !== last) return;
-      var data = await Promise.all(search.results.slice(0, 10).map(function (r) { return r.data(); }));
+      var data = await rerank(search.results, 10, q);
+      if (id !== last) return;
       if (!results) return;
-      results.innerHTML = data.map(function (d) {
-        var title = escapeHtml((d.meta && d.meta.title) || d.url);
-        return '<li class="rounded-sm hover:bg-secondary/40"><a href="' + d.url + '" class="block px-3 py-2"><div class="text-sm font-semibold">' + title + '</div><div class="text-xs text-muted-foreground line-clamp-2">' + d.excerpt + '</div></a></li>';
-      }).join('');
+      if (!data.length) {
+        results.innerHTML = '<li class="px-3 py-2 text-xs text-muted-foreground">No pages match.</li>';
+        return;
+      }
+      results.innerHTML = data.map(renderHit).join('');
     });
+
+    // Pagefind's ranking favours short, repetitive pages, and the generated
+    // API reference is 341 of them: for "anticipation" every Anticipation*
+    // type scores four times the architecture page. Scale each hit's score
+    // by its section before taking the top n. A query that IS a symbol name
+    // (case-insensitive match on the page title) keeps its reference page on
+    // top.
+    var SECTION_FACTOR = { 'API reference': 0.15, 'Changelog': 0.5, 'Home': 0.6 };
+    async function rerank(all, n, q) {
+      var pool = await Promise.all(all.slice(0, 40).map(function (r) {
+        return r.data().then(function (d) { return { score: r.score, d: d }; });
+      }));
+      var exact = q.toLowerCase().replace(/\s+/g, '');
+      pool.forEach(function (h) {
+        var section = (h.d.meta && h.d.meta.section) || '';
+        var title = ((h.d.meta && h.d.meta.title) || '').toLowerCase().replace(/\s+|\(\)$/g, '');
+        var f = SECTION_FACTOR[section];
+        if (f && !(section === 'API reference' && title === exact)) h.score *= f;
+      });
+      pool.sort(function (a, b) { return b.score - a.score; });
+      return pool.slice(0, n).map(function (h) { return h.d; });
+    }
+
+    function renderHit(d) {
+      var section = (d.meta && d.meta.section) || '';
+      var title = (d.meta && d.meta.title) || d.url;
+      var url = d.url;
+      var heading = '';
+      var excerpt = d.excerpt;
+      // A hit inside a page (a recipe demo, a guide section) links to its own
+      // anchor and shows that heading under the page title.
+      var sub = (d.sub_results || []).filter(function (s) { return s.url.indexOf('#') >= 0; })[0];
+      if (sub && sub.title !== title) {
+        url = sub.url;
+        heading = sub.title;
+        excerpt = sub.excerpt || excerpt;
+      }
+      return (
+        '<li class="border-b border-border/60 last:border-b-0 hover:bg-secondary/40"><a href="' + escapeHtml(url) + '" class="block px-3 py-2">' +
+        '<div class="flex items-baseline gap-2">' +
+        (section ? '<span class="font-mono text-[10px] uppercase tracking-[0.14em] text-brand-text">' + escapeHtml(section) + '</span>' : '') +
+        '<span class="truncate text-sm font-semibold">' + escapeHtml(title) + '</span>' +
+        (heading ? '<span class="truncate text-xs text-muted-foreground">' + escapeHtml(heading) + '</span>' : '') +
+        '</div>' +
+        '<div class="mt-0.5 text-xs text-muted-foreground line-clamp-2">' + excerpt + '</div>' +
+        '</a></li>'
+      );
+    }
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"]/g, function (c) {
