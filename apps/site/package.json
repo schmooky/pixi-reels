@@ -13,7 +13,7 @@
     "prepreview": "pnpm sync-assets && pnpm api:gen && pnpm llms:gen",
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build && pagefind --site dist",
+    "build": "astro build && node scripts/build-search.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
