@@ -4,56 +4,44 @@ import Studio from '../../components/Studio.tsx';
 ---
 <Base
   title="Studio · pixi-reels"
-  description="Live workbench for pixi-reels. Write TypeScript and watch reels rebuild. recipes open here, the prototype atlas is preloaded, and you can drop in your own sprites, animated sheets, or Spine bundles in the Symbols tab."
+  description="Live workbench for pixi-reels. Write a recipe module and watch the reels rebuild, with the debug overlay and the events panel beside them. Every recipe on the site opens here, the prototype atlas is preloaded, and you can drop in your own sprites, animated sheets, or Spine bundles in the Symbols tab."
 >
-  <section class="py-6 pb-14">
-    <div class="container">
-      <div class="mb-6">
-        <p class="eyebrow">Studio</p>
-        <h1 class="display mt-3 text-3xl sm:text-4xl">Live workbench.</h1>
+  <Studio client:only="react">
+    {/* Pre-hydration fallback. `client:only` skips SSR, so without this
+        the page shows nothing until the React bundle downloads and
+        hydrates, a multi-MB Monaco + PixiJS payload on cold cache. Mirrors
+        the workbench layout React replaces it with so the swap is quiet. */}
+    <div slot="fallback" class="fixed inset-x-0 top-14 bottom-0 z-40 grid grid-cols-1 gap-3 bg-background p-3 lg:grid-cols-[minmax(340px,2fr)_minmax(0,3fr)]">
+      <div class="flex min-h-[420px] flex-col overflow-hidden rounded-sm border border-border bg-card lg:min-h-0">
+        <div class="flex items-center gap-1 border-b border-border/60 bg-background/40 px-2 pt-2">
+          <div class="h-7 w-16 animate-pulse rounded-sm bg-muted-foreground/15" />
+          <div class="h-7 w-20 animate-pulse rounded-sm bg-muted-foreground/10" />
+          <div class="ml-auto mb-2 h-7 w-28 animate-pulse rounded-sm bg-muted-foreground/20" />
+        </div>
+        <div class="flex flex-1 flex-col gap-2.5 bg-[#1e1e1e] p-3">
+          {[38, 64, 28, 80, 52, 58, 22, 72, 44, 78, 50, 34, 60, 26, 70].map((w) => (
+            <div class="h-2.5 animate-pulse rounded-sm bg-white/10" style={`width: ${w}%`} />
+          ))}
+        </div>
       </div>
-      <Studio client:only="react">
-        {/* Pre-hydration fallback. `client:only` skips SSR, so without this
-            the page shows nothing until the React bundle downloads and
-            hydrates. a multi-MB Monaco + PixiJS payload on cold cache.
-            Mirrors the two-pane layout React will replace it with so the
-            swap is invisible. Tailwind's `animate-pulse` keeps the cells
-            breathing while the bundle is in-flight. */}
-        <div slot="fallback" class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]">
-          {/* Canvas pane */}
-          <div class="flex flex-col overflow-hidden rounded-sm border border-border bg-card">
-            <div class="theme-ink relative flex min-h-[480px] flex-1 flex-col items-center justify-center gap-4 bg-[#111114]">
-              <div class="flex gap-2 opacity-30" aria-hidden>
-                {Array.from({ length: 5 }).map(() => (
-                  <div class="flex flex-col gap-2">
-                    {Array.from({ length: 3 }).map(() => (
-                      <div class="h-8 w-8 animate-pulse rounded-sm bg-muted-foreground/30" />
-                    ))}
-                  </div>
+      <div class="flex min-h-[480px] flex-col overflow-hidden rounded-sm border border-border bg-card lg:min-h-0">
+        <div class="theme-ink relative flex flex-1 flex-col items-center justify-center gap-4 bg-[#111114]">
+          <div class="flex gap-2 opacity-30" aria-hidden>
+            {Array.from({ length: 5 }).map(() => (
+              <div class="flex flex-col gap-2">
+                {Array.from({ length: 3 }).map(() => (
+                  <div class="h-8 w-8 animate-pulse rounded-sm bg-muted-foreground/30" />
                 ))}
               </div>
-              <div class="text-xs text-muted-foreground">Loading studio…</div>
-            </div>
-            <div class="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs text-muted-foreground">
-              <div class="mt-0.5 h-[13px] w-[13px] flex-shrink-0 rounded-full border border-muted-foreground/40" />
-              <span>Loading studio…</span>
-            </div>
+            ))}
           </div>
-          {/* Editor pane */}
-          <div class="flex flex-col overflow-hidden rounded-sm border border-border bg-card">
-            <div class="flex items-center gap-1 border-b border-border/60 bg-background/40 px-2 pt-2">
-              <div class="h-7 w-16 animate-pulse rounded-sm bg-muted-foreground/15" />
-              <div class="h-7 w-20 animate-pulse rounded-sm bg-muted-foreground/10" />
-              <div class="ml-auto mb-2 h-7 w-28 animate-pulse rounded-sm bg-muted-foreground/20" />
-            </div>
-            <div class="flex h-[560px] flex-col gap-2.5 bg-[#1e1e1e] p-3">
-              {[38, 64, 28, 80, 52, 58, 22, 72, 44, 78, 50, 34, 60, 26, 70].map((w) => (
-                <div class="h-2.5 animate-pulse rounded-sm bg-white/10" style={`width: ${w}%`} />
-              ))}
-            </div>
-          </div>
+          <div class="text-xs text-muted-foreground">Loading studio…</div>
         </div>
-      </Studio>
+        <div class="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs text-muted-foreground">
+          <div class="mt-0.5 h-[13px] w-[13px] flex-shrink-0 rounded-full border border-muted-foreground/40" />
+          <span>Loading studio…</span>
+        </div>
+      </div>
     </div>
-  </section>
+  </Studio>
 </Base>

@@ -21,7 +21,8 @@ import {
  * beat, which is the right trade: no autoplay, no blocked-context warning.
  *
  * The files are served from `baseUrl` (default `/sfx/`): spin, reel-stop.1
- * to .3, anticipation, skip, win, pop, each as `.webm` and `.m4a`. Point
+ * to .3, split, nudge, grow, anticipation, skip, win, pop, each as `.webm`
+ * and `.m4a`. Point
  * `configureSounds` at your own folder, or at your own takes.
  */
 export type SoundBus = 'reels' | 'anticipation' | 'wins' | 'ui';
@@ -79,6 +80,9 @@ export function readyAudio(): Promise<void> {
       e.loadSound('skip', ladder('skip'), { bus: 'ui' }),
       e.loadSound('win', ladder('win'), { bus: 'wins' }),
       e.loadSound('pop', ladder('pop'), { bus: 'wins' }),
+      e.loadSound('split', ladder('split'), { bus: 'reels' }),
+      e.loadSound('nudge', ladder('nudge'), { bus: 'reels' }),
+      e.loadSound('grow', ladder('grow'), { bus: 'reels' }),
     ]);
   })();
   return loading;
@@ -107,6 +111,17 @@ export const DEFAULT_CUES: ReelCues = {
   skip: { play: 'skip' },
   win: { play: 'win', volume: 0.8 },
   cascadeDestroy: { play: 'pop', volume: { base: 0.8, jitter: 0.1 }, pitch: { jitter: 0.08 } },
+  // The beats the spin lifecycle does not cover: a reel shoved after it
+  // landed, a cell splitting or a column reshaped, a set gaining cells or
+  // reels, a pin dropped on the grid.
+  on: {
+    'nudge:start': { play: 'nudge', volume: 0.7, pitch: { jitter: 0.05 } },
+    'column:set': { play: 'split', volume: 0.6, pitch: { jitter: 0.06 } },
+    'expand:stepAdded': { play: 'grow', volume: 0.6 },
+    'reels:added': { play: 'grow', volume: 0.6 },
+    'rows:added': { play: 'grow', volume: 0.6, pitch: 1.15 },
+    'pin:placed': { play: 'pop', volume: 0.45, pitch: { base: 0.9, jitter: 0.05 } },
+  },
 };
 
 /** The cues a Hold & Win board gets: a kick per respin, a thud per cell, a pop per lock. */

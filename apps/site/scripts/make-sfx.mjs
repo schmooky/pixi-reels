@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Synthesize the reel sounds into public/sfx: the start kick and the three
- * stop thuds. Sine waves, filtered noise and envelopes, so there is no sample
+ * Synthesize the reel sounds into public/sfx: the start kick, the three
+ * stop thuds, and the tick, shove and sweep for a split, a nudge and a
+ * growing reel. Sine waves, filtered noise and envelopes, so there is no sample
  * library and no licence to track, and every one hits on its first sample.
  * The WAVs are written to a scratch folder and ffmpeg encodes each to WebM
  * (Opus) + M4A (AAC), the codec pair zvuk's source ladder expects. Only the
@@ -103,11 +104,35 @@ function thud(top, bottom) {
   return finish(mix(body, knock));
 }
 
+/** A cell splitting in two: a dry tick, high and over in 60 ms. */
+function split() {
+  const tick = tone(0.06, (t) => 1800 + 900 * Math.exp(-t / 0.006), { tau: 0.014, shape: 'tri' });
+  const snap = gain(noise(0.01, { cutoff: 7000, tau: 0.002 }), 0.5);
+  return finish(mix(tick, snap), { peakDb: -4 });
+}
+
+/** A reel nudged one cell: a short shove, lower and softer than a landing thud. */
+function nudge() {
+  const shove = tone(0.11, (t) => 120 + 90 * Math.exp(-t / 0.03), { tau: 0.04 });
+  const rub = gain(noise(0.05, { cutoff: 1200, tau: 0.02 }), 0.3);
+  return finish(mix(shove, rub), { peakDb: -3 });
+}
+
+/** A reel growing a cell or a set gaining a reel: a short rising sweep. */
+function grow() {
+  const sweep = tone(0.16, (t) => 220 + 520 * Math.min(1, t / 0.12), { tau: 0.09, shape: 'tri' });
+  const air = gain(noise(0.12, { cutoff: 3000, tau: 0.05 }), 0.25);
+  return finish(mix(sweep, air), { peakDb: -4 });
+}
+
 const SOUNDS = {
   spin,
   'reel-stop.1': () => thud(150, 70),
   'reel-stop.2': () => thud(165, 78),
   'reel-stop.3': () => thud(138, 64),
+  split,
+  nudge,
+  grow,
 };
 
 // --- writing -----------------------------------------------------------------

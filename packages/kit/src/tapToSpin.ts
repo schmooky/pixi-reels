@@ -39,6 +39,13 @@ export interface TapToSpinHandle {
 }
 
 /**
+ * Height of the strip along the bottom of the canvas that the cue sits in.
+ * A host fits the recipe's content above it so the cue never covers a cell;
+ * the runner, Studio and the share viewer all read it.
+ */
+export const CUE_STRIP = 44;
+
+/**
  * Make the canvas the spin button.
  *
  * ```ts
@@ -84,7 +91,7 @@ export function tapToSpin(app: Application, options: TapToSpinOptions): TapToSpi
   const place = (): void => {
     if (!plaque || plaque.isDestroyed) return;
     plaque.x = (app.screen.width - plaque.plateWidth) / 2;
-    plaque.y = app.screen.height - plaque.plateHeight - 12;
+    plaque.y = app.screen.height - (CUE_STRIP + plaque.plateHeight) / 2;
   };
   if (plaque) {
     app.stage.addChild(plaque);

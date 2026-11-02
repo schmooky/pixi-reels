@@ -13,7 +13,7 @@
 export { pickWeighted } from './pickWeighted.js';
 export { readout, setReadouts, readoutsEnabled } from './readout.js';
 export { fitText } from './fitText.js';
-export { tapToSpin, ownTap } from './tapToSpin.js';
+export { tapToSpin, ownTap, CUE_STRIP } from './tapToSpin.js';
 export type { TapToSpinOptions, TapToSpinHandle } from './tapToSpin.js';
 export { createAssets } from './assets.js';
 export type { RecipeAssets } from './assets.js';

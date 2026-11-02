@@ -11,7 +11,7 @@ import {
   type ReelSet,
   type SymbolData,
 } from 'pixi-reels';
-import { createAssets, setReadouts, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
+import { createAssets, setReadouts, CUE_STRIP, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
 import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
 
 import { getShare, ShareApiError } from '@/lib/studio/share/api.js';
@@ -327,12 +327,13 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
     const fit = (): void => {
       const rawW = fitted.width / (fitted.scale.x || 1);
       const rawH = fitted.height / (fitted.scale.y || 1);
+      // The strip under the reels belongs to the recipe's tap cue.
       const availW = Math.max(40, app.screen.width - PADDING * 2);
-      const availH = Math.max(40, app.screen.height - PADDING * 2);
+      const availH = Math.max(40, app.screen.height - CUE_STRIP - PADDING * 2);
       const scale = Math.min(availW / rawW, availH / rawH);
       fitted.scale.set(scale);
       fitted.x = (app.screen.width - rawW * scale) / 2;
-      fitted.y = (app.screen.height - rawH * scale) / 2;
+      fitted.y = PADDING + (availH - rawH * scale) / 2;
     };
     fit();
     fitRef.current = fit;

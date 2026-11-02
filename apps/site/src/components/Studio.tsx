@@ -8,12 +8,11 @@ import {
   CheckCircle2,
   Code2,
   Boxes,
-  Maximize2,
-  Minimize2,
   Share2,
   Eye,
   Gauge,
   MessageSquare,
+  Bug,
   X,
 } from 'lucide-react';
 import { SymbolsTab } from './studio/SymbolsTab.tsx';
@@ -30,8 +29,10 @@ import {
   type ReelSet,
   type SymbolData,
 } from 'pixi-reels';
-import { createAssets, setReadouts, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
+import { createAssets, setReadouts, CUE_STRIP, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
 import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
+import { attachRecipeDebug, DEFAULT_GROUPS, LAYER_GROUPS, type LayerGroup, type RecipeDebugHandle } from '@/lib/recipeDebug';
+import { EventsPanel } from './EventsPanel';
 import {
   loadConfig,
   saveConfig,
@@ -117,19 +118,26 @@ interface StudioEnv {
  * doesn't re-trigger the recipe-open prompt. Mirrors the encoder in
  * RecipeRunner's `openInStudio()`.
  */
-function consumeHashCode(): string | null {
+function consumeHashCode(): { code: string; debug: boolean } | null {
   if (typeof location === 'undefined') return null;
-  if (!location.hash.startsWith('#code=')) return null;
+  // The code is raw base64 (its `+` and `=` would not survive
+  // URLSearchParams), so split it off by hand; only the flags after it are
+  // a query string.
+  const m = location.hash.match(/^#code=([^&]*)(?:&(.*))?$/);
+  if (!m) return null;
+  const params = new URLSearchParams(m[2] ?? '');
   let decoded: string;
   try {
-    decoded = decodeURIComponent(escape(atob(location.hash.slice(6))));
+    decoded = decodeURIComponent(escape(atob(m[1])));
   } catch {
     return null;
   }
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch { /* ignore */ }
-  return decoded;
+  // `&debug=1`: the docs page's Debug button, which wants the overlay and
+  // the events panel open as soon as the recipe mounts.
+  return { code: decoded, debug: params.get('debug') === '1' };
 }
 
 type BuildResult = RecipeResult;
@@ -189,7 +197,7 @@ export default function Studio() {
   const lastInjectablesRef = useRef<StudioInjectables | null>(null);
   // Set by `run()` to a closure that recentres + scales the current reelSet
   // inside the (possibly-resized) canvas pane. Called from the ResizeObserver
-  // so layout changes (fullscreen toggle, panel resize, window resize) all
+  // so layout changes (the debug pane opening, a window resize) all
   // refit through a single path.
   const fitRef = useRef<(() => void) | null>(null);
 
@@ -199,8 +207,15 @@ export default function Studio() {
     { kind: 'idle', msg: 'Loading studio…' },
   );
   const [isBooting, setIsBooting] = useState(true);
-  const [fullscreen, setFullscreen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // The debug side: the overlay on every set and the events panel beside the
+  // canvas. Recording starts at mount so the panel shows the round that made
+  // you reach for it; the overlay is drawn only while the toggle is on.
+  const debugRef = useRef<RecipeDebugHandle | null>(null);
+  const [debugOn, setDebugOn] = useState(false);
+  const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
+  const [eventsTick, setEventsTick] = useState(0);
+  const [mounted, setMounted] = useState(false);
   // Speed selector. Populated from `reelSet.speed.profileNames` on every
   // Run so the segmented control reflects whatever the user's builder
   // registered. `.speed('mySpeed', ...)` in user code shows up
@@ -231,15 +246,16 @@ export default function Studio() {
   // debounced save effect so the user's saved Studio code in IDB is preserved.
   const [isEphemeral, setIsEphemeral] = useState(false);
 
-  // ESC exits fullscreen.
+  // The overlay follows the toggle and the layer groups; the panel follows
+  // the toggle through the layout below. A refit after either: the overlay's
+  // panels sit under the mask and grow the set's bounds.
   useEffect(() => {
-    if (!fullscreen) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullscreen(false);
-    };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [fullscreen]);
+    const d = debugRef.current;
+    if (!d) return;
+    if (debugOn) d.showOverlay(groups);
+    else d.hideOverlay();
+    fitRef.current?.();
+  }, [debugOn, groups, mounted]);
 
   // ── Load persisted config + boot Pixi ──────────────────────────────
   useEffect(() => {
@@ -250,7 +266,9 @@ export default function Studio() {
       if (!host) return;
 
       const persisted = await loadConfig().catch(() => null);
-      const hashCode = consumeHashCode();
+      const hash = consumeHashCode();
+      const hashCode = hash?.code ?? null;
+      if (hash?.debug) setDebugOn(true);
       const hasPriorWork = !!(persisted && (persisted.code || persisted.symbols.length > 0));
 
       // Three landing states:
@@ -296,7 +314,7 @@ export default function Studio() {
     })();
 
     // Refit whenever the canvas pane changes size. PixiJS's `resizeTo: host`
-    // only listens on window resize; CSS layout swaps (the fullscreen
+    // only listens on window resize; CSS layout swaps (the debug pane
     // toggle, future panel drags) leave the renderer with stale dimensions.
     // ResizeObserver fires for all of those.
     const host = canvasHostRef.current;
@@ -341,6 +359,9 @@ export default function Studio() {
   function teardownRun(): void {
     try { cleanupRef.current?.(); } catch { /* ignore */ }
     try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
+    debugRef.current?.detach();
+    debugRef.current = null;
+    setMounted(false);
     reelSetRef.current = null;
     cleanupRef.current = null;
     fitRef.current = null;
@@ -401,8 +422,13 @@ export default function Studio() {
     built ??= {};
     cleanupRef.current = built.cleanup ?? null;
     mountedRef.current = true;
+    debugRef.current = attachRecipeDebug(
+      { app: env.app, reelSet: built.reelSet ?? null, board: built.board?.events ?? null },
+      () => setEventsTick((n) => n + 1),
+    );
 
     if (!built.reelSet) {
+      setMounted(true);
       setStatus({ kind: 'ok', msg: 'Mounted. Tap the canvas to play it.' });
       return;
     }
@@ -416,7 +442,7 @@ export default function Studio() {
 
     const PADDING = 24;
     // Aspect-preserving fit. Upscales freely so the reels look right in a
-    // fullscreen canvas pane (with the previous Math.min(1, ...) clamp they
+    // viewport-sized canvas pane (with the previous Math.min(1, ...) clamp they
     // looked tiny in the middle). Always re-derives raw dimensions from
     // post-divide-by-scale so successive refits don't compound.
     // Fit the composition root when the code returns one (a banner set above
@@ -425,20 +451,22 @@ export default function Studio() {
     const fit = () => {
       const rawW = fitted.width / (fitted.scale.x || 1);
       const rawH = fitted.height / (fitted.scale.y || 1);
+      // The strip under the reels belongs to the recipe's tap cue.
       const availW = Math.max(40, env.app.screen.width - PADDING * 2);
-      const availH = Math.max(40, env.app.screen.height - PADDING * 2);
+      const availH = Math.max(40, env.app.screen.height - CUE_STRIP - PADDING * 2);
       const scale = Math.min(availW / rawW, availH / rawH);
       fitted.scale.set(scale);
       fitted.x = (env.app.screen.width - rawW * scale) / 2;
-      fitted.y = (env.app.screen.height - rawH * scale) / 2;
+      fitted.y = PADDING + (availH - rawH * scale) / 2;
     };
     fit();
     // The boot useEffect's ResizeObserver calls through this ref on every
-    // host-size change. single fit path for window resize, fullscreen
+    // host-size change. single fit path for window resize, the debug pane
     // toggle, and future panel drags.
     fitRef.current = fit;
 
     reelSetRef.current = reelSet;
+    setMounted(true);
 
     // Sync the speed selector with whatever the user's builder registered.
     // If the previously-selected name still exists we keep it (so toggling
@@ -515,7 +543,11 @@ export default function Studio() {
   }
 
   return (
-    <div className={cn('flex flex-col gap-3', fullscreen && 'fixed inset-x-0 top-14 bottom-0 z-40 bg-background p-4')}>
+    // The workbench takes the viewport under the nav: the code on the left,
+    // the reels in the middle at whatever size the window gives them, and
+    // the events panel on the right while debug is on. Below `lg` the three
+    // stack and the page scrolls.
+    <div className="fixed inset-x-0 top-14 bottom-0 z-40 flex flex-col gap-3 overflow-y-auto bg-background p-3 lg:overflow-hidden">
       {isEphemeral && (
         <div className="flex items-center gap-2 rounded-sm border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
           <Eye size={13} className="flex-shrink-0 text-brand-text" />
@@ -539,84 +571,14 @@ export default function Studio() {
 
       <div
         className={cn(
-          fullscreen
-            ? 'grid flex-1 grid-cols-2 gap-4 min-h-0'
-            : 'grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]',
+          'grid flex-1 grid-cols-1 gap-3 lg:min-h-0',
+          debugOn
+            ? 'lg:grid-cols-[minmax(320px,2fr)_minmax(0,3fr)_minmax(300px,1fr)]'
+            : 'lg:grid-cols-[minmax(340px,2fr)_minmax(0,3fr)]',
         )}
       >
-      {/* ── Canvas pane ─── */}
-      <div className={cn(
-        'flex flex-col overflow-hidden rounded-sm border border-border bg-card',
-        fullscreen && 'min-h-0',
-      )}>
-        <div className={cn('theme-ink relative flex-1', !fullscreen && 'min-h-[480px]')}>
-          <div ref={canvasHostRef} className="h-full w-full bg-[#111114]" />
-          {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
-          {speeds.length > 1 && (
-            <div
-              role="radiogroup"
-              aria-label="Spin speed"
-              className={cn(
-                'absolute bottom-3 left-3 inline-flex items-center gap-0.5 rounded-sm',
-                'border border-border/70 bg-background/80 p-0.5 pl-2',
-              )}
-            >
-              <Gauge size={12} strokeWidth={2.25} className="mr-1 flex-shrink-0 text-muted-foreground" />
-              {speeds.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  role="radio"
-                  aria-checked={speedName === name}
-                  onClick={() => handleSpeedChange(name)}
-                  className={cn(
-                    'rounded-sm px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors',
-                    speedName === name
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => { setReadoutsOn((v) => !v); if (mountedRef.current) setPendingAutoRun(true); }}
-            aria-pressed={readouts}
-            title={readouts ? 'Hide the recipe\'s plaques and outlines (re-runs)' : 'Show the recipe\'s plaques and outlines (re-runs)'}
-            className={cn(
-              'absolute bottom-3 right-16 inline-flex h-10 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[10px] uppercase tracking-wide',
-              'transition-[transform,background-color,color] duration-[133ms] active:scale-[0.97]',
-              readouts
-                ? 'border-foreground bg-foreground text-background'
-                : 'border-border/70 bg-background/80 text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <MessageSquare size={12} strokeWidth={2.25} />
-            Readouts
-          </button>
-        </div>
-        <div className="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs">
-          {status.kind === 'err' ? (
-            <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-destructive" />
-          ) : status.kind === 'ok' ? (
-            <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0 text-brand-text" />
-          ) : (
-            <div className="mt-0.5 h-[13px] w-[13px] flex-shrink-0 rounded-full border border-muted-foreground/40" />
-          )}
-          <span className={status.kind === 'err' ? 'text-destructive' : 'text-muted-foreground'}>
-            {isBooting ? 'Loading studio…' : status.msg}
-          </span>
-        </div>
-      </div>
-
       {/* ── Editor pane ─── */}
-      <div className={cn(
-        'flex flex-col overflow-hidden rounded-sm border border-border bg-card',
-        fullscreen && 'min-h-0',
-      )}>
+      <div className="flex min-h-[420px] flex-col overflow-hidden rounded-sm border border-border bg-card lg:order-1 lg:min-h-0">
         {/* Tab strip */}
         <div className="flex items-center gap-1 border-b border-border/60 bg-background/40 px-2 pt-2">
           <TabButton active={tab === 'code'} onClick={() => setTab('code')} icon={<Code2 size={12} />}>
@@ -656,15 +618,6 @@ export default function Studio() {
             </button>
             <button
               type="button"
-              onClick={() => setFullscreen((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-              title={fullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen. Monaco and reels fill the viewport 50/50'}
-              aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            >
-              {fullscreen ? <Minimize2 size={12} strokeWidth={2.5} /> : <Maximize2 size={12} strokeWidth={2.5} />}
-            </button>
-            <button
-              type="button"
               onClick={() => setShareOpen(true)}
               disabled={!config || config.symbols.length === 0}
               className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
@@ -678,7 +631,7 @@ export default function Studio() {
 
         {/* Tab body */}
         {tab === 'code' && (
-          <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
+          <div className="min-h-0 flex-1">
             {config ? (
               <Editor
                 defaultLanguage="typescript"
@@ -715,12 +668,128 @@ export default function Studio() {
         )}
 
         {tab === 'symbols' && (
-          <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
+          <div className="min-h-0 flex-1">
             {config ? <SymbolsTab config={config} onChange={setConfig} /> : <EditorSkeleton />}
           </div>
         )}
       </div>
 
+      {/* ── Canvas pane ─── */}
+      <div
+        data-state={isBooting ? 'loading' : status.kind === 'err' ? 'error' : mounted ? 'ready' : 'idle'}
+        className="flex min-h-[480px] flex-col overflow-hidden rounded-sm border border-border bg-card lg:order-2 lg:min-h-0"
+      >
+        <div className="theme-ink relative flex-1">
+          <div ref={canvasHostRef} className="h-full w-full bg-[#111114]" />
+          {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
+          {speeds.length > 1 && (
+            <div
+              role="radiogroup"
+              aria-label="Spin speed"
+              className={cn(
+                'absolute bottom-3 left-3 inline-flex items-center gap-0.5 rounded-sm',
+                'border border-border/70 bg-background/80 p-0.5 pl-2',
+              )}
+            >
+              <Gauge size={12} strokeWidth={2.25} className="mr-1 flex-shrink-0 text-muted-foreground" />
+              {speeds.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  role="radio"
+                  aria-checked={speedName === name}
+                  onClick={() => handleSpeedChange(name)}
+                  className={cn(
+                    'rounded-sm px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors',
+                    speedName === name
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+          {debugOn && (
+            <div className="inline-flex h-10 items-center gap-0.5 rounded-sm border border-border/70 bg-background/80 p-0.5" role="group" aria-label="Overlay layers">
+              {(Object.keys(LAYER_GROUPS) as LayerGroup[]).map((group) => (
+                <button
+                  key={group}
+                  type="button"
+                  onClick={() => setGroups((g) => (g.includes(group) ? g.filter((x) => x !== group) : [...g, group]))}
+                  aria-pressed={groups.includes(group)}
+                  className={cn(
+                    'rounded-sm px-2 py-1 font-mono text-[10px] uppercase tracking-wide transition-colors',
+                    groups.includes(group) ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {group}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setDebugOn((v) => !v)}
+            disabled={!mounted}
+            aria-pressed={debugOn}
+            aria-label={debugOn ? 'Hide debug' : 'Show debug'}
+            title={debugOn ? 'Hide the overlay and the events panel' : 'Draw the overlay on every set and open the events panel'}
+            className={cn(
+              'inline-flex h-10 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[10px] uppercase tracking-wide',
+              'transition-[transform,background-color,color] duration-[133ms] active:scale-[0.97] disabled:opacity-50',
+              debugOn
+                ? 'border-foreground bg-foreground text-background'
+                : 'border-border/70 bg-background/80 text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Bug size={12} strokeWidth={2.25} />
+            Debug
+          </button>
+          <button
+            type="button"
+            onClick={() => { setReadoutsOn((v) => !v); if (mountedRef.current) setPendingAutoRun(true); }}
+            aria-pressed={readouts}
+            title={readouts ? 'Hide the recipe\'s plaques and outlines (re-runs)' : 'Show the recipe\'s plaques and outlines (re-runs)'}
+            className={cn(
+              'inline-flex h-10 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[10px] uppercase tracking-wide',
+              'transition-[transform,background-color,color] duration-[133ms] active:scale-[0.97]',
+              readouts
+                ? 'border-foreground bg-foreground text-background'
+                : 'border-border/70 bg-background/80 text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <MessageSquare size={12} strokeWidth={2.25} />
+            Readouts
+          </button>
+          </div>
+        </div>
+        <div className="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs">
+          {status.kind === 'err' ? (
+            <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-destructive" />
+          ) : status.kind === 'ok' ? (
+            <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0 text-brand-text" />
+          ) : (
+            <div className="mt-0.5 h-[13px] w-[13px] flex-shrink-0 rounded-full border border-muted-foreground/40" />
+          )}
+          <span className={status.kind === 'err' ? 'text-destructive' : 'text-muted-foreground'}>
+            {isBooting ? 'Loading studio…' : status.msg}
+          </span>
+        </div>
+      </div>
+
+
+      {/* ── Events pane ─── */}
+      {debugOn && (
+        <EventsPanel
+          entries={debugRef.current?.entries ?? []}
+          tick={eventsTick}
+          onClear={() => debugRef.current?.clearEvents()}
+          className="h-[320px] rounded-sm border border-border lg:order-3 lg:h-auto lg:min-h-0"
+        />
+      )}
       </div>
 
       {shareOpen && config && (

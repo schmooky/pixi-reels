@@ -319,38 +319,43 @@ for (const path of SCROLL_PAGES) {
  * the metrics.
  */
 test('the debug overlay draws a spin without throwing', async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   const errors: string[] = [];
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
   page.on('pageerror', (err) => errors.push(String(err)));
 
-  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE}/mechanics/anticipation/`, { waitUntil: 'networkidle' });
-  // The page's first demo.
+  // The page's first demo. Its Debug button hands the module to Studio with
+  // `&debug=1`, where the overlay and the events panel open beside the
+  // reels at full size; the docs page draws no debug chrome of its own.
   const frame = page.locator('[data-recipe-frame]').first();
   await frame.scrollIntoViewIfNeeded();
-  await expect(frame.locator('canvas')).toHaveCount(1, { timeout: 30_000 });
+  await expect(frame.locator('[data-state="ready"]')).toHaveCount(1, { timeout: 60_000 });
+  await frame.getByRole('button', { name: 'Debug in Studio' }).click();
+  await page.waitForURL(/\/studio\//, { timeout: 30_000 });
 
-  await frame.getByRole('button', { name: 'Show debug' }).click();
+  // A fresh browser context has no saved Studio work, so the recipe from the
+  // hash runs on its own. `load`, not `networkidle`: Monaco streams from a
+  // CDN and the canvas does not wait for it.
+  const pane = page.locator('[data-state]');
+  await expect(pane).toHaveAttribute('data-state', 'ready', { timeout: 60_000 });
+  await expect(page.getByRole('button', { name: 'Hide debug' })).toBeVisible();
   // Turn on the two groups that are off by default, so every layer draws.
   for (const group of ['motion', 'bounds']) {
-    await frame.getByRole('button', { name: group, exact: true }).click();
+    await page.getByRole('button', { name: group, exact: true }).click();
   }
-  // A tap on the canvas starts the spin (`tapToSpin`); wait for the runner to
-  // report the recipe ready first, or the tap lands on a canvas that is not
-  // listening yet and the overlay records no round.
-  await expect(frame.locator('[data-state="ready"]')).toHaveCount(1, { timeout: 60_000 });
-  await frame.locator('canvas').click({ force: true });
+  await pane.locator('canvas').click({ force: true });
   await page.waitForTimeout(8_000);
   for (const group of ['info', 'grid', 'motion', 'bounds']) {
-    await frame.getByRole('button', { name: group, exact: true }).click();
+    await page.getByRole('button', { name: group, exact: true }).click();
   }
-  await frame.getByRole('button', { name: 'Hide debug' }).click();
+  await page.getByRole('button', { name: 'Hide debug' }).click();
   await page.waitForTimeout(500);
 
-  const shown = await frame.locator('.text-destructive').allInnerTexts();
+  const shown = await page.locator('.text-destructive').allInnerTexts();
   expect(shown.map((t) => t.trim()).filter(Boolean), 'the demo threw').toEqual([]);
   expect(errors, 'the debug overlay logged console errors').toEqual([]);
 });

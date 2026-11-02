@@ -4,7 +4,6 @@ import type { CSSProperties } from 'react';
 import { ExternalLink, Bug, Volume2, VolumeX } from 'lucide-react';
 import { Application } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
-import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 // DO NOT DELETE THESE TWO. Neither identifier is referenced in this file, so
 // they read as dead imports -- but they are load-bearing. They force the spine
@@ -22,19 +21,13 @@ import { SpineReelSymbol } from 'pixi-reels/spine';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { enableDebug, ReelSet } from 'pixi-reels';
-import {
-  debugOverlay, SpinMetrics,
-  type DebugOverlayHandle, type DebugOverlayLayer,
-} from 'pixi-reels/debug';
+import { CUE_STRIP } from '@pixi-reels/kit';
 import type { RecipeResult } from '@pixi-reels/kit';
 import { readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
 import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
-import { EventsPanel, ROW_LIMIT } from './EventsPanel';
-import type { EventEntry } from './EventsPanel';
-import { onNotice } from 'pixi-reels';
 
 // Renderer teardown options for `app.destroy(...)`.
 //
@@ -96,72 +89,20 @@ function releaseGsapApp(app: Application): void {
   }
 }
 
-/**
- * Every `ReelSet` currently on the stage, `primary` first.
- *
- * A recipe returns at most ONE set (the rest it parents itself, usually under
- * a `stage` composition root), so a debug toggle driven off the returned one
- * left the banner strip in `banner-ways` and the second grid in
- * `symbols-transposed-pair` with no overlay at all. Walking the display tree
- * finds them whatever the recipe did with them, and needs no per-recipe
- * bookkeeping.
- */
-function collectReelSets(stage: PIXI.Container, primary: ReelSet | null): ReelSet[] {
-  const found: ReelSet[] = primary ? [primary] : [];
-  const walk = (node: PIXI.Container): void => {
-    if (node instanceof ReelSet) {
-      if (!found.includes(node)) found.push(node);
-      // Don't descend: a set's own children are reels and viewports, and a
-      // ReelSet is never nested inside another one.
-      return;
-    }
-    for (const child of node.children) walk(child as PIXI.Container);
-  };
-  walk(stage);
-  return found;
-}
-
-/**
- * The overlay's layers in the groups the debug bar toggles. Everything at once
- * buries the reels, so each group answers one question: `info` is what the
- * engine is doing and how long it took, `grid` is where the cells are, `motion`
- * is which way the strips travel and where they wrap, `bounds` is what each
- * symbol actually covers.
- */
-const LAYER_GROUPS = {
-  info: ['hud', 'metrics', 'timeline'],
-  grid: ['mask', 'cells', 'blocks', 'pins'],
-  motion: ['axis', 'feed', 'buffers', 'thresholds'],
-  bounds: ['bounds'],
-} as const satisfies Record<string, readonly DebugOverlayLayer[]>;
-type LayerGroup = keyof typeof LAYER_GROUPS;
-const DEFAULT_GROUPS: readonly LayerGroup[] = ['info', 'grid'];
-
 /** One toolbar voice: mono, 11px, uppercase; the primary action is the brand fill. */
 const TOOL_BUTTON =
   'inline-flex h-6 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[11px] uppercase tracking-[0.14em] '
   + 'transition-[color,background-color,border-color,transform] duration-[133ms] active:scale-[0.97] '
   + 'disabled:cursor-not-allowed disabled:opacity-50';
 
-function layersFor(groups: readonly LayerGroup[]): DebugOverlayLayer[] {
-  return groups.flatMap((g) => [...LAYER_GROUPS[g]]);
-}
-
 /**
  * What a recipe returns. `stage` is a composition root the runner fits
- * instead of `reelSet`; `board` is a bus the events panel listens to beside
- * the sets it finds on the stage. See `RecipeResult` in `@pixi-reels/kit`.
+ * instead of `reelSet`. See `RecipeResult` in `@pixi-reels/kit`.
  */
 type RunResult = RecipeResult;
 
 interface Env {
   app: Application;
-}
-
-/** The two methods the events panel needs from any bus, typed loosely on purpose. */
-interface AnyBus {
-  onAny(fn: (event: string, ...args: unknown[]) => void): unknown;
-  offAny(fn: (event: string, ...args: unknown[]) => void): unknown;
 }
 
 interface RecipeRunnerProps {
@@ -174,19 +115,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const envRef = useRef<Env | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
-  // One handle per reel set on the stage, not per recipe: a recipe is free to
-  // build several (a banner strip above the grid, a transposed pair), and an
-  // overlay on only the one it happened to return explains half the picture.
-  const overlayRef = useRef<DebugOverlayHandle[]>([]);
-  // One recorder per reel set, running from mount: the timeline and metrics
-  // panels can then show the spin that made you reach for the Debug button.
-  const metricsRef = useRef<Map<ReelSet, SpinMetrics>>(new Map());
-  // Re-fit after the overlay grows the set's bounds (panels under the mask).
   const fitRef = useRef<(() => void) | null>(null);
-  const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [debugOn, setDebugOn] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   // The remembered choice, read after mount so the server and first client
   // render agree; every runner on the page follows one toggle.
@@ -194,20 +125,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     setSoundOn(soundEnabled());
     return onSoundEnabled(setSoundOn);
   }, []);
-  // The overlay draws into a container on the ReelSet, so a recipe that
-  // returns only `onSpin` (HoldAndWinBoard, BoardGrid) has nothing to draw on.
-  const [canDebug, setCanDebug] = useState(false);
-  // The events recorder. Always on (a push per event, capped), rendered only
-  // while the panel is open: `eventsTick` bumps once per animation frame with
-  // new rows, so a burst of `symbol:created` is one re-render, not a hundred.
-  const eventsRef = useRef<EventEntry[]>([]);
-  const eventsDirtyRef = useRef(false);
-  const eventsFrameRef = useRef<number | null>(null);
-  const spinOriginRef = useRef<number | null>(null);
-  const eventIdRef = useRef(0);
   const unsubscribeRef = useRef<Array<() => void>>([]);
-  const debugOnRef = useRef(false);
-  const [eventsTick, setEventsTick] = useState(0);
   // Hold the skeleton for at least 250ms so it doesn't flash for one
   // frame on fast loads.
   const showSkeleton = useMinDisplay(!ready, 250);
@@ -258,67 +176,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       reelSetRef.current = result.reelSet ?? null;
       cleanupRef.current = result.cleanup ?? null;
 
-      // Record every bus in the demo for the events panel: each reel set on
-      // the stage (a board's cells included), each of their reels, the board
-      // itself when the recipe hands it over, and engine notices.
-      const record = (source: string) => (event: string, ...args: unknown[]): void => {
-        const now = performance.now();
-        if (event === 'spin:start') {
-          // A board starts its cells within the same burst: keep one origin.
-          const prev = spinOriginRef.current;
-          if (prev === null || now - prev > 100) spinOriginRef.current = now;
-        }
-        const origin = spinOriginRef.current;
-        const list = eventsRef.current;
-        list.push({ id: ++eventIdRef.current, t: now, rel: origin === null ? null : now - origin, source, name: event, args });
-        if (list.length > ROW_LIMIT) list.splice(0, list.length - ROW_LIMIT);
-        eventsDirtyRef.current = true;
-        if (debugOnRef.current && eventsFrameRef.current === null) {
-          eventsFrameRef.current = requestAnimationFrame(() => {
-            eventsFrameRef.current = null;
-            if (!eventsDirtyRef.current) return;
-            eventsDirtyRef.current = false;
-            setEventsTick((n) => n + 1);
-          });
-        }
-      };
-      const listen = (bus: AnyBus, source: string): void => {
-        const fn = record(source);
-        bus.onAny(fn);
-        unsubscribeRef.current.push(() => bus.offAny(fn));
-      };
-      const sets = collectReelSets(app.stage, result.reelSet ?? null);
-      for (const rs of sets) metricsRef.current.set(rs, new SpinMetrics(rs, { ticker: app.ticker }));
-      sets.forEach((rs, k) => {
-        const setLabel = sets.length === 1 ? 'set' : `set${k}`;
-        listen(rs.events as unknown as AnyBus, setLabel);
-        // A growing set (`addReels`, `expand`) adds reels after mount: follow
-        // them, and let go of each one's bus when it is removed.
-        const reelOff: Array<() => void> = [];
-        const listenReel = (i: number): void => {
-          const bus = rs.reels[i].events as unknown as AnyBus;
-          const fn = record(sets.length === 1 ? `reel ${i}` : `${setLabel}/r${i}`);
-          bus.onAny(fn);
-          reelOff[i] = () => bus.offAny(fn);
-        };
-        rs.reels.forEach((_, i) => listenReel(i));
-        const onAdded = ({ from, count }: { from: number; count: number }): void => {
-          for (let i = from; i < from + count; i++) listenReel(i);
-        };
-        const onRemoved = ({ from }: { from: number }): void => {
-          for (const off of reelOff.splice(from)) off();
-        };
-        rs.events.on('reels:added', onAdded);
-        rs.events.on('reels:removed', onRemoved);
-        unsubscribeRef.current.push(() => {
-          rs.events.off('reels:added', onAdded);
-          rs.events.off('reels:removed', onRemoved);
-          for (const off of reelOff) off();
-        });
-      });
-      if (result.board?.events) listen(result.board.events as AnyBus, 'board');
-      unsubscribeRef.current.push(onNotice((n) => record('notice')(n.code, { kind: n.kind, message: n.message, detail: n.detail })));
-
       if (result.reelSet) {
         const rs = result.reelSet;
         // Fit the composition root when there is one, so a banner set moves,
@@ -334,17 +191,18 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         const fit = () => {
           const b = fitted.getLocalBounds();
           if (!(b.width > 0) || !(b.height > 0)) return;
+          // The strip under the reels belongs to the recipe's tap cue.
           const pad = 16;
-          const scale = Math.min(1, (app.screen.width - pad * 2) / b.width, (app.screen.height - pad * 2) / b.height);
+          const freeH = app.screen.height - CUE_STRIP - pad;
+          const scale = Math.min(1, (app.screen.width - pad * 2) / b.width, (freeH - pad) / b.height);
           fitted.scale.set(scale);
           fitted.x = (app.screen.width - b.width * scale) / 2 - b.x * scale;
-          fitted.y = (app.screen.height - b.height * scale) / 2 - b.y * scale;
+          fitted.y = pad + (freeH - pad - b.height * scale) / 2 - b.y * scale;
         };
         fit();
         fitRef.current = fit;
         app.renderer.on('resize', fit);
         enableDebug(rs);
-        setCanDebug(true);
         // The events panel docks beside the canvas and takes width from it;
         // PixiJS only watches the window, so the host's own resize is ours.
         const ro = new ResizeObserver(() => app.resize());
@@ -368,15 +226,16 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           const b = app.stage.getLocalBounds();
           if (!(b.width > 0) || !(b.height > 0)) return;
           const pad = 16;
+          const freeH = app.screen.height - CUE_STRIP - pad;
           const scale = Math.min(
             1,
             (app.screen.width - pad * 2) / b.width,
-            (app.screen.height - pad * 2) / b.height,
+            (freeH - pad) / b.height,
           );
           app.stage.scale.set(scale);
           app.stage.position.set(
             (app.screen.width - b.width * scale) / 2 - b.x * scale,
-            (app.screen.height - b.height * scale) / 2 - b.y * scale,
+            pad + (freeH - pad - b.height * scale) / 2 - b.y * scale,
           );
         };
         fitStage();
@@ -395,16 +254,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         try { off(); } catch { /* ignore */ }
       }
       unsubscribeRef.current = [];
-      if (eventsFrameRef.current !== null) cancelAnimationFrame(eventsFrameRef.current);
       try { cleanupRef.current?.(); } catch { /* ignore */ }
-      // Before the set and the app: the overlay is a child of the ReelSet and
-      // holds a TickerRef on app.ticker.
-      for (const o of overlayRef.current) {
-        try { o.destroy(); } catch { /* ignore */ }
-      }
-      overlayRef.current = [];
-      for (const m of metricsRef.current.values()) m.destroy();
-      metricsRef.current.clear();
       fitRef.current = null;
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
@@ -418,51 +268,12 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     };
   }, []);
 
-  function toggleDebug() {
-    if (debugOn) {
-      for (const o of overlayRef.current) o.destroy();
-      overlayRef.current = [];
-      debugOnRef.current = false;
-      setDebugOn(false);
-      fitRef.current?.();
-      return;
-    }
-    debugOnRef.current = true;
-    setDebugOn(true);
-    setEventsTick((n) => n + 1);
-    const reelSet = reelSetRef.current;
-    const app = envRef.current?.app;
-    if (!reelSet || !app) return;
-    // Built on first press, not at mount: a umbrella page mounts several
-    // recipes at once and none of them should pay for an overlay nobody asked
-    // to see. `live` drives the bounds / blocks / pins / info layers off the
-    // recipe's own app.ticker, so they track a spin instead of freezing on the
-    // frame the overlay happened to be built in.
-    overlayRef.current = collectReelSets(app.stage, reelSet).map((rs) =>
-      debugOverlay(rs, {
-        layers: layersFor(groups),
-        live: true,
-        ticker: app.ticker,
-        metrics: metricsRef.current.get(rs),
-      }),
-    );
-    fitRef.current?.();
-  }
-
-  function toggleGroup(group: LayerGroup) {
-    const next = groups.includes(group) ? groups.filter((g) => g !== group) : [...groups, group];
-    setGroups(next);
-    for (const o of overlayRef.current) o.setLayers(layersFor(next));
-    fitRef.current?.();
-  }
-
-  function clearEvents() {
-    eventsRef.current = [];
-    setEventsTick((n) => n + 1);
-  }
-
-  function openInStudio() {
-    window.location.href = `/studio/#code=${btoa(unescape(encodeURIComponent(code)))}`;
+  // Studio is where a demo is read and debugged at full size: the code
+  // beside the canvas, the overlay and the events panel beside both. The
+  // docs page only hands the module over.
+  function openInStudio(debug = false) {
+    const hash = `#code=${btoa(unescape(encodeURIComponent(code)))}${debug ? '&debug=1' : ''}`;
+    window.location.href = `/studio/${hash}`;
   }
 
   return (
@@ -470,11 +281,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     // <RecipeFrame> Astro wrapper so the layout is stable before JS
     // hydrates. Don't add a duplicate card here. The well keeps `height`;
     // the toolbar under it is the strip RecipeFrame's skeleton reserves.
-    // With the events panel open the canvas keeps its height and gives up
-    // width to the panel on the right; below the `sm` breakpoint the panel
-    // goes under the canvas.
     <div className="flex w-full flex-col bg-background" style={{ '--recipe-h': `${height}px` } as CSSProperties}>
-    <div className={cn('flex w-full', debugOn && 'flex-col sm:flex-row')}>
+    <div className="flex w-full">
     {/*
       The recipe owns the canvas: its `tapToSpin` turns a tap into a round
       and draws the cue. `data-state` is for the e2e suite, which taps the
@@ -496,54 +304,19 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           </div>
         )}
     </div>
-    {debugOn && (
-      <EventsPanel
-        entries={eventsRef.current}
-        tick={eventsTick}
-        onClear={clearEvents}
-        className="h-[220px] w-full shrink-0 border-t sm:h-[var(--recipe-h)] sm:w-[360px] sm:max-w-[46%] sm:border-l sm:border-t-0"
-      />
-    )}
     </div>
     <div className="flex min-h-9 flex-wrap items-center gap-1.5 border-t border-border px-1.5 py-1.5">
         <button
           type="button"
-          onClick={toggleDebug}
+          onClick={() => openInStudio(true)}
           disabled={!!error || !ready}
-          title={debugOn ? 'Hide the events panel and overlay' : canDebug ? 'Show the events panel and overlay' : 'Show the events panel'}
-          aria-label={debugOn ? 'Hide debug' : 'Show debug'}
-          aria-pressed={debugOn}
-          className={cn(
-            TOOL_BUTTON,
-            debugOn
-              ? 'border-foreground bg-foreground text-background'
-              : 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground',
-          )}
+          title="Open this demo in Studio with the overlay and the events panel"
+          aria-label="Debug in Studio"
+          className={cn(TOOL_BUTTON, 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground')}
         >
           <Bug size={11} strokeWidth={2.25} />
           Debug
         </button>
-        {debugOn && canDebug && (
-          <div className="inline-flex h-6 divide-x divide-border rounded-sm border border-border" role="group" aria-label="Overlay layers">
-            {(Object.keys(LAYER_GROUPS) as LayerGroup[]).map((group) => (
-              <button
-                key={group}
-                type="button"
-                onClick={() => toggleGroup(group)}
-                aria-pressed={groups.includes(group)}
-                title={`Overlay: ${LAYER_GROUPS[group].join(', ')}`}
-                className={cn(
-                  'px-2 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors duration-[133ms]',
-                  groups.includes(group)
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {group}
-              </button>
-            ))}
-          </div>
-        )}
         <button
           type="button"
           onClick={() => { setSoundEnabled(!soundOn); if (!soundOn) void readyAudio().catch(() => {}); }}
@@ -563,7 +336,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         </button>
         <button
           type="button"
-          onClick={openInStudio}
+          onClick={() => openInStudio()}
           title="Open in Studio"
           aria-label="Open in Studio"
           className={cn(TOOL_BUTTON, 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground')}
