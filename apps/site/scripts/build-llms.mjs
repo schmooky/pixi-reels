@@ -131,7 +131,8 @@ async function collectPages(baseDir) {
       description: fm.description ?? '',
       tags: fm.tags ?? [],
       realGameVideo: extractRealGameVideo(raw),
-      body: /\.mdx?$/.test(file) ? cleanBody(raw, href) : '',
+      // TypeDoc pages stay title + signature + URL (see SECTIONS above).
+      body: /\.mdx?$/.test(file) && !slug.startsWith('api/') ? cleanBody(raw, href) : '',
     });
   }
   return out;
