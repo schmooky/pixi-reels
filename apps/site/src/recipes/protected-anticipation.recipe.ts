@@ -3,8 +3,9 @@ import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Skip that cannot hide the tease',
@@ -103,16 +104,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('spin:start', () => { label.text = idle; });
   reelSet.events.on('spin:complete', () => { for (const i of [...glows.keys()]) stopGlow(i); });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      for (const i of [...glows.keys()]) stopGlow(i);
-      try { glowLayer.destroy({ children: true }); } catch {}
-      try { label.destroy({ children: true }); } catch {}
-    },
-    // One handler, two outcomes. The engine decides which, from `protect`.
-    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-    onSpin: async () => {
+    spin: async () => {
       const grid = [
         { visible: [rv(), SCAT, rv()] },
         { visible: [rv(), SCAT, rv()] },
@@ -132,6 +128,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 200));
       reelSet.setResult(grid);
       await p;
+    },
+    // One handler, two outcomes. The engine decides which, from `protect`.
+    skip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      for (const i of [...glows.keys()]) stopGlow(i);
+      try { glowLayer.destroy({ children: true }); } catch {}
+      try { label.destroy({ children: true }); } catch {}
     },
   };
 }

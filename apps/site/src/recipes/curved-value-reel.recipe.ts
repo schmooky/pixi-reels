@@ -1,6 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { ReelSetBuilder, ReelSymbol, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Numbers, not art',
@@ -158,10 +160,13 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     return VALUES[0];
   };
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
     // One reel, three cells: the middle one is the prize, the neighbours are
     // just the ladder either side of it.
-    nextResult: () => [[pick(), pick(), pick()]],
-  };
+    next: () => [[pick(), pick(), pick()]],
+  });
+  return { reelSet };
 }

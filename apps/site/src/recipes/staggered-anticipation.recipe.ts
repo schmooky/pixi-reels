@@ -1,6 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Staggered / sequential anticipation',
@@ -67,10 +69,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
   reelSet.events.on('spin:complete', () => { for (const i of [...glows.keys()]) stopGlow(i); });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
-    onSpin: async () => {
+    spin: async () => {
       // 2 scatters on reels 0 and 1 → the last three reels are all live.
       const grid = [
         { visible: [rv(), SCAT, rv()] },
@@ -87,5 +90,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setAnticipation(TEASE, 'sequential');
       await p;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
   };
 }

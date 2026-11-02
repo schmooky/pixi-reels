@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
 import type { SymbolRegistry } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Banner that joins a ways win',
@@ -109,5 +110,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     ]);
   };
 
-  return { reelSet: main, stage, onSpin, cleanup: () => banner.destroy() };
+  app.stage.addChild(stage);
+  reelSounds(main);
+  tapToSpin(app, {
+    reelSet: main,
+    spin: onSpin,
+  });
+  return { reelSet: main, stage, cleanup: () => banner.destroy() };
 }

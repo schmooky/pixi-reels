@@ -10,7 +10,9 @@ import {
   WinPresenter,
 } from 'pixi-reels';
 import type { ReelSymbol } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Draw paylines yourself from win:group',
@@ -95,9 +97,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const presenter = new WinPresenter(reelSet, { stagger: 70, cycleGap: 700 });
   reelSet.events.on('spin:start', () => presenter.abort());
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const p = reelSet.spin();
       await new Promise(r => setTimeout(r, 150));
       reelSet.setResult(GRID.map((visible) => ({ visible })));
@@ -105,6 +109,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise(r => setTimeout(r, 220));
       await presenter.show(WINS);
     },
+  });
+  return {
+    reelSet,
     cleanup: () => { presenter.destroy(); lineLayer.destroy({ children: true }); },
   };
 }

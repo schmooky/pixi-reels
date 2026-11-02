@@ -3,9 +3,10 @@ import { gsap } from 'gsap';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell, HwCoin } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: upgrade a coin in place',
@@ -142,10 +143,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   }
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       const maxed = board.lockedCoins.every((c) => c.data!.value === LADDER[LADDER.length - 1]);
@@ -167,5 +167,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         : `upgraded · total ${fmt(totalOf())} · press spin again`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   };
 }

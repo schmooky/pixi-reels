@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { AnimatedSpriteSymbol, HoldAndWinBuilder } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { bezierFly } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import type { HwCell } from 'pixi-reels';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: an overlay that survives swaps and rides flights',
@@ -22,7 +23,8 @@ export const meta = {
 //     is re-attached from `coin.data` - it never gets lost,
 //   - on a collect flight the badge is rebuilt onto the flying clone from the
 //     same `coin.data`, so it travels with the coin.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COIN = 'coin', COIN_B = 'coin_alt';
   const COLS = 3, ROWS = 1, CELL = 96, GAP = 12;
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -86,10 +88,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
 
   const flyers = new Set<PIXI.Container>();
   let phase = 'ready', total = 0;
-  return {
-    board,
-    cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); hud.destroy(); board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (phase === 'swapping' || phase === 'flying') return;
       if (phase === 'collected') { total = 0; meterText.text = '0'; phase = 'ready'; seedBoard(); return; }
 
@@ -124,5 +125,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = 'collected with its badge · press spin to reset';
       phase = 'collected';
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); hud.destroy(); board.destroy(); },
   };
 }

@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Slam-stop',
@@ -35,9 +37,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const p = reelSet.spin();
       // requestSkip queues until setResult arrives. call it from a player tap
       // anywhere in the round and the engine will land as soon as it has a
@@ -47,5 +51,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       setTimeout(() => reelSet.setResult(GRID.map((visible) => ({ visible }))), 800);
       await p;
     },
-  };
+  });
+  return { reelSet };
 }

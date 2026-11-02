@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Nudge a big symbol in, then hold it across a respin',
@@ -70,9 +72,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
   const ct = () => ({ visible: [filler(), filler(), filler()] });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // ── 1. Initial spin lands the tail-visible wild on reel 2. ──────
       const initialGrid = [
         ct(), ct(),
@@ -126,5 +130,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await spin2;
       await new Promise((r) => setTimeout(r, 900));
     },
-  };
+  });
+  return { reelSet };
 }

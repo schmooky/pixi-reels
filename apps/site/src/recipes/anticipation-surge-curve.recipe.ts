@@ -2,8 +2,9 @@ import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { DEBUG_FONT } from 'pixi-reels/debug';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Shape the tease: surge, then crawl',
@@ -119,16 +120,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   };
   app.ticker.add(tick);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      app.ticker.remove(tick);
-      try { trace.destroy(); } catch {}
-      try { panel.destroy(); } catch {}
-      try { oneLabel.destroy(); } catch {}
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[1].visible[1] = SCAT;
@@ -153,6 +149,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await p;
       sampling = false;
       hud.text = 'landed. press spin again';
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      app.ticker.remove(tick);
+      try { trace.destroy(); } catch {}
+      try { panel.destroy(); } catch {}
+      try { oneLabel.destroy(); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

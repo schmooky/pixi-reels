@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Per-reel shape (pyramid)',
@@ -35,11 +37,14 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       VISIBLE.map((cells) =>
         Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
       ),
-  };
+  });
+  return { reelSet };
 }

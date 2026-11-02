@@ -1,6 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets, SpriteSymbol } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'One drum, not five',
@@ -101,11 +103,14 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .stroke({ color: 0x2c2740, width: 2 });
   reelSet.addChild(bezel);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: REELS }, () =>
         Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
       ),
-  };
+  });
+  return { reelSet };
 }

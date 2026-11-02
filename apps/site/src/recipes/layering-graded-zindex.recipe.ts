@@ -6,8 +6,9 @@ import {
   StaticSpinSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { pickWeighted, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
@@ -30,7 +31,8 @@ export const meta = {
 //
 // In motion the resolver returns `defaultZIndex`, so the spin looks exactly
 // as it did - the grading is an at-rest presentation.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const thunderkick = await assets.spineSet("thunderkick");
 
   const SPINE_SCALE = 0.6;
@@ -94,10 +96,15 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   hud.position.set(3 * CELL_W, 4 * CELL_H + 6);
   reelSet.addChild(hud);
 
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () =>
+      ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights))),
+  });
   return {
     reelSet,
     cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    nextResult: () =>
-      ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights))),
   };
 }

@@ -1,6 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Land some reels, not all',
@@ -56,20 +57,25 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('spin:start', () => { hud.text = 'tap again to slam reels 0-2 only'; });
   reelSet.events.on('spin:complete', () => { hud.text = 'every reel landed. reels 3-4 stopped on their own'; });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    // The demo runner calls this on a second tap while spinning. A bare
-    // `slamStop()` would land all five; the options object is what makes it
-    // per-reel. `skipStage` is untouched, because a partial slam is not the
-    // round-ending press.
-    onSkip: () => reelSet.slamStop({ except: KEEP }),
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       const p = reelSet.spin();
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
     },
+    // The demo runner calls this on a second tap while spinning. A bare
+    // `slamStop()` would land all five; the options object is what makes it
+    // per-reel. `skipStage` is untouched, because a partial slam is not the
+    // round-ending press.
+    skip: () => reelSet.slamStop({ except: KEEP }),
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

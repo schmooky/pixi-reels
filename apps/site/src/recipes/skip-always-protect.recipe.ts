@@ -3,8 +3,9 @@ import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A tease no press can end',
@@ -95,24 +96,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('spin:start', () => { taps = 0; landedByPress = false; hud.text = idle; });
   reelSet.events.on('skip:requested', ({ reels }) => { landedByPress = reels.length > 0; });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      for (const i of [...glows.keys()]) stopGlow(i);
-      try { glowLayer.destroy({ children: true }); } catch {}
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    onSkip: () => {
-      taps += 1;
-      landedByPress = false;
-      try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); }
-      // A press that landed nothing emits no skip events at all. that is how
-      // `'always'` refuses one, rather than by throwing.
-      hud.text = landedByPress
-        ? `tap ${taps}: landed the reels around the tease`
-        : `tap ${taps}: ignored - reels ${TEASE.join(' and ')} finish on their own`;
-    },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[1].visible[1] = SCAT;
@@ -122,6 +110,24 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
+    },
+    skip: () => {
+      taps += 1;
+      landedByPress = false;
+      try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); }
+      // A press that landed nothing emits no skip events at all. that is how
+      // `'always'` refuses one, rather than by throwing.
+      hud.text = landedByPress
+        ? `tap ${taps}: landed the reels around the tease`
+        : `tap ${taps}: ignored - reels ${TEASE.join(' and ')} finish on their own`;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      for (const i of [...glows.keys()]) stopGlow(i);
+      try { glowLayer.destroy({ children: true }); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

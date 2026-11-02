@@ -1,12 +1,7 @@
 import { HoldAndWinBuilder } from 'pixi-reels';
-import {
-  CLOVER_CELL_RADIUS,
-  CLOVER_SPEED,
-  cloverCellMask,
-  CloverSymbol,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL_RADIUS, CLOVER_SPEED, cloverCellMask, CloverSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Dimming the art is not dimming the cell',
@@ -32,7 +27,8 @@ export const meta = {
 // (as it is in the other clover recipes, where the dark tile is the `empty`
 // id) then it IS art and `dimSymbols()` dims it with everything else. Draw
 // whatever must stay lit in `cellChrome()`.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const CELL = { width: 320, height: 269 };
   const C = { reel: 0, cell: 0 };
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -90,10 +86,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -120,5 +115,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = 'released - press spin to compare again';
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} board.destroy(); },
   };
 }

@@ -1,7 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Two ways to draw it',
@@ -34,7 +36,8 @@ export const meta = {
 // drawn 1:1 cannot also reach the window edges, so the buffer cells show there,
 // compressed as they curve away - exactly the sliver of the next symbol a real
 // cabinet shows, and exactly what a real cabinet's frame hides.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const { spineMap, symbolIds } = await assets.spineSet('thunderkick');
   const IDS = [...symbolIds];
 
@@ -126,11 +129,14 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .stroke({ color: 0x2c2740, width: 2 });
   reelSet.addChild(bezel);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: REELS }, () =>
         Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
       ),
-  };
+  });
+  return { reelSet };
 }

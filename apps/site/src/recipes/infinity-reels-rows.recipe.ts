@@ -2,9 +2,10 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
-import { countWays, evaluateWays } from '@pixi-reels/cheats/ways';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { countWays, evaluateWays } from '@pixi-reels/kit/ways';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Rows grow too',
@@ -200,11 +201,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   }
 
   // A demo scrolled away mid-zoom unmounts with the tweens still running.
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: onSpin,
+    skip: onSkip,
+  });
   return {
     reelSet,
     stage,
-    onSpin,
-    onSkip,
     cleanup: () => {
       gsap.killTweensOf(camera);
       gsap.killTweensOf(camera.scale);

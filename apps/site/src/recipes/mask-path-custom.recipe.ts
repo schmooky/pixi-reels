@@ -1,6 +1,7 @@
 import { CARD_DECK, CardSymbol, PathMaskStrategy, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Any shape, without a class',
@@ -60,10 +61,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({
         visible: Array.from({ length: ROWS }, rv),
       }));
@@ -72,5 +74,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(grid);
       await p;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

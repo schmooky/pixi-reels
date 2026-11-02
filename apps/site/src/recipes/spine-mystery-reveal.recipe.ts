@@ -8,8 +8,9 @@ import {
   StaticSpinSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spine mystery reveal',
@@ -24,7 +25,8 @@ export const meta = {
 // swaps to the round's shared target symbol via `activate()`.
 // Every reveal animation fades the bush to fully transparent, so the
 // overlay destroys itself on complete.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const thunderkick = await assets.spineSet("thunderkick");
 
   const SPINE_SCALE = 0.6;
@@ -157,5 +159,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     }
   });
 
-  return { reelSet, nextResult };
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: nextResult,
+  });
+  return { reelSet };
 }

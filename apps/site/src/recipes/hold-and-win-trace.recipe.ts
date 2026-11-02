@@ -1,8 +1,9 @@
 import { AnimatedSpriteSymbol, HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
 import type { DebugPlaqueRow } from 'pixi-reels/debug';
-import { BlurSpriteSymbol, readout } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: live event trace',
@@ -18,7 +19,8 @@ export const meta = {
 // This is the companion to the Hold & Win guide: watch the state machine instead
 // of imagining it. The board is a plain HoldAndWinBuilder board; nothing here
 // touches its internals - it only listens.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 4, ROWS = 3, CELL = 60, GAP = 6;
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -103,10 +105,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let running = false;
-  return {
-    board,
-    cleanup: () => { lines.length = 0; try { log.destroy({ children: true }); hud.destroy({ children: true }); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (running) return;
       running = true;
       lines.length = 0; render();
@@ -122,5 +123,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = 'feature:end reached — press spin to run again';
       running = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { lines.length = 0; try { log.destroy({ children: true }); hud.destroy({ children: true }); } catch {} board.destroy(); },
   };
 }

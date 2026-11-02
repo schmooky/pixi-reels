@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { HoldAndWinBuilder, RoundedRectMaskStrategy } from 'pixi-reels';
-import { CLOVER_CELL, CLOVER_SPEED, readout } from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'The game\'s grid: gaps filled by the background',
@@ -22,7 +23,8 @@ export const meta = {
 // rounded frame traced on the cell's exact bounds. A rounded cell mask cuts
 // each tile's corners on the same radius, so frame and tile agree to the
 // pixel. The background is only ever seen in the gaps and the margin.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
@@ -110,14 +112,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 1 }], [], [{ reel: 2, cell: 0 }], [], [], []];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => {
-      framePulse.kill();
-      try { hud.destroy({ children: true }); bg.destroy({ children: true }); } catch {}
-      board.destroy();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       total = 0;
@@ -134,6 +131,14 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       await board.playWin();
       hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
       busy = false;
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      framePulse.kill();
+      try { hud.destroy({ children: true }); bg.destroy({ children: true }); } catch {}
+      board.destroy();
     },
   };
 }

@@ -8,7 +8,9 @@ import {
   WinPresenter,
 } from 'pixi-reels';
 import type { Container } from 'pixi.js';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Custom per-symbol animation',
@@ -77,9 +79,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   reelSet.events.on('spin:start', () => presenter.abort());
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const p = reelSet.spin();
       await new Promise(r => setTimeout(r, 150));
       reelSet.setResult(GRID.map((visible) => ({ visible })));
@@ -87,6 +91,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise(r => setTimeout(r, 220));
       await presenter.show(WINS);
     },
-    cleanup: () => presenter.destroy(),
-  };
+  });
+  return { reelSet, cleanup: () => presenter.destroy() };
 }

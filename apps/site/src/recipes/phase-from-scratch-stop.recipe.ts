@@ -1,8 +1,9 @@
 import { gsap } from 'gsap';
 import { CARD_DECK, CardSymbol, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { ReelBounce, SkipContext, SpeedProfile, StopPhaseConfig } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'What a phase may call',
@@ -119,16 +120,21 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, TOTAL_H + 10);
   reelSet.addChild(hud);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       const p = reelSet.spin();
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
     },
+    skip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

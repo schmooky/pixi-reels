@@ -5,8 +5,9 @@ import {
   ReelSetBuilder,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A different curve per reel',
@@ -63,10 +64,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = lines.join('\n');
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[1].visible[0] = SCAT;
@@ -99,5 +101,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await p;
       hud.text = `${lines.join('\n')}  -  landed`;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

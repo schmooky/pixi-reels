@@ -1,7 +1,9 @@
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import type { Cell } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spin first, cascade after',
@@ -23,7 +25,8 @@ export const meta = {
 // detects winners per-grid each round; only the columns that have
 // winning cells animate. Real games typically chain across overlapping
 // clusters; here we keep the demo's affected area visually contiguous.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const cascade = await assets.spineSet("cascade");
 
   const IDS = [...cascade.symbolIds];
@@ -87,9 +90,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Stage 0. strip-spin lands here. Force the left-three columns to
       // stack: TRIGGER2 ('mid1') at cell 0, TRIGGER1 ('low1') at cell 1, random
       // elsewhere. The mid1s at cell 0 are pre-positioned so that AFTER the
@@ -151,5 +156,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
         pauseAfterDestroyMs: 167,
       });
     },
-  };
+  });
+  return { reelSet };
 }

@@ -1,14 +1,9 @@
 import { HoldAndWinBuilder } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { BoardCellZIndexResolver, HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'One cell in front, for a beat',
@@ -28,7 +23,8 @@ export const meta = {
 // The demo upgrades the middle clover while its neighbours keep landing. The
 // counter shows the refresh firing during the lift - and the clover stays in
 // front through every one.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width;
@@ -114,10 +110,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -140,5 +135,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `back in the pack after ${refreshes} whole-board refreshes - press spin to replay`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
   };
 }

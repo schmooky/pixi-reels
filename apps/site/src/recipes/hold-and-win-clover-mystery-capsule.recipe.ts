@@ -1,16 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { HoldAndWinBuilder } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { HwCell, HwCoin } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Mystery capsule: one of the jackpots',
@@ -26,7 +21,8 @@ export const meta = {
 // the tier's plaque above the board lights, and the amount paints on. The
 // symbol's own setBadge / setLabel do the whole reveal; nothing is added to
 // the stage per cell.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
@@ -133,10 +129,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   ];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy({ children: true }); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -156,5 +151,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy({ children: true }); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   };
 }

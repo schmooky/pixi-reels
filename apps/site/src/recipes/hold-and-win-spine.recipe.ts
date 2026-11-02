@@ -3,10 +3,11 @@ import { gsap } from 'gsap';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { bezierFly, coinWaves, GoldCoinSymbol, settleMoneyFace } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import type { HwCoin } from 'pixi-reels';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: Spine coins + collect',
@@ -344,19 +345,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     [], [], [],
   ];
 
-  return {
-    board,
-    cleanup: () => {
-      for (const fly of flyers) { try { gsap.killTweensOf(fly); gsap.killTweensOf(fly.scale); fly.destroy(); } catch {} }
-      flyers.clear();
-      gsap.killTweensOf(totalText.scale);
-      for (const { plaque, label } of Object.values(panels)) { try { plaque.destroy(); label.destroy(); } catch {} }
-      try { hud.destroy({ children: true }); labels.destroy(); totalText.destroy(); } catch {}
-      labelAt.clear();
-      board.destroy();
-      counter.destroy();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       // reset for replay
       for (const t of labelAt.values()) t.destroy();
       labelAt.clear();
@@ -380,6 +371,19 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await collectAll();
       hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      for (const fly of flyers) { try { gsap.killTweensOf(fly); gsap.killTweensOf(fly.scale); fly.destroy(); } catch {} }
+      flyers.clear();
+      gsap.killTweensOf(totalText.scale);
+      for (const { plaque, label } of Object.values(panels)) { try { plaque.destroy(); label.destroy(); } catch {} }
+      try { hud.destroy({ children: true }); labels.destroy(); totalText.destroy(); } catch {}
+      labelAt.clear();
+      board.destroy();
+      counter.destroy();
     },
   };
 }

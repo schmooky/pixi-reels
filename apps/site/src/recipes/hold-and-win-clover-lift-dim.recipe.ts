@@ -1,14 +1,9 @@
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Lift one cell, dim the rest',
@@ -31,7 +26,8 @@ export const meta = {
 // It fades rather than pops - `fade` milliseconds in and the same back out,
 // off the board's own ticker. Fast enough to belong to the collect's first
 // beat instead of reading as a transition of its own; `fade: 0` cuts.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width;
@@ -112,10 +108,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -132,5 +127,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `collected ${fmt(total)} - board back to its at-rest order`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
   };
 }

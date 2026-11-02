@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Big symbol falls into view through a cascade',
@@ -76,9 +78,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const FILLER_IDS = ['7', '8', '9', '10', 'J'];
   const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // ── 1. Initial spin: tall wild on reel 0 with tail at cell 0; ─────
       //      plant a two-cell MATCH cluster across all 3 reels (cells 1-2).
       const initialGrid = [
@@ -138,5 +142,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         pauseAfterDestroyMs: 280,
       });
     },
-  };
+  });
+  return { reelSet };
 }

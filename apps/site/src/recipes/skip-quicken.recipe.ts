@@ -3,8 +3,9 @@ import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
-import { readout } from '@pixi-reels/kit';
+import { ownTap, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A press that lands, not cuts',
@@ -113,19 +114,13 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // rather than the skip button, which is the quicken.
   hud.eventMode = 'static';
   hud.cursor = 'pointer';
-  hud.on('pointertap', () => reelSet.requestSkip({ mode: 'slam' }));
+  hud.on('pointertap', (e) => { ownTap(e); reelSet.requestSkip({ mode: 'slam' }); });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      for (const i of [...glows.keys()]) stopGlow(i);
-      try { glowLayer.destroy({ children: true }); } catch {}
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    // Every press goes through the same call. The engine decides which reels
-    // this one frees, from `protect`; the mode decides how they land.
-    onSkip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[1].visible[1] = SCAT;
@@ -135,6 +130,17 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
+    },
+    // Every press goes through the same call. The engine decides which reels
+    // this one frees, from `protect`; the mode decides how they land.
+    skip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      for (const i of [...glows.keys()]) stopGlow(i);
+      try { glowLayer.destroy({ children: true }); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

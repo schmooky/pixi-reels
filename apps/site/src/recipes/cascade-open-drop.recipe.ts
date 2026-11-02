@@ -1,7 +1,9 @@
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import type { Cell } from 'pixi-reels';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spin first, cascade after',
@@ -14,7 +16,8 @@ export const meta = {
 // Pure-drop opener: same 'low1' -> 'mid1' chain as the strip-spin
 // canvas, but the round opens as a cascade too. no strip motion. The
 // old board falls out, the new one drops in, then the chain runs.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const cascade = await assets.spineSet("cascade");
 
   const IDS = [...cascade.symbolIds];
@@ -77,9 +80,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const stage0 = Array.from({ length: REELS }, (_, c) =>
         Array.from({ length: ROWS }, (_, r) => {
           if (HIT_COLS.includes(c)) {
@@ -127,5 +132,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
         pauseAfterDestroyMs: 167,
       });
     },
-  };
+  });
+  return { reelSet };
 }

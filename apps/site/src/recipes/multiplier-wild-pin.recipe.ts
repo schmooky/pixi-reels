@@ -2,7 +2,9 @@ import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Multiplier wild',
@@ -107,10 +109,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   ];
   let spinCount = 0;
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { for (const t of badgeAt.values()) { try { t.destroy(); } catch {} } },
-    nextResult: () => {
+    next: () => {
       const idx = spinCount % arrivals.length;
       const grid = Array.from({ length: COLS }, () =>
         Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
@@ -120,5 +123,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       spinCount++;
       return grid;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const t of badgeAt.values()) { try { t.destroy(); } catch {} } },
   };
 }

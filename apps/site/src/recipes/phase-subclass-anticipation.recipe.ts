@@ -1,8 +1,9 @@
 import { AnticipationPhase, CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import type { AnticipationPhaseConfig } from 'pixi-reels';
 import type { DebugPlaque } from 'pixi-reels/debug';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Using update() from a subclass',
@@ -116,17 +117,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, counter.y + counter.plateHeight + 6);
   reelSet.addChild(hud);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      for (const c of counters.values()) { try { c.destroy({ children: true }); } catch {} }
-      counters.clear();
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    // Tap mid-tease: the slam routes through the subclass's `onSkip`, so the
-    // counters come off with the tease rather than freezing on screen.
-    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-    onSpin: async () => {
+    spin: async () => {
       for (const c of counters.values()) c.visible = false;
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
@@ -137,6 +132,17 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
+    },
+    // Tap mid-tease: the slam routes through the subclass's `onSkip`, so the
+    // counters come off with the tease rather than freezing on screen.
+    skip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      for (const c of counters.values()) { try { c.destroy({ children: true }); } catch {} }
+      counters.clear();
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

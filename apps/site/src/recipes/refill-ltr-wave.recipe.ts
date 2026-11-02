@@ -1,6 +1,8 @@
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Cascade refill orders',
@@ -14,7 +16,8 @@ export const meta = {
 // to right. Each reel's cells arrive together (no in-reel stagger), but
 // reel 0 lands before reel 1 before reel 2... Reads as a column-by-column
 // "filling up" of the grid.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const cascade = await assets.spineSet("cascade");
 
   const IDS = [...cascade.symbolIds];
@@ -78,9 +81,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     })
     .ticker(app.ticker).build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const stage0 = Array.from({ length: REELS }, (_, c) =>
         Array.from({ length: ROWS }, (_, r) =>
           r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
@@ -108,5 +113,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       reelSet.setDropOrder('ltr', REEL_WAVE_STEP_MS);
       await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
     },
-  };
+  });
+  return { reelSet };
 }

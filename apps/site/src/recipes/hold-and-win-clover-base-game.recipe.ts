@@ -1,18 +1,8 @@
 import { HoldAndWinBuilder, ReelSetBuilder, RoundedRectMaskStrategy } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_CELL_RADIUS,
-  CLOVER_FEATURES,
-  CLOVER_FRUITS,
-  CLOVER_REEL_SPEED,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  CloverSymbol,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_CELL_RADIUS, CLOVER_FEATURES, CLOVER_FRUITS, CLOVER_REEL_SPEED, CLOVER_SPEED, cloverCellMask, cloverGridBackground, CloverSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Clover base game into the feature',
@@ -27,7 +17,8 @@ export const meta = {
 // bet-scaled amount on its face; the feature clovers (collect, multi,
 // mystery, super) carry no amount. Three or more clovers on the stop hand
 // their cells to the Hold & Win board, which respins around them.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
@@ -160,10 +151,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { hud.destroy({ children: true }); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       const clovers = SPINS[spinNo % SPINS.length];
@@ -182,5 +172,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       }
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
   };
 }

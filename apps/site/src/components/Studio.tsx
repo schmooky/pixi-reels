@@ -6,8 +6,6 @@ import {
   RotateCcw,
   AlertCircle,
   CheckCircle2,
-  Square,
-  RefreshCw,
   Code2,
   Boxes,
   Maximize2,
@@ -33,8 +31,7 @@ import {
   type SymbolData,
 } from 'pixi-reels';
 import { createAssets, setReadouts, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
-import { reelSounds, boardSounds } from '../runtime/audio.ts';
-import { runRecipeModule } from '@/lib/recipeModule';
+import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
 import {
   loadConfig,
   saveConfig,
@@ -49,24 +46,26 @@ import type { StudioConfig } from '@/lib/studio/types.js';
 
 
 const DEFAULT_CODE = `// pixi-reels studio
-// Edit this module and press Run (Cmd/Ctrl+Enter). Recipes from /recipes/*
-// open here too: a recipe is a module, and what you read is what runs.
+// Edit this module and press Run (Cmd/Ctrl+Enter). Every recipe on the site
+// opens here too: a recipe is a module, and what you read is what runs.
 //
 // Import what you need. The runtime resolves:
 //   pixi-reels, pixi-reels/spine, pixi-reels/debug, pixi.js, gsap, pixi-silk,
 //   @esotericsoftware/spine-pixi-v8, @pixi-reels/kit, @pixi-reels/kit/spine,
-//   @pixi-reels/cheats/ways
+//   @pixi-reels/kit/sound, @pixi-reels/kit/ways
 //
 // The host hands the recipe a RecipeContext:
-//   app      PixiJS Application (.ticker, .screen, .stage)
-//   assets   .prototypeAtlas(), .spineSet(id), .holdAndWinSprites(), .clover(), .cloverSpines()
-//   sounds   .reelSounds(reelSet, cues?), .boardSounds(board, cues?)
+//   app             PixiJS Application (.ticker, .screen, .stage)
 //   userSymbols     Studio only: Record<id, { Class, options }> from the Symbols tab
 //   userSymbolData  Studio only: Record<id, { unmask?: boolean }>, applied by the builder
 //
-// Return { reelSet, nextResult? }, or { onSpin } for a custom spin handler.
+// The recipe adds its set to app.stage, wires its control (tapToSpin: a tap
+// starts a round, a tap mid-round skips it) and its sounds, and returns
+// { reelSet } so the host can draw the debug overlay on it. Copy the module
+// into a game as it is: npm i pixi-reels @pixi-reels/kit.
 import { ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 import type { RecipeContext, RecipeResult } from '@pixi-reels/kit';
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
@@ -95,21 +94,22 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: 5 }, () =>
         Array.from({ length: 3 }, () => pickWeighted(weights)),
       ),
-  };
+  });
+  return { reelSet };
 }
 `;
 
 interface StudioEnv {
   app: Application;
 }
-
-const sounds = { reelSounds, boardSounds };
 
 /**
  * Read `#code=<base64>` from `location.hash` once on mount. Returns the
@@ -183,8 +183,8 @@ export default function Studio() {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const envRef = useRef<StudioEnv | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
-  const nextResultRef = useRef<(() => string[][]) | null>(null);
-  const onSpinRef = useRef<(() => Promise<void>) | null>(null);
+  // True between a successful run and the next teardown.
+  const mountedRef = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
   const lastInjectablesRef = useRef<StudioInjectables | null>(null);
   // Set by `run()` to a closure that recentres + scales the current reelSet
@@ -199,7 +199,6 @@ export default function Studio() {
     { kind: 'idle', msg: 'Loading studio…' },
   );
   const [isBooting, setIsBooting] = useState(true);
-  const [isSpinning, setIsSpinning] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   // Speed selector. Populated from `reelSet.speed.profileNames` on every
@@ -343,10 +342,16 @@ export default function Studio() {
     try { cleanupRef.current?.(); } catch { /* ignore */ }
     try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
     reelSetRef.current = null;
-    nextResultRef.current = null;
-    onSpinRef.current = null;
     cleanupRef.current = null;
     fitRef.current = null;
+    mountedRef.current = false;
+    // The stage belongs to the recipe: it added its root and its tap
+    // listener there. A new run starts from an empty one.
+    const stage = envRef.current?.app.stage;
+    if (stage) {
+      stage.removeAllListeners('pointertap');
+      stage.removeChildren();
+    }
     if (lastInjectablesRef.current) {
       revokeBlobUrls(lastInjectablesRef.current.blobUrls);
       lastInjectablesRef.current = null;
@@ -374,37 +379,39 @@ export default function Studio() {
       setReadouts(readouts);
       // The module loader is shared with RecipeRunner and ShareViewer, so a
       // recipe opened in Studio resolves exactly the imports it resolved in
-      // the docs. Studio only swaps two things in: the atlas gains the
-      // Symbols-tab uploads (ids collide -> uploads win), and `ReelSetBuilder`
-      // becomes the subclass that applies the tab's per-symbol flags.
+      // the docs. Studio only swaps two things in: `createAssets` hands out
+      // an atlas with the Symbols-tab uploads folded in (ids collide ->
+      // uploads win), and `ReelSetBuilder` becomes the subclass that applies
+      // the tab's per-symbol flags.
       built = await runRecipeModule(config.code, {
         app: env.app,
-        assets: studioAssets(injectables.textures),
-        sounds,
         userSymbols: injectables.userSymbols,
         userSymbolData: injectables.userSymbolData,
       }, {
-        overrides: { 'pixi-reels': { ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData) } },
+        overrides: {
+          'pixi-reels': { ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData) },
+          '@pixi-reels/kit': { createAssets: () => studioAssets(injectables.textures) },
+        },
       });
     } catch (e) {
       setStatus({ kind: 'err', msg: `${e instanceof SyntaxError ? 'Compile' : 'Runtime'} error: ${(e as Error).message}` });
       return;
     }
 
-    if (!built || (!built.reelSet && !built.onSpin)) {
-      setStatus({ kind: 'err', msg: 'The recipe must return { reelSet } or { onSpin }.' });
-      return;
-    }
-
-    onSpinRef.current = built.onSpin ?? null;
+    built ??= {};
     cleanupRef.current = built.cleanup ?? null;
+    mountedRef.current = true;
 
     if (!built.reelSet) {
-      setStatus({ kind: 'ok', msg: 'Mounted. Custom spin handler active.' });
+      setStatus({ kind: 'ok', msg: 'Mounted. Tap the canvas to play it.' });
       return;
     }
 
     const reelSet = built.reelSet;
+    if (!(built.stage ?? reelSet).parent) {
+      setStatus({ kind: 'err', msg: OFF_STAGE });
+      return;
+    }
     enableDebug(reelSet);
 
     const PADDING = 24;
@@ -425,8 +432,6 @@ export default function Studio() {
       fitted.x = (env.app.screen.width - rawW * scale) / 2;
       fitted.y = (env.app.screen.height - rawH * scale) / 2;
     };
-    env.app.stage.removeChildren();
-    env.app.stage.addChild(fitted);
     fit();
     // The boot useEffect's ResizeObserver calls through this ref on every
     // host-size change. single fit path for window resize, fullscreen
@@ -434,7 +439,6 @@ export default function Studio() {
     fitRef.current = fit;
 
     reelSetRef.current = reelSet;
-    nextResultRef.current = built.nextResult ?? null;
 
     // Sync the speed selector with whatever the user's builder registered.
     // If the previously-selected name still exists we keep it (so toggling
@@ -457,34 +461,6 @@ export default function Studio() {
   function handleSpeedChange(name: string): void {
     setSpeedName(name);
     try { reelSetRef.current?.setSpeed(name); } catch { /* ignore. profile missing */ }
-  }
-
-  async function handleSpin(): Promise<void> {
-    if (isSpinning) {
-      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
-      // in the catch so a player tap during the server-wait window still
-      // queues the slam and fires it the moment the result is in.
-      try { reelSetRef.current?.skipSpin(); }
-      catch { reelSetRef.current?.requestSkip(); }
-      return;
-    }
-    if (!reelSetRef.current && !onSpinRef.current) return;
-    setIsSpinning(true);
-    try {
-      if (onSpinRef.current) {
-        await onSpinRef.current();
-      } else if (reelSetRef.current) {
-        const p = reelSetRef.current.spin();
-        const result = nextResultRef.current?.();
-        await new Promise((r) => setTimeout(r, 150));
-        if (result) reelSetRef.current.setResult(result.map((visible) => ({ visible })));
-        await p;
-      }
-    } catch (e) {
-      setStatus({ kind: 'err', msg: `Spin error: ${(e as Error).message}` });
-    } finally {
-      setIsSpinning(false);
-    }
   }
 
   // Cmd/Ctrl+Enter triggers Run from the Code tab.
@@ -607,7 +583,7 @@ export default function Studio() {
           )}
           <button
             type="button"
-            onClick={() => { setReadoutsOn((v) => !v); if (reelSetRef.current || onSpinRef.current) setPendingAutoRun(true); }}
+            onClick={() => { setReadoutsOn((v) => !v); if (mountedRef.current) setPendingAutoRun(true); }}
             aria-pressed={readouts}
             title={readouts ? 'Hide the recipe\'s plaques and outlines (re-runs)' : 'Show the recipe\'s plaques and outlines (re-runs)'}
             className={cn(
@@ -620,22 +596,6 @@ export default function Studio() {
           >
             <MessageSquare size={12} strokeWidth={2.25} />
             Readouts
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSpin()}
-            disabled={isBooting || (!reelSetRef.current && !onSpinRef.current)}
-            title={isSpinning ? 'Stop' : 'Spin'}
-            aria-label={isSpinning ? 'Stop' : 'Spin'}
-            className={cn(
-              'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-sm',
-              'bg-brand text-brand-foreground',
-              'transition-[transform,background-color,color] duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] hover:bg-brand/90 active:scale-[0.97]',
-              isSpinning && 'bg-foreground text-background hover:bg-foreground/90',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
-            {isSpinning ? <Square size={14} strokeWidth={2.5} /> : <RefreshCw size={16} strokeWidth={2.25} />}
           </button>
         </div>
         <div className="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs">

@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { AnimatedSpriteSymbol, HoldAndWinBuilder } from 'pixi-reels';
-import { BlurSpriteSymbol, readout } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { bezierFly, coinWaves } from '@pixi-reels/kit/spine';
 import type { HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: collector with particle streams',
@@ -18,7 +19,8 @@ export const meta = {
 // a collector lands, and each coin's value flies into it on a bezier arc
 // trailed by a stream of neon particles, ticking the collector total up.
 // Pure game-layer choreography over the board's cellCenter() + events.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3, CELL = 76, GAP = 6;
   const COIN = 'coin', COLLECTOR = 'collect';
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -141,10 +143,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let phase = 'ready';
-  return {
-    board,
-    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); gsap.killTweensOf(sumText); sumText.destroy(); } catch {} sumText = null; } try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (phase === 'running') return;
       if (phase === 'done') { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); sumText.destroy(); } catch {} sumText = null; } total = 0; SEED.forEach((c, i) => (c.data.value = [10, 5, 25, 15][i])); board.reset(); seedBoard(); phase = 'ready'; return; }
       phase = 'running';
@@ -156,5 +157,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       phase = 'done';
       hud.text = `collected ${fmt(total)} · press spin to reset`;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); gsap.killTweensOf(sumText); sumText.destroy(); } catch {} sumText = null; } try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   };
 }

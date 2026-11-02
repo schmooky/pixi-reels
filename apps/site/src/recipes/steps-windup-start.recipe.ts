@@ -7,9 +7,10 @@ import {
   StartPhase,
   step,
 } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { ownTap, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import type { StartStepContext } from 'pixi-reels';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A wind-up launch',
@@ -90,25 +91,31 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, TOTAL_H + 10);
   hud.eventMode = 'static';
   hud.cursor = 'pointer';
-  hud.on('pointertap', () => {
+  hud.on('pointertap', (e) => {
+    ownTap(e);
     windup = !windup;
     hud.text = label();
   });
   reelSet.addChild(hud);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      unwatch();
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       const p = reelSet.spin();
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
+    },
+    skip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      unwatch();
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

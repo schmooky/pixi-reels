@@ -9,8 +9,9 @@ import {
   step,
 } from 'pixi-reels';
 import type { AnticipationStepContext } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A spotlight around the tease',
@@ -91,16 +92,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, TOTAL_H + 10);
   reelSet.addChild(hud);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      unwatch();
-      gsap.killTweensOf(shades);
-      try { shadeLayer.destroy({ children: true }); } catch {}
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[2].visible[1] = SCAT;
@@ -109,6 +105,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
+    },
+    skip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      unwatch();
+      gsap.killTweensOf(shades);
+      try { shadeLayer.destroy({ children: true }); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

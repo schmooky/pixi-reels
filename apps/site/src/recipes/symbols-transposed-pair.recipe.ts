@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { SymbolRegistry } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'The same symbols on both axes',
@@ -77,10 +78,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     horizontal,
   );
 
-  return {
+  app.stage.addChild(stage);
+  reelSounds(vertical);
+  tapToSpin(app, {
     reelSet: vertical,
-    stage,
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () =>
         Array.from({ length: CELLS }, () => pickWeighted(weights)),
       ).map((visible) => ({ visible }));
@@ -93,6 +95,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       horizontal.setResult(grid);
       await Promise.all([pv, ph]);
     },
-    cleanup: () => horizontal.destroy(),
-  };
+  });
+  return { reelSet: vertical, stage, cleanup: () => horizontal.destroy() };
 }

@@ -8,8 +8,9 @@ import {
 } from 'pixi-reels';
 import type { Container } from 'pixi.js';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Scatter jaw anticipation',
@@ -24,7 +25,8 @@ export const meta = {
 // `nearWinStart`/`nearWinLoop` (held excitement while the tease runs),
 // `lastReelScatterNearWin` (the RIGHTMOST jaw pose on the deciding land)
 // and `bonusGameWon` for the payoff. Spins alternate hit / miss.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const thunderkick = await assets.spineSet("thunderkick");
 
   const SPINE_SCALE = 0.6;
@@ -175,9 +177,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
 
   let spinCount = 0;
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Odd spins hit (3rd scatter on the rightmost reel), even spins miss.
       won = spinCount % 2 === 0;
       spinCount++;
@@ -210,5 +214,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       });
       await p;
     },
-  };
+  });
+  return { reelSet };
 }

@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ExternalLink, Bug, Volume2, VolumeX } from 'lucide-react';
-import { TapHint } from './TapHint';
 import { Application } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
@@ -27,11 +26,9 @@ import {
   debugOverlay, SpinMetrics,
   type DebugOverlayHandle, type DebugOverlayLayer,
 } from 'pixi-reels/debug';
-import { createAssets } from '@pixi-reels/kit';
 import type { RecipeResult } from '@pixi-reels/kit';
-import { reelSounds, boardSounds, readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
-import type { HoldAndWinBoard, ReelSoundsHandle } from 'pixi-reels';
-import { runRecipeModule } from '@/lib/recipeModule';
+import { readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
+import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
@@ -167,10 +164,6 @@ interface AnyBus {
   offAny(fn: (event: string, ...args: unknown[]) => void): unknown;
 }
 
-/** The kits every demo on the site loads from the site's own origin. */
-const assets = createAssets();
-const recipeSounds = { reelSounds, boardSounds };
-
 interface RecipeRunnerProps {
   code: string;
   height?: number;
@@ -180,9 +173,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const envRef = useRef<Env | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
-  const nextResultRef = useRef<(() => string[][]) | null>(null);
-  const onSpinRef = useRef<(() => Promise<void>) | null>(null);
-  const onSkipRef = useRef<(() => void) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   // One handle per reel set on the stage, not per recipe: a recipe is free to
   // build several (a banner strip above the grid, a transposed pair), and an
@@ -191,11 +181,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   // One recorder per reel set, running from mount: the timeline and metrics
   // panels can then show the spin that made you reach for the Debug button.
   const metricsRef = useRef<Map<ReelSet, SpinMetrics>>(new Map());
-  const soundsRef = useRef<ReelSoundsHandle[]>([]);
   // Re-fit after the overlay grows the set's bounds (panels under the mask).
   const fitRef = useRef<(() => void) | null>(null);
   const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
-  const [spinning, setSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [debugOn, setDebugOn] = useState(false);
@@ -256,30 +244,18 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       try {
         // The recipe is a module: its imports resolve through the one table
         // in lib/recipeModule.ts, the same for Studio and the share viewer.
-        result = await runRecipeModule(code, { app, assets, sounds: recipeSounds });
+        result = await runRecipeModule(code, { app });
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);
         return;
       }
       if (cancelled) return;
 
-      if (!result?.reelSet && !result?.onSpin) {
-        setError('Recipe must return { reelSet } or { onSpin }.');
-        return;
-      }
-
+      // The recipe owns its round, its control and its sounds; the runner
+      // reads only what the chrome needs: the set for the overlay and the
+      // panel, the root to fit, the board to record, the cleanup to run.
+      result ??= {};
       reelSetRef.current = result.reelSet ?? null;
-      // The default cue table on the recipe's set: spin bed, reel thuds,
-      // tease, skip, win, cascade pop. A recipe wanting its own calls
-      // `reelSounds(reelSet, cues)` itself; both run, so keep them apart.
-      // `??=`: a dev hot update keeps the ref's old value (null) across the
-      // component swap, and a recipe must still mount.
-      const sounds = (soundsRef.current ??= []);
-      if (result.reelSet) sounds.push(reelSounds(result.reelSet));
-      if (result.board && 'respinsLeft' in result.board) sounds.push(boardSounds(result.board as HoldAndWinBoard));
-      nextResultRef.current = result.nextResult ?? null;
-      onSpinRef.current = result.onSpin ?? null;
-      onSkipRef.current = result.onSkip ?? null;
       cleanupRef.current = result.cleanup ?? null;
 
       // Record every bus in the demo for the events panel: each reel set on
@@ -348,6 +324,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         // Fit the composition root when there is one, so a banner set moves,
         // scales and centres with the grid it sits above.
         const fitted = result.stage ?? rs;
+        if (!fitted.parent) {
+          setError(OFF_STAGE);
+          return;
+        }
         // Fit the local bounds, offset included: the debug overlay draws the
         // buffers and feed markers above the mask and its panels under it, so
         // the content does not start at (0, 0) once it is on.
@@ -360,7 +340,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           fitted.x = (app.screen.width - b.width * scale) / 2 - b.x * scale;
           fitted.y = (app.screen.height - b.height * scale) / 2 - b.y * scale;
         };
-        app.stage.addChild(fitted);
         fit();
         fitRef.current = fit;
         app.renderer.on('resize', fit);
@@ -427,8 +406,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       for (const m of metricsRef.current.values()) m.destroy();
       metricsRef.current.clear();
       fitRef.current = null;
-      for (const s of soundsRef.current ?? []) { try { s.destroy(); } catch { /* ignore */ } }
-      soundsRef.current = [];
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
       if (app) {
@@ -436,63 +413,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         try { app.destroy(DESTROY_RENDERER, { children: true }); } catch { /* ignore */ }
       }
       reelSetRef.current = null;
-      onSpinRef.current = null;
       cleanupRef.current = null;
       envRef.current = null;
     };
   }, []);
-
-  async function handleSpin() {
-    if (!ready || !!error) return;
-    // A press is the gesture that lets audio start; the first one also loads
-    // the files. Not awaited: the spin must not wait on a fetch.
-    void readyAudio().catch(() => {});
-    if (spinning) {
-      // Recipe-supplied skip handler wins. lets a nudge / cascade / custom
-      // timeline recipe intercept the player's mid-action tap. Otherwise
-      // fall through to the built-in heuristics.
-      if (onSkipRef.current) {
-        onSkipRef.current();
-        return;
-      }
-      // Nudge in flight → skip THAT first (the spin pipeline is idle).
-      const reelSet = reelSetRef.current;
-      if (reelSet && reelSet.reels.some((r) => r.isNudging)) {
-        reelSet.skipNudge();
-        return;
-      }
-      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
-      // in the catch so a player tap during the server-wait window still
-      // queues the slam and fires it the moment the result is in.
-      try { reelSetRef.current?.skipSpin(); }
-      catch { reelSetRef.current?.requestSkip(); }
-      return;
-    }
-    setSpinning(true);
-    try {
-      if (onSpinRef.current) {
-        await onSpinRef.current();
-      } else {
-        const reelSet = reelSetRef.current;
-        if (!reelSet) return;
-        const p = reelSet.spin();
-        await new Promise((r) => setTimeout(r, 150));
-        const result = nextResultRef.current?.();
-        if (result) reelSet.setResult(result.map((visible) => ({ visible })));
-        await p;
-      }
-    } catch (err) {
-      // Don't surface mid-spin transient errors in the UI (recipe runner
-      // shouldn't flash error banners during normal cleanup races). DO
-      // log them. silently swallowing here previously hid a real shape
-      // bug where recipes passed `string[][]` to `refill({ grid })` and
-      // the engine threw inside a Promise that no one was watching.
-      // eslint-disable-next-line no-console -- diagnostic surface
-      console.error('[RecipeRunner] handleSpin threw:', err);
-    } finally {
-      setSpinning(false);
-    }
-  }
 
   function toggleDebug() {
     if (debugOn) {
@@ -552,25 +476,19 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     <div className="flex w-full flex-col bg-background" style={{ '--recipe-h': `${height}px` } as CSSProperties}>
     <div className={cn('flex w-full', debugOn && 'flex-col sm:flex-row')}>
     {/*
-      The canvas is the button: a tap spins, a tap while running skips. The
-      role and label sit on this wrapper (the host's children are replaced
-      when the app mounts), and the e2e suite presses it as "Spin".
+      The recipe owns the canvas: its `tapToSpin` turns a tap into a round
+      and draws the cue. `data-state` is for the e2e suite, which taps the
+      canvas once the recipe is ready.
     */}
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={spinning ? 'Skip' : 'Spin'}
-      aria-disabled={!!error || !ready}
-      onClick={() => void handleSpin()}
-      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); void handleSpin(); } }}
-      className="relative flex min-w-0 flex-1 cursor-pointer select-none items-center justify-center bg-[#111114] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+      data-state={error ? 'error' : ready ? 'ready' : 'loading'}
+      className="relative flex min-w-0 flex-1 cursor-pointer select-none items-center justify-center bg-[#111114]"
       style={{ height }}
     >
         <div
           ref={hostRef}
           className="h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full"
         />
-        <TapHint spinning={spinning} hidden={!ready || !!error} />
         {showSkeleton && !error && <CanvasSkeleton label="Compiling recipe…" />}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center bg-card/90 p-6 font-mono text-xs text-destructive">

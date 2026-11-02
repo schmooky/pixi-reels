@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { AnimatedSpriteSymbol, HoldAndWinBuilder, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { BlurSpriteSymbol, readout } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: enter from the base game and back',
@@ -20,7 +21,8 @@ export const meta = {
 // (every cell now its own 1×1 reel), plays the respin feature, and on
 // `feature:end` swaps back to the base game. The board is a second display
 // object on the same screen - `feature:enter` / `feature:end` are the seam.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3, CELL = 74, GAP = 6;
   const COIN = 'coin', BONUS = 'bonus';
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -132,10 +134,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { gsap.killTweensOf([board.container, labels]); } catch {} for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); base.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       const bonusCells = BONUS_SPOTS[spin % BONUS_SPOTS.length];
@@ -153,5 +154,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       }
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { gsap.killTweensOf([board.container, labels]); } catch {} for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); base.destroy(); },
   };
 }

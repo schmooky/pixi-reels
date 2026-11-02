@@ -6,7 +6,9 @@ import {
   SharedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'getBlockBounds. outline a big symbol',
@@ -68,9 +70,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       .stroke({ color: 0xff6b35, width: 4, alpha: 1 });
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () => {
+    next: () => {
       const grid = Array.from({ length: REELS }, () =>
         Array.from({ length: ROWS }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
       );
@@ -81,5 +85,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       plantedAt = { reel, cell };
       return grid;
     },
-  };
+  });
+  return { reelSet };
 }

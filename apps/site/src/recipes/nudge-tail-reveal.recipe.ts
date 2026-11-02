@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Nudge through a big symbol',
@@ -51,9 +53,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
   const col3 = () => [filler(), filler(), filler()];
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // 1. Land 1x2 MEGA anchored at column 2, cell 0. Block fills cells 0+1.
       const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
       const p = reelSet.spin();
@@ -84,5 +88,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         duration: 540,
       });
     },
-  };
+  });
+  return { reelSet };
 }

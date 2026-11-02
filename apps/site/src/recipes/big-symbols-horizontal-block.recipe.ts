@@ -6,7 +6,9 @@ import {
   SharedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Big symbol on a horizontal set',
@@ -74,9 +76,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       .stroke({ color: 0xff6b35, width: 4, alpha: 1 });
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () => {
+    next: () => {
       const grid = Array.from({ length: REELS }, () =>
         Array.from({ length: CELLS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
       );
@@ -88,6 +92,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       planted = { reel, cell };
       return grid;
     },
-    cleanup: () => { try { outline.destroy(); } catch {} },
-  };
+  });
+  return { reelSet, cleanup: () => { try { outline.destroy(); } catch {} } };
 }

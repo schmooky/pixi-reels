@@ -3,7 +3,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { setTimeout as wait } from 'node:timers/promises';
 
 /**
- * Cascade recipes must survive a real Spin, not just a mount.
+ * Cascade recipes must survive a real round, not just a mount.
  *
  * `recipes-mount.spec.ts` proves a recipe compiles and mounts.
  * `check-recipe-syntax` proves it parses. Neither ever pressed the button,
@@ -13,8 +13,8 @@ import { setTimeout as wait } from 'node:timers/promises';
  * rejects AFTER the winners are destroyed, leaving the board frozen
  * mid-round with holes in it. Every static gate was green the whole time.
  *
- * So: click Spin, let the chain run, and fail on anything that reaches the
- * console or the runner's error banner.
+ * So: tap every demo's canvas, let the chain run, and fail on anything that
+ * reaches the console or the runner's error banner.
  */
 
 let server: ChildProcess | null = null;
@@ -84,28 +84,39 @@ for (const path of CASCADE_PAGES) {
     await page.evaluate(() => document.getElementById('demos')?.scrollIntoView());
     await page.waitForTimeout(3000);
 
-    // The runner renders one round button per demo, labelled Spin at rest.
-    const spins = page.getByRole('button', { name: 'Spin' });
-    const count = await spins.count();
-    expect(count, `${path} mounted no runnable demo`).toBeGreaterThan(0);
     // Budget by the page's demo count, as the scroll test does by height,
-    // with the old flat 60s as the floor. Frames, not mounted buttons: on a
+    // with the old flat 60s as the floor. Frames, not ready demos: on a
     // slow runner only a third of the demos have mounted at count time, and
     // a budget from that number came out BELOW the floor. The cascade page
     // is at 26 frames.
     const frames = await page.locator('.recipe-frame').count();
+    expect(frames, `${path} has no demo frame`).toBeGreaterThan(0);
     test.setTimeout(Math.max(60_000, 20_000 + frames * 3_000 + 12_000));
 
-    // Pin the buttons NOW. Once a demo is mid-round its button reads Skip, so
-    // the "Spin" locator shrinks under an index loop: `nth(i)` past the end
-    // waits the whole click timeout for an element that never comes. And
-    // click without actionability checks: under software GL a frame can take
-    // long enough that "stable" never holds for two of them in a row, and
-    // one waited-out click per demo is the whole budget.
-    const buttons = await spins.elementHandles();
-    for (const btn of buttons) {
-      if (!(await btn.isEnabled().catch(() => false))) continue;
-      await btn.click({ timeout: 5_000, force: true }).catch(() => { /* mid-round relabel */ });
+    // There is no DOM spin control. The runner's wrapper inside each frame
+    // carries `data-state`: `loading` until the recipe has mounted, `ready`
+    // once its canvas accepts taps (the recipe wires `tapToSpin`, so a
+    // pointer tap on the stage starts a round), `error` when the runner has
+    // painted its banner. Wait for every mounted frame to be ready, so a
+    // click does not land on a canvas whose recipe is still loading its kits
+    // and quietly start nothing.
+    const ready = page.locator('.recipe-frame [data-state="ready"]');
+    await expect
+      .poll(async () => {
+        const loading = await page.locator('.recipe-frame [data-state="loading"]').count();
+        return loading === 0 && (await ready.count()) > 0;
+      }, { message: `${path} never had every mounted demo reach data-state="ready"`, timeout: 60_000 })
+      .toBe(true);
+
+    // Pin the canvases NOW, then click each once. Playwright's click sends
+    // real pointer events, which Pixi turns into the `pointertap` the recipe
+    // listens for. `force` skips the actionability checks: under software GL
+    // a frame can take long enough that "stable" never holds for two demos in
+    // a row, and one waited-out click per demo is the whole budget. A tap on
+    // a demo already mid-round would skip it, but each canvas is tapped once.
+    const canvases = await ready.locator('canvas').elementHandles();
+    for (const canvas of canvases) {
+      await canvas.click({ timeout: 5_000, force: true }).catch(() => { /* detached mid-walk */ });
       await page.waitForTimeout(400);
     }
 

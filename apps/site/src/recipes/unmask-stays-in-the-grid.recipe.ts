@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, ReelSymbol, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
@@ -140,14 +141,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   ghostLabel.position.set(gx + SIZE / 2, ghostY + 6);
   stage.addChild(ghost, ghostLabel);
 
-  return {
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    stage,
-    onSpin: async () => {
+    spin: async () => {
       const p = reelSet.spin();
       await new Promise((r) => setTimeout(r, 200));
       reelSet.setResult(result());
       await p;
     },
-  };
+  });
+  return { reelSet, stage };
 }

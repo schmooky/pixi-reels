@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { AnimatedSpriteSymbol, HoldAndWinBuilder } from 'pixi-reels';
-import { BlurSpriteSymbol, readout } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: sprite coins (no Spine)',
@@ -17,7 +18,8 @@ export const meta = {
 // Diamonds 3 art): number symbols blur as they spin (BlurSpriteSymbol) and
 // the money coin is a 30-frame flip (AnimatedSpriteSymbol). No skeleton
 // runtime - this is the sprite path a studio ships most often.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 4, CELL = 74, GAP = 6;
   const COIN = 'coin';
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -115,10 +117,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   ];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       for (const t of labelAt.values()) t.destroy();
@@ -138,5 +139,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `feature over · TOTAL ${fmt(totalOf())} · press spin to replay`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   };
 }

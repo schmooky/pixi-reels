@@ -4,8 +4,9 @@ import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import type { DebugPlaqueRow } from 'pixi-reels/debug';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Skip, reel groups and a protected tease',
@@ -192,5 +193,12 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // A demo scrolled away mid-pan unmounts with the tween still running; kill it
   // so it does not tick on into a destroyed camera.
-  return { reelSet, stage, onSpin, onSkip, cleanup: () => gsap.killTweensOf(camera) };
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: onSpin,
+    skip: onSkip,
+  });
+  return { reelSet, stage, cleanup: () => gsap.killTweensOf(camera) };
 }

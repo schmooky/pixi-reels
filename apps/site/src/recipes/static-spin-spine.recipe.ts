@@ -6,8 +6,9 @@ import {
   StaticSpinSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { buildSpineMap, pickWeighted } from '@pixi-reels/kit';
+import { buildSpineMap, pickWeighted, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { GeneratedSpineName, RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spin static, not Spine',
@@ -23,7 +24,8 @@ export const meta = {
 // no Spine state ticks while spinning, and cells recycling mid-spin never
 // instantiate a skeleton at all. On land the skeletons come back and play
 // their landing animation.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   await assets.spineSet("generated");
 
   const SIZE = 140; // the generated skeletons' authored frame size - render 1:1
@@ -74,11 +76,14 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: 5 }, () =>
         Array.from({ length: 3 }, () => pickWeighted(weights)),
       ),
-  };
+  });
+  return { reelSet };
 }

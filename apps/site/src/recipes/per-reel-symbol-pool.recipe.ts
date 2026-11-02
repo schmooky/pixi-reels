@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Which symbols may spawn where',
@@ -104,10 +105,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     stage.addChild(caption);
   }
 
-  return {
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    stage,
-    nextResult: () =>
+    next: () =>
       // A perfectly ordinary server result. The pools never touch it.
       Array.from({ length: COLS }, () =>
         Array.from({ length: ROWS }, () => {
@@ -115,5 +117,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
           return pool[Math.floor(Math.random() * pool.length)];
         }),
       ),
-  };
+  });
+  return { reelSet, stage };
 }

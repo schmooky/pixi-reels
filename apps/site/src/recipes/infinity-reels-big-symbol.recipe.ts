@@ -2,9 +2,10 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
-import { evaluateWays } from '@pixi-reels/cheats/ways';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { evaluateWays } from '@pixi-reels/kit/ways';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A big symbol widens its step',
@@ -129,5 +130,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // A demo scrolled away mid-pan unmounts with the tween still running; kill it
   // so it does not tick on into a destroyed camera.
-  return { reelSet, stage, onSpin, cleanup: () => gsap.killTweensOf(camera) };
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: onSpin,
+  });
+  return { reelSet, stage, cleanup: () => gsap.killTweensOf(camera) };
 }

@@ -1,6 +1,7 @@
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { BlurSpriteSymbol } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Texture atlas symbols',
@@ -9,7 +10,8 @@ export const meta = {
   needs: ['prototype-atlas'],
 } as const satisfies RecipeMeta;
 
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const { textures, blurTextures } = await assets.prototypeAtlas();
 
   const IDS = [
@@ -32,11 +34,14 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: 5 }, () =>
         Array.from({ length: 3 }, () => IDS[Math.floor(Math.random() * IDS.length)])
       ),
-  };
+  });
+  return { reelSet };
 }

@@ -1,7 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Cascades on a drum',
@@ -41,7 +43,8 @@ export const meta = {
 //     hole onto the background.
 //
 // Framing it is the fix, and it is what a real cabinet does anyway.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const cascade = await assets.spineSet('cascade');
 
   const IDS = [...cascade.symbolIds];
@@ -126,9 +129,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .stroke({ color: 0x2f2a44, width: 2 });
   reelSet.addChild(bezel);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const stage0 = Array.from({ length: REELS }, (_, c) =>
         Array.from({ length: ROWS }, (_, r) =>
           r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
@@ -161,5 +166,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
         pauseAfterDestroyMs: 250,
       });
     },
-  };
+  });
+  return { reelSet };
 }

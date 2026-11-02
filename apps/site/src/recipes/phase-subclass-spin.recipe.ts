@@ -1,8 +1,9 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, SpinPhase } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { SpinPhaseConfig } from 'pixi-reels';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A spin floor the phase decides for itself',
@@ -92,10 +93,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       : `${floorFor(i)}ms\n-> ${Math.round(performance.now() - t0)}ms`;
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { for (const t of labels) { try { t.destroy({ children: true }); } catch {} } },
-    onSpin: async () => {
+    spin: async () => {
       for (let i = 0; i < REELS; i++) labels[i].text = `${floorFor(i)}ms\nfloor`;
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       const p = reelSet.spin();
@@ -106,5 +108,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(grid);
       await p;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const t of labels) { try { t.destroy({ children: true }); } catch {} } },
   };
 }

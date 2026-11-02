@@ -1,8 +1,9 @@
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import type { DebugPlaque } from 'pixi-reels/debug';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Read the axis instead of remembering it',
@@ -89,12 +90,17 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     labels.push(text);
   }
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: REELS }, () =>
         Array.from({ length: CELLS }, () => pickWeighted(weights)),
       ),
+  });
+  return {
+    reelSet,
     cleanup: () => {
       for (const t of labels) t.destroy({ children: true });
       gfx.destroy();

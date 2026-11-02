@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Land a big symbol partially in buffer',
@@ -62,9 +64,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
   const ct = () => ({ visible: [filler(), filler(), filler()] });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // 1. Land the 1x3 TALL with anchor at `bufferStart[1]` (= cell -2).
       //    Block spans cells -2, -1, 0. Only visible cell 0 shows the block's
       //    bottom cell; cells 1 and 2 are random fillers.
@@ -118,5 +122,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         duration: 540,
       });
     },
-  };
+  });
+  return { reelSet };
 }

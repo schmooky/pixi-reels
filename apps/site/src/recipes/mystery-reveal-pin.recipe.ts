@@ -3,7 +3,9 @@ import { gsap } from 'gsap';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Mystery reveal (CellPin)',
@@ -170,6 +172,20 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   ];
   let spinCount = 0;
 
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () => {
+      const script = scripts[spinCount % scripts.length];
+      const grid = Array.from({ length: COLS }, () =>
+        Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
+      );
+      for (const m of script.mysteries) grid[m.c][m.r] = MYSTERY;
+      spinCount++;
+      return grid;
+    },
+  });
   return {
     reelSet,
     // A reveal can be mid-tween when the recipe is torn down (nav / HMR). Kill any
@@ -181,15 +197,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
           try { const v = reel.getSymbolAt(r).view; gsap.killTweensOf(v); gsap.killTweensOf(v.scale); } catch {}
         }
       }
-    },
-    nextResult: () => {
-      const script = scripts[spinCount % scripts.length];
-      const grid = Array.from({ length: COLS }, () =>
-        Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
-      );
-      for (const m of script.mysteries) grid[m.c][m.r] = MYSTERY;
-      spinCount++;
-      return grid;
     },
   };
 }

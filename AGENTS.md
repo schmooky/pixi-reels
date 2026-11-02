@@ -19,7 +19,7 @@ The library builds to two entry points:
 - `pixi-reels`. core (reel set, phases, symbols, events, testing, debug).
 - `pixi-reels/spine`. Spine 2D symbols with the Bonbon animation vocabulary.
 
-Everything else. cheats and seeded RNG live in `packages/cheats/`; Spine loaders, symbol classes and the recipe contract live in `packages/kit/` (`@pixi-reels/kit`). Both are reference code, copy-pasteable, **not library API**.
+Everything else. cheats and seeded RNG live in `packages/cheats/` (private); Spine loaders, symbol classes, the asset kits, `tapToSpin`, the sound set, the pay-ways evaluator and the recipe contract live in `packages/kit/` (`@pixi-reels/kit`, published, with the subpaths `/spine`, `/sound` and `/ways`). Neither is **library API**: import what fits, copy the rest.
 
 ---
 
@@ -66,7 +66,7 @@ pixi-reels/
 │   ├── src/recipes/               ~230 live runnable demos, each a real module (the /recipes route)
 │   ├── src/lib/recipeModule.ts    runs a recipe module from source; the one table of imports it may use
 │   └── public/                    prototype atlas + spine sets
-├── packages/kit/                  @pixi-reels/kit: symbol classes, asset kits, readout, the RecipeContext contract
+├── packages/kit/                  @pixi-reels/kit: symbol classes, asset kits, tapToSpin, readout, the RecipeContext contract; /spine, /sound, /ways subpaths
 ├── packages/cheats/               CheatEngine + SeededRng (private, ADR 009)
 ├── tests/e2e/                     Playwright specs + the orientation-matrix fixture
 ├── docs/
@@ -207,10 +207,10 @@ class SpinManager { /* ... */ }     // wrong; you already have ReelSet
 
 ### Add a new recipe or demo to the site
 
-1. **Never** add it to the library. Recipes and demos live in `apps/site/src/components/`.
-2. Reuse `packages/cheats`. Extend it if you need a new cheat. don't define one inline in the demo.
-3. Write the MDX in `apps/site/src/pages/recipes/` or `apps/site/src/pages/demos/` with frontmatter (title, subtitle, tags, steps).
-4. Update `apps/site/src/content/*.ts` metadata if adding to a gallery.
+1. **Never** add it to the library. A recipe is `apps/site/src/recipes/<slug>.recipe.ts`: `export const meta` (title, topic, tags, optional height and needs) and `export default async function recipe({ app }: RecipeContext): Promise<RecipeResult>`.
+2. The recipe builds its set on `app.ticker`, adds it to `app.stage`, loads its own assets with `createAssets()`, wires its control with `tapToSpin(app, { reelSet, next })` (or `{ spin, skip }` for a round of its own) and its sounds with `reelSounds(reelSet)` / `boardSounds(board)` from `@pixi-reels/kit/sound`, and returns `{ reelSet }` (or `stage`, `board`, `cleanup`). Nothing comes through the context but `app`; the module must run as-is copied into a game. `packages/kit/README.md` has a full example.
+3. It may import only what `apps/site/src/lib/recipeModule.ts` resolves: `pixi.js`, `gsap`, `pixi-silk`, `pixi-reels` and its subpaths, `@pixi-reels/kit` and its subpaths. Readouts go through `readout`, never bare `PIXI.Text` / `PIXI.Graphics`.
+4. Embed it on the umbrella page under `apps/site/src/content/recipes/` (or a topic page) with `<RecipeDemo code="<slug>" />`.
 
 ### Add or modify a cheat
 

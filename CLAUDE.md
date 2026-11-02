@@ -134,7 +134,7 @@ If you've tried three approaches and none work, do not try a fourth random appro
 **Monorepo layout:**
 - `packages/pixi-reels/`. The npm-publishable library
 - `apps/site/`. The docs site. Its `/recipes` route is where live, runnable demos live now: ~230 of them, each an `apps/site/src/recipes/<slug>.recipe.ts` module (`export const meta`, `export default async function recipe(ctx)`) driven by an umbrella page under `src/content/recipes/`. `src/lib/recipeModule.ts` runs one from source; what you read is what runs, in the docs, in Studio and in a game
-- `packages/kit/`. `@pixi-reels/kit`: symbol classes and asset loaders the recipes run on (BlurSpriteSymbol, CoinSymbol, Spine loaders, atlas loader), `pickWeighted`, `readout` (the switchable explanation layer) and the `RecipeContext` / `RecipeResult` / `RecipeMeta` contract
+- `packages/kit/`. `@pixi-reels/kit`, published: symbol classes and asset loaders the recipes run on (BlurSpriteSymbol, CoinSymbol, Spine loaders, atlas loader), `createAssets`, `tapToSpin` (the canvas as the spin button, with the "tap to spin" plaque), `pickWeighted`, `readout` (the switchable explanation layer) and the `RecipeContext` / `RecipeResult` / `RecipeMeta` contract. Subpaths: `/spine`, `/sound` (`reelSounds`, `boardSounds`), `/ways` (`evaluateWays`, `countWays`)
 - `apps/site/public/prototype-symbols/`. Open-licensed sprite atlas the recipes draw with
 - `packages/cheats/`. `CheatEngine` + `SeededRng`. Deliberately outside the library (ADR 009); used by the docs site and by the library's own integration tests
 - `tests/e2e/fixtures/orientation-matrix/`. All four travel combinations on one page. The Playwright target for browser coverage of the axis
@@ -293,8 +293,11 @@ debugOverlay(reelSet, { layers: 'all', live: true, ticker: app.ticker });
 ### Recipe kit (`packages/kit/src/`)
 | File | Purpose |
 |-----------|---------|
-| `recipe.ts` | `RecipeContext` (`app`, `assets`, `sounds`), `RecipeResult`, `RecipeMeta`: the contract every recipe module is written against |
-| `assets.ts` | `createAssets(baseUrl)`: the atlas, Spine sets, Hold & Win and clover kits by name |
+| `recipe.ts` | `RecipeContext` (`app`, plus Studio-only `userSymbols` / `userSymbolData`), `RecipeResult` (`reelSet?`, `stage?`, `board?`, `cleanup?`), `RecipeMeta`: the contract every recipe module is written against. A recipe adds its root to `app.stage`, wires its own control and sounds, and returns only what a host's chrome reads |
+| `tapToSpin.ts` | `tapToSpin(app, { reelSet, next })` or `tapToSpin(app, { spin, skip })`: the canvas as the spin button, a tap mid-round skips, the cue plaque drawn in the canvas; `ownTap(event)` keeps a tap on a display object from reaching it |
+| `assets.ts` | `createAssets(baseUrl)`: the atlas, Spine sets, Hold & Win and clover kits by name. A recipe calls it itself; nothing comes through the context |
+| `sound.ts` | The `@pixi-reels/kit/sound` subpath: one zvuk engine per page, the sound set, `reelSounds(reelSet)` / `boardSounds(board)` with the default cue tables, `configureSounds({ baseUrl })` |
+| `ways.ts` | The `@pixi-reels/kit/ways` subpath: `evaluateWays`, `countWays` (moved here from `@pixi-reels/cheats/ways`) |
 | `readout.ts` | `readout.plaque()` / `readout.graphics()`: explanation drawings a host can switch off (`setReadouts`) |
 | `prototypeSpriteLoader.ts` | Loads the `prototype-symbols` TexturePacker atlas (`apps/site/public/prototype-symbols/`, 84 frames + blur variants) |
 | `BlurSpriteSymbol.ts` | Sprite symbol that swaps to a pre-rendered motion-blur texture during SPIN |

@@ -8,8 +8,9 @@ import {
   RoundedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A different trim per side',
@@ -84,17 +85,22 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, H + 16);
   reelSet.addChild(hud);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      try { frame.destroy(); trace.destroy(); lipText.destroy({ children: true }); hud.destroy({ children: true }); } catch {}
-    },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       const p = reelSet.spin();
       await new Promise((r) => setTimeout(r, 380));
       reelSet.setResult(grid);
       await p;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      try { frame.destroy(); trace.destroy(); lipText.destroy({ children: true }); hud.destroy({ children: true }); } catch {}
     },
   };
 }

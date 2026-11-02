@@ -1,6 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Tease for N symbols, not N milliseconds',
@@ -77,10 +78,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // them, which is the whole point of a travel anchor.
   const SPEEDS: Record<number, number> = { 2: 0.55, 3: 0.3, 4: 0.14 };
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[1].visible[1] = SCAT;
@@ -103,5 +105,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         .map((i) => `reel ${i} @${SPEEDS[i]}x -> ${(covered.get(i) ?? 0).toFixed(2)} cells`)
         .join('   ');
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

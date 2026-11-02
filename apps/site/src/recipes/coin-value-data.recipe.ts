@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { HoldAndWinBuilder, ReelSymbol } from 'pixi-reels';
 import type { HwCoin } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Beginner: carry the value as data',
@@ -98,10 +99,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     [],
   ];
 
-  return {
-    board,
-    cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { labels.destroy({ children: false }); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       for (const t of labelAt.values()) t.destroy();
       labelAt.clear();
       board.reset();
@@ -114,5 +114,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
       hud.text = `held ${board.lockedCoins.length} · total ${fmt(total)}`;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { labels.destroy({ children: false }); } catch {} board.destroy(); },
   };
 }

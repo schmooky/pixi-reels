@@ -2,9 +2,10 @@ import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import { fitText, GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Value-carrying coin (Hold & Win)',
@@ -81,10 +82,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   ];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { total.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       for (const t of labelAt.values()) t.destroy(); labelAt.clear();
@@ -96,5 +96,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { total.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   };
 }

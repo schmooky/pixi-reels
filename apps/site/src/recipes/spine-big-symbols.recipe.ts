@@ -1,7 +1,8 @@
 import { ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { buildSpineMap } from '@pixi-reels/kit';
+import { buildSpineMap, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { GeneratedSpineName, RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Big symbols with Spine',
@@ -18,7 +19,8 @@ export const meta = {
 //
 // Reuses the wild skeleton for the 2x2 BIGWILD. Spine scales the whole
 // rig to whatever cell box the engine hands it without losing crispness.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   await assets.spineSet("generated");
 
   const REELS = 5;
@@ -102,9 +104,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   });
 
   let spinCount = 0;
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () => {
+    next: () => {
       const grid = Array.from({ length: REELS }, () =>
         Array.from({ length: ROWS }, () => CARDS[Math.floor(Math.random() * CARDS.length)]),
       );
@@ -116,5 +120,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       }
       return grid;
     },
-  };
+  });
+  return { reelSet };
 }

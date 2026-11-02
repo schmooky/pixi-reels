@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { AnimatedSpriteSymbol, HoldAndWinBuilder } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { bezierFly, coinWaves } from '@pixi-reels/kit/spine';
 import type { HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: skip the whole feature',
@@ -20,7 +21,8 @@ export const meta = {
 // `feature:skip`; the game layer listens and cuts its own flights / collect
 // short. The normal `feature:end` event still fires as the single "feature
 // over" signal. Press Run, then tap the button again mid-feature to skip.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COIN = 'coin', CELL = 70, GAP = 6, COLS = 5, ROWS = 3;
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const fmt = (v: number) => v.toFixed(2);
@@ -90,18 +92,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let running = false;
-  return {
-    board,
-    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { meterText.destroy(); hud.destroy({ children: true }); labels.destroy({ children: false }); } catch {} board.destroy(); },
-    // RecipeRunner calls onSkip when the button is tapped mid-feature
-    onSkip: () => {
-      if (!running || skipping) return;
-      skipping = true;
-      board.skip();                              // slam every in-flight spin + fire feature:skip
-      for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } // cut flights short
-      flyers.clear();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (running) return;
       running = true; skipping = false; total = 0; meterText.text = '0.00';
       for (const t of labelAt.values()) t.destroy(); labelAt.clear();
@@ -119,5 +112,17 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `feature:end fired · TOTAL ${fmt(total)}${skipping ? ' (skipped)' : ''} · press spin`;
       running = false;
     },
+    // RecipeRunner calls onSkip when the button is tapped mid-feature
+    skip: () => {
+      if (!running || skipping) return;
+      skipping = true;
+      board.skip();                              // slam every in-flight spin + fire feature:skip
+      for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } // cut flights short
+      flyers.clear();
+    },
+  });
+  return {
+    board,
+    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { meterText.destroy(); hud.destroy({ children: true }); labels.destroy({ children: false }); } catch {} board.destroy(); },
   };
 }

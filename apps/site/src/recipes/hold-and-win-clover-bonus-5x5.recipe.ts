@@ -1,15 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { HoldAndWinBuilder } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Clover bonus board, 5x5',
@@ -23,7 +18,8 @@ export const meta = {
 // Hold & Win. Gold clovers spin past with bet-scaled amounts and lock where
 // they land; a blank cell is the game's own dark clover tile; the 1 2 3
 // lamps under the board are the respin counter, relit on every hit.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 5;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
@@ -111,10 +107,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 1 }, { reel: 1, cell: 4 }], [], [{ reel: 2, cell: 0 }, { reel: 3, cell: 2 }], [], [], []];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { hud.destroy({ children: true }); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       total = 0;
@@ -132,5 +127,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   };
 }

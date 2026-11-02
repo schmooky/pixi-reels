@@ -3,8 +3,9 @@ import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Groups: reels that stop and skip together',
@@ -112,16 +113,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       : `press ${press}: [${named}] - round over`;
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      for (const i of [...glows.keys()]) stopGlow(i);
-      try { glowLayer.destroy({ children: true }); } catch {}
-      try { bars.destroy(); } catch {}
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-    onSpin: async () => {
+    spin: async () => {
       order = [];
       press = 0;
       for (const i of [...glows.keys()]) stopGlow(i);
@@ -139,6 +135,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await p;
 
       hud.text = `landed ${order.join(' -> ')}`;
+    },
+    skip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      for (const i of [...glows.keys()]) stopGlow(i);
+      try { glowLayer.destroy({ children: true }); } catch {}
+      try { bars.destroy(); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

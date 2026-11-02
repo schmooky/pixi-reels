@@ -1,6 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Both knobs at once',
@@ -56,11 +57,14 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: REELS }, () =>
         Array.from({ length: CELLS }, () => pickWeighted(weights)),
       ),
-  };
+  });
+  return { reelSet };
 }

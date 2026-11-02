@@ -2,15 +2,10 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Respin counter lamps',
@@ -25,7 +20,8 @@ export const meta = {
 // one event, `respins:changed`, whose `reason` says why the number moved -
 // seed, hit-reset or miss - so the lamps can pop on a reset and dim on a miss
 // without the game re-deriving any of it.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
@@ -111,10 +107,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   const ROUNDS = [[], [], [{ reel: 0, cell: 2 }], [], [], []];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy({ children: true }); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -129,5 +124,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `counter ran out · ${board.lockedCoins.length} held · press spin to replay`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy({ children: true }); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   };
 }

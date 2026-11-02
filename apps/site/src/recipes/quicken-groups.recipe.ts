@@ -1,7 +1,8 @@
 import { SilkGraphics } from 'pixi-silk';
 import { CardSymbol, PhaseCardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Quicken with groups',
@@ -84,17 +85,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = `${hud.text.split('\n')[0]}\nlanded so far: ${order.join(' ')}`;
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      unwatch();
-      try { bars.destroy(); } catch {}
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    // Every press goes through the same call. The engine decides which group
-    // this one frees; the group lands through its stop.
-    onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[1].visible[1] = SCAT;
@@ -103,6 +98,17 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
+    },
+    // Every press goes through the same call. The engine decides which group
+    // this one frees; the group lands through its stop.
+    skip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      unwatch();
+      try { bars.destroy(); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

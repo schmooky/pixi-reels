@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Tall blocks that stream past during the spin',
@@ -95,10 +96,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     stage.addChild(caption);
   }
 
-  return {
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    stage,
-    nextResult: () => {
+    next: () => {
       // What LANDS is still the server's call. Half the spins land the block
       // on reel 0 (anchored at cell 0, so it fills the column) and a scatter
       // on reel 4; the rest land plain cards, with the tease having been a tease.
@@ -109,5 +111,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       return grid;
     },
-  };
+  });
+  return { reelSet, stage };
 }

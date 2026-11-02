@@ -1,7 +1,8 @@
 import { HoldAndWinBuilder, SpeedPresets } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import { CoinSymbol, coinValue, pickWeighted, readout } from '@pixi-reels/kit';
+import { CoinSymbol, coinValue, pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: cells that spin sideways',
@@ -96,13 +97,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   };
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => {
-      try { hud.destroy({ children: true }); } catch {}
-      board.destroy();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       try {
@@ -120,6 +117,13 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       } finally {
         busy = false;
       }
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      try { hud.destroy({ children: true }); } catch {}
+      board.destroy();
     },
   };
 }

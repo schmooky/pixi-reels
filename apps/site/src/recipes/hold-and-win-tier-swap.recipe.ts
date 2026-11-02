@@ -3,9 +3,10 @@ import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: swap a symbol in place (coin → MINI → MAJOR)',
@@ -110,10 +111,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   seedBoard();
 
   let tier = 0, busy = false;
-  return {
-    board,
-    cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy({ children: false }); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       tier = (tier + 1) % TIERS.length;
@@ -126,5 +126,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = `swapped to ${t.label} · neighbours unchanged · press spin`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy({ children: false }); } catch {} board.destroy(); },
   };
 }

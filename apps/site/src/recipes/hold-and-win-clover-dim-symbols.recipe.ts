@@ -1,14 +1,9 @@
 import { HoldAndWinBuilder } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import type { HwCell } from 'pixi-reels';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Dim the cells, or dim only the art',
@@ -30,7 +25,8 @@ export const meta = {
 // The reason this is a library method rather than three lines of `gsap.to`:
 // a dimmed cell that swaps its symbol has to keep its dim, and the symbol
 // that LEFT has to lose the tint before the pool hands it to another cell.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width;
@@ -105,10 +101,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -124,5 +119,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = 'both released - press spin to compare again';
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
   };
 }

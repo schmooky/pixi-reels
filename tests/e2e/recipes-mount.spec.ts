@@ -19,7 +19,7 @@ import { setTimeout as wait } from 'node:timers/promises';
  * screenshot baseline is GPU- and platform-dependent (same reasoning as
  * orientation-matrix.spec.ts).
  *
- * A third section drives named demos through their spin button, because
+ * A third section drives named demos by tapping their canvas, because
  * mounting proves nothing about a recipe whose point is inside `onSpin`. It
  * lives here rather than in its own spec so it shares this file's preview
  * server: the guard above refuses to attach to a server it did not start, and
@@ -223,12 +223,14 @@ for (const { path, anchor, ms } of DRIVEN) {
       .map((t) => t.trim()).filter(Boolean);
     expect(mountFailures, `${anchor} threw on mount`).toEqual([]);
 
-    // The canvas appears before the recipe has finished loading its kits; the
-    // control stays disabled until then, and on a page of 48 demos that can
-    // take longer than click()'s own 10 s wait.
-    const spin = frame.getByRole('button', { name: 'Spin' });
-    await expect(spin, `${anchor} never became ready`).toBeEnabled({ timeout: 60_000 });
-    await spin.click();
+    // The canvas appears before the recipe has finished loading its kits.
+    // There is no DOM spin control: the recipe wires `tapToSpin`, so a tap on
+    // the canvas starts the round, and the runner's wrapper flips its
+    // `data-state` from `loading` to `ready` once that tap would be heard. On
+    // a page of 48 demos that can take longer than click()'s own 10 s wait.
+    await expect(frame.locator('[data-state="ready"]'), `${anchor} never became ready`)
+      .toHaveCount(1, { timeout: 60_000 });
+    await frame.locator('canvas').click({ force: true });
     await page.waitForTimeout(ms);
 
     // Both assertions below are load-bearing, and they catch different
@@ -336,7 +338,11 @@ test('the debug overlay draws a spin without throwing', async ({ page }) => {
   for (const group of ['motion', 'bounds']) {
     await frame.getByRole('button', { name: group, exact: true }).click();
   }
-  await frame.getByRole('button', { name: 'Spin' }).click();
+  // A tap on the canvas starts the spin (`tapToSpin`); wait for the runner to
+  // report the recipe ready first, or the tap lands on a canvas that is not
+  // listening yet and the overlay records no round.
+  await expect(frame.locator('[data-state="ready"]')).toHaveCount(1, { timeout: 60_000 });
+  await frame.locator('canvas').click({ force: true });
   await page.waitForTimeout(8_000);
   for (const group of ['info', 'grid', 'motion', 'bounds']) {
     await frame.getByRole('button', { name: group, exact: true }).click();

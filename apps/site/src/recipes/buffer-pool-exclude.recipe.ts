@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Which symbols may spawn where',
@@ -177,10 +178,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   applyPool();
   refreshLabels();
 
-  return {
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    stage,
-    onSpin: async () => {
+    spin: async () => {
       // Step to the next state so consecutive spins show all three.
       mode = (mode + 1) % MODES.length;
       applyPool();
@@ -196,6 +198,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       );
       await p;
     },
+  });
+  return {
+    reelSet,
+    stage,
     cleanup: () => {
       app.ticker.remove(tick);
     },

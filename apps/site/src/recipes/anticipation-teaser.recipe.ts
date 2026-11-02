@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Anticipation teaser',
@@ -38,9 +40,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.speed.addProfile('demo', { ...SpeedPresets.NORMAL, anticipationDelay: 1800 });
   reelSet.setSpeed('demo');
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Land result. reels 3 and 4 will anticipate.
       // Explicit ColumnTarget form: bufferStart on reels 3 and 4 holds the BIG
       // coin, so when those reels decelerate for the anticipation phase it is
@@ -64,5 +68,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(result);
       await p;
     },
-  };
+  });
+  return { reelSet };
 }

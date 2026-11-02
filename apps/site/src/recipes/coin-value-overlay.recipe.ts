@@ -1,6 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { ReelSetBuilder, ReelSymbol, SpeedPresets } from 'pixi-reels';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Beginner: number on a ready-made coin',
@@ -20,7 +22,8 @@ export const meta = {
 //
 // `this.view` is a container, so you `addChild` both and position them
 // in resize().
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const { coin } = await assets.holdAndWinSprites(); // the diamond-coin sprite frames
   const COIN_TEX = coin[0];                        // use one frame as the still coin
 
@@ -70,8 +73,10 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   reelSet.x = (app.screen.width - (REELS * CELL + (REELS - 1) * GAP)) / 2;
   reelSet.y = (app.screen.height - CELL) / 2 - 6;
 
-  return {
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () => Array.from({ length: REELS }, () => [idFor(VALUES[Math.floor(Math.random() * VALUES.length)])]),
-  };
+    next: () => Array.from({ length: REELS }, () => [idFor(VALUES[Math.floor(Math.random() * VALUES.length)])]),
+  });
+  return { reelSet };
 }

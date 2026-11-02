@@ -3,9 +3,10 @@ import { gsap } from 'gsap';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { coinWaves, GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: count-up coin',
@@ -126,15 +127,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   const randVal = () => [2, 5, 10, 15, 25, 50, 100][Math.floor(Math.random() * 7)];
   let busy = false;
-  return {
-    board,
-    cleanup: () => {
-      for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
-      labelAt.clear();
-      try { hud.destroy({ children: true }); labels.destroy(); } catch {}
-      board.destroy();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
@@ -156,6 +151,15 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       const total = coins.reduce((a, c) => a + c.data.value, 0);
       hud.text = `counted up · total ${fmt(total)} · press spin to re-roll`;
       busy = false;
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
+      labelAt.clear();
+      try { hud.destroy({ children: true }); labels.destroy(); } catch {}
+      board.destroy();
     },
   };
 }

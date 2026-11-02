@@ -2,8 +2,9 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted } from '@pixi-reels/kit';
+import { ownTap, pickWeighted, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Cell hit areas. click to pick, hover to preview',
@@ -91,7 +92,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       const k = keyOf(reel, cell);
       hit.on('pointerover', () => { hoverKey = k; redraw(); });
       hit.on('pointerout', () => { if (hoverKey === k) hoverKey = null; redraw(); });
-      hit.on('pointertap', () => {
+      hit.on('pointertap', (e) => {
+        ownTap(e);
         if (picked.has(k)) picked.delete(k);
         else { picked.add(k); pulse(reel, cell); }
         redraw();
@@ -106,9 +108,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   for (const h of hitAreas) h.zIndex = 9999;
   reelSet.sortableChildren = true;
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Normal spin; picks survive across spins.
       const p = reelSet.spin();
       await new Promise(r => setTimeout(r, 150));
@@ -117,6 +121,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(grid.map((visible) => ({ visible })));
       await p;
     },
+  });
+  return {
+    reelSet,
     cleanup: () => {
       for (const h of hitAreas) h.destroy();
       overlayGfx.destroy();

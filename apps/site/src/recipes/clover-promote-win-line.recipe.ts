@@ -1,12 +1,6 @@
 import { gsap } from 'gsap';
 import { ReelSetBuilder, RoundedRectMaskStrategy } from 'pixi-reels';
-import {
-  CLOVER_CELL_RADIUS,
-  CLOVER_FRUITS,
-  CLOVER_REEL_SPEED,
-  CloverSymbol,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL_RADIUS, CLOVER_FRUITS, CLOVER_REEL_SPEED, CloverSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 
 export const meta = {
@@ -31,7 +25,8 @@ export const meta = {
 // viewport mask cuts every symbol at the grid edge and the next reel draws
 // over the one before it. Promoted, the same tween is neither cut nor
 // covered - and nothing moved to get there.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -82,9 +77,8 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let busy = false;
-  return {
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} reels.destroy(); },
-    onSpin: async () => {
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       const settle = reels.spin();
@@ -100,5 +94,8 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = 'released - press spin to compare again';
       busy = false;
     },
+  });
+  return {
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} reels.destroy(); },
   };
 }

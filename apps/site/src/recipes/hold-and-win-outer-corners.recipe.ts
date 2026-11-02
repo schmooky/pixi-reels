@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
 import { HoldAndWinBuilder, RoundedRectMaskStrategy } from 'pixi-reels';
-import { CLOVER_CELL, CLOVER_SPEED, CloverSymbol, readout } from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, CloverSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'One rounded window, one mask per cell',
@@ -20,7 +21,8 @@ export const meta = {
 // top-left for (0, 0), top-right for (4, 0), and so on. With no gap between
 // the cells the fifteen masks read as one rounded frame, cut on the same
 // radius as the panel drawn behind the board.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: CLOVER_CELL.width / 2, height: CLOVER_CELL.height / 2 }; // 101 x 85
   const RADIUS = 20;
@@ -122,15 +124,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   const ROUNDS = [[{ reel: 2, cell: 1 }, { reel: 4, cell: 0 }], [{ reel: 0, cell: 2 }], [], [], []];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => {
-      try { hud.destroy({ children: true }); } catch {}
-      try { seams.destroy(); } catch {}
-      try { frame.destroy(); } catch {}
-      board.destroy();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -145,6 +141,15 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
       hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
       busy = false;
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      try { hud.destroy({ children: true }); } catch {}
+      try { seams.destroy(); } catch {}
+      try { frame.destroy(); } catch {}
+      board.destroy();
     },
   };
 }

@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Peek symbol from buffer-start',
@@ -50,9 +52,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .initialFrame(initialFrame)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Land on a random grid AND re-seed the buffer-above with TEASE so the
       // next spin shows the peek again. Same explicit ColumnTarget shape used
       // for the initial frame above.
@@ -70,5 +74,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(result);
       await p;
     },
-  };
+  });
+  return { reelSet };
 }

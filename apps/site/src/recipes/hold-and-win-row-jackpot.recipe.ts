@@ -3,9 +3,10 @@ import { gsap } from 'gsap';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { bezierFly, coinWaves, GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: row-complete jackpot',
@@ -186,20 +187,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   seedBoard();
 
   let phase = 'ready';
-  return {
-    board,
-    cleanup: () => {
-      for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
-      flyers.clear();
-      for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
-      labelAt.clear();
-      gsap.killTweensOf(awardText.scale);
-      pendingFx.length = 0;
-      try { hud.destroy({ children: true }); awardText.destroy(); labels.destroy(); } catch {}
-      board.destroy();
-      plaque.destroy();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (phase === 'running') return;
       if (phase === 'done') {
         for (const t of labelAt.values()) t.destroy();
@@ -217,6 +207,20 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await sleep(300);
       phase = 'done';
       hud.text = `MINI awarded ${fmt(award)} · press spin to reset`;
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
+      flyers.clear();
+      for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
+      labelAt.clear();
+      gsap.killTweensOf(awardText.scale);
+      pendingFx.length = 0;
+      try { hud.destroy({ children: true }); awardText.destroy(); labels.destroy(); } catch {}
+      board.destroy();
+      plaque.destroy();
     },
   };
 }

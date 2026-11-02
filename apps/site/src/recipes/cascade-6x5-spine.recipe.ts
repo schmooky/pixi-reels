@@ -1,6 +1,8 @@
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Cascade 6x4 tumble',
@@ -13,7 +15,8 @@ export const meta = {
 // Same starter as the card canvas above, with spine symbols. Only the
 // registration block and the id constants differ; the orchestration
 // (spin, setResult, runCascade, both callbacks) is identical.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const cascade = await assets.spineSet("cascade");
 
   const IDS = [...cascade.symbolIds];
@@ -73,9 +76,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     })
     .ticker(app.ticker).build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Stage 0: cluster of CLUSTER on cell 2, cols 0-2.
       const stage0 = Array.from({ length: REELS }, (_, c) =>
         Array.from({ length: ROWS }, (_, r) =>
@@ -115,5 +120,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
         pauseAfterDestroyMs: 250,
       });
     },
-  };
+  });
+  return { reelSet };
 }

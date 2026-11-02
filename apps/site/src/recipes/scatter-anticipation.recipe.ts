@@ -6,7 +6,9 @@ import {
   ReelSetBuilder,
   SpeedPresets,
 } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Scatter-driven anticipation',
@@ -76,10 +78,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   let spinCount = 0;
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
-    onSpin: async () => {
+    spin: async () => {
       spinCount++;
       // Odd spins: 4 scatters + all-remaining. Even spins: 3 scatters + scatter-only.
       const allRemaining = spinCount % 2 === 1;
@@ -99,5 +102,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setAnticipation(teaseReels, { stagger: 'sequential', slowdown: { from: 0.5, to: 0.12 } });
       await p;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
   };
 }

@@ -1,8 +1,9 @@
 import { gsap } from 'gsap';
 import { PhaseCardSymbol, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import type { ReelBounce, SkipContext, SpeedProfile, StopPhaseConfig } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A phase that can be quickened',
@@ -136,19 +137,24 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = idle;
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      unwatch();
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       const p = reelSet.spin();
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
+    },
+    skip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      unwatch();
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

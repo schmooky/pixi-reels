@@ -1,6 +1,8 @@
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Cell bounds. overlays, paylines & hit areas',
@@ -59,9 +61,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     [SEVEN, SEVEN, A],
   ];
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Clear last spin's overlay before the reels start moving.
       overlayGfx.clear();
 
@@ -83,5 +87,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       for (const reel of winCols) drawCellOutline(reel, WIN_ROW, 0xff6b35);
       drawPayline(winCols, WIN_ROW, 0xff6b35);
     },
-  };
+  });
+  return { reelSet };
 }

@@ -40,7 +40,7 @@
 | **UI / HUD** | No spin button, no balance readout, no bet selector, no FS counter. The library is a `PIXI.Container`. You place it in your scene. | Game code. |
 | **i18n / localization** | No user-facing strings in the library. | Game code. |
 | **Accessibility** (ARIA, screen readers, reduced motion) | The library runs inside a canvas; a11y is a concern of the surrounding DOM UI. Consumers can honour `prefers-reduced-motion` by swapping speed profiles. | Consumer's DOM UI + custom `SpeedProfile`. |
-| **Asset loading + pipeline** | PixiJS `Assets` already does this. The library receives textures / Spine aliases already loaded. | Consumer, or `apps/site/src/runtime/`'s Spine loaders as a reference. |
+| **Asset loading + pipeline** | PixiJS `Assets` already does this. The library receives textures / Spine aliases already loaded. | Consumer, or the loaders in `@pixi-reels/kit` (`packages/kit/`) as a reference. |
 | **Analytics, wallet, session** | Nothing about the player. | Game code / platform. |
 | **Licence / entitlement / regulatory hooks** | Not a regulated component. | Operator stack. |
 
@@ -60,7 +60,7 @@
 ### Negative
 
 - Adopters sometimes want a more "batteries-included" framework. The library points them at the examples + recipes, which are copy-pasteable but not library API. Some reimplement the same win-detection or bonus-state code. That's fine — the site documents the common shapes (see `/recipes/` and `/spine/`), so the re-implementation is never from scratch.
-- A small category of utilities sits outside the library: `packages/cheats/` (cheats, seeded RNG) and `apps/site/src/runtime/` (symbol classes, Spine and atlas loaders). These are intentionally **not** published - they are reference code, not API. See ADR 009.
+- A small category of utilities sits outside the library: `packages/cheats/` (cheats, seeded RNG), intentionally **not** published, and `packages/kit/` (symbol classes, Spine and atlas loaders, the tap-to-spin control, the sound set), published as `@pixi-reels/kit` since 2026-11 so that a recipe copied from the docs resolves its imports. Both are reference code, not engine API. See ADR 009.
 
 ## Enforcement
 

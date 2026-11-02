@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Skip an in-flight nudge',
@@ -43,9 +45,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const p = reelSet.spin();
       await new Promise((resolve) => setTimeout(resolve, 220));
       reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
@@ -65,9 +69,12 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         });
       }
     },
+  });
+  return {
+    reelSet,
     // No `onSkip` override needed. the RecipeRunner's built-in fallback
     // detects an in-flight nudge and calls `reelSet.skipNudge()` for us.
     // The recipe deliberately leaves the default behaviour in place so
-    // readers can copy the minimal pattern.
+    // readers can copy the minimal pattern.,
   };
 }

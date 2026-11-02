@@ -1,8 +1,9 @@
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Cell bounds on a horizontal set',
@@ -68,9 +69,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     [C, A, PAY, B, C],
   ];
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       overlayGfx.clear();
 
       const p = reelSet.spin();
@@ -89,6 +92,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       overlayGfx.polyline(pts).stroke({ color: 0xff6b35, width: 3, alpha: 0.85, cap: 'round' });
     },
+  });
+  return {
+    reelSet,
     cleanup: () => {
       for (const t of tags) t.destroy({ children: true });
       overlayGfx.destroy();

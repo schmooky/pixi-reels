@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Tall block in an anticipation tease, landing peeking, then up',
@@ -68,10 +69,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   stage.addChild(reelSet);
   stage.addChild(title);
 
-  return {
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    stage,
-    onSpin: async () => {
+    spin: async () => {
       // 1. Same landing as the nudge-up demo: head on the last visible cell.
       const grid = [col3(), col3(), col3(), col3(), [filler(), filler(), TALL.id]];
       grid[0][1] = SCATTER.id;
@@ -101,5 +103,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       await new Promise((r) => setTimeout(r, 900));
     },
-  };
+  });
+  return { reelSet, stage };
 }

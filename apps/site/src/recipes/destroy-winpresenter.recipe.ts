@@ -1,6 +1,8 @@
 import { ReelSetBuilder, SpeedPresets, WinPresenter } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Cascade wins. present, destroy, refill',
@@ -14,7 +16,8 @@ export const meta = {
 // the board and shows each winning combination in turn, a short pause,
 // then all winners explode and the refill drops. Both combinations go
 // through one WinPresenter call in runCascade's presentWinners hook.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const cascade = await assets.spineSet("cascade");
 
   const IDS = [...cascade.symbolIds];
@@ -86,9 +89,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
 
   reelSet.events.on('spin:start', () => presenter.abort());
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const stage0 = Array.from({ length: REELS }, (_, c) =>
         Array.from({ length: ROWS }, () => randSymbol()),
       );
@@ -144,6 +149,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
         pauseAfterDestroyMs: 83,
       });
     },
-    cleanup: () => presenter.destroy(),
-  };
+  });
+  return { reelSet, cleanup: () => presenter.destroy() };
 }

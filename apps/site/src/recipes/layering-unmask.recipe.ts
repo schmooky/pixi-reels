@@ -6,8 +6,9 @@ import {
   StaticSpinSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
@@ -24,7 +25,8 @@ export const meta = {
 // neighbours with zero recipe code. The engine bakes each reel's offset
 // into the lifted view, so this works on offset (center-anchored) reels
 // too, no manual promotion needed.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const thunderkick = await assets.spineSet("thunderkick");
 
   const SPINE_SCALE = 0.6;
@@ -81,9 +83,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () => {
+    next: () => {
       const grid = ROWS_PER_REEL.map((cells) =>
         Array.from({ length: cells }, () => pickWeighted(weights)),
       );
@@ -94,5 +98,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       grid[5][Math.random() < 0.5 ? 0 : grid[5].length - 1] = 'scatter';
       return grid;
     },
-  };
+  });
+  return { reelSet };
 }

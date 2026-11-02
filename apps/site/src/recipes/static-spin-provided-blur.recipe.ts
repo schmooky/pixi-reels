@@ -6,7 +6,9 @@ import {
   SpriteSymbol,
   StaticSpinSymbol,
 } from 'pixi-reels';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Bring your own blur textures',
@@ -20,7 +22,8 @@ export const meta = {
 // the cache treats provided textures as authoritative and never bakes or
 // destroys them). The royal symbols have NO blur art in the atlas, so the
 // cache auto-bakes theirs. Both kinds spin through the exact same wrapper.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const { textures, blurTextures } = await assets.prototypeAtlas();
 
   const PROVIDED = ['round/round_1', 'round/round_2', 'round/round_3', 'round/round_4'];
@@ -67,11 +70,14 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: 5 }, () =>
         Array.from({ length: 3 }, () => IDS[Math.floor(Math.random() * IDS.length)]),
       ),
-  };
+  });
+  return { reelSet };
 }

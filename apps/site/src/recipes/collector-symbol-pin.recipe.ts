@@ -4,9 +4,10 @@ import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { bezierFly, fitText, GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Collector symbol',
@@ -107,10 +108,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   }
 
   let phase = 'ready';
-  return {
-    board,
-    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (phase === 'running') return;
       if (phase === 'done') { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); board.reset(); seedBoard(); phase = 'ready'; return; }
       phase = 'running';
@@ -122,5 +122,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = `collector absorbed ${sum} · press spin to reset`;
       phase = 'done';
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   };
 }

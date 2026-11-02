@@ -2,8 +2,9 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { AnimatedSpriteSymbol, HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import { BlurSpriteSymbol, readout } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: multiplier-strike coin',
@@ -17,7 +18,8 @@ export const meta = {
 // press a multiplier coin lands, the strike FX (17-frame AnimatedSprite)
 // fires over it, and every coin's value is multiplied by it - labels bump,
 // total jumps. The multiplier lives in coin.data; the board is value-blind.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3, CELL = 76, GAP = 6;
   const COIN = 'coin';
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -125,10 +127,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   seedBoard();
 
   let phase = 'ready';
-  return {
-    board,
-    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy?.(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (phase === 'running') return;
       if (phase === 'done') { reset(); phase = 'ready'; return; }
       phase = 'running';
@@ -149,5 +150,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       phase = 'done';
       hud.text = `×${MULT} applied · total ${fmt(totalOf())} · press spin to reset`;
     },
+  });
+  return {
+    board,
+    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy?.(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   };
 }

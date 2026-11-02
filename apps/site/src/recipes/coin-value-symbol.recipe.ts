@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { ReelSetBuilder, ReelSymbol, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Beginner: carry a value on a coin',
@@ -115,9 +116,13 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = `landed ${values.join(' · ')}  =  ${total}`;
   });
 
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () => Array.from({ length: REELS }, () => [idFor(VALUES[Math.floor(Math.random() * VALUES.length)])]),
+  });
   return {
     reelSet,
     cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    nextResult: () => Array.from({ length: REELS }, () => [idFor(VALUES[Math.floor(Math.random() * VALUES.length)])]),
   };
 }

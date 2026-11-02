@@ -6,8 +6,9 @@ import {
   StaticSpinSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Multi-skin Spine tiers on a compact grid',
@@ -22,7 +23,8 @@ export const meta = {
 // via spineMap's `skin`. The spin uses the engine's static-spin feature:
 // every cell swaps to a cached snapshot texture with auto-baked motion
 // blur, so no skeleton ticks while the reels turn.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const thunderkick = await assets.spineSet("thunderkick");
 
   // The symbol plates measure exactly 175x203 (setup-pose bounds of the tier
@@ -84,11 +86,14 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       ROWS_PER_REEL.map((cells) =>
         Array.from({ length: cells }, () => pickWeighted(weights)),
       ),
-  };
+  });
+  return { reelSet };
 }

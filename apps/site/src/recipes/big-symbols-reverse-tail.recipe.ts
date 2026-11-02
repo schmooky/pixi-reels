@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Tail-visible block on a roll-up reel',
@@ -57,9 +59,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // 1. Land the block with its anchor on the LAST visible cell. The engine
       //    paints OCCUPIED into bufferEnd[0] and bufferEnd[1] itself, so only
       //    the block's head shows, at the edge the reel feeds from.
@@ -94,5 +98,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         duration: 540,
       });
     },
-  };
+  });
+  return { reelSet };
 }

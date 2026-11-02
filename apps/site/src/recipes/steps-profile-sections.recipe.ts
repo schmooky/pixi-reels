@@ -10,8 +10,9 @@ import {
   StopPhase,
 } from 'pixi-reels';
 import type { ReelSet, SpeedProfile, StopStepContext } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { ownTap, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'A step you added, tuned from the profile',
@@ -177,13 +178,29 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, TOTAL_H + 10);
   hud.eventMode = 'static';
   hud.cursor = 'pointer';
-  hud.on('pointertap', () => reelSet.setSpeed(current === 'normal' ? 'turbo' : 'normal'));
+  hud.on('pointertap', (e) => { ownTap(e); reelSet.setSpeed(current === 'normal' ? 'turbo' : 'normal'); });
   reelSet.events.on('speed:changed', (profile) => {
     current = profile.name;
     hud.text = label();
   });
   reelSet.addChild(hud);
 
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      reelSet.setAnticipation(TEASING, { stagger: 'sequential' });
+      await p;
+    },
+    // A quicken that reaches a reel mid-tease cuts it, and that reel lands on
+    // the section's own half: no `whenAnticipated`, blue puff, small lift.
+    skip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  });
   return {
     reelSet,
     cleanup: () => {
@@ -191,17 +208,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       gsap.killTweensOf(reelSet.pivot);
       try { fxLayer.destroy({ children: true }); } catch {}
       try { hud.destroy({ children: true }); } catch {}
-    },
-    // A quicken that reaches a reel mid-tease cuts it, and that reel lands on
-    // the section's own half: no `whenAnticipated`, blue puff, small lift.
-    onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
-    onSpin: async () => {
-      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-      const p = reelSet.spin();
-      await new Promise((r) => setTimeout(r, 250));
-      reelSet.setResult(grid);
-      reelSet.setAnticipation(TEASING, { stagger: 'sequential' });
-      await p;
     },
   };
 }

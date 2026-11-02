@@ -10,8 +10,9 @@ import {
   StopPhase,
 } from 'pixi-reels';
 import type { SpeedProfile, StopStepContext } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { ownTap, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Beats and FX that follow the speed mode',
@@ -95,13 +96,26 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, TOTAL_H + 10);
   hud.eventMode = 'static';
   hud.cursor = 'pointer';
-  hud.on('pointertap', () => reelSet.setSpeed(current === 'normal' ? 'turbo' : 'normal'));
+  hud.on('pointertap', (e) => { ownTap(e); reelSet.setSpeed(current === 'normal' ? 'turbo' : 'normal'); });
   reelSet.events.on('speed:changed', (profile) => {
     current = profile.name;
     hud.text = label();
   });
   reelSet.addChild(hud);
 
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      await p;
+    },
+    skip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
+  });
   return {
     reelSet,
     cleanup: () => {
@@ -109,14 +123,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       for (const g of plates) gsap.killTweensOf(g);
       try { plateLayer.destroy({ children: true }); } catch {}
       try { hud.destroy({ children: true }); } catch {}
-    },
-    onSkip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
-    onSpin: async () => {
-      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-      const p = reelSet.spin();
-      await new Promise((r) => setTimeout(r, 250));
-      reelSet.setResult(grid);
-      await p;
     },
   };
 }

@@ -2,8 +2,9 @@ import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { DEBUG_FONT } from 'pixi-reels/debug';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'The gas pedal: bounded acceleration',
@@ -160,16 +161,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   };
   app.ticker.add(tick);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      app.ticker.remove(tick);
-      try { trace.destroy(); } catch {}
-      try { panels.destroy(); } catch {}
-      for (const t of labels) { try { t.destroy(); } catch {} }
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[1].visible[1] = SCAT;
@@ -190,6 +186,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       await p;
       hud.text = 'landed. blue = speed, orange = acceleration';
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      app.ticker.remove(tick);
+      try { trace.destroy(); } catch {}
+      try { panels.destroy(); } catch {}
+      for (const t of labels) { try { t.destroy(); } catch {} }
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

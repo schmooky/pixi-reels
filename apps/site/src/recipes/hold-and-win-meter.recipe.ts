@@ -3,9 +3,10 @@ import { gsap } from 'gsap';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { bezierFly, coinWaves, GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: fly to a feature meter',
@@ -190,19 +191,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   }
 
   let phase = 'ready';
-  return {
-    board,
-    cleanup: () => {
-      for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
-      flyers.clear();
-      gsap.killTweensOf(totalText.scale);
-      for (const t of labelAt.values()) { try { t.destroy(); } catch {} }
-      labelAt.clear();
-      try { barBg.destroy(); barFill.destroy(); totalText.destroy(); hud.destroy({ children: true }); labels.destroy(); } catch {}
-      board.destroy();
-      counter.destroy();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (phase === 'running') return;
       if (phase === 'done') {
         total = 0; totalText.text = '0.00'; drawBar(0);
@@ -217,6 +208,19 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await collectToMeter();
       phase = 'done';
       hud.text = `collected ${fmt(total)} / ${fmt(TARGET)} · press spin to reset`;
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
+      flyers.clear();
+      gsap.killTweensOf(totalText.scale);
+      for (const t of labelAt.values()) { try { t.destroy(); } catch {} }
+      labelAt.clear();
+      try { barBg.destroy(); barFill.destroy(); totalText.destroy(); hud.destroy({ children: true }); labels.destroy(); } catch {}
+      board.destroy();
+      counter.destroy();
     },
   };
 }

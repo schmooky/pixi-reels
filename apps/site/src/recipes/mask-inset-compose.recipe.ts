@@ -10,8 +10,9 @@ import {
   RoundedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Insetting and composing',
@@ -94,19 +95,24 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     x: W / 2 + 90, duration: 2.2, yoyo: true, repeat: -1, ease: 'sine.inOut',
   });
 
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 380));
+      reelSet.setResult(grid);
+      await p;
+    },
+  });
   return {
     reelSet,
     cleanup: () => {
       drift.kill();
       try { banner.destroy({ children: true }); } catch {}
       try { hud.destroy({ children: true }); } catch {}
-    },
-    onSpin: async () => {
-      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-      const p = reelSet.spin();
-      await new Promise((r) => setTimeout(r, 380));
-      reelSet.setResult(grid);
-      await p;
     },
   };
 }

@@ -6,9 +6,10 @@ import {
   StaticSpinSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { pickWeighted, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { ReelLandingContext } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Landing: the frame, and the beat',
@@ -27,7 +28,8 @@ export const meta = {
 // symbol class, one option, no per-reel subclasses and no listener that
 // re-sets the track after the engine set it. The log under the grid prints
 // what the rule chose, the frame each reel lands (`spin:reelLanding`).
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const thunderkick = await assets.spineSet("thunderkick");
 
   const SPINE_SCALE = 0.6;
@@ -100,16 +102,21 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   };
   reelSet.events.on('spin:reelLanding', onLanding);
 
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () => {
+      for (let i = 0; i < 6; i++) lines[i] = `reel ${i}: spinning`;
+      redraw();
+      return ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights)));
+    },
+  });
   return {
     reelSet,
     cleanup: () => {
       reelSet.events.off('spin:reelLanding', onLanding);
       try { hud.destroy({ children: true }); } catch {}
-    },
-    nextResult: () => {
-      for (let i = 0; i < 6; i++) lines[i] = `reel ${i}: spinning`;
-      redraw();
-      return ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights)));
     },
   };
 }

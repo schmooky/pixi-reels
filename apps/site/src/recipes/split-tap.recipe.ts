@@ -2,9 +2,10 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { ownTap, pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { Reel } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Tap a cell to split it',
@@ -94,7 +95,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     button.position.set(i * 86, 0);
     button.eventMode = 'static';
     button.cursor = 'pointer';
-    button.on('pointertap', () => {
+    button.on('pointertap', (e) => {
+      ownTap(e);
       mode = name;
       paintToggles();
     });
@@ -173,6 +175,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hit.eventMode = 'static';
   hit.cursor = 'pointer';
   hit.on('pointertap', async (event) => {
+    ownTap(event);
     if (busy || inRound) return;
     const at = event.getLocalPosition(reelSet);
     for (let r = 0; r < reelSet.reels.length; r++) {
@@ -210,10 +213,15 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     }
   }
 
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: onSpin,
+  });
   return {
     reelSet,
     stage,
-    onSpin,
     cleanup: () => {
       running?.kill();
       gsap.killTweensOf(camera);

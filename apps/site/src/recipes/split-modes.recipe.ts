@@ -2,9 +2,10 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import type { Reel, ReelSet } from 'pixi-reels';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Grow or keep',
@@ -195,14 +196,19 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     }
   }
 
+  app.stage.addChild(stage);
+  reelSounds(panels[0].reelSet);
+  tapToSpin(app, {
+    reelSet: panels[0].reelSet,
+    spin: onSpin,
+    // One press lands both boards.
+    skip: () => {
+      for (const p of panels) p.reelSet.requestSkip();
+    },
+  });
   return {
     reelSet: panels[0].reelSet,
     stage,
-    onSpin,
-    // One press lands both boards.
-    onSkip: () => {
-      for (const p of panels) p.reelSet.requestSkip();
-    },
     cleanup: () => {
       for (const tl of running) tl.kill();
       for (const p of panels) {

@@ -1,6 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Name the reels that land',
@@ -52,21 +53,26 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = `landed [${reels.join(', ')}]${partial ? ' - tap for the next group' : ' - round over'}`;
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    // No protection involved and no tease: this is the raw per-reel lever
-    // driving a plan that lives entirely in game code.
-    onSkip: () => {
-      const group = queue.shift();
-      if (group) reelSet.slamStop({ reels: group });
-    },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       const p = reelSet.spin();
       await new Promise((r) => setTimeout(r, 250));
       reelSet.setResult(grid);
       await p;
     },
+    // No protection involved and no tease: this is the raw per-reel lever
+    // driving a plan that lives entirely in game code.
+    skip: () => {
+      const group = queue.shift();
+      if (group) reelSet.slamStop({ reels: group });
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

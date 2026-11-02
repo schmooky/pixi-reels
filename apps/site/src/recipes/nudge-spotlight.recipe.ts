@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spotlight after a nudge',
@@ -42,9 +44,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // 1. Land on a near-miss: no wilds anywhere.
       const p = reelSet.spin();
       await new Promise((resolve) => setTimeout(resolve, 220));
@@ -78,5 +82,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       reelSet.spotlight.hide();
     },
-  };
+  });
+  return { reelSet };
 }

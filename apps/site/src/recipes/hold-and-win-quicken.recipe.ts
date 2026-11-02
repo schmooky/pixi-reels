@@ -1,6 +1,7 @@
 import { HoldAndWinBuilder, PhaseCardSymbol, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: quicken the wave',
@@ -81,18 +82,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 1 }], [{ reel: 2, cell: 0 }], [{ reel: 1, cell: 2 }], []];
 
   let running = false;
-  return {
-    board,
-    cleanup: () => {
-      unwatch();
-      try { hud.destroy({ children: true }); } catch {}
-      board.destroy();
-    },
-    onSkip: () => {
-      if (!running) return;
-      board.skip({ mode: 'quicken', speed: 'turbo' });
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (running) return;
       running = true;
       board.reset();
@@ -106,6 +98,18 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       hud.text = 'feature over: press spin';
       running = false;
+    },
+    skip: () => {
+      if (!running) return;
+      board.skip({ mode: 'quicken', speed: 'turbo' });
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      unwatch();
+      try { hud.destroy({ children: true }); } catch {}
+      board.destroy();
     },
   };
 }

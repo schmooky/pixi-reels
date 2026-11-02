@@ -1,6 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Slowing anticipation',
@@ -65,10 +67,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
   reelSet.events.on('spin:complete', () => { for (const i of [...glows.keys()]) stopGlow(i); });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
-    onSpin: async () => {
+    spin: async () => {
       const grid = [
         { visible: [rv(), SCAT, rv()] },
         { visible: [rv(), SCAT, rv()] },
@@ -88,5 +91,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       await p;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
   };
 }

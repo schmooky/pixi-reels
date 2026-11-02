@@ -6,10 +6,14 @@
  * it is engine API: copy what you need into your game.
  *
  * Anything that pulls the Spine runtime in lives at `@pixi-reels/kit/spine`,
- * so a page of card-symbol demos never downloads it.
+ * so a page of card-symbol demos never downloads it; the sound set and the
+ * zvuk engine live at `@pixi-reels/kit/sound`, the pay-ways evaluator at
+ * `@pixi-reels/kit/ways`.
  */
 export { pickWeighted } from './pickWeighted.js';
 export { readout, setReadouts, readoutsEnabled } from './readout.js';
+export { tapToSpin, ownTap } from './tapToSpin.js';
+export type { TapToSpinOptions, TapToSpinHandle } from './tapToSpin.js';
 export { createAssets } from './assets.js';
 export type { RecipeAssets } from './assets.js';
 export type {
@@ -20,7 +24,6 @@ export type {
   RecipeModule,
   RecipeNeed,
   RecipeResult,
-  RecipeSounds,
 } from './recipe.js';
 
 export { BlurSpriteSymbol } from './BlurSpriteSymbol.js';

@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spin up, drop down (explicit gravity)',
@@ -80,9 +82,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () =>
         Array.from({ length: CELLS }, () => randExcept(HIT_ID)),
       );
@@ -117,5 +121,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         pauseAfterDestroyMs: 220,
       });
     },
-  };
+  });
+  return { reelSet };
 }

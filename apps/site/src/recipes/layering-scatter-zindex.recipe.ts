@@ -6,8 +6,9 @@ import {
   StaticSpinSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
@@ -22,7 +23,8 @@ export const meta = {
 // left at the default layer, so the tile below it paints over its leaves
 // (bottom cells draw in front within a layer). Spot the difference each
 // spin: jaw never clipped, bush clipped from below.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const thunderkick = await assets.spineSet("thunderkick");
 
   const SPINE_SCALE = 0.6;
@@ -77,9 +79,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () => {
+    next: () => {
       const grid = ROWS_PER_REEL.map((cells) =>
         Array.from({ length: cells }, () => pickWeighted(weights)),
       );
@@ -93,5 +97,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       grid[mReel][1 + Math.floor(Math.random() * 2)] = 'mystery';
       return grid;
     },
-  };
+  });
+  return { reelSet };
 }

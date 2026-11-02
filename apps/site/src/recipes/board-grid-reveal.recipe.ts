@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { BoardGrid, SpeedPresets } from 'pixi-reels';
-import { BlurSpriteSymbol, readout } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 
 export const meta = {
@@ -19,7 +19,8 @@ export const meta = {
 // at once to a random prize, then the values tally and the top cell pops. No locking,
 // no respins - those are Hold & Win's rules, and they live in Hold & Win's code, not
 // here. You own the rule; the primitive just spins the cells you tell it to.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3, CELL = 72, GAP = 6;
 
   const { symbols, blur } = await assets.holdAndWinSprites();
@@ -67,9 +68,8 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   app.stage.addChild(hud);
 
   let busy = false;
-  return {
-    cleanup: () => { try { gsap.killTweensOf(ring); } catch {} try { hud.destroy({ children: true }); } catch {} grid.destroy(); },
-    onSpin: async () => {
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       ring.visible = false;
@@ -97,5 +97,8 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `revealed · total ${total} · top ${PRIZE[top.id]} (${top.id})`;
       busy = false;
     },
+  });
+  return {
+    cleanup: () => { try { gsap.killTweensOf(ring); } catch {} try { hud.destroy({ children: true }); } catch {} grid.destroy(); },
   };
 }

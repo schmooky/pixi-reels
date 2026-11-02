@@ -1,6 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Skip the tease',
@@ -62,14 +64,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
   reelSet.events.on('spin:complete', () => { for (const i of [...glows.keys()]) stopGlow(i); });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
-    // The demo runner presses this on a second button tap while spinning. It
-    // slams the current drop onto the result and cuts every tease short. Guarded
-    // so a tap before setResult() queues instead of throwing.
-    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-    onSpin: async () => {
+    spin: async () => {
       const grid = [
         { visible: [rv(), SCAT, rv()] },
         { visible: [rv(), SCAT, rv()] },
@@ -88,5 +87,13 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       await p;
     },
+    // The demo runner presses this on a second button tap while spinning. It
+    // slams the current drop onto the result and cuts every tease short. Guarded
+    // so a tap before setResult() queues instead of throwing.
+    skip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
   };
 }

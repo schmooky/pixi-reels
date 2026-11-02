@@ -1,7 +1,8 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Per-reel spin floor',
@@ -78,10 +79,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       : `${FLOORS[i]}ms\n-> ${Math.round(performance.now() - t0)}ms`;
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { for (const t of labels) { try { t.destroy({ children: true }); } catch {} } },
-    onSpin: async () => {
+    spin: async () => {
       // Persists across spin() and refill() until cleared with null, exactly
       // like setStopDelays(). Set once at boot in a real game.
       reelSet.setMinimumSpinTime(FLOORS);
@@ -99,5 +101,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(grid);
       await p;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const t of labels) { try { t.destroy({ children: true }); } catch {} } },
   };
 }

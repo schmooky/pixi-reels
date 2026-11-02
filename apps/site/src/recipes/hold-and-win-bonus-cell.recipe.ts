@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { AnimatedSpriteSymbol, HoldAndWinBuilder } from 'pixi-reels';
-import { BlurSpriteSymbol, readout } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: bonus cells',
@@ -17,7 +18,8 @@ export const meta = {
 // coin lands ON one, the cell flashes active and doubles that coin's value.
 // Positional special cells are pure game state - the board only reports
 // where each coin landed (coin:locked + cell), the rest is your rule.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3, CELL = 76, GAP = 6;
   const COIN = 'coin';
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -125,10 +127,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   const reset = () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); board.reset(); placeMarkers(); };
   placeMarkers();
 
-  return {
-    board,
-    cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       reset();
@@ -144,5 +145,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   };
 }

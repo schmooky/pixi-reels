@@ -1,6 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Pressing before the server answers',
@@ -55,20 +56,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = `queued slam fired: landed [${reels.join(', ')}]${partial ? ' - tease protected' : ''}`;
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    // The canonical universal-button pattern: try the round-aware press, fall
-    // back to the queue when it throws. One handler covers both windows.
-    onSkip: () => {
-      try {
-        reelSet.skipSpin();
-      } catch {
-        reelSet.requestSkip();
-        hud.text = 'too early to land - slam QUEUED until the result arrives';
-      }
-    },
-    onSpin: async () => {
+    spin: async () => {
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       grid[0].visible[1] = SCAT;
       grid[1].visible[1] = SCAT;
@@ -80,5 +72,19 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(grid);
       await p;
     },
+    // The canonical universal-button pattern: try the round-aware press, fall
+    // back to the queue when it throws. One handler covers both windows.
+    skip: () => {
+      try {
+        reelSet.skipSpin();
+      } catch {
+        reelSet.requestSkip();
+        hud.text = 'too early to land - slam QUEUED until the result arrives';
+      }
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

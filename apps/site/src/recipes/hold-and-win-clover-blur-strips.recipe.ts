@@ -1,11 +1,5 @@
 import { HoldAndWinBuilder } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { Container } from 'pixi.js';
 import type { HwCell } from 'pixi-reels';
@@ -26,7 +20,8 @@ export const meta = {
 // frame on the stop. Two one-row boards, same spin: the top one plays the
 // blur track, the bottom one opts out - the difference is why studios
 // pre-render the blur.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
@@ -83,9 +78,8 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 5, 10]) } });
   let busy = false;
-  return {
-    cleanup: () => { try { c1.destroy({ children: true }); c2.destroy({ children: true }); for (const g of grids) g.destroy({ children: true }); } catch {} top.destroy(); bottom.destroy(); },
-    onSpin: async () => {
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       for (const b of [top, bottom]) { b.reset(); b.enter([]); }
@@ -94,5 +88,8 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       await sleep(300);
       busy = false;
     },
+  });
+  return {
+    cleanup: () => { try { c1.destroy({ children: true }); c2.destroy({ children: true }); for (const g of grids) g.destroy({ children: true }); } catch {} top.destroy(); bottom.destroy(); },
   };
 }

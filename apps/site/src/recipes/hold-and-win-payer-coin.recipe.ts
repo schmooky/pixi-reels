@@ -4,9 +4,10 @@ import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { bezierFly, coinWaves, GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: payer / doubler coin',
@@ -183,17 +184,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   });
 
   let phase = 'ready';
-  return {
-    board,
-    cleanup: () => {
-      for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
-      flyers.clear();
-      for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
-      labelAt.clear();
-      try { hud.destroy({ children: true }); labels.destroy(); } catch {}
-      board.destroy();
-    },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (phase === 'done') {
         for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
         labelAt.clear();
@@ -213,6 +206,17 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await payout(PAYER_CELL, PAY_VALUE);
       phase = 'done';
       hud.text = `paid · total ${fmt(totalOf())} · press spin to reset`;
+    },
+  });
+  return {
+    board,
+    cleanup: () => {
+      for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
+      flyers.clear();
+      for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
+      labelAt.clear();
+      try { hud.destroy({ children: true }); labels.destroy(); } catch {}
+      board.destroy();
     },
   };
 }

@@ -10,9 +10,10 @@ import {
 } from 'pixi-reels';
 import type { SymbolPosition } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
-import { evaluateWays } from '@pixi-reels/cheats/ways';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { evaluateWays } from '@pixi-reels/kit/ways';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Paylines and payways with WinLines',
@@ -137,5 +138,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     await presenter.show(wins);
   }
 
-  return { reelSet, stage, onSpin, cleanup: () => presenter.destroy() };
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: onSpin,
+  });
+  return { reelSet, stage, cleanup: () => presenter.destroy() };
 }

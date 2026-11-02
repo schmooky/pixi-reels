@@ -1,7 +1,8 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import type { FrameMiddleware } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Feature mode swap',
@@ -113,9 +114,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   let spinCount = 0;
   redrawBanner(3);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const phase = Math.floor(spinCount / 3) % 2;
       const shouldBeInFeature = phase === 1;
       if (shouldBeInFeature && !inFeature) enterFeature();
@@ -143,6 +146,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       const nextSpinsUntilSwitch = 3 - (spinCount % 3);
       redrawBanner(nextSpinsUntilSwitch);
     },
+  });
+  return {
+    reelSet,
     cleanup: () => {
       try { banner.destroy({ children: true }); } catch {}
     },

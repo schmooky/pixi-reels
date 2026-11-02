@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Tall block in an anticipation tease, landing peeking, then up',
@@ -68,10 +69,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   stage.addChild(reelSet);
   stage.addChild(title);
 
-  return {
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    stage,
-    onSpin: async () => {
+    spin: async () => {
       // 1. Spin, then land two scatters and the block's head on the last
       //    visible cell of reel 4. The coordinator paints the body into
       //    bufferEnd; the tease on reel 4 shows more blocks on the way.
@@ -97,5 +99,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       await new Promise((r) => setTimeout(r, 900));
     },
-  };
+  });
+  return { reelSet, stage };
 }

@@ -2,8 +2,9 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, StopPhase } from 'pixi-reels';
 import type { StopPhaseConfig } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Subclass a built-in phase',
@@ -92,22 +93,27 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, TOTAL_H + 10);
   reelSet.addChild(hud);
 
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      await p;
+    },
+    // Tap again mid-spin: the slam routes through the same subclass via
+    // `onSkip`, so the flash fires on skipped reels too.
+    skip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  });
   return {
     reelSet,
     cleanup: () => {
       for (const g of flashes) gsap.killTweensOf(g);
       try { flashLayer.destroy({ children: true }); } catch {}
       try { hud.destroy({ children: true }); } catch {}
-    },
-    // Tap again mid-spin: the slam routes through the same subclass via
-    // `onSkip`, so the flash fires on skipped reels too.
-    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-    onSpin: async () => {
-      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-      const p = reelSet.spin();
-      await new Promise((r) => setTimeout(r, 250));
-      reelSet.setResult(grid);
-      await p;
     },
   };
 }

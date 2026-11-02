@@ -1,14 +1,9 @@
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell, HwCoin } from 'pixi-reels';
-import {
-  CLOVER_CELL,
-  CLOVER_SPEED,
-  cloverCellMask,
-  cloverGridBackground,
-  readout,
-} from '@pixi-reels/kit';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Feature clovers: collect, multi, mystery',
@@ -25,7 +20,8 @@ export const meta = {
 //   MYSTERY  turns into a gold clover with a revealed amount (setSymbolAt)
 //   COLLECT  sums every held amount and shows the total on its face
 // Strip weights are flavour only: a cell lands on what respin() was handed.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COLS = 5, ROWS = 3;
   const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
   const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
@@ -117,10 +113,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   ];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -139,5 +134,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = `feature over · gold total ${fmt(total)} · press spin to replay`;
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} grid.destroy({ children: true }); board.destroy(); },
   };
 }

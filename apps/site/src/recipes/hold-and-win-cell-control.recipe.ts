@@ -1,7 +1,8 @@
 import { AnimatedSpriteSymbol, HoldAndWinBuilder } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { BoardCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: drive each cell on its own',
@@ -18,7 +19,8 @@ export const meta = {
 // inside it, independently of every other cell. This demo starts three
 // cells with a stagger (each on its own clock), slam-stops the third the
 // instant it starts, and then flashes the landed coins via `symbolAt(cell)`.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const COIN = 'coin', EMPTY = 'empty';
   const CELL = 96, GAP = 12;
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -56,10 +58,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
   }
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       board.reset();
@@ -88,5 +89,9 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
       hud.text = 'each cell: started, stopped and read on its own · press spin';
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} board.destroy(); },
   };
 }

@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'MultiWays cascade',
@@ -156,9 +158,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     await p;
   }
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const shape = randomShape();
 
       // Round 1. strip-spin lands the multiways grid (AdjustPhase reshapes
@@ -191,5 +195,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         pauseAfterDestroyMs: 60,
       });
     },
-  };
+  });
+  return { reelSet };
 }

@@ -3,8 +3,9 @@ import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Your own release plan',
@@ -103,14 +104,22 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = `press ${press}: landed [${reels.join(', ')}]${partial ? '' : ' - round over'}`;
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      for (const i of [...glows.keys()]) stopGlow(i);
-      try { glowLayer.destroy({ children: true }); } catch {}
-      try { hud.destroy({ children: true }); } catch {}
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      grid[0].visible[1] = SCAT;
+      grid[1].visible[1] = SCAT;
+
+      const p = reelSet.spin();
+      reelSet.setAnticipation(TEASE, { stagger: 250, protect: 'always' });
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      await p;
     },
-    onSkip: () => {
+    skip: () => {
       press += 1;
       if (press === 1) {
         // Press 1 is the engine's own group: everything outside the tease.
@@ -121,16 +130,13 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       const group = queue.shift();
       if (group) reelSet.slamStop({ reels: group });
     },
-    onSpin: async () => {
-      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-      grid[0].visible[1] = SCAT;
-      grid[1].visible[1] = SCAT;
-
-      const p = reelSet.spin();
-      reelSet.setAnticipation(TEASE, { stagger: 250, protect: 'always' });
-      await new Promise((r) => setTimeout(r, 250));
-      reelSet.setResult(grid);
-      await p;
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      for (const i of [...glows.keys()]) stopGlow(i);
+      try { glowLayer.destroy({ children: true }); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

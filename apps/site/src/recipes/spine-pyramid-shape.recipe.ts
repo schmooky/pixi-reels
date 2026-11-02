@@ -1,7 +1,8 @@
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { buildSpineMap } from '@pixi-reels/kit';
+import { buildSpineMap, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { GeneratedSpineName, RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Pyramid shape with Spine',
@@ -15,7 +16,8 @@ export const meta = {
 // Spine skeletons scale cleanly to whatever cell size each reel hands them.
 // the outer 3-cell reels get taller cells than the inner 5-cell reels, and
 // the rig stays crisp at both because it's vector, not a baked sprite.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   await assets.spineSet("generated");
 
   const VISIBLE = [3, 5, 5, 5, 3];
@@ -75,11 +77,14 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     setTimeout(syncIdle, LANDING_MS);
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       VISIBLE.map((cells) =>
         Array.from({ length: cells }, () => IDS[Math.floor(Math.random() * IDS.length)]),
       ),
-  };
+  });
+  return { reelSet };
 }

@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Nudge on a roll-up set',
@@ -51,9 +53,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       reelSet.spotlight.hide();
 
       const grid = Array.from({ length: REELS }, () => col());
@@ -84,5 +88,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         { playWinAnimation: true },
       );
     },
-  };
+  });
+  return { reelSet };
 }

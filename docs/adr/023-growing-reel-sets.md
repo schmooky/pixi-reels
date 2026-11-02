@@ -108,7 +108,8 @@ builder now auto-picks one only for blocks wider than a reel, and `setColumn()`
 warns once if one is in use.
 
 **Win math stays out (ADR 007).** The pay-ways evaluator the recipes use lives
-in `@pixi-reels/cheats/ways` beside the other server stand-ins. The library
+in `@pixi-reels/kit/ways` (it moved there from `@pixi-reels/cheats/ways` when the
+kit was published) beside the other server stand-ins. The library
 only draws: `WinLines` in `pixi-reels/debug` strokes the cells it is handed.
 
 ## Consequences

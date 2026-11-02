@@ -109,8 +109,11 @@ const sounds = attachReelSounds(reelSet, zvukPort(engine), {
 sounds.destroy(); // when the reel set goes
 ```
 
-Every demo on this site runs that table. The Sound button under a demo mutes
-it; the files load on the first press.
+Every demo on this site runs that table: `reelSounds(reelSet)` from
+`@pixi-reels/kit/sound` snaps it onto a set, on one engine shared by every
+demo on the page, and `boardSounds(board)` does the same for a Hold & Win
+board. The Sound button under a demo mutes it; the files load on the first
+press.
 
 The spin cue is a one-shot on purpose. A bed that loops under every spin
 (`spin: { loop: 'spin-loop', fadeIn: 0.05, fadeOut: 0.08 }`) is supported and

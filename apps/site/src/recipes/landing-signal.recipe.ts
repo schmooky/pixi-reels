@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { ReelLandingContext } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Landing: the frame, and the beat',
@@ -88,15 +89,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('spin:reelLanding', onLanding);
   reelSet.events.on('spin:reelLanded', onLanded);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => {
-      reelSet.events.off('spin:reelLanding', onLanding);
-      reelSet.events.off('spin:reelLanded', onLanded);
-      for (const g of plates.values()) { gsap.killTweensOf(g.scale); try { g.destroy(); } catch {} }
-      try { hud.destroy({ children: true }); } catch {}
-    },
-    onSpin: async () => {
+    spin: async () => {
       for (const g of plates.values()) gsap.to(g.scale, { y: 0, duration: 0.15 });
       for (let i = 0; i < REELS; i++) lines[i] = `reel ${i}: spinning`;
       redraw();
@@ -105,6 +102,15 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 380));
       reelSet.setResult(grid);
       await p;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      reelSet.events.off('spin:reelLanding', onLanding);
+      reelSet.events.off('spin:reelLanded', onLanded);
+      for (const g of plates.values()) { gsap.killTweensOf(g.scale); try { g.destroy(); } catch {} }
+      try { hud.destroy({ children: true }); } catch {}
     },
   };
 }

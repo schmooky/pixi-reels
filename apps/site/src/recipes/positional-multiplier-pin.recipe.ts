@@ -2,7 +2,9 @@ import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { settleMoneyFace } from '@pixi-reels/kit/spine';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Positional multiplier cells',
@@ -113,12 +115,17 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     // multiplier to any win passing through a positionMultiplier cell.
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: COLS }, () =>
         Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
       ),
+  });
+  return {
+    reelSet,
     cleanup: () => { try { badgeLayer.destroy({ children: true }); } catch {} },
   };
 }

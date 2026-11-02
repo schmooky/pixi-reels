@@ -1,6 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Abort a nudge',
@@ -64,9 +65,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     say(1, `nudge:cancelled reel=${info.reelIndex} reason='${info.reason}'`);
   });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const p = reelSet.spin();
       await new Promise((resolve) => setTimeout(resolve, 220));
       reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
@@ -102,5 +105,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         }
       }
     },
-  };
+  });
+  return { reelSet };
 }

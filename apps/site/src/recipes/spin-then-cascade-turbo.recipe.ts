@@ -7,7 +7,9 @@ import {
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import type { Cell } from 'pixi-reels';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spin first, cascade after',
@@ -22,7 +24,8 @@ export const meta = {
 // textures (StaticSpinSymbol. no skeleton ticks while spinning); the
 // cascade runs a shorter dropIn and a faster explode. SpeedPresets
 // controls the strip phases, .tumble() + timeScale the cascade.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const cascade = await assets.spineSet("cascade");
 
   const IDS = [...cascade.symbolIds];
@@ -91,9 +94,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const stage0 = Array.from({ length: REELS }, (_, c) =>
         Array.from({ length: ROWS }, (_, r) => {
           if (HIT_COLS.includes(c)) {
@@ -138,5 +143,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
         pauseAfterDestroyMs: 83,
       });
     },
-  };
+  });
+  return { reelSet };
 }

@@ -1,7 +1,9 @@
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import type { Cell } from 'pixi-reels';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Cascade wins. present, destroy, refill',
@@ -14,7 +16,8 @@ export const meta = {
 // Engine-default destroy: no `out` animation registered, so
 // `destroySymbols` falls back to the built-in GSAP scale-and-fade
 // implode. Works with no destruction art at all.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const cascade = await assets.spineSet("cascade");
 
   const A = 'low1', B = 'low2', C = 'low3';
@@ -62,9 +65,11 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     })
     .ticker(app.ticker).build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Land BEFORE via a normal strip-spin.
       const p = reelSet.spin({ mode: 'standard' });
       await new Promise(r => setTimeout(r, 150));
@@ -98,5 +103,6 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
         pauseAfterDestroyMs: 117,
       });
     },
-  };
+  });
+  return { reelSet };
 }

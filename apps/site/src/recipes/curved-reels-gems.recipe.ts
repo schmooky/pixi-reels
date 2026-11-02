@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { BlurSpriteSymbol } from '@pixi-reels/kit';
+import { BlurSpriteSymbol, createAssets, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'On real art',
@@ -36,7 +37,8 @@ export const meta = {
 //
 // Blur-on-spin still works: the mesh is handed each new texture as the symbol
 // swaps to its motion-blur variant.
-export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
   const { symbols, blur } = await assets.holdAndWinSprites();
 
   const IDS = ['1', '2', '3', '4', '5', '6', '7', '8', 'wild'];
@@ -90,11 +92,14 @@ export default async function recipe({ app, assets }: RecipeContext): Promise<Re
     .stroke({ color: 0x2c2740, width: 2 });
   reelSet.addChild(bezel);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: REELS }, () =>
         Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
       ),
-  };
+  });
+  return { reelSet };
 }

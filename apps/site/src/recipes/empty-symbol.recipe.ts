@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { EmptySymbol, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets } from 'pixi-reels';
-import { pickWeighted } from '@pixi-reels/kit';
+import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
 import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'EmptySymbol: render nothing for a registered id',
@@ -78,9 +79,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       const spin = reelSet.spin();
       await new Promise((r) => setTimeout(r, 150));
       // Coins scatter sparsely; buffers are forced empty so nothing spills.
@@ -99,5 +102,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(grid);
       await spin;
     },
-  };
+  });
+  return { reelSet };
 }

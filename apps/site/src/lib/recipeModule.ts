@@ -29,9 +29,10 @@ const MODULES: Record<string, ModuleLoader> = {
   'pixi-reels': () => import('pixi-reels'),
   'pixi-reels/spine': () => import('pixi-reels/spine'),
   'pixi-reels/debug': () => import('pixi-reels/debug'),
-  '@pixi-reels/cheats/ways': () => import('@pixi-reels/cheats/ways'),
   '@pixi-reels/kit': () => import('@pixi-reels/kit'),
   '@pixi-reels/kit/spine': () => import('@pixi-reels/kit/spine'),
+  '@pixi-reels/kit/sound': () => import('@pixi-reels/kit/sound'),
+  '@pixi-reels/kit/ways': () => import('@pixi-reels/kit/ways'),
 };
 
 const loaded = new Map<string, Promise<Record<string, unknown>>>();
@@ -137,3 +138,8 @@ export async function runRecipeModule(
   const mod = await evaluateRecipeModule(source, opts);
   return (await mod.default(ctx)) as RecipeResult;
 }
+
+/** The one mistake every old-contract recipe makes, named once for Studio, the share viewer and the runner. */
+export const OFF_STAGE =
+  'The recipe built a set but did not put it on the stage. A recipe adds its root with `app.stage.addChild(reelSet)` and wires its control with `tapToSpin(app, { reelSet, next })`; code written against the old contract (`nextResult` / `onSpin` in the result) needs that change. See the default module.';
+

@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, Lock, Loader2, Square, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Lock, Loader2 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
 import { Application, type Texture } from 'pixi.js';
@@ -12,8 +12,7 @@ import {
   type SymbolData,
 } from 'pixi-reels';
 import { createAssets, setReadouts, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
-import { reelSounds, boardSounds } from '../runtime/audio.ts';
-import { runRecipeModule } from '@/lib/recipeModule';
+import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
 
 import { getShare, ShareApiError } from '@/lib/studio/share/api.js';
 import { openEnvelope } from '@/lib/studio/share/crypto.js';
@@ -50,8 +49,6 @@ type Phase =
   | { kind: 'awaiting-password'; meta: GetShareResponse['meta']; envelope: NonNullable<GetShareResponse['envelope']> }
   | { kind: 'ready'; meta: GetShareResponse['meta']; config: StudioConfig; assets: Map<string, StoredAsset> }
   | { kind: 'error'; message: string };
-
-const sounds = { reelSounds, boardSounds };
 
 /** Sibling of `studioAssets` in Studio.tsx: the shared uploads join the atlas. */
 function sharedAssets(uploads: Record<string, Texture>): RecipeAssets {
@@ -215,15 +212,12 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
-  const nextResultRef = useRef<(() => string[][]) | null>(null);
-  const onSpinRef = useRef<(() => Promise<void>) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const lastInjectablesRef = useRef<StudioInjectables | null>(null);
   const fitRef = useRef<(() => void) | null>(null);
 
   const [status, setStatus] = useState<string>('Press Run to mount the reels.');
   const [error, setError] = useState<string | null>(null);
-  const [isSpinning, setIsSpinning] = useState(false);
 
   // Asset getter. pulls from the in-memory map decoded from the share.
   // No IndexedDB writes; closing the tab discards the shared assets.
@@ -278,6 +272,10 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
     try { cleanupRef.current?.(); } catch { /* ignore */ }
     try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
     if (lastInjectablesRef.current) revokeBlobUrls(lastInjectablesRef.current.blobUrls);
+    // The stage belongs to the recipe: it added its root and its tap
+    // listener there. A new run starts from an empty one.
+    app.stage.removeAllListeners('pointertap');
+    app.stage.removeChildren();
 
     let injectables: StudioInjectables;
     try {
@@ -297,25 +295,30 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
       // lib/recipeModule.ts.
       built = await runRecipeModule(config.code, {
         app,
-        assets: sharedAssets(injectables.textures),
-        sounds,
         userSymbols: injectables.userSymbols,
         userSymbolData: injectables.userSymbolData,
       }, {
-        overrides: { 'pixi-reels': { ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData) } },
+        overrides: {
+          'pixi-reels': { ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData) },
+          '@pixi-reels/kit': { createAssets: () => sharedAssets(injectables.textures) },
+        },
       });
     } catch (e) {
       setError(`${e instanceof SyntaxError ? 'Compile' : 'Runtime'} error: ${(e as Error).message}`);
       return;
     }
 
-    onSpinRef.current = built.onSpin ?? null;
+    built ??= {};
     cleanupRef.current = built.cleanup ?? null;
     if (!built.reelSet) {
-      setStatus('Mounted. Custom spin handler active.');
+      setStatus('Mounted. Tap the canvas to play it.');
       return;
     }
     const reelSet = built.reelSet;
+    if (!(built.stage ?? reelSet).parent) {
+      setError(OFF_STAGE);
+      return;
+    }
     enableDebug(reelSet);
 
     const PADDING = 24;
@@ -331,41 +334,11 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
       fitted.x = (app.screen.width - rawW * scale) / 2;
       fitted.y = (app.screen.height - rawH * scale) / 2;
     };
-    app.stage.removeChildren();
-    app.stage.addChild(fitted);
     fit();
     fitRef.current = fit;
 
     reelSetRef.current = reelSet;
-    nextResultRef.current = built.nextResult ?? null;
     setStatus(`Mounted. ${reelSet.reels.length} reel${reelSet.reels.length === 1 ? '' : 's'} × ${reelSet.reels[0]?.symbols.length ?? 0} slots.`);
-  }
-
-  async function handleSpin(): Promise<void> {
-    if (isSpinning) {
-      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
-      // in the catch so a player tap during the server-wait window still
-      // queues the slam and fires it the moment the result is in.
-      try { reelSetRef.current?.skipSpin(); }
-      catch { reelSetRef.current?.requestSkip(); }
-      return;
-    }
-    if (!reelSetRef.current && !onSpinRef.current) return;
-    setIsSpinning(true);
-    try {
-      if (onSpinRef.current) await onSpinRef.current();
-      else if (reelSetRef.current) {
-        const p = reelSetRef.current.spin();
-        const result = nextResultRef.current?.();
-        await new Promise((r) => setTimeout(r, 150));
-        if (result) reelSetRef.current.setResult(result.map((visible) => ({ visible })));
-        await p;
-      }
-    } catch (e) {
-      setError(`Spin error: ${(e as Error).message}`);
-    } finally {
-      setIsSpinning(false);
-    }
   }
 
   return (
@@ -373,22 +346,6 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
       <div className="flex flex-col overflow-hidden rounded-sm border border-border bg-card">
         <div className="theme-ink relative flex-1 min-h-[480px]">
           <div ref={canvasHostRef} className="h-full w-full bg-[#111114]" />
-          <button
-            type="button"
-            onClick={() => void handleSpin()}
-            disabled={!reelSetRef.current && !onSpinRef.current}
-            title={isSpinning ? 'Stop' : 'Spin'}
-            aria-label={isSpinning ? 'Stop' : 'Spin'}
-            className={cn(
-              'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-sm',
-              'bg-brand text-brand-foreground',
-              'transition-[transform,background-color,color] duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] hover:bg-brand/90 active:scale-[0.97]',
-              isSpinning && 'bg-foreground text-background hover:bg-foreground/90',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
-            {isSpinning ? <Square size={14} strokeWidth={2.5} /> : <RefreshCw size={16} strokeWidth={2.25} />}
-          </button>
         </div>
         <div className="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs">
           {error ? (

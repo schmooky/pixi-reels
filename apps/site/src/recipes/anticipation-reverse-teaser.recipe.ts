@@ -1,5 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Teaser on a reel that spins up',
@@ -48,9 +50,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.speed.addProfile('demo', { ...SpeedPresets.NORMAL, anticipationDelay: 1800 });
   reelSet.setSpeed('demo');
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    onSpin: async () => {
+    spin: async () => {
       // Park the coin on whichever side this set feeds from, so the same code
       // teases correctly on a forward set too.
       const teaser = FEED === 'start' ? { bufferStart: [COIN] } : { bufferEnd: [COIN] };
@@ -70,5 +74,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setResult(result);
       await p;
     },
-  };
+  });
+  return { reelSet };
 }

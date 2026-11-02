@@ -7,8 +7,9 @@ import {
   SpeedPresets,
 } from 'pixi-reels';
 import type { CascadeDropInPhaseConfig, TumbleConfig } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Phases that take constructor arguments',
@@ -85,10 +86,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   hud.position.set(0, TOTAL_H + 10);
   reelSet.addChild(hud);
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    onSpin: async () => {
+    spin: async () => {
       drops = 0;
       const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
       const p = reelSet.spin();
@@ -98,5 +100,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = `CountingDropInPhase constructed ${drops}x - once per reel, ` +
         'from a registration made before .tumble()';
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

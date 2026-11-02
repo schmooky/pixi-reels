@@ -4,8 +4,9 @@ import { SilkGraphics } from 'pixi-silk';
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import type { Reel } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
-import { pickWeighted, readout } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Split in place on MultiWays',
@@ -236,10 +237,15 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   }
 
   // A demo scrolled away mid-split unmounts with the tweens still running.
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: onSpin,
+  });
   return {
     reelSet,
     stage,
-    onSpin,
     cleanup: () => {
       running?.kill();
       for (const reel of reelSet.reels) {

@@ -1,6 +1,7 @@
 import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Uniform floor, and clearing it',
@@ -55,10 +56,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   let last = 0;
   reelSet.events.on('spin:reelLanded', () => { last = Math.round(performance.now() - t0); });
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-    onSpin: async () => {
+    spin: async () => {
       const cleared = spinNo++ % 2 === 1;
       // One call, both shapes. `null` is not "floor of 0", it is "use the
       // profile's own minimumSpinTime again".
@@ -75,5 +77,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         ? `setMinimumSpinTime(null) -> profile floor 200ms,\nlast reel at rest ${last}ms`
         : `setMinimumSpinTime(${FLOOR}) -> every reel held,\nlast reel at rest ${last}ms`;
     },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
   };
 }

@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
-import { readout } from '@pixi-reels/kit';
+import { readout, tapToSpin } from '@pixi-reels/kit';
 import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { HwCell } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Hold & Win: last-cell anticipation',
@@ -157,10 +158,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const val = () => [5, 10, 15, 25][Math.floor(Math.random() * 4)];
 
   let busy = false;
-  return {
-    board,
-    cleanup: () => { stopPulse(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-    onSpin: async () => {
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
       if (busy) return;
       busy = true;
       for (const t of labelAt.values()) t.destroy();
@@ -182,5 +182,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         : 'feature over · press spin to replay';
       busy = false;
     },
+  });
+  return {
+    board,
+    cleanup: () => { stopPulse(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
   };
 }
