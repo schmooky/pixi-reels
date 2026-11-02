@@ -1,11 +1,23 @@
 ---
-title: Pins
-order: 4
-eyebrow: Building blocks
-description: CellPin is the cell-persistence primitive. It survives spins,
-  migrates on reshape, and works with any ReelSymbol subclass. This guide covers
-  lifecycle, events, movePin, and Spine-specific animation hooks.
+title: Wilds, multipliers & mystery (CellPin)
+group: mechanics
+oneLiner: Sticky, expanding, walking and multiplier wilds plus mystery reveals, all built on the CellPin primitive.
+order: 40
+tags:
+  - wild
+  - sticky
+  - multiplier
+  - mystery
+  - respin
+  - cell-pin
+  - horizontal
+  - reverse
+  - orientation
+guides:
+  - pins
 ---
+
+<ConceptPart title="Pins" lede="CellPin is the cell-persistence primitive. It survives spins, migrates on reshape, and works with any ReelSymbol subclass. This guide covers lifecycle, events, movePin, and Spine-specific animation hooks.">
 
 A pin nails one cell to one symbol id, and keeps it there across spins.
 
@@ -24,6 +36,8 @@ await reelSet.movePin({ reel, cell }, { reel: reel - 1, cell }, { duration: 600 
 reelSet.unpin(reel, cell);
 ```
 
+<a id="what-a-pin-guarantees"></a>
+
 ## What a pin guarantees
 
 - The cell visually shows the pinned symbol id for the lifetime of the pin.
@@ -35,6 +49,8 @@ reelSet.unpin(reel, cell);
   `nudge()`. Pins are not nudge-aware, deliberately.
 
 See the [CellPin reference](/api/interfaces/index.CellPin/) for the full type.
+
+<a id="the-three-symbol-instances-involved"></a>
 
 ## The three symbol instances involved
 
@@ -50,6 +66,8 @@ All pooled, all through `onActivate(symbolId)`.
 Want a sticky cell? Ignore this. Want to animate the pin while the reel
 moves? It matters: they are separate objects, and animation state does not
 travel between them.
+
+<a id="lifecycle-in-full"></a>
 
 ## Lifecycle in full
 
@@ -83,6 +101,8 @@ unpin(reel, cell)  (or pin auto-expires after `turns: N`)
   fires pin:expired(pin, reason)
 ```
 
+<a id="a-minimal-sprite-symbol-example"></a>
+
 ## A minimal sprite-symbol example
 
 ```ts
@@ -108,6 +128,8 @@ await reelSet.spin();
 ```
 
 No special wiring is needed for sprite symbols. the pin handles overlay creation, reshape migration, and unpin teardown internally.
+
+<a id="spine-animation-hooks"></a>
 
 ## Spine animation hooks
 
@@ -159,13 +181,19 @@ async function walkLeft(pin: CellPin) {
 }
 ```
 
+<a id="gotchas"></a>
+
 ## Gotchas
+
+<a id="1-the-flight-symbol-is-a-fresh-acquire"></a>
 
 ### 1. The flight symbol is a fresh acquire
 
 It is **not** the same instance as the reel-cell symbol. Any transient state you set on the cell (animation tracks, tint, skin) is not inherited by the flight instance. The flight starts from `onActivate` defaults.
 
 This is usually what you want. your flight animation is its own entity. but be deliberate about it.
+
+<a id="2-overlay-animations-dont-carry-over-to-the-landed-cell"></a>
 
 ### 2. Overlay animations don't carry over to the landed cell
 
@@ -181,18 +209,26 @@ reelSet.events.on('pin:placed', (pin) => {
 });
 ```
 
+<a id="3-callback-errors-dont-crash-movepin"></a>
+
 ### 3. Callback errors don't crash `movePin`
 
 `onFlightCreated` and `onFlightCompleted` errors are caught internally. The tween always runs, the pin always moves, the flight is always released. This keeps a bug in your animation code from leaving the engine in a bad state.
+
+<a id="4-resize-runs-on-every-acquire"></a>
 
 ### 4. `resize()` runs on every acquire
 
 Every pooled symbol gets `resize(cellWidth, cellHeight)` called on acquire. For Spine, that computes a scale from `spine.getBounds()`. If the skeleton hasn't loaded yet (async data) you may see a zero-sized sprite for the first frame. In practice the skeleton is always ready by the time the pool is warm; keep an eye on it if you see a size pop.
 
+<a id="related"></a>
+
 ## Related
 
-- [Walking wild (movePin) recipe](/recipes/walking-wild-pin/). the same pattern, runnable
-- [Sticky wild recipe](/recipes/sticky-wild-pin/). minimum-viable pin usage
-- [Expanding wild recipe](/recipes/expanding-wild-pin/). per-reel pin expansion
-- [Symbols guide](/guides/symbols/). authoring custom `ReelSymbol` subclasses
-- [Spin lifecycle](/guides/spin-lifecycle/). events fired around a spin
+- [Walking wild (movePin) recipe](/mechanics/wilds-and-pins/#walking-wild-pin). the same pattern, runnable
+- [Sticky wild recipe](/mechanics/wilds-and-pins/#sticky-wild-pin). minimum-viable pin usage
+- [Expanding wild recipe](/mechanics/wilds-and-pins/#expanding-wild-pin). per-reel pin expansion
+- [Symbols guide](/mechanics/symbols/#concept). authoring custom `ReelSymbol` subclasses
+- [Spin lifecycle](/mechanics/skip/#concept). events fired around a spin
+
+</ConceptPart>

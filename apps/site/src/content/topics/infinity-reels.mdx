@@ -1,13 +1,27 @@
 ---
-title: Infinity reels
-order: 8.5
-eyebrow: Building blocks
-description: The base spin lands, then the board grows sideways a reel at a
-  time, as far as the server's result says. One expand() call per round, and
-  removeReels() to shrink back. Rows can grow too.
+title: "Infinity reels: growing the board"
+group: mechanics
+oneLiner: Add reels sideways after the base spin lands, one or two at a time, as many as the server's result says. MultiWays reaches millions of ways; a big symbol widens its step.
+order: 52
+tags:
+  - expand
+  - addReels
+  - removeReels
+  - addRows
+  - multiways
+  - ways
+  - big-symbols
+  - skip
+  - win-lines
+guides:
+  - infinity-reels
 ---
 
-Infinity reels: the base spin lands, and while the win keeps going the board grows sideways, a reel at a time, as far as the server's result says. In pixi-reels that is one call per round: `reelSet.expand()`. Live demos are on the [infinity reels recipe page](/recipes/infinity-reels/).
+<ConceptPart title="Infinity reels" lede="The base spin lands, then the board grows sideways a reel at a time, as far as the server's result says. One expand() call per round, and removeReels() to shrink back. Rows can grow too.">
+
+Infinity reels: the base spin lands, and while the win keeps going the board grows sideways, a reel at a time, as far as the server's result says. In pixi-reels that is one call per round: `reelSet.expand()`. Live demos are on the [infinity reels recipe page](/mechanics/infinity-reels/).
+
+<a id="1-the-servers-result"></a>
 
 ## 1. The server's result
 
@@ -19,6 +33,8 @@ interface InfinityResult {
   extra: ColumnTarget[]; // the reels the board grows by, in order; often none
 }
 ```
+
+<a id="2-spin-the-base-then-expand"></a>
 
 ## 2. Spin the base, then expand
 
@@ -38,6 +54,8 @@ await reelSet.expand({
 
 Each step adds its reels, spins only them with every earlier reel held, and lands them on their columns. `expand()` awaits your hooks, so a camera pan or a win readout plays before the next step. It validates the columns before the first reel is added, so a bad result throws on an untouched board.
 
+<a id="3-next-round-shrink-back"></a>
+
 ## 3. Next round: shrink back
 
 ```ts
@@ -45,6 +63,8 @@ reelSet.removeReels(); // back to the reels the builder made; a no-op when the b
 ```
 
 That is the whole mechanic. The rest is choices.
+
+<a id="rows-can-grow-too"></a>
 
 ## Rows can grow too
 
@@ -65,6 +85,8 @@ reelSet.removeRows();
 
 On MultiWays the rows are each reel's shape: an `expand()` column's `visible.length` is that reel's cell count, inside the fixed reel height.
 
+<a id="stacked-symbols-that-split"></a>
+
 ## Stacked symbols that split
 
 Some infinity slots land a symbol stacked two to four cells tall and, when it wins, split the stack into more single symbols than it had cells, its reel growing past the frame. A stack is a big symbol one reel wide; the server says what it splits into.
@@ -76,7 +98,9 @@ const { from, count } = reelSet.splitSymbol(reel, cell, res.split); // e.g. six 
 
 The reel grows by the difference, the cells above and below keep their symbols, and the board re-centres around the taller reel: keep the other reels still on screen while your camera eases out, or they jump. Split at rest, or between `expand()` steps in `onStepLanded`. Next round, `resetColumns()` puts every reel back.
 
-Any symbol one reel wide splits, a 1x1 too. To keep the reel's height instead, its cells shrinking to share it, pass `{ height: 'keep' }`; it is the default on MultiWays, where a reel's height is fixed. For any other change to one reel, `setColumn(reel, column, { height })` shows a column of any length. The [splitting symbols recipes](/recipes/split-symbols/) show both modes side by side, a tap-to-split playground and splits on MultiWays.
+Any symbol one reel wide splits, a 1x1 too. To keep the reel's height instead, its cells shrinking to share it, pass `{ height: 'keep' }`; it is the default on MultiWays, where a reel's height is fixed. For any other change to one reel, `setColumn(reel, column, { height })` shows a column of any length. The [splitting symbols recipes](/mechanics/split-symbols/) show both modes side by side, a tap-to-split playground and splits on MultiWays.
+
+<a id="ways-count-them-and-draw-them"></a>
 
 ## Ways: count them and draw them
 
@@ -95,11 +119,15 @@ reelSet.events.on('spin:start', () => lines.clear());
 
 The demos on this site stand in for the server with `evaluateWays()` and `countWays()` from the repository's private `@pixi-reels/cheats` package. Copy them if you want the same left-to-right ways math in a prototype.
 
+<a id="skip"></a>
+
 ## Skip
 
 The steps are one round. The first `skipSpin()` lands the step in flight and speeds up the rest: the fastest profile in standard mode; in cascade mode every later step lands at once. A press between steps, while a hook runs, carries to the next step. To land everything still to come at once, abort the expansion's `signal`.
 
 **Gotcha:** an aborted expansion lands the remaining reels in one step, at the height the board has then. If your rows grow during the expansion, slam each step instead of aborting.
+
+<a id="events"></a>
 
 ## Events
 
@@ -114,3 +142,5 @@ The steps are one round. The first `skipSpin()` lands the step in flight and spe
 | `expand:end` | Always last: `'complete'` or `'failed'`. Put the UI back here. |
 
 Each step also fires the usual `spin:*` events. `reelSet.isExpanding` tells them apart from a new round.
+
+</ConceptPart>

@@ -1,0 +1,21 @@
+---
+/**
+ * One merged guide inside a topic's Concept section. A topic that absorbed
+ * several guides (big symbols took per-reel geometry, MultiWays and buffer
+ * indexing) keeps each one's title and lede as a hairline row above its prose,
+ * and gives it an `id` so the old guide URL can redirect straight to it.
+ */
+interface Props {
+  title: string;
+  id?: string;
+  lede?: string;
+}
+const { title, id, lede } = Astro.props as Props;
+---
+<section id={id} class="concept-part scroll-mt-20">
+  <div class="not-prose mt-12 border-t border-border pt-6 [.concept-part:first-child_&]:mt-0 [.concept-part:first-child_&]:border-t-0 [.concept-part:first-child_&]:pt-0">
+    <div class="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{title}</div>
+    {lede && <div class="mt-2 max-w-[620px] text-base leading-relaxed text-muted-foreground">{lede}</div>}
+  </div>
+  <slot />
+</section>

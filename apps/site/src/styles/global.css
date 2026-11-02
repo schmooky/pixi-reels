@@ -129,7 +129,7 @@
      hash lands with the heading tucked underneath it. The hand-placed
      `<a id>` targets need it too: they are the element the browser actually
      scrolls to on those pages. */
-  .prose-docs :where(h2, h3, h4), .prose-docs > a[id]:empty { scroll-margin-top: 5rem; }
+  .prose-docs :where(h2, h3, h4), .prose-docs a[id]:empty { scroll-margin-top: 5rem; }
 
   /* The permalink itself. Hidden until the heading is hovered or the link is
      focused, so it never competes with the heading text - but it is a real link

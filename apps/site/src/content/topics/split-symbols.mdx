@@ -1,0 +1,21 @@
+---
+title: Splitting symbols
+group: mechanics
+oneLiner: A symbol splits into more cells when it wins. Its reel grows past the frame, or keeps its height while its cells shrink, on any board and on MultiWays.
+order: 53
+tags:
+  - split
+  - splitSymbol
+  - setColumn
+  - resetColumns
+  - ways
+  - multiways
+  - stacked-symbols
+---
+
+When a symbol splits, the cell it stands on becomes two or more cells of their own. `reelSet.splitSymbol(reel, cell, ids, { height })` places the server's split: the symbol covering `(reel, cell)` becomes `ids`, one per cell, and the cells above and below keep their symbols. Any symbol one reel wide splits, in any slot: a 1x1, or a stacked big symbol in full view. It returns `{ reelIndex, from, count }`, the new cells, so the game can animate them. `height` says what gives:
+
+- `'grow'` (the default): the cells keep their size and the reel grows. The board re-anchors around it per the builder's `reelAnchor`.
+- `'keep'`: the reel keeps its height and every cell on it shrinks to share it, as a MultiWays reel's do. Nothing else moves. It is the default on MultiWays, where a reel's height is fixed.
+
+`resetColumns()` puts every reel back to the cells it was built with, at their size. `setColumn(reel, column, { height })` is the primitive under both: one reel shows a column of any length. The [infinity reels guide](/mechanics/infinity-reels/#stacked-symbols-that-split) has the short version.

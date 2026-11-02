@@ -1,15 +1,84 @@
 ---
-title: Sound
-order: 15
-eyebrow: Building blocks
-description: Snap a table of sound cues onto a reel set's events, with a port
-  for @schmooky/zvuk.
+title: "Feel: timings & landing FX"
+group: tension
+oneLiner: Seven edits to the built-in phases' step lists that change how a spin feels - stagger curves, a wind-up launch, a landing kick with dust, beats and FX that follow the speed profile, a step of your own tuned from a profile section, a spotlight around the tease, and one extra beat on the last reel - each a few lines against StartPhase, StopPhase or AnticipationPhase, with slam and quicken still working.
+order: 62
+tags:
+  - phases
+  - steps
+  - timing
+  - fx
+  - anticipation
+  - speed
+  - skip
+guides:
+  - speed-modes
+  - sound
 ---
+
+<ConceptPart title="Speed modes" id="concept-speed-modes" lede="Normal, turbo, super-turbo. and adding your own.">
+
+A speed profile is every number that decides how a spin feels. Acceleration,
+speed, stop stagger, bounce.
+
+<a id="the-three-defaults"></a>
+
+## The three defaults
+
+```ts
+import { SpeedPresets } from 'pixi-reels';
+
+// SpeedPresets.NORMAL      . "relaxed" feel
+// SpeedPresets.TURBO       . faster stop, short accel
+// SpeedPresets.SUPER_TURBO . almost-instant
+```
+
+Call no `.speed()` at all and you get `NORMAL` under the name `'normal'`.
+
+<a id="switch-at-runtime"></a>
+
+## Switch at runtime
+
+```ts
+reelSet.speed.addProfile('turbo', SpeedPresets.TURBO);
+reelSet.setSpeed('turbo');
+reelSet.events.on('speed:changed', (p, prev) => console.log(p.name, prev.name));
+```
+
+<a id="custom-profile"></a>
+
+## Custom profile
+
+```ts
+const CINEMATIC: SpeedProfile = {
+  name: 'cinematic',
+  spinDelay: 280,
+  spinSpeed: 38,
+  stopDelay: 180,
+  anticipationDelay: 1200,
+  bounceDistance: 14,
+  bounceDuration: 260,
+  accelerationEase: 'power3.in',
+  bounceEase: 'elastic.out(1, 0.5)',
+  accelerationDuration: 420,
+  minimumSpinTime: 1400,
+};
+
+builder
+  .speed('cinematic', CINEMATIC)
+  .initialSpeed('cinematic');
+```
+
+</ConceptPart>
+
+<ConceptPart title="Sound" id="concept-sound" lede="Snap a table of sound cues onto a reel set's events, with a port for @schmooky/zvuk.">
 
 The engine knows the beats: a spin starts, each reel lands, a reel teases, a
 press skips, winners show, a cascade pops. Your audio engine knows the sounds.
 `attachReelSounds` is the table between them: which sound fires on which beat,
 when a loop starts and when it fades out.
+
+<a id="the-cue-table"></a>
 
 ## The cue table
 
@@ -48,6 +117,8 @@ The spin cue is a one-shot on purpose. A bed that loops under every spin
 fades out on the last landing, but on a page of demos it wears thin fast; the
 reel stops carry the rhythm.
 
+<a id="the-beats"></a>
+
 ## The beats
 
 | Cue | Starts on | A loop ends on | Context |
@@ -63,6 +134,8 @@ reel stops carry the rhythm.
 Every context also carries `speed` (the active profile's name), `profile`
 (the profile itself) and `mode` (`'standard'`, or `'cascade'` for a tumble
 and its refills).
+
+<a id="a-hold--win-board"></a>
 
 ## A Hold & Win board
 
@@ -87,6 +160,8 @@ symbols drop in one by one.
 Loops are keyed per beat (one tease loop per reel), fade out when their beat
 ends, and stop dead on `destroy()` or when the reel set is destroyed.
 
+<a id="any-engine"></a>
+
 ## Any engine
 
 `attachReelSounds` only needs a `ReelAudioPort`: `play(name, { bus, volume,
@@ -94,3 +169,5 @@ pitch })` and `loop(name, { ..., fadeIn })` returning `{ stop({ fade }) }`.
 `zvukPort` is that port over a zvuk engine (a variants set plays its next take,
 a missing name is skipped with one warning). Wrap Howler or raw Web Audio the
 same way.
+
+</ConceptPart>

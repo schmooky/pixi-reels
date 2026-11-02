@@ -1,10 +1,23 @@
 ---
 title: Nudge
-order: 11
-eyebrow: Building blocks
-description: Push a reel down or up by one or more positions after it has
-  stopped, revealing caller-supplied symbols.
+group: mechanics
+oneLiner: Shift a landed reel up or down by N positions to reveal new symbols, sequential, parallel, staggered, skippable or abortable.
+order: 50
+tags:
+  - nudge
+  - stagger
+  - spotlight
+  - big-symbols
+  - abort
+  - skip
+  - horizontal
+  - reverse
+  - orientation
+guides:
+  - nudge
 ---
+
+<ConceptPart title="Nudge" lede="Push a reel down or up by one or more positions after it has stopped, revealing caller-supplied symbols.">
 
 A nudge shoves one reel a few cells AFTER it has landed, revealing symbols
 you supply.
@@ -26,6 +39,8 @@ Reel 2 moves one cell. Everything shifts along, the last symbol leaves the
 window, and `'wild'` arrives at the front.
 
 <RecipeDemo code="nudge" />
+
+<a id="the-contract"></a>
 
 ## The contract
 
@@ -69,6 +84,8 @@ Resolves with the new visible cells, in order. Feed it straight into win
 re-detection. Rejects `AbortError` if `signal` aborts or the set is destroyed
 mid-tween.
 
+<a id="how-incoming-lays-out"></a>
+
 ## How `incoming` lays out
 
 For a 3-cell reel landed on `['A', 'B', 'C']` (first, middle, last):
@@ -94,10 +111,14 @@ nudge or the next spin's opening frame.
 `distance >= total strip capacity` throws, because a full rotation would
 silently eat a pre-placed buffer entry.
 
+<a id="sequential-vs-parallel"></a>
+
 ## Sequential vs parallel
 
 One nudge, one reel. Multi-reel beats are yours to orchestrate. Same engine
 output either way -- only the pacing differs.
+
+<a id="sequential-three-separate-beats"></a>
 
 ### Sequential. three separate beats
 
@@ -111,6 +132,8 @@ for (const reel of [1, 2, 3]) {
 
 Each `await` waits for that reel to land. The player reads reel 1's wild
 before reel 2 starts. Total time = reels x duration.
+
+<a id="parallel-one-synchronised-beat"></a>
 
 ### Parallel. one synchronised beat
 
@@ -127,6 +150,8 @@ await Promise.all(
 All the tweens start on the same frame. The whole line arrives together.
 Total time = one duration, however many reels.
 
+<a id="stagger-sugar-in-between"></a>
+
 ### Stagger. sugar in between
 
 `startDelay` gives you a wave without writing a loop:
@@ -141,6 +166,8 @@ await Promise.all(
 
 t=0, t=80, t=160. All running concurrently. Validation still throws
 synchronously at the call site; only the movement is delayed.
+
+<a id="big-symbols-on-the-reel"></a>
 
 ## Big symbols on the reel
 
@@ -168,6 +195,8 @@ tear the block off its cells on the next one.
 // Nudge back by 1 and the whole block lands at cells 0 and 1.
 await reelSet.nudge(2, { distance: 1, direction: 'reverse', incoming: ['filler'] });
 ```
+
+<a id="aborting--skipping"></a>
 
 ## Aborting / skipping
 
@@ -199,6 +228,8 @@ abort.
 Either way the strip lands where it was always going to. You never end up
 half-tweened.
 
+<a id="events"></a>
+
 ## Events
 
 | Event | Payload | When |
@@ -218,6 +249,8 @@ reelSet.events.on('nudge:complete', ({ reelIndex, symbols }) => {
   // Re-run win detection on reelSet.getVisibleGrid() here.
 });
 ```
+
+<a id="when-nudge-throws-or-rejects"></a>
 
 ## When `nudge()` throws (or rejects)
 
@@ -243,16 +276,20 @@ Bad arguments throw straight away. Cancellation rejects later.
 A nudge touches one reel. Spotlights, pins elsewhere, and every other reel
 carry through untouched.
 
+<a id="recipes"></a>
+
 ## Recipes
 
-- [Nudge a reel](/recipes/nudge/). the minimum runnable demo.
-- [Spotlight after a nudge](/recipes/nudge-spotlight/). nudge into a
+- [Nudge a reel](/mechanics/nudge/). the minimum runnable demo.
+- [Spotlight after a nudge](/mechanics/nudge/#nudge-spotlight). nudge into a
   win line, then run `WinPresenter` on the new cells.
-- [Nudge through a big symbol](/recipes/nudge-big-symbol/). block
+- [Nudge through a big symbol](/mechanics/nudge/#nudge-big-symbol). block
   survival math + tail-reveal canvas.
-- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/).
+- [Land a big symbol partially in buffer](/mechanics/big-symbols/#big-symbol-partial-land).
   the dual entry point: land in tail-visible state via `setResult`'s
   `bufferStart`, nudge to reveal.
-- [Nudge a big symbol in, then hold it across a respin](/recipes/big-symbol-held-respin/).
+- [Nudge a big symbol in, then hold it across a respin](/mechanics/big-symbols/#big-symbol-held-respin).
   reveal a buffer-anchored wild, then hold the reel through a respin
   of the others.
+
+</ConceptPart>

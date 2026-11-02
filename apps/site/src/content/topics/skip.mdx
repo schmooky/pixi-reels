@@ -1,9 +1,22 @@
 ---
-title: Spin lifecycle
-eyebrow: Building blocks
-description: The full lifecycle of a spin. phases, events, and how to hook in.
-order: 5
+title: Skip & slam
+group: mechanics
+oneLiner: Every skip lever end to end - partial slams both spellings, all three tease-protect modes, your own release plan, the quicken mode that lands instead of cutting (with groups, as a two-press button, and in a custom phase), queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
+order: 57
+tags:
+  - skip
+  - slam
+  - anticipation
+  - tease
+  - phases
+  - timing
+  - groups
+guides:
+  - spin-lifecycle
 ---
+
+<ConceptPart title="Spin lifecycle" lede="The full lifecycle of a spin. phases, events, and how to hook in.">
+
 A spin has three phases. Sometimes four.
 
 **Start** -- pulls back a little, then accelerates. Like a lever.
@@ -15,6 +28,8 @@ you asked for it with `setAnticipation()` before the result. Most scatter
 games want it, so it ships ready.
 
 **Stop** -- brakes onto the target frame, overshoots, settles.
+
+<a id="what-events-will-be-fired-by-reelset"></a>
 
 ## What events will be fired by ReelSet
 
@@ -69,6 +84,8 @@ after the landing can `await` it instead of hijacking the track.
 `spin:complete` -- fires immediately after, with the identical `SpinResult` (which already carries `duration`). This
 is where win presentation starts.
 
+<a id="pattern-fetch-result-mid-spin"></a>
+
 ## Pattern: fetch result mid-spin
 
 Real slots call the server while the reels spin. That is the design.
@@ -86,6 +103,8 @@ const result = await promise;
 Call `setResult()` **while the reels are spinning**. Too early is fine -- the
 engine holds the stop until every reel is in SPIN. Never calling it is not
 fine: the promise waits forever.
+
+<a id="player-slam-stop"></a>
 
 ## Player slam-stop
 
@@ -110,6 +129,8 @@ no second code path.
 `skipStage` tells you where the round is: `0` before any press, `2` after,
 `1` while a protected tease is still running (see below). Drive the button's
 look from it.
+
+<a id="skip-granularity"></a>
 
 ## Skip granularity
 
@@ -144,7 +165,7 @@ speed boost, and that refills carry no tease of their own (`refill()` clears
 the anticipation set on entry). A Hold & Win board is a different shape
 entirely - one single-reel `ReelSet` per cell - so per-reel slam has nothing to
 divide there and `BoardGrid.skipSpinning()` is the per-cell lever instead. See
-[Skip & slam](/recipes/skip/#skip-cascade-protect) for both.
+[Skip & slam](/mechanics/skip/#skip-cascade-protect) for both.
 
 Two mid-spin calls that look like they would help here do not, and both are
 pinned by tests. Shrinking the set with `setAnticipation()` does NOT release a
@@ -176,6 +197,8 @@ Reach for `protect` rather than a raised floor on teasing spins. If a
 scatterless skip lands instantly but a teasing one settles slower, the response
 time itself tells the player a feature is coming before the reels have landed.
 
+<a id="holding-some-reels"></a>
+
 ## Holding some reels
 
 Expanding wilds and single-reel respins need some reels to stay put.
@@ -193,6 +216,8 @@ It counts as already landed, so `spin:allLanded` waits only on the others. It
 fires no `spin:stopping` and no `spin:reelLanded`.
 
 `setAnticipation([...])` drops held indices without complaining.
+
+<a id="overriding-spin-mode"></a>
 
 ## Overriding spin mode
 
@@ -216,7 +241,9 @@ await reelSet.spin({ mode: 'cascade' }); // respin. cascade drop-in
 Pick `'cascade'` without `.tumble(...)` and the engine throws. The error names
 the method you forgot.
 
-See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
+See the [spin-then-cascade recipe](/mechanics/cascade/#spin-then-cascade).
+
+<a id="how-to-nudge"></a>
 
 ## How to nudge
 
@@ -231,7 +258,7 @@ await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] }
 ```
 
 `direction` is relative to the reel's own travel, not to the screen. See
-[Orientation & direction](/guides/orientation-and-direction/).
+[Orientation & direction](/mechanics/orientation-and-direction/#concept).
 
 Several reels at once? `Promise.all([...])` of independent calls.
 
@@ -239,9 +266,11 @@ Cancel mid-tween with `NudgeOptions.signal` -- rejects `AbortError`, fires
 `nudge:cancelled`. Or fast-forward with `reelSet.skipNudge(reel)`, which
 resolves normally.
 
-Read the full contract in the [nudge guide](/guides/nudge/).
+Read the full contract in the [nudge guide](/mechanics/nudge/#concept).
 
-Live recipes: [nudge](/recipes/nudge/), [skip](/recipes/nudge-skip/), [abort](/recipes/nudge-abort/), [stagger](/recipes/nudge-stagger/), [spotlight after a nudge](/recipes/nudge-spotlight/), [big symbols](/recipes/nudge-big-symbol/).
+Live recipes: [nudge](/mechanics/nudge/), [skip](/mechanics/nudge/#nudge-skip), [abort](/mechanics/nudge/#nudge-abort), [stagger](/mechanics/nudge/#nudge-stagger), [spotlight after a nudge](/mechanics/nudge/#nudge-spotlight), [big symbols](/mechanics/nudge/#nudge-big-symbol).
+
+<a id="full-event-map"></a>
 
 ## Full event map
 
@@ -274,8 +303,12 @@ Live recipes: [nudge](/recipes/nudge/), [skip](/recipes/nudge-skip/), [abort](/r
 | `nudge:cancelled`      | `({ reelIndex, distance, direction, reason })`  | `NudgeOptions.signal` aborted or the reel was destroyed mid-tween. **Does not fire alongside `nudge:complete`.**                                                         |
 | `destroyed`            | .                                               | `destroy()` called                                                                                                                                                       |
 
+<a id="deeper-dive"></a>
+
 ## Deeper dive
 
-* [Phases](/docs/api-phases/). customize START/SPIN/STOP timing
-* [Events](/docs/api-events/). types and exact signatures
-* [SpinOptions](/docs/api-builder/#spin-options). `holdReels`, `mode`
+* [Phases](/reference/api-phases/). customize START/SPIN/STOP timing
+* [Events](/reference/api-events/). types and exact signatures
+* [SpinOptions](/reference/api-builder/#spin-options). `holdReels`, `mode`
+
+</ConceptPart>
