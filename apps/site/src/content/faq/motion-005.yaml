@@ -1,5 +1,6 @@
 id: motion-005
 group: motion
+topic: orientation-and-direction
 question: How do I spin one reel up and another down (mixed directions)?
 answer: >-
   `.directionPerReel(['forward', 'reverse', 'forward', ...])` on the builder,

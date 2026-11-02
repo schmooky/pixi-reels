@@ -13,6 +13,6 @@ const { entry } = Astro.props;
 const { Content } = await render(entry);
 const { title, description, eyebrow } = entry.data;
 ---
-<Docs title={title} description={description} eyebrow={eyebrow} section="docs">
+<Docs title={title} description={description} eyebrow={eyebrow} section="reference">
   <Content components={{ RecipeDemo, Image: RecipeImage }} />
 </Docs>

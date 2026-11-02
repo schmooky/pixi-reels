@@ -1,13 +1,24 @@
 ---
 title: Hold & Win
-order: 14
-eyebrow: Building blocks
-description: The Hold & Win lifecycle end to end — the mental model, the state
-  machine, the events, and how to wire the board to your game client.
+group: mechanics
+oneLiner: Every Hold and Win building block on one page, from carrying a value on a coin to production Spine and sprite boards with collectors, multipliers, jackpots, meters, anticipation and skips, plus a rectangular-cell clover game from base spin to growing bonus board.
+order: 10
+tags:
+  - hold-and-win
+  - coins
+  - collector
+  - respin
+  - spine
+  - horizontal
+  - reverse
+  - orientation
+  - rectangular
+  - clovers
+guides:
+  - hold-and-win
 ---
 
-import Timeline from '../../components/docs/Timeline.astro';
-import Tree from '../../components/docs/Tree.astro';
+<ConceptPart title="Hold & Win" lede="The Hold & Win lifecycle end to end — the mental model, the state machine, the events, and how to wire the board to your game client.">
 
 Hold & Win (a.k.a. Lock & Respin, Hold & Spin) is a feature where coins land,
 **stick**, and refill a respin counter until the board fills or the respins run
@@ -17,8 +28,10 @@ out. `pixi-reels` ships it as a built-in board:
 import { HoldAndWinBuilder } from 'pixi-reels';
 ```
 
-The [recipes](/recipes/) show individual tricks; this guide shows how the whole
+The [recipes](/mechanics/) show individual tricks; this guide shows how the whole
 thing fits together and how you drive it from a real game client.
+
+<a id="the-mental-model"></a>
 
 ## The mental model
 
@@ -47,6 +60,8 @@ game logic you run on top of three openings:
 
 Keep that split and any Hold & Win variant you can think of is a small amount of
 game code - the board never changes.
+
+<a id="the-lifecycle"></a>
 
 ## The lifecycle
 
@@ -77,6 +92,8 @@ moment (`'idle' | 'active' | 'spinning'`).
 3. The feature **ends** when the board fills or the counter hits 0 (`→ idle`).
    Then you collect.
 
+<a id="what-one-respin-fires"></a>
+
 ### What one `respin()` fires
 
 Events come in a fixed order. Cells land in stagger order, so `cell:landed` /
@@ -98,6 +115,8 @@ Events come in a fixed order. Cells land in stagger order, so `cell:landed` /
     { label: '[feature:end]', note: 'if full, or the counter reached 0 → phase returns to idle' },
   ]}
 />
+
+<a id="wiring-it-to-your-game-client"></a>
 
 ## Wiring it to your game client
 
@@ -140,13 +159,15 @@ board.release(board.lockedCoins.map((c) => c.cell));
 ```
 
 `respin()` resolves only after the whole wave has landed *and* the counter has
-resolved, so the loop reads top-to-bottom. Want a [single skip button](/recipes/hold-and-win-skip/)?
+resolved, so the loop reads top-to-bottom. Want a [single skip button](/mechanics/hold-and-win/#hold-and-win-skip)?
 Call `board.skip()` to slam every in-flight cell; the landing → `coin:locked` →
 `feature:end` flow still resolves, you stop waiting. `board.skip({ mode: 'quicken' })`
 is the press that lands instead of cutting: every in-flight cell drops its spin
 floor (the stagger lives there, so the wave lands together) and still spins its
 symbol in and bounces; add `speed: 'turbo'` to land it on turbo, or make it the
 board's default with `HoldAndWinBuilder.skipMode('quicken')`.
+
+<a id="events-reference"></a>
 
 ## Events reference
 
@@ -178,6 +199,8 @@ Two deliberate distinctions:
   MINI → MAJOR), keeping the ledger correct. It throws on a free cell; placing a
   brand-new tracked coin is `enter`/`respin`'s job.
 
+<a id="rectangular-cells-the-lock-animation-dormant-cells"></a>
+
 ## Rectangular cells, the lock animation, dormant cells
 
 Three builder knobs cover what a production board usually needs beyond the square default:
@@ -205,8 +228,10 @@ locked -- `.lockAnimation((coin) => coin.id === 'collector' ? 'win' : 'landing')
 collector celebrates while plain coins only settle. `board.activate(cells)` wakes dormant
 cells between waves - they show the empty symbol, join the next respin and count toward
 `isFull` from then on; `reset()` seals them again. The `Rectangular cells`, `Landing only`
-and `Clover board that grows` recipes on the [Hold & Win recipes page](/recipes/hold-and-win/)
+and `Clover board that grows` recipes on the [Hold & Win recipes page](/mechanics/hold-and-win/)
 show each one running.
+
+<a id="draw-order-between-cells"></a>
 
 ## Draw order between cells
 
@@ -223,7 +248,9 @@ that layer sortable and asks for each cell's order on every place and landing:
 
 `board.liftedLayer` is the layer itself, for an effect that has to sit between the
 cells and their lifted art. `symbolZIndex(resolver)` is the per-symbol form from
-`ReelSetBuilder`, applied inside every cell -- see [big symbols](/guides/big-symbols/#zindex-layering).
+`ReelSetBuilder`, applied inside every cell -- see [big symbols](/mechanics/big-symbols/#zindex-layering).
+
+<a id="speeds-board-wide"></a>
 
 ## Speeds, board-wide
 
@@ -255,6 +282,8 @@ cuts the wave in progress - or `board.skip({ mode: 'quicken', speed: 'turbo' })`
 lands it on turbo instead of cutting it. Each name also gets a `name:tension` variant the
 board uses for an anticipating wave.
 
+<a id="own-the-board"></a>
+
 ## Own the board
 
 `pixi-reels` ships boards as two layers, on purpose:
@@ -272,7 +301,7 @@ the built-in board doesn't fit, you have three escape hatches, in order of effor
    builder options. Most games never go past here.
 2. **Build on the primitive.** If your feature isn't lock-and-respin at all
    (pick-and-reveal, cluster-collect, scratch-card), skip `HoldAndWinBuilder` and
-   use `BoardGrid` directly. [Here's a non-Hold & Win board on the primitive](/recipes/board-grid-reveal/).
+   use `BoardGrid` directly. [Here's a non-Hold & Win board on the primitive](/mechanics/cells-and-banners/#board-grid-reveal).
 3. **Fork the board.** Want lock-and-respin but with *different* rules? Copy
    `HoldAndWinBoard` + `HoldAndWinState` into your project and repoint their
    imports at `pixi-reels` - everything they reach for (`BoardGrid`,
@@ -285,14 +314,18 @@ The one thing the board will **never** do is read your `data` or encode a
 paytable. Meaning stays yours; the board only moves reels. That line - mechanism
 on our side, domain on yours - is the contract that keeps it out of your way.
 
+<a id="where-to-go-next"></a>
+
 ## Where to go next
 
-- **See the lifecycle live** - the [event-trace board](/recipes/hold-and-win-trace/)
+- **See the lifecycle live** - the [event-trace board](/mechanics/hold-and-win/#hold-and-win-trace)
   prints every event as it fires.
-- **Starter** - [Hold & Win respin](/recipes/hold-and-win/), the minimal board.
-- **Carry a value** - [on the coin's data](/recipes/coin-value-data/) ·
-  [baked into a symbol class](/recipes/coin-value-symbol/).
-- **Flights & collect** - [collector + bezier choreography](/recipes/hold-and-win-collector/) ·
-  [fly to a meter](/recipes/hold-and-win-meter/).
-- **Tension** - [per-board anticipation](/recipes/hold-and-win-anticipation/).
-- **Base game → feature** - [transition in one chain](/recipes/hold-and-win-base-to-feature/).
+- **Starter** - [Hold & Win respin](/mechanics/hold-and-win/), the minimal board.
+- **Carry a value** - [on the coin's data](/mechanics/hold-and-win/#coin-value-data) ·
+  [baked into a symbol class](/mechanics/hold-and-win/#coin-value-symbol).
+- **Flights & collect** - [collector + bezier choreography](/mechanics/hold-and-win/#hold-and-win-collector) ·
+  [fly to a meter](/mechanics/hold-and-win/#hold-and-win-meter).
+- **Tension** - [per-board anticipation](/mechanics/hold-and-win/#hold-and-win-anticipation).
+- **Base game → feature** - [transition in one chain](/mechanics/hold-and-win/#hold-and-win-base-to-feature).
+
+</ConceptPart>

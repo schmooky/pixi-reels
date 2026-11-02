@@ -1,5 +1,6 @@
 id: chars-009
 group: chars
+topic: hold-and-win
 question: How do I make persistent feature symbols interact across the board
   (Money-Train style)?
 answer: On the Hold & Win board, coordinate persistent feature symbols from your
@@ -7,4 +8,4 @@ answer: On the Hold & Win board, coordinate persistent feature symbols from your
   act across cells (absorb, boost, move).
 links:
   - label: "Recipe: Collector symbol"
-    href: /recipes/collector-symbol-pin/
+    href: /mechanics/hold-and-win/#collector-symbol-pin

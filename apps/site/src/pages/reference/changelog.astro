@@ -1,24 +1,25 @@
 ---
-import Base from '../layouts/Base.astro';
-import { Content as ChangelogContent } from '../generated/CHANGELOG.md';
-import { PIXI_REELS_VERSION } from '../lib/version.ts';
-import { SITE, articleLd, breadcrumbLd } from '../lib/seo.ts';
+import Base from '../../layouts/Base.astro';
+import { Content as ChangelogContent } from '../../generated/CHANGELOG.md';
+import { PIXI_REELS_VERSION } from '../../lib/version.ts';
+import { SITE, articleLd, breadcrumbLd } from '../../lib/seo.ts';
 
 const title = 'Changelog';
 const description = `Per-release notes for the pixi-reels engine. Latest published version: v${PIXI_REELS_VERSION}.`;
 
 const jsonLd = [
-  articleLd({ title, description, path: '/changelog/' }),
+  articleLd({ title, description, path: '/reference/changelog/' }),
   breadcrumbLd([
     { name: SITE.name, url: '/' },
-    { name: title, url: '/changelog/' },
+    { name: 'Reference', url: '/reference/' },
+    { name: title, url: '/reference/changelog/' },
   ]),
 ];
 ---
 <Base
   title={`${title} · ${SITE.name}`}
   description={description}
-  path="/changelog/"
+  path="/reference/changelog/"
   type="article"
   article={{ section: 'Reference' }}
   jsonLd={jsonLd}

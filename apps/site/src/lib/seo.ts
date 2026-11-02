@@ -30,17 +30,17 @@ export function ogUrlForPath(pathname: string | undefined): string {
   };
 
   return (
-    item('recipes', /^\/recipes\/([^/]+)$/) ??
-    item('guides', /^\/guides\/([^/]+)$/) ??
+    (p === '/reference/changelog' ? '/og/section/changelog.png' : null) ??
+    item('mechanics', /^\/mechanics\/([^/]+)$/) ??
+    item('learn', /^\/learn\/([^/]+)$/) ??
     item('faq', /^\/faq\/([^/]+)$/) ??
-    item('docs', /^\/docs\/([^/]+)$/) ??
+    item('reference', /^\/reference\/([^/]+)$/) ??
     item('architecture', /^\/architecture\/([^/]+)$/) ??
-    (p === '/recipes' ? '/og/section/recipes.png' : null) ??
-    (p === '/guides' ? '/og/section/guides.png' : null) ??
+    (p === '/mechanics' ? '/og/section/mechanics.png' : null) ??
+    (p === '/learn' ? '/og/section/learn.png' : null) ??
     (p === '/faq' ? '/og/section/faq.png' : null) ??
-    (p === '/docs' ? '/og/section/docs.png' : null) ??
+    (p === '/reference' ? '/og/section/reference.png' : null) ??
     (p === '/architecture' ? '/og/section/architecture.png' : null) ??
-    (p === '/changelog' ? '/og/section/changelog.png' : null) ??
     (p.startsWith('/api') ? '/og/section/api.png' : null) ??
     SITE.defaultImage
   );

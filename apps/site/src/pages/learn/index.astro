@@ -1,14 +1,14 @@
 ---
 import Docs from '../../layouts/Docs.astro';
-import { GUIDES_NAV } from '../../content/nav.ts';
+import { LEARN_NAV } from '../../content/nav.ts';
 ---
-<Docs title="Guides" section="guides" eyebrow="Learn" description="Step-by-step guides for pixi-reels.">
+<Docs title="Learn" section="learn" eyebrow="Learn" description="Step-by-step guides for pixi-reels.">
   <p>
-    Walkthroughs that take you from zero to shipping. Start with <a href="/guides/getting-started/">Getting started</a>, then pick whichever topic matches what you need next.
+    Walkthroughs that take you from zero to shipping. Start with <a href="/learn/getting-started/">Getting started</a>, then pick whichever <a href="/mechanics/">mechanic</a> matches what you need next.
   </p>
 
   <div class="mt-12 space-y-12">
-    {GUIDES_NAV.map((section, i) => (
+    {LEARN_NAV.map((section, i) => (
       <section>
         <h2 class="eyebrow mb-4 mt-0">{String(i + 1).padStart(2, '0')} / {section.title}</h2>
         <div class="divide-y divide-border border-y border-border">

@@ -1,5 +1,6 @@
 id: anim-009
 group: anim
+topic: cells-and-banners
 question: How do I await a one-shot animation and continue when it finishes?
 answer: "`await symbol.playWin()` resolves when the win one-shot finishes; on
   `SpineReelSymbol`, `playLanding()` / `playOut()` do the same for the landing /
@@ -7,4 +8,4 @@ answer: "`await symbol.playWin()` resolves when the win one-shot finishes; on
   animation. Each resolves early if something else takes its track."
 links:
   - label: "Guide: Win animations"
-    href: /guides/win-animations/
+    href: /mechanics/cells-and-banners/#concept

@@ -369,7 +369,7 @@ const geometry = [
     bounce, the cascade fall and the pin squash work on any axis without a
     special case. And stacking order is geometric, not relative to travel: <code>cellStacking</code> defaults to <code>'ascending'</code>, meaning
     the cell with the larger coordinate draws in front, and a reverse reel
-    does not flip that. The <a href="/guides/orientation-and-direction/">orientation guide</a> shows
+    does not flip that. The <a href="/mechanics/orientation-and-direction/#concept">orientation guide</a> shows
     the combinations in a running demo.
   </p>
 
@@ -631,7 +631,7 @@ const geometry = [
     2 block on 80 px cells with a 4 px gap is 164 px across, not 160. A
     block's <code>size.reels</code> always spans the cross axis and <code>size.cells</code> the main axis, so under a horizontal orientation
     the screen width and height they map to swap. <code>getSymbolAt</code> and <code>getVisibleSymbols</code> resolve a covered cell to the anchor's
-    id. See the <a href="/guides/big-symbols/">big symbols guide</a>.
+    id. See the <a href="/mechanics/big-symbols/#concept-big-symbols">big symbols guide</a>.
   </p>
 
   <h2>Nudge: a post-stop reposition</h2>
@@ -685,7 +685,7 @@ const geometry = [
 
   <p>
     The set emits <code>nudge:start</code>, <code>nudge:complete</code> and <code>nudge:cancelled</code>; the reel itself emits <code>phase:enter</code> and <code>phase:exit</code> with the name <code>'nudge'</code>. <code>skipNudge()</code> jumps straight to the
-    landed state. See the <a href="/guides/nudge/">nudge guide</a> and the <a href="/recipes/nudge/">nudge recipes</a>.
+    landed state. See the <a href="/mechanics/nudge/#concept">nudge guide</a> and the <a href="/mechanics/nudge/">nudge recipes</a>.
   </p>
 
   <h2>Per-reel geometry</h2>
@@ -717,7 +717,7 @@ const geometry = [
   </div>
 
   <p>
-    The <a href="/guides/per-reel-geometry/">per-reel geometry guide</a> shows
+    The <a href="/mechanics/big-symbols/#concept-per-reel-geometry">per-reel geometry guide</a> shows
     pyramids and jagged boards built from these.
   </p>
 

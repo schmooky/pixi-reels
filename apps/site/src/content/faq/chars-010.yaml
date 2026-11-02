@@ -1,9 +1,10 @@
 id: chars-010
 group: chars
+topic: hold-and-win
 question: How do I aim a flight at a moving target (the character animates while
   a coin flies)?
 answer: >-
   The helper tweens to a fixed point, so recompute the target each frame in your own update (or re-issue `bezierFly`) as the character moves. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
 links:
   - label: "Recipe: Hold & Win — collector"
-    href: /recipes/hold-and-win-collector/
+    href: /mechanics/hold-and-win/#hold-and-win-collector

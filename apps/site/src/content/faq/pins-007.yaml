@@ -1,8 +1,9 @@
 id: pins-007
 group: pins
+topic: big-symbols
 question: How do I keep a pin in place when the board reshapes (MultiWays)?
 answer: Pins clamp and restore automatically across MultiWays reshapes;
   `pin:migrated` fires when they move.
 links:
   - label: "Recipe: Sticky wild + MultiWays"
-    href: /recipes/sticky-wild-multiways/
+    href: /mechanics/big-symbols/#sticky-wild-multiways

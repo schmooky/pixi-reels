@@ -1,5 +1,6 @@
 id: mways-007
 group: mways
+topic: orientation-and-direction
 question: How do I add a top horizontal reel (extra strip above the board)?
 answer: >-
   Build it as a second `ReelSet` with `.orientation('horizontal')` -- one reel
@@ -10,6 +11,6 @@ answer: >-
   yourself.
 links:
   - label: "Recipe: Horizontal banner"
-    href: /recipes/orientation-and-direction/#horizontal-banner
+    href: /mechanics/orientation-and-direction/#horizontal-banner
   - label: "Guide: Orientation and direction"
-    href: /guides/orientation-and-direction/
+    href: /mechanics/orientation-and-direction/#concept

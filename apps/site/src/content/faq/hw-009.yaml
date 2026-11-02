@@ -1,8 +1,9 @@
 id: hw-009
 group: hw
+topic: hold-and-win
 question: How do I make most spins land blank so coins flash by rarely?
 answer: "Weight `empty` heavily over the coin on the strip, e.g. `.weights({
   coin: 1, empty: 3 })`."
 links:
   - label: "Recipe: Hold & Win respin"
-    href: /recipes/hold-and-win/
+    href: /mechanics/hold-and-win/

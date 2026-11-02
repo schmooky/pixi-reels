@@ -6,7 +6,7 @@ description: Fluent builder for ReelSet. Reduces ~100 lines of manual wiring to
   ~10, validates everything at .build() time.
 ---
 
-Every method returns `this` so you can chain. `build()` validates and returns a [`ReelSet`](/docs/api-reelset/). missing required calls throw with a single error listing every problem.
+Every method returns `this` so you can chain. `build()` validates and returns a [`ReelSet`](/reference/api-reelset/). missing required calls throw with a single error listing every problem.
 
 ## Required
 
@@ -36,11 +36,11 @@ Missing any of these throws at `.build()` with a human-readable list of problems
 | `.offsetConfig(config)` | `{ mode: 'none' }` |
 | `.spinningMode(mode)` | `new StandardMode()` |
 | `.frameMiddleware(mw)` | *(none)*. add as many as you want; sorted by priority. |
-| `.phases((f) => { f.register(...) })` | Built-in `START`/`SPIN`/`STOP`/`ANTICIPATION` (+ cascade phases when `.tumble()` is used). `f.register(key, Class, options)` re-registers a built-in with options; `{ steps }` edits its step list, see [Phases](/docs/api-phases/#steps). |
-| `.skipMode('slam' \| 'quicken')` | `'slam'`. What a skip press does to the reels it frees when `requestSkip()` / `skipSpin()` do not say. See [ReelSet](/docs/api-reelset/). |
+| `.phases((f) => { f.register(...) })` | Built-in `START`/`SPIN`/`STOP`/`ANTICIPATION` (+ cascade phases when `.tumble()` is used). `f.register(key, Class, options)` re-registers a built-in with options; `{ steps }` edits its step list, see [Phases](/reference/api-phases/#steps). |
+| `.skipMode('slam' \| 'quicken')` | `'slam'`. What a skip press does to the reels it frees when `requestSkip()` / `skipSpin()` do not say. See [ReelSet](/reference/api-reelset/). |
 | `.tumble({ fall, dropIn })` | *(unset; required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`)*. see [the Tumble section](#tumble) below. |
 | `.multiways({ minCells, maxCells, reelExtent })` | *(unset; required for `setShape(...)`)*. `reelExtent` is a MAIN-axis extent. |
-| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. which screen axis the strip travels along. See [Orientation & direction](/guides/orientation-and-direction/). |
+| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. which screen axis the strip travels along. See [Orientation & direction](/mechanics/orientation-and-direction/#concept). |
 | `.direction('forward' \| 'reverse')` | `'forward'`. which way along that axis symbols move. `'reverse'` on a vertical set is a roll-up. |
 | `.directionPerReel([d,...])` | *(unset)*. per-reel override; length must equal `reels()`. Cannot be combined with cross-reel big symbols. |
 | `.cellStacking('ascending' \| 'descending')` | `'ascending'`. which cell draws in front. Geometric: `direction('reverse')` does NOT flip it. |
@@ -108,7 +108,7 @@ const reelSet = new ReelSetBuilder()
 
 ### Picking a feel
 
-Five preset recipes you can copy verbatim. see the [tumble feels recipe](/recipes/tumble-feels/) for side-by-side canvases.
+Five preset recipes you can copy verbatim. see the [tumble feels recipe](/mechanics/cascade/#tumble-feels) for side-by-side canvases.
 
 | Feel | fall.ease | dropIn.ease | dropIn.cellStagger | When to use |
 |---|---|---|---|---|
@@ -149,4 +149,4 @@ await spin;
 await reelSet.spin({ mode: 'cascade' });
 ```
 
-See the [spin lifecycle guide](/guides/spin-lifecycle/) for how these options interact with the event timeline, and the [cascades guide](/guides/cascades/) for the cascade-specific orchestration.
+See the [spin lifecycle guide](/mechanics/skip/#concept) for how these options interact with the event timeline, and the [cascades guide](/mechanics/cascade/#concept) for the cascade-specific orchestration.

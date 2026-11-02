@@ -1,8 +1,9 @@
 id: hw-013
 group: hw
+topic: hold-and-win
 question: How do I play a slick reset back to the opening state after the feature?
 answer: On replay, `board.reset()` blanks the board, then re-`enter(seed)`;
   animate the sweep yourself.
 links:
   - label: "Recipe: Hold & Win — collector"
-    href: /recipes/hold-and-win-collector/
+    href: /mechanics/hold-and-win/#hold-and-win-collector

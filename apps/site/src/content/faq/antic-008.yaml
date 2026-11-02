@@ -1,5 +1,6 @@
 id: antic-008
 group: antic
+topic: anticipation
 question: How do I chain anticipation across multiple reels (rolling tension)?
 answer: >-
   Pass several reel indices plus a stagger: `setAnticipation([2, 3, 4], 450)`.
@@ -9,4 +10,4 @@ answer: >-
   previous one has fully landed.
 links:
   - label: "Recipe: Near-miss"
-    href: /recipes/near-miss/
+    href: /mechanics/anticipation/#near-miss

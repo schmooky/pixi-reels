@@ -341,7 +341,7 @@ poolCapacity = builder.poolCapacity(n) ?? max(20, sum over reels of (visible + b
   <p>
     Three limits: big symbols cannot be combined with <code>multiways()</code>,
     a non-anchor cell cannot be pinned, and a block spanning reels whose cell
-    sizes differ logs a one-time warning. The recipes use <code>zIndex: 5</code> for anchors so a block draws above its neighbours. See <a href="/guides/big-symbols/">the big symbols guide</a>.
+    sizes differ logs a one-time warning. The recipes use <code>zIndex: 5</code> for anchors so a block draws above its neighbours. See <a href="/mechanics/big-symbols/#concept-big-symbols">the big symbols guide</a>.
   </p>
 
   <h2>The concrete classes</h2>
@@ -496,7 +496,7 @@ poolCapacity = builder.poolCapacity(n) ?? max(20, sum over reels of (visible + b
 
   <p>
     Under <code>packages/pixi-reels/src/</code>: <code>symbols/ReelSymbol.ts</code> and the <code>Sprite</code>, <code>AnimatedSprite</code>, <code>Spine</code>, <code>Card</code>, <code>PhaseCard</code> and <code>Empty</code> files beside it, with <code>SymbolRegistry.ts</code>, <code>SymbolFactory.ts</code> and <code>PerspectiveCell.ts</code>; <code>pool/ObjectPool.ts</code>; <code>spine/SpineReelSymbol.ts</code>; <code>snapshot/SpinTextureCache.ts</code> and <code>StaticSpinSymbol.ts</code>; <code>frame/SymbolPool.ts</code> and <code>RandomSymbolProvider.ts</code>; <code>spin/bigSymbolBlocks.ts</code>; and the <code>OccupiedStub</code> in <code>core/Reel.ts</code>.
-    Guides: <a href="/guides/symbols/">symbols</a>, <a href="/guides/win-animations/">win animations</a>, <a href="/guides/big-symbols/">big symbols</a>. Recipes: <a href="/recipes/symbols/">symbols</a>, <a href="/recipes/big-symbols/">big symbols</a>.
+    Guides: <a href="/mechanics/symbols/#concept">symbols</a>, <a href="/mechanics/cells-and-banners/#concept">win animations</a>, <a href="/mechanics/big-symbols/#concept-big-symbols">big symbols</a>. Recipes: <a href="/mechanics/symbols/">symbols</a>, <a href="/mechanics/big-symbols/">big symbols</a>.
   </p>
 
   <Callout kind="remember">

@@ -1,5 +1,6 @@
 id: coins-016
 group: coins
+topic: hold-and-win
 question: How do I upgrade a coin's value tier in place (5 → 10 → 25)?
 answer: >-
   Swap the coin's id and data in place with `board.setSymbolAt(cell, id, data)`.
@@ -10,4 +11,4 @@ answer: >-
   payload.
 links:
   - label: "Recipe: Hold & Win — upgrade a coin in place"
-    href: /recipes/hold-and-win-upgrade-coin/
+    href: /mechanics/hold-and-win/#hold-and-win-upgrade-coin

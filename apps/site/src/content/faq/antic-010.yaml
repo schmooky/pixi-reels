@@ -1,5 +1,6 @@
 id: antic-010
 group: antic
+topic: anticipation
 question: How do I make the anticipation reel speed up briefly before slowing?
 answer: >-
   Give the tease a curve whose first segment is a surge above 1: `setAnticipation(reels,

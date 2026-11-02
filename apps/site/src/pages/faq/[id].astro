@@ -6,6 +6,8 @@ import {
   FAQ_GROUP_TITLE,
   type FaqQuestionResolved,
 } from '../../content/faq.ts';
+import { TOPIC_BY_SLUG } from '../../content/topics.ts';
+import { renderAnswer, plainAnswer as plain } from '../../lib/faqRender.ts';
 import { ChevronLeft, ArrowRight } from 'lucide-react';
 import { SITE, qaPageLd, articleLd, breadcrumbLd } from '../../lib/seo.ts';
 
@@ -20,24 +22,8 @@ interface Props {
 }
 const { q } = Astro.props as Props;
 const groupTitle = FAQ_GROUP_TITLE[q.group];
+const topic = q.topic ? TOPIC_BY_SLUG[q.topic] : undefined;
 const path = `/faq/${q.id}/`;
-
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-// Plain prose → HTML: blank lines split paragraphs, `code` spans become <code>.
-function renderAnswer(text: string): string {
-  return text
-    .split(/\n\n+/)
-    .map((p) => {
-      const html = escapeHtml(p).replace(
-        /`([^`]+)`/g,
-        '<code class="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[0.85em]">$1</code>',
-      );
-      return `<p class="leading-7 text-foreground/85">${html}</p>`;
-    })
-    .join('');
-}
-const plain = (s: string) => s.replace(/`/g, '');
 
 const answerEn = q.answer!.en;
 const description = plain(answerEn).slice(0, 155);
@@ -63,7 +49,7 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
     breadcrumbLd([
       { name: SITE.name, url: '/' },
       { name: 'FAQ', url: '/faq/' },
-      { name: groupTitle.en, url: `/faq/#${q.group}` },
+      { name: topic?.title ?? 'General', url: `/faq/#${topic?.slug ?? 'general'}` },
       { name: q.en, url: path },
     ]),
   ]}
@@ -77,9 +63,9 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
       <p class="eyebrow">
         FAQ
         <span class="text-muted-foreground/60">/</span>
-        <a href={`/faq/#${q.group}`} class="hover:underline">{groupTitle.en}</a>
+        <a href={`/faq/#${topic?.slug ?? 'general'}`} class="hover:underline">{topic?.title ?? 'General'}</a>
         <span class="text-muted-foreground/60">/</span>
-        Answered
+        {groupTitle.en}
       </p>
       <h1 class="display mt-4 text-4xl sm:text-5xl">{q.en}</h1>
     </header>
@@ -87,11 +73,19 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
     <article class="space-y-4">
       <div class="space-y-3" set:html={renderAnswer(answerEn)} />
 
-      {q.links && q.links.length > 0 && (
+      {((q.links && q.links.length > 0) || topic) && (
         <div class="not-prose mt-8 border-y border-border py-4">
           <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">See it work</div>
           <ul class="space-y-1.5">
-            {q.links.map((l) => (
+            {topic && (
+              <li>
+                <a href={`/mechanics/${topic.slug}/`} class="group inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
+                  Mechanic: {topic.title}
+                  <ArrowRight size={14} strokeWidth={2.5} className="transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1" />
+                </a>
+              </li>
+            )}
+            {(q.links ?? []).map((l) => (
               <li>
                 <a href={l.href} class="group inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
                   {l.label}

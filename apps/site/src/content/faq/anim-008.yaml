@@ -1,5 +1,6 @@
 id: anim-008
 group: anim
+topic: hold-and-win
 question: How do I play an arbitrary named Spine animation on a symbol?
 answer: "`await symbol.playOneShot(name)` plays it once on `SpineReelSymbol` and
   resolves when it ends, then returns the track to idle; pass `{ track: 1 }` for
@@ -8,4 +9,4 @@ answer: "`await symbol.playOneShot(name)` plays it once on `SpineReelSymbol` and
   `.spine` getter."
 links:
   - label: "Recipe: Hold & Win — Spine coins"
-    href: /recipes/hold-and-win-spine/
+    href: /mechanics/hold-and-win/#hold-and-win-spine

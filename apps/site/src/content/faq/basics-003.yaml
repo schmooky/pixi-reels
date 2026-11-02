@@ -1,5 +1,6 @@
 id: basics-003
 group: basics
+topic:
 question: How do I set how many cells are visible?
 answer: Use `.visibleCells(n)` for a uniform count, or
   `.visibleCellsPerReel([...])` when each reel shows a different number of cells.

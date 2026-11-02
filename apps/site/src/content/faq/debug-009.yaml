@@ -1,5 +1,6 @@
 id: debug-009
 group: debug
+topic:
 question: How do I record and replay a spin frame by frame?
 answer: >-
   `startRecording(reelSet, tag)` snapshots the board at `spin:start`, each
@@ -9,4 +10,4 @@ answer: >-
   and the same `setResult` grid to reproduce.
 links:
   - label: "Guide: Debugging"
-    href: /guides/debugging/
+    href: /learn/debugging/

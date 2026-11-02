@@ -1,8 +1,9 @@
 id: wilds-007
 group: wilds
+topic: wilds-and-pins
 question: How do I keep a sticky wild for a fixed number of spins then drop it?
 answer: "Pin with `{ turns: N }`; it auto-unpins and fires `pin:expired` when
   the counter runs out."
 links:
   - label: "Recipe: Sticky wild (CellPin)"
-    href: /recipes/sticky-wild-pin/
+    href: /mechanics/wilds-and-pins/#sticky-wild-pin

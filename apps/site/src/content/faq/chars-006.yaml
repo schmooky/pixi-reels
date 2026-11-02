@@ -1,8 +1,9 @@
 id: chars-006
 group: chars
+topic: cells-and-banners
 question: How do I walk a character across the reels stopping on each cell?
 answer: Tween the character along the cell centers from `getCellBounds` /
   `cellCenter`, stopping on each.
 links:
   - label: "Recipe: Cell bounds"
-    href: /recipes/cell-bounds/
+    href: /mechanics/cells-and-banners/#cell-bounds

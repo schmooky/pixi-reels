@@ -110,7 +110,13 @@ export function rehypeHeadingAnchors() {
       if (!children) return;
       for (let i = 0; i < children.length; i++) {
         const node = children[i];
-        if (node.type !== 'element') continue;
+        // Recurse into JSX wrappers too: a topic page's Concept prose sits
+        // inside `<ConceptPart>`, an `mdxJsxFlowElement` whose heading children
+        // would otherwise never be reached.
+        if (node.type !== 'element') {
+          visit(node);
+          continue;
+        }
         if (ANCHORED.has(node.tagName) && !alreadyAnchored(node)) {
           // Prefer the hand-placed anchor before this heading; fall back to the
           // heading's own generated id. The lookback skips whitespace-only text

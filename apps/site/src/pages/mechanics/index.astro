@@ -1,30 +1,30 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { RECIPES, RECIPE_GROUPS } from '../../content/recipes.ts';
+import { TOPICS, TOPIC_GROUPS } from '../../content/topics.ts';
 import RecipeThumb from '../../components/RecipeThumb.astro';
 import { breadcrumbLd, articleLd, SITE } from '../../lib/seo.ts';
 
-const title = 'Recipes. pixi-reels mechanics, grouped and live';
+const title = 'Mechanics. pixi-reels mechanics, grouped and live';
 const description = 'Slot mechanics built with pixi-reels, grouped into pages of live, replayable demos: Hold & Win, big symbols, cascades, wilds and pins, nudge, anticipation, symbol authoring, cells and banners.';
 
-// Group recipes by their `group` field; preserve declaration order within each group.
-const recipesByGroup = new Map<string, typeof RECIPES>();
-for (const recipe of RECIPES) {
-  const list = recipesByGroup.get(recipe.group) ?? [];
-  list.push(recipe);
-  recipesByGroup.set(recipe.group, list);
+// Group topics by their `group` field; preserve declaration order within each group.
+const topicsByGroup = new Map<string, typeof TOPICS>();
+for (const topic of TOPICS) {
+  const list = topicsByGroup.get(topic.group) ?? [];
+  list.push(topic);
+  topicsByGroup.set(topic.group, list);
 }
-const groups = RECIPE_GROUPS.filter((g) => (recipesByGroup.get(g.id) ?? []).length > 0);
+const groups = TOPIC_GROUPS.filter((g) => (topicsByGroup.get(g.id) ?? []).length > 0);
 ---
 <Base
-  title={`Recipes · ${SITE.name}`}
+  title={`Mechanics · ${SITE.name}`}
   description={description}
-  path="/recipes/"
+  path="/mechanics/"
   jsonLd={[
-    articleLd({ title, description, path: '/recipes/' }),
+    articleLd({ title, description, path: '/mechanics/' }),
     breadcrumbLd([
       { name: SITE.name, url: '/' },
-      { name: 'Recipes', url: '/recipes/' },
+      { name: 'Mechanics', url: '/mechanics/' },
     ]),
   ]}
 >
@@ -32,9 +32,9 @@ const groups = RECIPE_GROUPS.filter((g) => (recipesByGroup.get(g.id) ?? []).leng
     <div class="container">
       <div class="max-w-3xl">
         <p class="motion-appear eyebrow">
-          Recipes
+          Mechanics
           <span class="text-muted-foreground/60">/</span>
-          {RECIPES.length} pages
+          {TOPICS.length} pages
         </p>
         <h1 class="display mt-5 text-4xl sm:text-5xl lg:text-6xl">
           <span class="motion-slam block">Slot mechanics, grouped and live.</span>
@@ -56,9 +56,9 @@ const groups = RECIPE_GROUPS.filter((g) => (recipesByGroup.get(g.id) ?? []).leng
             <h2 class="display mt-4 text-3xl sm:text-4xl">{g.description}</h2>
           </div>
           <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-            {(recipesByGroup.get(g.id) ?? []).map((r, i) => (
+            {(topicsByGroup.get(g.id) ?? []).map((r, i) => (
               <a
-                href={`/recipes/${r.slug}/`}
+                href={`/mechanics/${r.slug}/`}
                 class="group reveal flex min-w-0 flex-col border border-border bg-card transition-colors duration-[217ms] hover:border-brand"
                 style={`--motion-delay: ${(i % 3) * 50}ms`}
               >
@@ -67,7 +67,7 @@ const groups = RECIPE_GROUPS.filter((g) => (recipesByGroup.get(g.id) ?? []).leng
                   <h3 class="font-display text-xl font-bold tracking-tight">{r.title}</h3>
                   <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{r.oneLiner}</p>
                   <span class="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-foreground">
-                    Open recipe
+                    Open
                     <svg class="h-4 w-4 transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="M5 12h14M13 6l6 6-6 6" />
                     </svg>

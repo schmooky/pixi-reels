@@ -1,8 +1,9 @@
 id: cascade-012
 group: cascade
+topic: cells-and-banners
 question: How do I slam through all remaining cascades on a tap?
 answer: "`reelSet.skipSpin()` during a cascade fast-forwards the remaining
   tumble steps."
 links:
   - label: "Recipe: Slam-stop"
-    href: /recipes/slam-stop/
+    href: /mechanics/cells-and-banners/#slam-stop

@@ -1,8 +1,9 @@
 id: fs-006
 group: fs
+topic: wilds-and-pins
 question: How do I pick a single expanding symbol at the start of the feature?
 answer: Pick the id at feature start and pin its column to expand each spin (the
   expanding-wild pattern).
 links:
   - label: "Recipe: Expanding wild (CellPin)"
-    href: /recipes/expanding-wild-pin/
+    href: /mechanics/wilds-and-pins/#expanding-wild-pin

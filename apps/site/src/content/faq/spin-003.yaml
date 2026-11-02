@@ -1,8 +1,9 @@
 id: spin-003
 group: spin
+topic: skip
 question: How do I know when a spin has completely finished?
 answer: "`await reelSet.spin()` resolves with a `SpinResult` once every reel
   lands, or listen for the `spin:complete` event."
 links:
   - label: "Guide: Spin lifecycle"
-    href: /guides/spin-lifecycle/
+    href: /mechanics/skip/#concept

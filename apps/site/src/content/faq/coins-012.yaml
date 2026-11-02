@@ -1,8 +1,9 @@
 id: coins-012
 group: coins
+topic: hold-and-win
 question: How do I tick the collector total up as each value lands on it?
 answer: >-
   Increment the collector total in the `bezierFly().then(...)` arrival callback. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
 links:
   - label: "Recipe: Hold & Win — collector"
-    href: /recipes/hold-and-win-collector/
+    href: /mechanics/hold-and-win/#hold-and-win-collector

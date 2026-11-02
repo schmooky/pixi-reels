@@ -1,12 +1,25 @@
 ---
-title: Win animations
-order: 13
-eyebrow: Building blocks
-description: Highlight winning symbols, cycle through lines, and dim the losers.
+title: Cells, bounds, paylines & overlays
+group: rendering
+oneLiner: Cell geometry, self-drawn paylines and overlays, hit areas, and runtime feature-mode swaps.
+order: 80
+tags:
+  - paylines
+  - hit-areas
+  - overlays
+  - wins
+  - horizontal
+  - orientation
+guides:
+  - win-animations
 ---
+
+<ConceptPart title="Win animations" lede="Highlight winning symbols, cycle through lines, and dim the losers.">
 
 `SymbolSpotlight` dims the losers, lifts the winners above the mask, and
 cycles through lines for you.
+
+<a id="one-win-one-line"></a>
 
 ## One win, one line
 
@@ -23,6 +36,8 @@ reelSet.events.on('spin:complete', async (result) => {
 });
 ```
 
+<a id="multiple-lines-cycled"></a>
+
 ## Multiple lines, cycled
 
 ```ts
@@ -37,6 +52,8 @@ await reelSet.spotlight.cycle(
 );
 ```
 
+<a id="play-per-symbol-animations"></a>
+
 ## Play per-symbol animations
 
 Set `playWinAnimation: true` and the spotlight calls `playWin()` on each
@@ -50,7 +67,11 @@ await reelSet.spotlight.show(wins[0].positions, { playWinAnimation: true });
 `show()` resolves when the animation is done, so `await` it to gate whatever
 comes next.
 
+<a id="events"></a>
+
 ## Events
 
 `spotlight:start` and `spotlight:end` bracket a `cycle()`. Use them to disable
 the spin button while a win plays.
+
+</ConceptPart>

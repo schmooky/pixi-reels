@@ -1,9 +1,26 @@
 ---
-title: Symbols
-order: 3
-eyebrow: Building blocks
-description: Register and implement reel symbols. sprites, animations, Spine, or custom.
+title: Symbols, layering & motion blur
+group: rendering
+oneLiner: Symbol classes, a card that shows its reel's phase, three-tier layering (zIndex, unmask, promote), multi-skin Spine tiers, and static-spin motion blur.
+order: 70
+tags:
+  - symbols
+  - reveal
+  - mystery
+  - pools
+  - buffers
+  - weights
+  - layering
+  - static-spin
+  - motion-blur
+  - spine
+  - horizontal
+  - orientation
+guides:
+  - symbols
 ---
+
+<ConceptPart title="Symbols" lede="Register and implement reel symbols. sprites, animations, Spine, or custom.">
 
 A **symbol** is what fills one cell. Three ship with the library. The fourth
 is for everything else.
@@ -14,6 +31,8 @@ is for everything else.
 | `AnimatedSpriteSymbol` | Sprite-sheet animation loops. |
 | `SpineSymbol` | Skeletal animation via `@esotericsoftware/spine-pixi-v8`. |
 | `ReelSymbol` (abstract) | Roll your own. |
+
+<a id="register"></a>
 
 ## Register
 
@@ -27,6 +46,8 @@ builder.symbols((r) => {
   r.register('bar',    AnimatedSpriteSymbol, { frames: barFrames, animationSpeed: 1.5 });
 });
 ```
+
+<a id="custom-symbol"></a>
 
 ## Custom symbol
 
@@ -75,6 +96,8 @@ builder.symbols((r) => {
 });
 ```
 
+<a id="headless-testing"></a>
+
 ## Headless testing
 
 `HeadlessSymbol` draws nothing. No textures to load, no canvas needed. Use it
@@ -89,7 +112,9 @@ builder.symbols((r) => {
 });
 ```
 
-See [Cheats & testing](/guides/cheats-and-testing/) for the full recipe.
+See [Cheats & testing](/learn/cheats-and-testing/) for the full recipe.
+
+<a id="weights"></a>
 
 ## Weights
 
@@ -116,4 +141,6 @@ builder.randomSymbols({ weights: { WILD: 40 } }, { reel: 2 });     // reel 2 onl
 
 The same pools are reachable at run time as `reelSet.randomSymbols.set(...)`,
 which is where a game-mode switch belongs. See
-[Buffer indexing](/guides/buffer-indexing/).
+[Buffer indexing](/mechanics/big-symbols/#concept-buffer-indexing).
+
+</ConceptPart>

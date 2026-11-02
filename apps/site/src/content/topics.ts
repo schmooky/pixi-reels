@@ -1,23 +1,30 @@
-export type RecipeGroup = 'starters' | 'mechanics' | 'tension' | 'rendering';
+export type TopicGroup = 'starters' | 'mechanics' | 'tension' | 'rendering';
 
-export interface RecipeMeta {
+/**
+ * One mechanic, one page: `/mechanics/<slug>/`. Read from the frontmatter of
+ * `src/content/topics/<slug>.mdx` (the Concept prose); the matching
+ * `src/content/recipes/<slug>.mdx` holds the page's live demos.
+ */
+export interface TopicMeta {
   slug: string;
-  group: RecipeGroup;
+  group: TopicGroup;
   title: string;
   oneLiner: string;
   tags: string[];
+  /** Guides merged into this topic's Concept section; their old URLs redirect here. */
+  guides: string[];
   /**
    * Card preview, OPTIONAL. By convention you don't set this: drop a file at
    * `public/recipes/<slug>/card.<ext>` (gif / webp / png / mp4 ...) and it is
    * picked up automatically. With no file the card renders a generated
    * placeholder from the title. Set this only to point at a non-conventional
-   * path. See the "Recipe previews" guide and `lib/recipeMedia.ts`.
+   * path. See the "Recipe previews" page under Learn and `lib/recipeMedia.ts`.
    */
   image?: string;
 }
 
-/** Display order + label for each group on the /recipes/ index page. */
-export const RECIPE_GROUPS: Array<{ id: RecipeGroup; label: string; description: string }> = [
+/** Display order + label for each group on the /mechanics/ index page. */
+export const TOPIC_GROUPS: Array<{ id: TopicGroup; label: string; description: string }> = [
   {
     id: 'starters',
     label: 'Start here',
@@ -40,48 +47,43 @@ export const RECIPE_GROUPS: Array<{ id: RecipeGroup; label: string; description:
   },
 ];
 
-/**
- * Every recipe card on /recipes/ is derived from the Keystatic-managed recipe
- * collection (src/content/recipes/<slug>.mdx). Edit recipe metadata at
- * /keystatic; this module reads each file's frontmatter synchronously at load
- * so the /recipes index and OG/sitemap consumers keep the same `RECIPES` shape.
- * Cards sort by group (RECIPE_GROUPS order) then by the per-recipe `order` field.
- */
 import { parse } from 'yaml';
 
-// Vite inlines each recipe's raw MDX at build time; we only parse the
-// frontmatter block. Works identically in `astro dev` and the static build.
-const recipeFiles = import.meta.glob<string>('./recipes/*.mdx', {
+// Vite inlines each topic's raw MDX at build time; only the frontmatter block
+// is parsed. Works identically in `astro dev` and the static build.
+const topicFiles = import.meta.glob<string>('./topics/*.mdx', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
-const GROUP_RANK = new Map(RECIPE_GROUPS.map((g, i) => [g.id, i]));
+const GROUP_RANK = new Map(TOPIC_GROUPS.map((g, i) => [g.id, i]));
 
-interface RecipeFrontmatter {
+interface TopicFrontmatter {
   title: string;
-  group: RecipeGroup;
+  group: TopicGroup;
   oneLiner: string;
   order?: number;
   tags?: string[];
+  guides?: string[];
   image?: string;
 }
 
-function readFrontmatter(path: string, raw: string): RecipeFrontmatter {
+function readFrontmatter(path: string, raw: string): TopicFrontmatter {
   const m = raw.match(/^---\n([\s\S]*?)\n---/);
-  if (!m) throw new Error(`Recipe ${path} has no frontmatter`);
-  return parse(m[1]) as RecipeFrontmatter;
+  if (!m) throw new Error(`Topic ${path} has no frontmatter`);
+  return parse(m[1]) as TopicFrontmatter;
 }
 
-export const RECIPES: RecipeMeta[] = Object.entries(recipeFiles)
+export const TOPICS: TopicMeta[] = Object.entries(topicFiles)
   .map(([path, raw]) => {
     const fm = readFrontmatter(path, raw);
-    const meta: RecipeMeta = {
+    const meta: TopicMeta = {
       slug: path.replace(/^.*\//, '').replace(/\.mdx$/, ''),
       group: fm.group,
       title: fm.title,
       oneLiner: fm.oneLiner,
       tags: fm.tags ?? [],
+      guides: fm.guides ?? [],
     };
     if (fm.image) meta.image = fm.image;
     return { meta, order: fm.order ?? 0 };
@@ -91,3 +93,7 @@ export const RECIPES: RecipeMeta[] = Object.entries(recipeFiles)
     return g !== 0 ? g : a.order - b.order;
   })
   .map((r) => r.meta);
+
+export const TOPIC_BY_SLUG: Record<string, TopicMeta> = Object.fromEntries(
+  TOPICS.map((t) => [t.slug, t]),
+);

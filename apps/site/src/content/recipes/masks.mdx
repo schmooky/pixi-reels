@@ -1,31 +1,6 @@
 ---
-title: "Masks & board shapes"
-group: rendering
-oneLiner: Clip the reels to something other than a rectangle - rounded windows, rounded per-reel cards, the rounded outline of a jagged pyramid, arbitrary paths, and the inset / compose decorators.
-order: 75
-tags:
-  - mask
-  - rounded
-  - silhouette
-  - pyramid
-  - jagged
-  - frame
+title: Masks & board shapes
 ---
-
-The viewport clips the reels through a `MaskStrategy` so buffer cells never leak past the grid. Everything here is additive; the default `RectMaskStrategy` is unchanged.
-
-| Board | Strategy |
-|---|---|
-| Square frame art | `RectMaskStrategy` (default) |
-| Rounded frame, reels flush | `RoundedRectMaskStrategy` (`scope: 'set'`) |
-| Reels as separate cards, with a cross gap | `RoundedRectMaskStrategy` (`scope: 'reel'`) |
-| Rounded frame, one rect per reel, any gap | `RoundedRectMaskStrategy` (`scope: 'outer'`) |
-| Hold & Win board, a mask per cell | `cellMask((cell, { corners }) => ...)` |
-| Pyramid / MultiWays, rounded, reels flush | `SilhouetteMaskStrategy` |
-| Hexes, holes, cut-outs | `PathMaskStrategy` |
-
-`inset(strategy, px)` and `composeMasks(a, b, ...)` wrap any of them, yours included.
-
 ## A rounded window
 
 `scope: 'set'` rounds the union bounding box. Safe at any cross gap, so it is the default.

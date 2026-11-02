@@ -8,7 +8,7 @@ description: From `npm install` to a working cascade slot in ~80 lines of
 
 You'll build a 6×5 cascade slot. drop on click, detect 3-in-a-row wins, vanish the winners, refill from above, repeat until no more wins. ~80 lines of TypeScript. No prior `pixi-reels` knowledge required; PixiJS basics help.
 
-By the end you'll have a working slot. If you already know `pixi-reels`, skim the [cascades guide](/guides/cascades/) for the mental model and the [API reference](/docs/api-reelset/) for the verbs.
+By the end you'll have a working slot. If you already know `pixi-reels`, skim the [cascades guide](/mechanics/cascade/#concept) for the mental model and the [API reference](/reference/api-reelset/) for the verbs.
 
 ## Step 0. Install
 
@@ -110,7 +110,7 @@ const server = {
 };
 ```
 
-The cascade function follows the [gravity convention](/guides/cascades/#refill-geometry-the-survivor-convention). If you have a real server, this is the contract its response must follow.
+The cascade function follows the [gravity convention](/mechanics/cascade/#refill-geometry-the-survivor-convention). If you have a real server, this is the contract its response must follow.
 
 ## Step 4. Detect winners
 
@@ -213,7 +213,7 @@ The two-pronged slam handler is deliberate:
   to slam onto yet. Both are no-ops when the engine is idle.
 - `AbortController.abort()` flips a flag `runCascade` observes at the next await boundary. Works whether the engine is mid-refill or idle.
 
-Combined: the engine slams its in-flight motion AND the cascade chain ends. See [the cancellation section in the cascades guide](/guides/cascades/#cancelling-a-chain-via-abortsignal) for the rationale.
+Combined: the engine slams its in-flight motion AND the cascade chain ends. See [the cancellation section in the cascades guide](/mechanics/cascade/#cancelling-a-chain-via-abortsignal) for the rationale.
 
 ## Step 7. Try it
 
@@ -236,10 +236,10 @@ Compare with hand-rolling cascades:
 
 Now that the slot works:
 
-- **Pick a feel**. five preset `tumble({...})` shapes side-by-side in [tumble feels](/recipes/tumble-feels/).
-- **Tune the lead-in**. the pause between SPIN click and first frame of fall. see [fall delays](/recipes/fall-delays/).
-- **Add a cascading multiplier**. bump a meter inside `onCascade`. see [cascade-6x5 recipe](/recipes/cascade-6x5/).
-- **Use Spine symbols with custom disintegration**. your `SpineReelSymbol` subclass overrides `playDestroy()` to play the `out` animation; everything else stays the same. See [cascade wins. present, destroy, refill](/recipes/cascade-destroy-and-present/) for the spine wiring.
-- **Spin first, cascade after**. open with a strip-spin landing, then cascade. see [spin then cascade](/recipes/spin-then-cascade/).
+- **Pick a feel**. five preset `tumble({...})` shapes side-by-side in [tumble feels](/mechanics/cascade/#tumble-feels).
+- **Tune the lead-in**. the pause between SPIN click and first frame of fall. see [fall delays](/mechanics/cascade/#fall-delays).
+- **Add a cascading multiplier**. bump a meter inside `onCascade`. see [cascade-6x5 recipe](/mechanics/cascade/#cascade-6x5).
+- **Use Spine symbols with custom disintegration**. your `SpineReelSymbol` subclass overrides `playDestroy()` to play the `out` animation; everything else stays the same. See [cascade wins. present, destroy, refill](/mechanics/cascade/#cascade-destroy-and-present) for the spine wiring.
+- **Spin first, cascade after**. open with a strip-spin landing, then cascade. see [spin then cascade](/mechanics/cascade/#spin-then-cascade).
 
-Stuck? Read [the cascades guide](/guides/cascades/). the mental model is what makes the verbs click.
+Stuck? Read [the cascades guide](/mechanics/cascade/#concept). the mental model is what makes the verbs click.

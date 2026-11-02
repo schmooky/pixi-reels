@@ -184,7 +184,7 @@ overlay.destroy();
 A build that never imports `pixi-reels/debug` never needs `pixi-silk`. It draws
 through WebGL: on a WebGPU renderer the overlay's shapes draw nothing, so debug
 on `app.init({ preference: 'webgl' })`. Building one in a headless test needs a
-canvas stand-in; the [4.0 migration guide](/docs/migrating-to-4-0/) has it.
+canvas stand-in; the [4.0 migration guide](/reference/migrating-to-4-0/) has it.
 
 | Layer | Draws | Catches |
 |---|---|---|
@@ -350,7 +350,7 @@ stack rather than being stringified.
 A few notices fire only once per process (`buffer-clamped`, for instance) so a
 builder constructed in a loop cannot flood the console.
 
-The full list of codes lives in the [events reference](/docs/api-events/).
+The full list of codes lives in the [events reference](/reference/api-events/).
 
 ## Gotchas
 

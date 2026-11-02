@@ -6,7 +6,7 @@ description: The main orchestrator. Created via ReelSetBuilder, drives every
   spin, refill, pin, and win animation.
 ---
 
-`ReelSet` extends `PIXI.Container`. Construct via [`ReelSetBuilder`](/docs/api-builder/), add it to your stage, then drive it with the verbs below.
+`ReelSet` extends `PIXI.Container`. Construct via [`ReelSetBuilder`](/reference/api-builder/), add it to your stage, then drive it with the verbs below.
 
 Every method on this page is non-async unless its return type is `Promise`. Most errors throw synchronously at the call site, in the same stack frame you wrote. The exceptions are cancellation: `spin()` rejects on its watchdog or `SpinOptions.signal`, and `nudge()` rejects with an `AbortError`.
 
@@ -25,7 +25,7 @@ Every method on this page is non-async unless its return type is `Promise`. Most
 | `slamStop` | `(options?: { reels?: number[] \| except?: number[] }) => void` | Unconditional slam, whatever the set's `skipMode`. No boost, no auto-slam flag, no tease protection. With `reels` / `except` (not both) it lands only those reels and every other reel keeps running to a natural landing. Throws before `setResult()`, like `skipSpin()`; a spin whose result will never come is aborted through `spin({ signal })`. |
 | `skipNudge` | `(reel?: number) => void` | Fast-forward an in-flight `nudge()` to its landed state. Distinct from `skipSpin` and `slamStop`: those land a spin; this lands a nudge. |
 | `skipStage` | `readonly 0 \| 1 \| 2` | `0` until the first press of the round, `2` after the press that ended it, in either mode. `1` means a press freed the reels around a protected tease and left the tease running. the button should stay live, because the next press ends it. Decided before the press lands anything, so a `spin:complete` listener already sees `2`. Drive UI labels from this, but gate on `isSpinning` first: the stage is ROUND-scoped and only resets on the next `spin()`, so an `'always'` round (where no press ever reaches `2`) leaves it parked at `1` through the idle window. |
-| `isSpinning` | `readonly boolean` | `true` between `spin:start` and `spin:complete`. Oscillates per refill in a cascade round. see [cascades guide](/guides/cascades/). |
+| `isSpinning` | `readonly boolean` | `true` between `spin:start` and `spin:complete`. Oscillates per refill in a cascade round. see [cascades guide](/mechanics/cascade/#concept). |
 
 ```ts
 const result = await reelSet.spin({ holdReels: [0, 4] });
@@ -35,7 +35,7 @@ console.log(result.wasSkipped);    // true if slam ended the spin
 
 ## Cascade (tumble)
 
-Available when the builder was configured with `.tumble({...})`. See the [cascades guide](/guides/cascades/) for the mental model.
+Available when the builder was configured with `.tumble({...})`. See the [cascades guide](/mechanics/cascade/#concept) for the mental model.
 
 | Method | Signature | Notes |
 |---|---|---|
@@ -111,7 +111,7 @@ await reelSet.runCascade({
 });
 ```
 
-The events `cascade:gravity:start` / `cascade:gravity:symbol` / `cascade:gravity:end` fire only in this mode. see the [events reference](/docs/api-events/#cascade-tumble).
+The events `cascade:gravity:start` / `cascade:gravity:symbol` / `cascade:gravity:end` fire only in this mode. see the [events reference](/reference/api-events/#cascade-tumble).
 
 > **Heads-up.** If your `gravityHold` promise never resolves, the engine will wait forever. the cascade hangs. There's no built-in timeout. If your animation source can stall (animation library error, missed user input, hung XHR), wrap it in your own `Promise.race([yourPromise, timeoutReject])` before passing it in, or rely on `gravityHoldMs` alone. A rejection in `gravityHold` (or a throw from `onGravityComplete`) does **not** reject the `refill()` / `runCascade()` call -- the engine catches it, emits `cascade:gravity:error`, logs it, and slams to recover, so the awaited promise still resolves. A `try` block will never see it; subscribe to `cascade:gravity:error`.
 
@@ -126,7 +126,7 @@ Available when the builder was configured with `.multiways({...})`.
 
 ## Growing the board
 
-Add reels after the last one and take them away again, at rest. `expand()` is the "infinity reels" chain built on them; see the [recipes](/recipes/infinity-reels/).
+Add reels after the last one and take them away again, at rest. `expand()` is the "infinity reels" chain built on them; see the [recipes](/mechanics/infinity-reels/).
 
 | Method | Signature | Notes |
 |---|---|---|
@@ -162,7 +162,7 @@ Add reels after the last one and take them away again, at rest. `expand()` is th
 | `spotlight` | `SymbolSpotlight`. dim losers, cycle winning lines, play per-cell win animations |
 | `viewport` | `ReelViewport`. masked + unmasked + spotlight containers (use `showDim(alpha)` / `hideDim()` for full-board dim) |
 
-The library ships [`WinPresenter`](/docs/api-events/) as a higher-level events-driven win driver. listen to `win:start`, `win:group`, `win:symbol`, `win:end`.
+The library ships [`WinPresenter`](/reference/api-events/) as a higher-level events-driven win driver. listen to `win:start`, `win:group`, `win:symbol`, `win:end`.
 
 ## Pins (persistent cell claims)
 
@@ -233,7 +233,7 @@ reelSet.frame.remove('feature-wilds');
 
 ## Events
 
-`reelSet.events` is a typed `EventEmitter<ReelSetEvents>`. See the [events reference](/docs/api-events/) for the full surface. Per-reel events live on `reel.events`.
+`reelSet.events` is a typed `EventEmitter<ReelSetEvents>`. See the [events reference](/reference/api-events/) for the full surface. Per-reel events live on `reel.events`.
 
 ```ts
 reelSet.events.on('spin:complete', (r) => console.log(r.symbols));

@@ -1,0 +1,64 @@
+---
+/**
+ * The whole /mechanics/<slug>/ page: the two content entries that share the
+ * slug (topics/ for the Concept, recipes/ for the Demos), the API list derived
+ * from what they and their demo sources name, and the FAQ answers tagged with
+ * the topic, handed to the Topic layout.
+ */
+import { getEntry, render } from 'astro:content';
+import Topic from '../../layouts/Topic.astro';
+import RecipeDemo from '../RecipeDemo.astro';
+import RecipeImage from '../RecipeImage.astro';
+import AssetCredit from '../AssetCredit.astro';
+import ConceptPart from './ConceptPart.astro';
+import Grid from '../docs/Grid.astro';
+import Strip from '../docs/Strip.astro';
+import Timeline from '../docs/Timeline.astro';
+import Tree from '../docs/Tree.astro';
+import { TOPICS, TOPIC_BY_SLUG } from '../../content/topics.ts';
+import { FAQ_BY_TOPIC } from '../../content/faq.ts';
+import { getTopicDemos, parseRecipeDemos } from '../../lib/topicDemos.ts';
+import { apiForTopic } from '../../lib/topicApi.ts';
+import { getRecipeCode } from '../../lib/recipeCode.ts';
+
+interface Props {
+  slug: string;
+}
+const { slug } = Astro.props as Props;
+
+const topicEntry = await getEntry('topics', slug);
+if (!topicEntry) throw new Error(`No topic "${slug}". Expected src/content/topics/${slug}.mdx.`);
+const demosEntry = await getEntry('recipes', slug);
+if (!demosEntry) {
+  throw new Error(`Topic "${slug}" has no demos body. Expected src/content/recipes/${slug}.mdx.`);
+}
+const { Content: Concept } = await render(topicEntry);
+const { Content: Demos } = await render(demosEntry);
+
+const conceptBody = topicEntry.body ?? '';
+const demosBody = demosEntry.body ?? '';
+const demos = getTopicDemos(slug);
+// The nudge guide embeds demos of its own; its source counts for the API list too.
+const conceptDemos = parseRecipeDemos(conceptBody);
+const api = apiForTopic({
+  markdown: [conceptBody, demosBody],
+  code: [...demos, ...conceptDemos].map((d) => getRecipeCode(d.code)),
+});
+const topic = TOPIC_BY_SLUG[slug];
+const questions = FAQ_BY_TOPIC[slug] ?? [];
+
+// The MDX bodies carry no imports: every component they use is supplied here,
+// so the same files round-trip through Keystatic.
+const components = { RecipeDemo, Image: RecipeImage, AssetCredit, ConceptPart, Grid, Strip, Timeline, Tree };
+---
+<Topic
+  topic={topic}
+  index={TOPICS.indexOf(topic)}
+  demos={demos}
+  api={api}
+  questions={questions}
+  hasConcept={conceptBody.trim().length > 0}
+>
+  <Fragment slot="concept"><Concept components={components} /></Fragment>
+  <Fragment slot="demos"><Demos components={components} /></Fragment>
+</Topic>

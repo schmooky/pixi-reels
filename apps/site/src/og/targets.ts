@@ -3,12 +3,12 @@
  * `pages/og/[...path].png.ts` renders one PNG per entry; `lib/seo.ts`'s
  * `ogUrlForPath` maps a request path to the matching `/og/<id>.png` by the same
  * convention, so the two never drift. Content routes are globbed from their
- * source (recipes/guides/docs frontmatter, RECIPES groups, answered FAQ)
+ * source (topic/guide/doc frontmatter, TOPIC groups, answered FAQ)
  * so adding a page mints its card automatically.
  */
 import type { OgTarget } from './render.ts';
 import { SITE } from '../lib/seo.ts';
-import { RECIPES, RECIPE_GROUPS } from '../content/recipes.ts';
+import { TOPICS, TOPIC_GROUPS } from '../content/topics.ts';
 import { FAQ_ANSWERED, FAQ_GROUP_TITLE } from '../content/faq.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
 import { monogram, hueFor } from '../lib/recipeMedia.ts';
@@ -25,31 +25,25 @@ const slugOf = (key: string) => key.split('/').pop()!.replace(/\.(mdx|astro)$/, 
 const humanize = (slug: string) =>
   slug.replace(/[-_]/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
-const recipeGroupLabel = new Map(RECIPE_GROUPS.map((g) => [g.id, g.label.replace(/\s*\(.*\)$/, '')]));
-const recipeBySlug = new Map(RECIPES.map((r) => [r.slug, r]));
+const topicGroupLabel = new Map(TOPIC_GROUPS.map((g) => [g.id, g.label.replace(/\s*\(.*\)$/, '')]));
 
 // ── content globs (frontmatter read eagerly; Vite-only, runs in the build) ──
-// Recipes/guides/docs live in Keystatic content collections. Frontmatter is
-// read eagerly (Vite-only, runs in the build).
-const recipeMods = import.meta.glob<FmModule>('/src/content/recipes/*.mdx', { eager: true });
+// Guides/docs live in Keystatic content collections. Frontmatter is read
+// eagerly (Vite-only, runs in the build). Topics come through TOPICS.
 const guideMods = import.meta.glob<FmModule>('/src/content/guides/*.mdx', { eager: true });
 const docMods = import.meta.glob<FmModule>('/src/content/docs/*.mdx', { eager: true });
 
-function recipeTargets(): OgTarget[] {
-  return Object.entries(recipeMods).map(([key, mod]) => {
-    const slug = slugOf(key);
-    const meta = recipeBySlug.get(slug);
-    const fm = mod.frontmatter ?? {};
-    const title = fm.title ?? meta?.title ?? humanize(slug);
-    const group = meta ? recipeGroupLabel.get(meta.group) : undefined;
+function topicTargets(): OgTarget[] {
+  return TOPICS.map((t) => {
+    const group = topicGroupLabel.get(t.group);
     return {
-      id: `recipes/${slug}`,
-      eyebrow: group ? `Recipe · ${group}` : 'Recipe',
-      title,
-      subtitle: fm.description ?? meta?.oneLiner,
-      monogram: monogram(title),
-      hue: hueFor(title),
-      footerRight: `/recipes/${slug}`,
+      id: `mechanics/${t.slug}`,
+      eyebrow: group ? `Mechanics · ${group}` : 'Mechanics',
+      title: t.title,
+      subtitle: t.oneLiner,
+      monogram: monogram(t.title),
+      hue: hueFor(t.title),
+      footerRight: `/mechanics/${t.slug}`,
     };
   });
 }
@@ -103,11 +97,11 @@ const HOME: Omit<OgTarget, 'id'> = {
 };
 
 const SECTIONS: Array<{ id: string; eyebrow: string; title: string; subtitle: string }> = [
-  { id: 'recipes', eyebrow: 'Browse', title: 'Recipes', subtitle: 'Runnable, copy-paste slot mechanics — lines, cascades, hold & win, wilds, big symbols, and more.' },
-  { id: 'guides', eyebrow: 'Learn', title: 'Guides', subtitle: 'Mental models and step-by-step walkthroughs for building slots with pixi-reels.' },
+  { id: 'mechanics', eyebrow: 'Browse', title: 'Mechanics', subtitle: 'Runnable, copy-paste slot mechanics — lines, cascades, hold & win, wilds, big symbols, and more.' },
+  { id: 'learn', eyebrow: 'Learn', title: 'Learn', subtitle: 'Mental models and step-by-step walkthroughs for building slots with pixi-reels.' },
   { id: 'faq', eyebrow: 'Answers', title: 'Frequently asked questions', subtitle: 'Practical how-tos for building reels, symbols, wins, and features.' },
   { id: 'api', eyebrow: 'Reference', title: 'API reference', subtitle: 'Every class, interface, and function in the pixi-reels public surface.' },
-  { id: 'docs', eyebrow: 'Reference', title: 'Documentation', subtitle: 'Builder, ReelSet, events, and phases — the pixi-reels API in prose.' },
+  { id: 'reference', eyebrow: 'Reference', title: 'Reference', subtitle: 'Builder, ReelSet, events, and phases — the pixi-reels API in prose.' },
   { id: 'architecture', eyebrow: 'Internals', title: 'Architecture', subtitle: 'How the engine is wired: spin lifecycle, phases, events, cascade.' },
   { id: 'changelog', eyebrow: 'Releases', title: 'Changelog', subtitle: 'What changed in each pixi-reels release.' },
 ];
@@ -118,7 +112,7 @@ function sectionTargets(): OgTarget[] {
     eyebrow: s.eyebrow,
     title: s.title,
     subtitle: s.subtitle,
-    footerRight: `/${s.id}`,
+    footerRight: s.id === 'changelog' ? '/reference/changelog' : `/${s.id}`,
   }));
 }
 
@@ -126,9 +120,9 @@ export const OG_TARGETS: OgTarget[] = [
   { id: 'home', ...HOME },
   { id: 'default', ...HOME },
   ...sectionTargets(),
-  ...recipeTargets(),
-  ...fmTargets(guideMods, 'guides', 'Guide'),
-  ...fmTargets(docMods, 'docs', 'Docs'),
+  ...topicTargets(),
+  ...fmTargets(guideMods, 'learn', 'Learn'),
+  ...fmTargets(docMods, 'reference', 'Reference'),
   ...faqTargets(),
   ...archTargets(),
 ];

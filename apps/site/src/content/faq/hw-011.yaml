@@ -1,8 +1,9 @@
 id: hw-011
 group: hw
+topic: hold-and-win
 question: How do I do a column-respin variant (hold whole columns)?
 answer: For whole-column holds use one ReelSet and `spin({ holdReels })` instead
   of the per-cell board.
 links:
   - label: "Recipe: Hold & Win respin"
-    href: /recipes/hold-and-win/
+    href: /mechanics/hold-and-win/

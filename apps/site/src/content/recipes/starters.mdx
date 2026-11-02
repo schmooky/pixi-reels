@@ -1,21 +1,6 @@
 ---
-title: "Starters"
-group: starters
-oneLiner: "Copy-paste starting templates: classic lines, cascade tumble, MultiWays, Hold and Win, plus the horizontal and reverse variants."
-order: 0
-tags:
-  - starter
-  - 5x3
-  - cascade
-  - multiways
-  - hold-and-win
-  - horizontal
-  - reverse
-  - orientation
+title: Starters
 ---
-
-Canonical starting templates. copy one, swap in your art and math, and ship.
-
 <a id="classic-5x3"></a>
 
 ## Classic 5×3 starter
@@ -65,6 +50,6 @@ The same template with the strips turned sideways: three reels stacked down the 
 
 Classic 5x3, travelling the other way: symbols rise and each reel lands from below. The whole diff against the classic starter is `.direction('reverse')`.
 
-**Gotcha:** buffers stay geometric. `bufferStart` is still the slot above the window, so on a reverse reel the "next up" slot is `bufferEnd`. Read `reel.axis.feedEdge` rather than assuming. See [orientation and direction](/recipes/orientation-and-direction/#roll-up) for the per-reel and mixed-axis variants.
+**Gotcha:** buffers stay geometric. `bufferStart` is still the slot above the window, so on a reverse reel the "next up" slot is `bufferEnd`. Read `reel.axis.feedEdge` rather than assuming. See [orientation and direction](/mechanics/orientation-and-direction/#roll-up) for the per-reel and mixed-axis variants.
 
 <RecipeDemo code="starter-reverse-5x3" />

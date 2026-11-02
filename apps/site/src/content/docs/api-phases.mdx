@@ -223,7 +223,7 @@ branch, a slam cancels the step in flight, and the game edits the list with
 The feel work these lists are for, stagger curves, a wind-up launch, a landing
 kick, beats and FX that follow the speed profile, a spotlight around the tease
 and one extra beat on the last reel, is six short recipes on
-[Feel: timings & landing FX](/recipes/feel/).
+[Feel: timings & landing FX](/mechanics/feel/).
 
 ## Configure a phase from the speed profile
 
@@ -413,7 +413,7 @@ frame here, spun out and bounced on a quicken:
 `skippable` are readonly fields on the class; a subclass inherits both, and
 overriding `skippable` on a built-in is not a supported way to protect a phase
 from a slam - `forceComplete()` ignores the flag by design. Use
-[tease protection](/docs/api-reelset/) for that.
+[tease protection](/reference/api-reelset/) for that.
 
 ### Phases that take constructor arguments
 
@@ -493,7 +493,7 @@ where to put it when the floor is derived rather than configured:
 
 <RecipeDemo code="phase-subclass-spin" />
 
-Every lever above has a worked demo on [Skip & slam](/recipes/skip/).
+Every lever above has a worked demo on [Skip & slam](/mechanics/skip/).
 
 There is a fairness reason to reach for `protect` rather than raising the floor
 on teasing spins: if a scatterless skip lands instantly but a teasing skip

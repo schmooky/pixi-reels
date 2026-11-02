@@ -1,7 +1,8 @@
 id: debug-010
 group: debug
+topic:
 question: How do I assert the visible grid matches the expected result?
 answer: Assert against `reelSet.getVisibleGrid()` (or `SpinResult.symbols`).
 links:
   - label: "Guide: Cheats & testing"
-    href: /guides/cheats-and-testing/
+    href: /learn/cheats-and-testing/

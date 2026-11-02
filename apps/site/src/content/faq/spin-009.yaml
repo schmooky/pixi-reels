@@ -1,5 +1,6 @@
 id: spin-009
 group: spin
+topic: feel
 question: How do I control the bounce/overshoot when a reel lands?
 answer: Tune `bounceDistance` and `bounceDuration` on the `SpeedProfile`.
 links: []

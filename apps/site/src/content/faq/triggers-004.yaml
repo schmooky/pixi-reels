@@ -1,8 +1,9 @@
 id: triggers-004
 group: triggers
+topic: hold-and-win
 question: How do I make a symbol that is both a coin and a bonus trigger?
 answer: Use one id and treat it as both — your trigger logic counts it, and it
   also lands as a coin in the board's seed.
 links:
   - label: "Recipe: Hold & Win respin"
-    href: /recipes/hold-and-win/
+    href: /mechanics/hold-and-win/

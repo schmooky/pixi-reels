@@ -1,5 +1,6 @@
 id: wins-009
 group: wins
+topic:
 question: How do I count the win amount up with a rolling number?
 answer: Drive your own counter widget; a small `win:set` / `win:add` event bus of
   your own is enough to carry the running win total to it.

@@ -1,8 +1,9 @@
 id: motion-006
 group: motion
+topic: cascade
 question: How do I peek the next symbol from above before it lands?
 answer: Pre-fill the `bufferStart` slot so a teaser symbol sits just out of
   frame and scrolls into view on the next spin.
 links:
   - label: "Recipe: Peek from above"
-    href: /recipes/peek-from-above/
+    href: /mechanics/cascade/#peek-from-above

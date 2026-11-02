@@ -1,5 +1,6 @@
 id: anim-004
 group: anim
+topic: symbols
 question: A symbol gets destroyed by an object — how do I play its destroy animation?
 answer: >-
   Override `playDestroy(opts)` on your `ReelSymbol`. The default is a ~200 ms

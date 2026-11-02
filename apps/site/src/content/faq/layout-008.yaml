@@ -1,5 +1,6 @@
 id: layout-008
 group: layout
+topic:
 question: How do I play an outro that breaks the board apart on exit?
 answer: Tween the reel containers out on exit before calling `destroy()`.
 links: []

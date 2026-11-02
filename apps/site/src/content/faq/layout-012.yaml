@@ -1,5 +1,6 @@
 id: layout-012
 group: layout
+topic: orientation-and-direction
 question: Can the horizontal banner reel cascade like the main reels when a
   symbol was part of a win?
 answer: >-
@@ -12,5 +13,5 @@ answer: >-
   `cascade:dropIn:*` and `cascade:chain:end`.
 links:
   - label: "Recipe: Horizontal reel (paying-symbol banner)"
-    href: /recipes/horizontal-reel/
+    href: /mechanics/orientation-and-direction/#horizontal-reel
 recipe: horizontal-reel
