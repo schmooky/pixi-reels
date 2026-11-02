@@ -16,7 +16,7 @@ Wild lands and the whole reel turns wild for N spins, then auto-expires when the
 
 ## Sticky wild (CellPin)
 
-A sticky wild on the primitive: pin on land with `turns: N`, the engine overlays it and counts down. no ghost sprites, no manual grid injection.
+A sticky wild on the primitive: pin on land with `turns: N`, and the engine overlays it and counts down, with no ghost sprites and no manual grid injection.
 
 <RecipeDemo code="sticky-wild-pin" height={300} />
 
@@ -26,7 +26,7 @@ A sticky wild on the primitive: pin on land with `turns: N`, the engine overlays
 
 A wild migrates one reel left each spin via `reelSet.movePin()`, with flight hooks for Spine run animations.
 
-**Gotcha:** walk pins sequentially with `await`, never `Promise.all`. two pins moving to the same cell throws.
+Walk pins sequentially with `await`, never `Promise.all`; two pins moving to the same cell throws.
 
 <RecipeDemo code="walking-wild-pin" height={300} />
 
@@ -56,7 +56,7 @@ Mystery symbols land, then all reveal to the same random class via `'eval'` pins
 
 ## Spine mystery reveal
 
-Mystery bushes land and burst; an overlay Spine plays the reveal while `activate()` swaps the cell underneath, so the hand-off is seamless.
+Mystery bushes land and burst; an overlay Spine plays the reveal while `activate()` swaps the cell underneath, so the player never sees the swap.
 
 <RecipeDemo code="spine-mystery-reveal" height={460} />
 
@@ -76,7 +76,7 @@ The same expand-the-whole-reel pin on `.orientation('horizontal')`. Pins are ind
 
 A `.direction('reverse')` set: the reels travel upward through three respins while pinned wilds hold their cells, and new wilds picked up on the way stick too.
 
-**Gotcha:** pin coordinates stay geometric. cell 0 is the top cell whichever edge the strip feeds from.
+Pin coordinates stay geometric; cell 0 is the top cell whichever edge the strip feeds from.
 
 <RecipeDemo code="wilds-reverse-sticky-respin" height={300} />
 

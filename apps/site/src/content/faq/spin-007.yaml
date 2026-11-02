@@ -3,7 +3,7 @@ group: spin
 topic: cells-and-banners
 question: How do I slam-stop the reels on a second button press?
 answer: On the second tap call `reelSet.skipSpin()` to slam the reels to their
-  landing — or `reelSet.requestSkip()` if the server result has not arrived yet,
+  landing, or `reelSet.requestSkip()` if the server result has not arrived yet,
   which queues the slam for the moment it does.
 links:
   - label: "Recipe: Slam-stop"

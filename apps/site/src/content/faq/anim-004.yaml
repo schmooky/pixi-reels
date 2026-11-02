@@ -1,7 +1,7 @@
 id: anim-004
 group: anim
 topic: symbols
-question: A symbol gets destroyed by an object — how do I play its destroy animation?
+question: A symbol gets destroyed by an object. How do I play its destroy animation?
 answer: >-
   Override `playDestroy(opts)` on your `ReelSymbol`. The default is a ~200 ms
   scale-and-fade implode: a ~60 ms anticipation pop, then a ~140 ms collapse to

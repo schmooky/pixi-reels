@@ -6,5 +6,5 @@ answer: Use the shared `BlurSpriteSymbol` (`{ textures, blurTextures }`);
   subclass it to swap on the engine's `onReelSpinStart` / `onReelLanded` hooks
   so blur needs no per-cell event wiring.
 links:
-  - label: "Recipe: Hold & Win — sprite coins"
+  - label: "Recipe: Hold & Win: sprite coins"
     href: /mechanics/hold-and-win/#hold-and-win-sprites

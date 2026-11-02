@@ -2,6 +2,6 @@ id: wins-012
 group: wins
 topic: feel
 question: How do I keep the win highlight in sync with the win sound?
-answer: Both fire from the same `win:group` event — start the sound in the same
+answer: Both fire from the same `win:group` event. Start the sound in the same
   listener that triggers the highlight.
 links: []

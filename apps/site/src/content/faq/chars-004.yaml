@@ -3,7 +3,7 @@ group: chars
 topic: hold-and-win
 question: How do I make a fisherman collect every money-fish on the board?
 answer: >-
-  On collect, walk the money-symbol cells and `bezierFly` each value into the character; the board only gives you `cellCenter` + the payloads. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+  On collect, walk the money-symbol cells and `bezierFly` each value into the character; the board only gives you `cellCenter` + the payloads. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package, copy them into your project.
 links:
-  - label: "Recipe: Hold & Win — collector"
+  - label: "Recipe: Hold & Win: collector"
     href: /mechanics/hold-and-win/#hold-and-win-collector

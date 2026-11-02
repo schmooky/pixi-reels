@@ -8,5 +8,5 @@ answer: "Use the fluent `ReelSetBuilder`: chain `.reels()`, `.visibleCells()`,
 links:
   - label: "Guide: Your first reelset"
     href: /learn/your-first-reelset/
-  - label: "Recipe: Classic 5×3"
+  - label: "Recipe: Classic 5x3"
     href: /mechanics/starters/#classic-5x3

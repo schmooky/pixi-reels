@@ -2,6 +2,6 @@ id: basics-008
 group: basics
 topic:
 question: How do I show a static board with no spinning at all?
-answer: Build with `.initialFrame(grid)` and never call `spin()` — the
+answer: Build with `.initialFrame(grid)` and never call `spin()`. The
   board renders the seeded symbols statically.
 links: []

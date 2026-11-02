@@ -3,7 +3,7 @@ group: chars
 topic: hold-and-win
 question: How do I have the character grow/level up as it eats more coins?
 answer: Scale the character's view up per collected coin in your collect
-  callback — it is game-layer state.
+  callback. It is game-layer state.
 links:
-  - label: "Recipe: Hold & Win — collector"
+  - label: "Recipe: Hold & Win: collector"
     href: /mechanics/hold-and-win/#hold-and-win-collector

@@ -5,5 +5,5 @@ question: How do I keep the board centered with jackpot panels flanking it?
 answer: Position the side panels and the `reelSet` Container around the center
   in your layout code.
 links:
-  - label: "Recipe: Hold & Win — Spine coins"
+  - label: "Recipe: Hold & Win: Spine coins"
     href: /mechanics/hold-and-win/#hold-and-win-spine

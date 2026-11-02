@@ -7,5 +7,5 @@ answer: Hold & Win cells are independent reels, so the builder's
   `anticipateWhen(...)` runs anticipation on the still-spinning cells out of the
   box; for one cell, swap that mini-reel to a tension profile.
 links:
-  - label: "Recipe: Hold & Win — last-cell anticipation"
+  - label: "Recipe: Hold & Win: last-cell anticipation"
     href: /mechanics/hold-and-win/#hold-and-win-anticipation

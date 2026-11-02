@@ -42,7 +42,7 @@ The same collect, each coin's value flying into the orb trailed by a stream of n
 
 A payer orb lands and pumps its value into every other coin; one line changes it into a doubler.
 
-**Gotcha:** the payer orb is server-placed only (weight 0), so it never lands off a random strip.
+The payer orb is server-placed only (weight 0), so it never lands off a random strip.
 
 <RecipeDemo code="hold-and-win-payer-coin" height={420} />
 
@@ -50,7 +50,7 @@ A payer orb lands and pumps its value into every other coin; one line changes it
 
 ## Hold & Win: multiplier-strike coin
 
-A multiplier coin lands, the strike FX fires, a ×N badge pops, and every coin's value is multiplied.
+A multiplier coin lands, the strike FX fires, an xN badge pops, and every coin's value is multiplied.
 
 <RecipeDemo code="hold-and-win-multiplier" height={420} />
 
@@ -66,13 +66,13 @@ Coins land blank; on lock a strip of candidate amounts spins inside the coin fac
 
 ## Hold & Win: upgrade a coin in place
 
-A held coin climbs the value ladder (5 → 10 → 25 → 50 → 100) with a flip-and-pop: no respin, no cell movement.
+A held coin climbs the value ladder (5, 10, 25, 50, 100) with a flip-and-pop: no respin, no cell movement.
 
 <RecipeDemo code="hold-and-win-upgrade-coin" height={420} />
 
 <a id="hold-and-win-tier-swap"></a>
 
-## Hold & Win: swap a symbol in place (coin → MINI → MAJOR)
+## Hold & Win: swap a symbol in place (coin to MINI to MAJOR)
 
 board.setSymbolAt(cell, id, data) re-places one cell with a different symbol and rewrites its ledger entry, leaving the neighbours where they were.
 
@@ -100,7 +100,7 @@ The whole board from TexturePacker sprites: numbers blur as they spin, a 30-fram
 
 The board with production Spine coins: MINI/MAJOR tiers that reveal on lock, side plaques, and a collect flight into a counter.
 
-**Gotcha:** jackpot (MINI / MAJOR) coins are server-placed only (weight 0).
+Jackpot (MINI / MAJOR) coins are server-placed only (weight 0).
 
 <RecipeDemo code="hold-and-win-spine" height={520} />
 
@@ -164,7 +164,7 @@ board.skip() slams every in-flight cell to its landed position and fires feature
 
 ## Hold & Win: an overlay that survives swaps and rides flights
 
-A ×100 badge lives in coin.data and rides as a child of the symbol's view, so it survives an in-place swap and travels on a collect flight.
+An x100 badge lives in coin.data and rides as a child of the symbol's view, so it survives an in-place swap and travels on a collect flight.
 
 <RecipeDemo code="hold-and-win-sticky-overlay" height={320} />
 
@@ -180,9 +180,9 @@ A board runs a full feature while every board.events beat prints to a live log: 
 
 ## Hold & Win: cells that spin sideways
 
-The whole lock-and-respin round on `.axis('horizontal')`. Every cell is its own 1x1 ReelSet, so the axis only picks which edge a coin scrolls in from. the board still lays out cols x rows and the lock still claims one cell.
+The whole lock-and-respin round on `.axis('horizontal')`. Every cell is its own 1x1 ReelSet, so the axis only picks which edge a coin scrolls in from. The board still lays out cols x rows and the lock still claims one cell.
 
-**Gotcha:** don't build this on a plain ReelSet with `.orientation('horizontal')`. there a reel IS a whole row, so the row travels as one ribbon straight across the cell gaps and past the cells that are supposed to be locked.
+Don't build this on a plain ReelSet with `.orientation('horizontal')`. There a reel is a whole row, so the row travels as one ribbon straight across the cell gaps and past the cells that are supposed to be locked.
 
 <RecipeDemo code="hold-and-win-horizontal-lock" height={340} />
 
@@ -192,7 +192,7 @@ The whole lock-and-respin round on `.axis('horizontal')`. Every cell is its own 
 
 The same round on `.axis('vertical', 'reverse')`, plus the hold that pairs with it: `respin()` spins `board.freeCells` and only those, and `respin:start` reports exactly which cells are in flight.
 
-**Gotcha:** the ReelSet-level equivalent, `spin({ holdReels })`, holds a whole reel. a board has no `holdReels` because Hold & Win holds single cells.
+The ReelSet-level equivalent, `spin({ holdReels })`, holds a whole reel. A board has no `holdReels` because Hold & Win holds single cells.
 
 <RecipeDemo code="hold-and-win-reverse-respin" height={340} />
 
@@ -200,7 +200,7 @@ The same round on `.axis('vertical', 'reverse')`, plus the hold that pairs with 
 
 ## Rectangular cells: width, height and a gap per axis
 
-Hold & Win art is usually wider than tall. cellSize takes a width and a height plus a columnGap and a rowGap, so the board lays out to the art's own rectangle, with the game's grid showing through the gaps. Every clover here is a Spine 4.2 skeleton on the game's art, with idle, landing, win and blur tracks the engine drives through SpineReelSymbol.
+Hold & Win art is usually wider than tall, so cellSize takes a width and a height plus a columnGap and a rowGap, and the board lays out to the art's own rectangle, with the game's grid showing through the gaps. Every clover here is a Spine 4.2 skeleton on the game's art, with idle, landing, win and blur tracks the engine drives through SpineReelSymbol.
 
 <RecipeDemo code="hold-and-win-rect-cells" height={360} />
 
@@ -232,7 +232,7 @@ The feature on its own: gold clovers lock with their amounts, blanks are the gam
 
 ## Draw order between cells
 
-Every cell is its own reel set, so the clovers the engine lifts above the cells at rest share one layer, drawn in attach order: column by column, which lets the next column's clover cover a lower clover's glow. `cellZIndex` sorts that layer by whatever the board says - here lower rows in front and the capsule on top of everything, re-asked on every place and landing.
+Every cell is its own reel set, so the clovers the engine lifts above the cells at rest share one layer, drawn in attach order: column by column, which lets the next column's clover cover a lower clover's glow. `cellZIndex` sorts that layer by whatever the board says: here lower rows in front and the capsule on top of everything, re-asked on every place and landing.
 
 <RecipeDemo code="hold-and-win-clover-cell-order" height={400} />
 
@@ -240,7 +240,7 @@ Every cell is its own reel set, so the clovers the engine lifts above the cells 
 
 ## One cell in front, for a beat
 
-`cellZIndex` is the at-rest order and the board re-asks it on every place and every landing, so a clover that must not be overlapped while it upgrades cannot express that by returning a bigger number: the next landing overwrites it mid-animation. `board.lift(cell)` promotes the cell on a separate channel and hands back a release - the refresh keeps running underneath and cannot touch it, and the release restores the cell's place without recomputing anything.
+`cellZIndex` is the at-rest order and the board re-asks it on every place and every landing, so a clover that must not be overlapped while it upgrades cannot express that by returning a bigger number: the next landing overwrites it mid-animation. `board.lift(cell)` promotes the cell on a separate channel and hands back a release. The refresh keeps running underneath and cannot touch it, and the release restores the cell's place without recomputing anything.
 
 <RecipeDemo code="hold-and-win-clover-lift" height={400} />
 
@@ -248,7 +248,7 @@ Every cell is its own reel set, so the clovers the engine lifts above the cells 
 
 ## Lift one cell, dim the rest
 
-`board.dim({ except })` is the partner of `lift()`: it draws above every cell's clover and below anything lifted, so a lifted cell stays in front of the dim whether or not it is excepted. A dim covers cells, not symbol ids - this collect resolves the gold clovers it is about to sweep to cells and spares them, so the money stays bright while the blanks go dark. It fades in and back out over `fade` ms off the board's own ticker, fast enough to belong to the beat rather than read as a transition; `fade: 0` cuts.
+`board.dim({ except })` is the partner of `lift()`: it draws above every cell's clover and below anything lifted, so a lifted cell stays in front of the dim whether or not it is excepted. A dim covers cells, not symbol ids. This collect resolves the gold clovers it is about to sweep to cells and spares them, so the money stays bright while the blanks go dark. It fades in and back out over `fade` ms off the board's own ticker, fast enough to belong to the beat rather than read as a transition; `fade: 0` cuts.
 
 <RecipeDemo code="hold-and-win-clover-lift-dim" height={400} />
 
@@ -256,7 +256,7 @@ Every cell is its own reel set, so the clovers the engine lifts above the cells 
 
 ## Dim the cells, or dim only the art
 
-Two channels for pushing a board back. `dim()` lays a rectangle over each cell, so the clover goes dark and so does the tile it sits in. `dimSymbols()` multiplies each symbol's own tint towards black instead: the art sinks and the board keeps its lights on. Same sweep runs twice below, so the only difference on screen is which one did it - `amount` is the strength on both, and both fade over `fade`.
+Two channels for pushing a board back. `dim()` lays a rectangle over each cell, so the clover goes dark and so does the tile it sits in. `dimSymbols()` multiplies each symbol's own tint towards black instead: the art sinks and the board keeps its lights on. Same sweep runs twice below, so the only difference on screen is which one did it. `amount` is the strength on both, and both fade over `fade`.
 
 The reason it is a board method rather than three lines of `gsap.to`: a dimmed cell that swaps its symbol has to keep its dim, and the symbol that left has to lose the tint before the pool hands it to another cell.
 
@@ -266,11 +266,11 @@ The reason it is a board method rather than three lines of `gsap.to`: a dimmed c
 
 ## Dimming the art is not dimming the cell
 
-One slot blown up, with a fruit in it rather than a clover so the cell's own background shows all the way around the symbol. The blue plate is `cellChrome()` - the board draws it, it is not a symbol - so `dimSymbols()` never touches it however hard it dims the fruit. `amount` steps 0.3, 0.6, 0.9 and the plate does not move; then the same 0.6 through `dim()` takes the whole cell down.
+One slot blown up, with a fruit in it rather than a clover so the cell's own background shows all the way around the symbol. The blue plate is `cellChrome()`, drawn by the board rather than a symbol, so `dimSymbols()` never touches it however hard it dims the fruit. `amount` steps 0.3, 0.6, 0.9 and the plate does not move; then the same 0.6 through `dim()` takes the whole cell down.
 
-The last beat is the corollary: swap the cell to the empty id and there is no art left to dim, so `dimSymbols()` changes nothing at all - not the symbol that has gone, and not the plate, which was never its business.
+The last beat is the corollary: swap the cell to the empty id and there is no art left to dim, so `dimSymbols()` changes nothing at all: not the symbol that has gone, and not the plate, which was never its business.
 
-Which is the thing to watch for on a real board. If your blank tile is a registered symbol (as it is in the recipes above, where the dark tile is the `empty` id) then it IS art, and `dimSymbols()` dims it with everything else. Draw whatever must stay lit in `cellChrome()`, or name its cell in `except`.
+Which is the thing to watch for on a real board. If your blank tile is a registered symbol (as it is in the recipes above, where the dark tile is the `empty` id) then it is art, and `dimSymbols()` dims it with everything else. Draw whatever must stay lit in `cellChrome()`, or name its cell in `except`.
 
 <RecipeDemo code="hold-and-win-clover-dim-one-cell" height={400} />
 
@@ -318,7 +318,7 @@ Held clovers idle until the feature ends. When COLLECT locks, lightning strikes 
 
 ## The lock animation, per coin and after the landing
 
-`lockAnimation` may be a function of the coin that just locked: gold settles with its landing only, COLLECT celebrates. The celebration waits for the skeleton's own landing beat (`symbol.landing`) instead of taking its track from it, so the landing shows first and the win follows - the HUD prints when each finished.
+`lockAnimation` may be a function of the coin that just locked: gold settles with its landing only, COLLECT celebrates. The celebration waits for the skeleton's own landing beat (`symbol.landing`) instead of taking its track from it, so the landing shows first and the win follows; the HUD prints when each finished.
 
 <RecipeDemo code="hold-and-win-clover-lock-rule" height={400} />
 
@@ -390,7 +390,7 @@ Don't draw the coin; use art you already have (a sprite) and add the number on t
 
 ## Value-carrying coin (Hold & Win)
 
-Each coin carries a coefficient (×2 … ×50) in coin.data; the board locks hits and respins only the free cells natively, no pins.
+Each coin carries a coefficient (x2 to x50) in coin.data; the board locks hits and respins only the free cells natively, no pins.
 
 <RecipeDemo code="value-coin-pin" />
 

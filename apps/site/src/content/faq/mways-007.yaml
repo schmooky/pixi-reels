@@ -3,9 +3,9 @@ group: mways
 topic: orientation-and-direction
 question: How do I add a top horizontal reel (extra strip above the board)?
 answer: >-
-  Build it as a second `ReelSet` with `.orientation('horizontal')` -- one reel
-  (`.reels(1)`) whose `.visibleCells(n)` is the number of symbols in the strip
-  -- and add it to the stage above your main set. It is a normal reel set, so
+  Build it as a second `ReelSet` with `.orientation('horizontal')`, one reel
+  (`.reels(1)`) whose `.visibleCells(n)` is the number of symbols in the strip,
+  and add it to the stage above your main set. It is a normal reel set, so
   it spins, lands and cascades with the same API. There is no single-call
   "banner" helper; the two sets stay independent and you position them
   yourself.

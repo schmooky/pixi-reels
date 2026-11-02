@@ -3,7 +3,7 @@ group: coins
 topic: hold-and-win
 question: How do I send a golden trail to the meter instead of a flying coin?
 answer: >-
-  Send a trail sprite or particle along the same `bezierFly` path instead of a coin clone — the board only hands out geometry. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+  Send a trail sprite or particle along the same `bezierFly` path instead of a coin clone. The board only hands out geometry. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package, copy them into your project.
 links:
-  - label: "Recipe: Hold & Win — collector"
+  - label: "Recipe: Hold & Win: collector"
     href: /mechanics/hold-and-win/#hold-and-win-collector

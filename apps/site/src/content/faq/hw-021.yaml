@@ -7,5 +7,5 @@ answer: '`board.skip()` slams every in-flight cell to its landed position and
   fires `feature:skip`; gate your own flights / collect on that signal to cut
   them short, and treat `feature:end` as the single "all done" event.'
 links:
-  - label: "Recipe: Hold & Win — skip the whole feature"
+  - label: "Recipe: Hold & Win: skip the whole feature"
     href: /mechanics/hold-and-win/#hold-and-win-skip

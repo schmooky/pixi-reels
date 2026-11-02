@@ -13,7 +13,7 @@ title: Masks & board shapes
 
 `scope: 'reel'` rounds every reel box instead.
 
-**Gotcha:** needs a non-zero CROSS gap. At gap `0` neighbours share an edge and rounding both sides of it notches every seam. The strategy warns once.
+This needs a non-zero cross gap. At gap `0` neighbours share an edge and rounding both sides of it notches every seam. The strategy warns once.
 
 <RecipeDemo code="mask-rounded-reels" />
 
@@ -23,7 +23,7 @@ title: Masks & board shapes
 
 `scope: 'outer'` keeps one rect per reel, so buffer cells past a short reel stay hidden as with the default, and rounds a corner only where it sits on a corner of the union box: the first reel's outer pair, the last reel's outer pair, nothing in between. Inner edges stay square, so it is fine at cross gap `0`, where `scope: 'reel'` notches. `corners: { topLeft: true, ... }` narrows any scope to named screen corners.
 
-**Gotcha:** on a jagged set the box corners may touch no reel, and then nothing rounds. Use `SilhouetteMaskStrategy` there.
+On a jagged set the box corners may touch no reel, and then nothing rounds. Use `SilhouetteMaskStrategy` there.
 
 <RecipeDemo code="mask-outer-corners" />
 
@@ -41,7 +41,7 @@ Every Hold & Win cell is its own 1x1 reel set with its own mask, and `cellMask` 
 
 A pyramid has no single rectangle to round: per-reel rounding notches the seams, bounding-box rounding hides the staircase. `SilhouetteMaskStrategy` walks the union outline and rounds every vertex, concave steps included via `concaveRadius`. A uniform set degrades to a rounded rect.
 
-**Gotcha:** reels must butt together (cross gap `0`). With a gap they are genuinely disjoint; the strategy says so and falls back to per-reel rounded rects.
+Reels must butt together (cross gap `0`). With a gap they are disjoint; the strategy says so and falls back to per-reel rounded rects.
 
 <RecipeDemo code="mask-silhouette-pyramid" />
 
@@ -49,9 +49,9 @@ A pyramid has no single rectangle to round: per-reel rounding notches the seams,
 
 ## Any shape, without a class
 
-`PathMaskStrategy` takes a `(graphics, context) => void`. The context carries `rects`, `width`, `height`, `axis` and `bleed`. Do not call `g.clear()` - the strategy already did.
+`PathMaskStrategy` takes a `(graphics, context) => void`. The context carries `rects`, `width`, `height`, `axis` and `bleed`. Do not call `g.clear()`; the strategy already did.
 
-**Gotcha:** `cut()` subtracts from the last shape already **filled**, so fill first. Draw the hole before filling and you get an empty mask and an invisible board, with no error.
+`cut()` subtracts from the last shape already filled, so fill first. Draw the hole before filling and you get an empty mask and an invisible board, with no error.
 
 <RecipeDemo code="mask-path-custom" />
 
@@ -59,9 +59,9 @@ A pyramid has no single rectangle to round: per-reel rounding notches the seams,
 
 ## Insetting and composing
 
-`inset(strategy, px)` shrinks any strategy's output (negative grows) - the fix for art bleeding a pixel past the frame. Pass `{ top, right, bottom, left }` instead of one number when the frame's lips differ: `inset(new RoundedRectMaskStrategy({ radius: 43 }), { top: 4, bottom: 12 })`. Sides are screen sides in every orientation and an omitted side is untouched. `composeMasks(...)` unions several into the viewport's one mask, for a board plus a banner.
+`inset(strategy, px)` shrinks any strategy's output (negative grows), the fix for art bleeding a pixel past the frame. Pass `{ top, right, bottom, left }` instead of one number when the frame's lips differ: `inset(new RoundedRectMaskStrategy({ radius: 43 }), { top: 4, bottom: 12 })`. Sides are screen sides in every orientation and an omitted side is untouched. `composeMasks(...)` unions several into the viewport's one mask, for a board plus a banner.
 
-**Gotcha:** union only. A Graphics mask is the union of its filled shapes; there is no way to intersect or subtract two strategies. Use `.cut()` inside a `PathMaskStrategy` instead.
+Union only. A Graphics mask is the union of its filled shapes; there is no way to intersect or subtract two strategies. Use `.cut()` inside a `PathMaskStrategy` instead.
 
 <RecipeDemo code="mask-inset-compose" />
 
@@ -69,7 +69,7 @@ A pyramid has no single rectangle to round: per-reel rounding notches the seams,
 
 ## A different trim per side
 
-Frame art rarely has four equal lips. `inset(strategy, { top, right, bottom, left })` names the sides the way the artist measured them - screen sides in every orientation, an omitted side untouched - so a rounded window with a thick bottom lip is one wrapped strategy, not a hand-drawn path.
+Frame art rarely has four equal lips. `inset(strategy, { top, right, bottom, left })` names the sides the way the artist measured them (screen sides in every orientation, an omitted side untouched), so a rounded window with a thick bottom lip is one wrapped strategy, not a hand-drawn path.
 
 <RecipeDemo code="mask-inset-sides" />
 
@@ -77,4 +77,4 @@ Frame art rarely has four equal lips. `inset(strategy, { top, right, bottom, lef
 
 Implement `build(ctx)` and `update(g, ctx)`, set `version = MASK_STRATEGY_VERSION`, pass it to `.maskStrategy(...)`. Reach for `PathMaskStrategy` first; a class only earns its keep when it holds state across draws.
 
-Respect two things: `ctx.axis`, because `rects` are screen-space in every orientation (`axis.toLocal(w, h)` gives `{ cross, main }`), and `ctx.bleed`, which inflates the CROSS axis only. Add the optional `draw(g, ctx)` and your strategy composes like the built-ins.
+Respect two things: `ctx.axis`, because `rects` are screen-space in every orientation (`axis.toLocal(w, h)` gives `{ cross, main }`), and `ctx.bleed`, which inflates the cross axis only. Add the optional `draw(g, ctx)` and your strategy composes like the built-ins.

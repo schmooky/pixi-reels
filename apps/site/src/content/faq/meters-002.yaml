@@ -2,6 +2,6 @@ id: meters-002
 group: meters
 topic:
 question: How do I increment the meter on each win and reset on a miss?
-answer: Drive it from win events (or your own round event bus) — increment on a
+answer: Drive it from win events (or your own round event bus). Increment on a
   win, reset on a dry spin in your handler.
 links: []

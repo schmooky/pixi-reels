@@ -2,6 +2,6 @@ id: symbols-015
 group: symbols
 topic: symbols
 question: How do I tint or recolor a symbol per spin (e.g. a charged state)?
-answer: Tint the symbol's `view` (a PixiJS Container) in `onActivate` — e.g. set
+answer: Tint the symbol's `view` (a PixiJS Container) in `onActivate`, e.g. set
   `this.view.tint` for a charged state.
 links: []

@@ -4,7 +4,7 @@ topic: orientation-and-direction
 question: How do I make reels horizontal instead of vertical?
 answer: >-
   `.orientation('horizontal')` on the builder runs the strip along X, with reels
-  marched along Y. Everything else is orientation-neutral -- pyramids, MultiWays,
+  marched along Y. Everything else is orientation-neutral, pyramids, MultiWays,
   big symbols and cascades all work on either axis. `symbolSize(width, height)`
   stays screen-space, so a horizontal set takes its travel pitch from `width`.
 links: []

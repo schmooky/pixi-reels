@@ -5,5 +5,5 @@ question: How do I format the value as 0.00 with a bitmap gold font?
 answer: Render the amount with a PixiJS `BitmapText` in a gold digit font and
   format it with `value.toFixed(2)`.
 links:
-  - label: "Recipe: Hold & Win — Spine coins"
+  - label: "Recipe: Hold & Win: Spine coins"
     href: /mechanics/hold-and-win/#hold-and-win-spine

@@ -2,6 +2,6 @@ id: fs-004
 group: fs
 topic:
 question: How do I retrigger and add more free spins mid-feature?
-answer: Detect the retrigger in the feature result and add to your counter —
+answer: Detect the retrigger in the feature result and add to your counter,
   game-layer bookkeeping.
 links: []

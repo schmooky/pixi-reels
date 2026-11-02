@@ -6,13 +6,13 @@ Symbol building blocks and how they are drawn: the classes you register, the thr
 
 <a id="card-symbol-debug"></a>
 
-## CardSymbol. debug / prototyping helper
+## CardSymbol: debug / prototyping helper
 
 No-asset PIXI.Graphics symbol for recipes, mechanic tests, and prototypes; crisp at any cell size.
 Exported from the package, so a prototype needs no art at all:
 `import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels'`.
 
-**Gotcha:** debug scaffolding, not production art - ship SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol instead.
+This is debug scaffolding, not production art; ship SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol instead.
 
 <RecipeDemo code="card-symbol-debug" />
 
@@ -20,9 +20,9 @@ Exported from the package, so a prototype needs no art at all:
 
 ## PhaseCardSymbol: read the phase off the board
 
-A `CardSymbol` that is grey at rest and takes the colour of the phase its reel is running - sky for `start`, blue for `spin`, amber for `anticipation`, violet for `stop`, a green beat on landing. Register it like any symbol, then point one watcher at the reels: `PhaseCardSymbol.watch(reelSet.reels)` paints every card from the reels' own `phase:enter`, `landed` and `symbol:created` events, custom phases included, and returns the release.
+A `CardSymbol` that is grey at rest and takes the colour of the phase its reel is running: sky for `start`, blue for `spin`, amber for `anticipation`, violet for `stop`, a green beat on landing. Register it like any symbol, then point one watcher at the reels: `PhaseCardSymbol.watch(reelSet.reels)` paints every card from the reels' own `phase:enter`, `landed` and `symbol:created` events, custom phases included, and returns the release.
 
-**Gotcha:** the card does not know its reel, so without the watcher it stays grey. `setPhase()` is public for anything else that knows the phase. `colors` overrides or extends `PHASE_CARD_COLORS`; a phase with no entry draws `other`.
+The card does not know its reel, so without the watcher it stays grey. `setPhase()` is public for anything else that knows the phase. `colors` overrides or extends `PHASE_CARD_COLORS`; a phase with no entry draws `other`.
 
 <RecipeDemo code="phase-colors" />
 
@@ -30,7 +30,7 @@ A `CardSymbol` that is grey at rest and takes the colour of the phase its reel i
 
 ## EmptySymbol: render nothing for a registered id
 
-Register EmptySymbol against an id to reserve a grid slot that occupies a strip slot but draws zero pixels - the canonical blank field for hold-and-win boards.
+Register EmptySymbol against an id to reserve a grid slot that occupies a strip slot but draws zero pixels: the canonical blank field for hold-and-win boards.
 
 <RecipeDemo code="empty-symbol" />
 
@@ -48,7 +48,7 @@ A hand-written `ReelSymbol` on a horizontal set, with wide non-square cells. Not
 
 Travel changes motion; facing changes art; they never change each other. The engine never rotates a symbol container to fake an axis, so third-party symbol classes need no changes at all.
 
-**Gotcha:** the one orientation fact a symbol gets is `this.mainAxis` (`'y'` vertical, `'x'` horizontal), and it is there for effects that genuinely follow travel, motion blur being the one in the box. Do not lay out with it.
+The one orientation fact a symbol gets is `this.mainAxis` (`'y'` vertical, `'x'` horizontal), and it is there for effects that follow travel, motion blur being the one in the box. Do not lay out with it.
 
 <RecipeDemo code="symbols-horizontal-resize" />
 
@@ -64,7 +64,7 @@ Four reels of three cells, built twice and landed with the identical grid. One s
 
 A symbol morphs into a different (usually higher) one mid-round via setSymbolAt.
 
-**Gotcha:** transform only after landing (spin:complete / spin:reelLanded); setSymbolAt throws mid-spin and on big-symbol anchors.
+Transform only after landing (spin:complete / spin:reelLanded); setSymbolAt throws mid-spin and on big-symbol anchors.
 
 <RecipeDemo code="symbol-transform" />
 
@@ -81,9 +81,9 @@ await reelSet.swapSymbols(
 );
 ```
 
-The three beats are separately skippable: `skipOut` for art that plays its own Spine `out` track, `skipIn` to leave the cells hidden and reveal them yourself, `onSwapped` for a midpoint beat that has to await a real animation. `playIn()` / `playOut()` are the per-symbol hooks underneath, on the same contract as `playDestroy` - override them for art-appropriate entrances and exits.
+The three beats are separately skippable: `skipOut` for art that plays its own Spine `out` track, `skipIn` to leave the cells hidden and reveal them yourself, `onSwapped` for a midpoint beat that has to await a real animation. `playIn()` / `playOut()` are the per-symbol hooks underneath, on the same contract as `playDestroy`; override them for art-appropriate entrances and exits.
 
-**Gotcha:** cells are validated up front, and an abort still performs the swap so the board never disagrees with the result. Only valid at rest, and single-cell symbols only - a big symbol spans cells the frame layer reserves, so revealing one is a `setResult` / `setShape` job.
+Cells are validated up front, and an abort still performs the swap so the board never disagrees with the result. Only valid at rest, and single-cell symbols only; a big symbol spans cells the frame layer reserves, so revealing one is a `setResult` / `setShape` job.
 
 <RecipeDemo code="symbol-swap-reveal" />
 
@@ -91,45 +91,41 @@ The three beats are separately skippable: `skipOut` for art that plays its own S
 
 ## Which symbols may spawn where
 
-`weights()` is one table for the whole set. A pool layers on top of it for a scope: one reel, the buffer cells, or one reel's buffer cells. It governs the RANDOM draw only - an explicit `setResult` target always wins.
+`weights()` is one table for the whole set. A pool layers on top of it for a scope: one reel, the buffer cells, or one reel's buffer cells. It governs the random draw only; an explicit `setResult` target always wins.
 
-**Keep a symbol out of the hidden cells (globally, or on one reel):**
-
-Each spin steps the pool through off, `{ reel: 1, slots: 'buffer' }`, and `{ slots: 'buffer' }`. The labels above and below the grid read the hidden cells live, so you can see COIN stop parking there - on the middle reel first, then everywhere.
+Keep a symbol out of the hidden cells, globally or on one reel. Each spin steps the pool through off, `{ reel: 1, slots: 'buffer' }`, and `{ slots: 'buffer' }`. The labels above and below the grid read the hidden cells live, so you can see COIN stop parking there, on the middle reel first, then everywhere.
 
 <RecipeDemo code="buffer-pool-exclude" height={440} />
 
-**Give one reel its own draw table:**
-
-Watch the spin rather than the landing: reel 0 draws low cards only, reel 2 is a wild reel while it scrolls, reel 4 never teases a wild. Same `weights()` underneath all five.
+Give one reel its own draw table. Watch the spin rather than the landing: reel 0 draws low cards only, reel 2 is a wild reel while it scrolls, reel 4 never teases a wild. Same `weights()` underneath all five.
 
 <RecipeDemo code="per-reel-symbol-pool" height={400} />
 
 <a id="symbol-layering"></a>
 
-## Symbol layering - zIndex, unmask, promote
+## Symbol layering: zIndex, unmask, promote
 
 Three tiers of "draw my symbol on top": within one reel, above every reel and the mask, and per-instance via the spotlight layer.
 
-**Within a reel (symbolData zIndex):**
+Within a reel (symbolData zIndex):
 
 <RecipeDemo code="layering-scatter-zindex" height={420} />
 
-**Cross-reel and out-of-mask (unmask, at rest):**
+Cross-reel and out-of-mask (unmask, at rest):
 
 <RecipeDemo code="layering-unmask" height={420} />
 
-**Your own order (symbolZIndex):** the engine's formula is type-dominant; a grading spec is row-dominant. Hand the engine a resolver and it keeps applying it after every wrap, swap and landing - here every mid and high is unmasked, so at rest the lower row fronts the one above whatever the symbol, and only a higher grade wins over that.
+Your own order (symbolZIndex): the engine's formula is type-dominant; a grading spec is row-dominant. Hand the engine a resolver and it keeps applying it after every wrap, swap and landing. Here every mid and high is unmasked, so at rest the lower row fronts the one above whatever the symbol, and only a higher grade wins over that.
 
 <a id="layering-graded-zindex"></a>
 
 <RecipeDemo code="layering-graded-zindex" height={420} />
 
-**Gotcha:** unmask lifts VISIBLE cells only. The same id in a buffer cell stays under the mask, so oversized art cannot hang outside the grid from a slot the player was never meant to see. The demo below lands both at once - and holds through a skip, which is the moment that used to leak.
+Unmask lifts visible cells only. The same id in a buffer cell stays under the mask, so oversized art cannot hang outside the grid from a slot the player was never meant to see. The demo below lands both at once, and holds through a skip, which is the moment that used to leak.
 
 <RecipeDemo code="unmask-stays-in-the-grid" height={400} />
 
-**Per-instance (promote the landed view into spotlightContainer):**
+Per-instance (promote the landed view into spotlightContainer):
 
 <RecipeDemo code="layering-promote-jagged" height={420} />
 
@@ -137,7 +133,7 @@ Three tiers of "draw my symbol on top": within one reel, above every reel and th
 
 <a id="clover-promote-win-line"></a>
 
-**The same job in one call (`reelSet.promote`):** the demo above hand-rolls it - capture each view's parent and position, reparent into `spotlightContainer`, put every one back before the strip moves. `promote(positions)` is that, as a value: it attaches the views to a render layer instead of reparenting, so nothing moves, nothing has to be put back, and the returned release drops them. Unlike `spotlight.show()` there is no dim, no `playWin()` and nothing to await, so the game's own timeline stays in charge. Below, the same tween runs twice - once clipped, once promoted.
+The same job in one call (`reelSet.promote`): the demo above hand-rolls it, capturing each view's parent and position, reparenting into `spotlightContainer`, and putting every one back before the strip moves. `promote(positions)` is that, as a value: it attaches the views to a render layer instead of reparenting, so nothing moves, nothing has to be put back, and the returned release drops them. Unlike `spotlight.show()` there is no dim, no `playWin()` and nothing to await, so the game's own timeline stays in charge. Below, the same tween runs twice, once clipped, once promoted.
 
 <RecipeDemo code="clover-promote-win-line" height={400} />
 
@@ -145,11 +141,11 @@ Three tiers of "draw my symbol on top": within one reel, above every reel and th
 
 ## Landing: the frame, and the beat
 
-`spin:reelLanding` fires the frame a reel is on its result - strip snapped, every symbol told it landed, the bounce about to start. `spin:reelLanded` fires once the bounce has settled, a whole `bounceDuration` later. Anything coupled to the landing itself belongs on the first one; the demo grows a takeover plate over the copy reels on it and prints the gap.
+`spin:reelLanding` fires the frame a reel is on its result: strip snapped, every symbol told it landed, the bounce about to start. `spin:reelLanded` fires once the bounce has settled, a whole `bounceDuration` later. Anything coupled to the landing itself belongs on the first one; the demo grows a takeover plate over the copy reels on it and prints the gap.
 
 <RecipeDemo code="landing-signal" />
 
-Each symbol hears the same moment through `onReelLanded(ctx)`, with the reel and cell it landed in. A Spine symbol's `autoPlayLanding` can be a rule of that context: `true` for its landing, `false` for nothing, or an animation name for a different beat - so the copy reels land without a pose to fight the takeover, and the last two reels use a reveal as their landing.
+Each symbol hears the same moment through `onReelLanded(ctx)`, with the reel and cell it landed in. A Spine symbol's `autoPlayLanding` can be a rule of that context: `true` for its landing, `false` for nothing, or an animation name for a different beat, so the copy reels land without a pose to fight the takeover, and the last two reels use a reveal as their landing.
 
 <a id="spine-landing-rule"></a>
 
@@ -171,7 +167,7 @@ One skeleton per symbol tier (a skin per id) with static-spin blur, on a gapless
 
 ## Auto-baked motion blur (static spin)
 
-Spin cached snapshot textures with a baked blur - no blur art, no runtime filters.
+Spin cached snapshot textures with a baked blur: no blur art, no runtime filters.
 
 <RecipeDemo code="static-spin-blur" />
 
@@ -179,7 +175,7 @@ Spin cached snapshot textures with a baked blur - no blur art, no runtime filter
 
 ## Bring your own blur textures
 
-Hand-authored blur strips where you have them; auto-baked blur where you don't - both spin through the same StaticSpinSymbol.
+Hand-authored blur strips where you have them; auto-baked blur where you don't. Both spin through the same StaticSpinSymbol.
 
 <RecipeDemo code="static-spin-provided-blur" />
 

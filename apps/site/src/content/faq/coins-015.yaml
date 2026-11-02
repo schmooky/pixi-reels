@@ -7,5 +7,5 @@ answer: >-
   `packages/kit/src/holdAndWinFx.ts`) to order the sweep, and `bezierFly`
   each value into the collector cell, optionally trailed by particle streams.
 links:
-  - label: "Recipe: Hold & Win — collector with particles"
+  - label: "Recipe: Hold & Win: collector with particles"
     href: /mechanics/hold-and-win/#hold-and-win-collector-particles

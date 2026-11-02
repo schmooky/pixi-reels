@@ -3,7 +3,7 @@ group: chars
 topic: hold-and-win
 question: How do I make the character react (chomp, bounce) when a coin hits it?
 answer: >-
-  Resolve the `bezierFly` promise on arrival and play the character's reaction in the `.then(...)`. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+  Resolve the `bezierFly` promise on arrival and play the character's reaction in the `.then(...)`. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package, copy them into your project.
 links:
-  - label: "Recipe: Hold & Win — collector"
+  - label: "Recipe: Hold & Win: collector"
     href: /mechanics/hold-and-win/#hold-and-win-collector

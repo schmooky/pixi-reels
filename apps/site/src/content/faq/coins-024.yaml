@@ -8,5 +8,5 @@ answer: Keep the value in `coin.data` and attach the overlay as a child of the
   instance has a fresh view), and on a flight rebuild it onto the flying clone
   from the same `data`.
 links:
-  - label: "Recipe: Hold & Win — overlay survives swaps and rides flights"
+  - label: "Recipe: Hold & Win: overlay survives swaps and rides flights"
     href: /mechanics/hold-and-win/#hold-and-win-sticky-overlay

@@ -3,7 +3,7 @@ group: meters
 topic: hold-and-win
 question: How do I animate a value flying into the meter and bumping it up?
 answer: >-
-  `bezierFly` the value to the meter's screen position with `arriveScale` and bump it in the arrival callback. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+  `bezierFly` the value to the meter's screen position with `arriveScale` and bump it in the arrival callback. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package, copy them into your project.
 links:
-  - label: "Recipe: Hold & Win — fly to a feature meter"
+  - label: "Recipe: Hold & Win: fly to a feature meter"
     href: /mechanics/hold-and-win/#hold-and-win-meter

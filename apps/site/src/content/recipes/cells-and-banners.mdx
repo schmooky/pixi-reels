@@ -6,7 +6,7 @@ Address individual cells, render your own paylines and overlays, and swap featur
 
 <a id="cell-bounds"></a>
 
-## Cell bounds. overlays, paylines & hit areas
+## Cell bounds: overlays, paylines & hit areas
 
 getCellBounds(reel, cell) hands you the pixel rect of any visible cell, for paylines, win outlines, or hit areas that align exactly with symbols.
 
@@ -14,11 +14,11 @@ getCellBounds(reel, cell) hands you the pixel rect of any visible cell, for payl
 
 <a id="cell-hit-areas"></a>
 
-## Cell hit areas. click to pick, hover to preview
+## Cell hit areas: click to pick, hover to preview
 
 Attach pointer events to individual cells with getCellBounds; hover previews, click toggles a pick, picks survive spins.
 
-**Gotcha:** fill the hit rect with alpha 0, not `visible = false`. an invisible-but-filled rect is still hit-testable; a hidden one is not.
+Fill the hit rect with alpha 0, not `visible = false`. An invisible but filled rect is still hit-testable; a hidden one is not.
 
 <RecipeDemo code="cell-hit-areas" />
 
@@ -28,7 +28,7 @@ Attach pointer events to individual cells with getCellBounds; hover previews, cl
 
 `getCellBounds(reel, cell)` takes the same arguments on either axis, and (0, 0) is still the first cell of the first reel. The rect it returns transposes: on a horizontal set the reel index walks down the screen and the cell index walks across it, so the same cell index on every reel stacks vertically.
 
-**Gotcha:** the payline drawn through those centres therefore runs vertically, where identical code draws a horizontal line on a vertical set. Read the rects; do not infer them from the indices.
+The payline drawn through those centres therefore runs vertically, where identical code draws a horizontal line on a vertical set. Read the rects; do not infer them from the indices.
 
 <RecipeDemo code="cells-horizontal-bounds" />
 
@@ -52,7 +52,7 @@ A reveal-and-collect prize grid built straight on the generic BoardGrid primitiv
 
 ## Draw paylines yourself from win:group
 
-Core never draws lines. subscribe to win:group and plot your own overlay from getCellBounds.
+Core never draws lines. Subscribe to win:group and plot your own overlay from getCellBounds.
 
 <RecipeDemo code="paylines-events-only" />
 
@@ -76,7 +76,7 @@ Replace playWin() with your own GSAP timeline, styled per win.id.
 
 Let the player smash the button to land the reels now.
 
-**Gotcha:** for player-facing slam use requestSkip(). skipSpin() THROWS if the result has not arrived yet; requestSkip() queues until it does.
+Use requestSkip() for a player-facing slam. A call to skipSpin() throws if the result has not arrived yet; requestSkip() queues until it does.
 
 <RecipeDemo code="slam-stop" />
 
@@ -84,6 +84,6 @@ Let the player smash the button to land the reels now.
 
 Enter and exit a bonus mode at runtime by adding or removing a frame middleware, with no ReelSet rebuild.
 
-**Gotcha:** run custom middleware after target-placement (priority > 10; target-placement is 10, and the recipe uses 20) so it reacts to the grid the server chose.
+Run custom middleware after target-placement (priority > 10; target-placement is 10, and the recipe uses 20) so it reacts to the grid the server chose.
 
 <RecipeDemo code="feature-mode-swap" />

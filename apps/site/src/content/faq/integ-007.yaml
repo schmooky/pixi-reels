@@ -1,7 +1,7 @@
 id: integ-007
 group: integ
 topic: hold-and-win
-question: How do I sequence multi-step server features (round → round → collect)?
+question: How do I sequence multi-step server features (round, round, collect)?
 answer: Drive each step with an `await` (e.g. `board.respin(round.hits)` per
   round) against the server's per-step response.
 links:

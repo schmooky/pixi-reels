@@ -3,7 +3,7 @@ group: result
 topic: big-symbols
 question: How do I send a structured result that survives JSON / postMessage?
 answer: Use the explicit `ColumnTarget` object form (`{ visible, bufferStart,
-  bufferEnd }`) — it survives JSON / postMessage, unlike the negative-index
+  bufferEnd }`). It survives JSON / postMessage, unlike the negative-index
   array form.
 links:
   - label: "Guide: Buffer indexing"
