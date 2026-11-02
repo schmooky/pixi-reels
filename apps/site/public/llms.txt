@@ -35,18 +35,6 @@ await result;
 
 ## Guides
 
-### Big symbols
-URL: https://pixi-reels.schmooky.dev/guides/big-symbols/
-A big symbol is a single symbol that visually occupies an N×M block
-
-### Buffer indexing
-URL: https://pixi-reels.schmooky.dev/guides/buffer-indexing/
-How ColumnTarget indices map to cells in initialFrame and
-
-### Cascades. the mental model
-URL: https://pixi-reels.schmooky.dev/guides/cascades/
-Two moments, three phases, gravity-correct refills. The mental
-
 ### Cheats & testing
 URL: https://pixi-reels.schmooky.dev/guides/cheats-and-testing/
 Force deterministic outcomes, run spin lifecycles in Node, write
@@ -59,57 +47,9 @@ Snapshot the reel state as JSON, render an ASCII grid, trace every event.
 URL: https://pixi-reels.schmooky.dev/guides/getting-started/
 Install pixi-reels and run your first reel set in under 2 minutes.
 
-### Hold & Win
-URL: https://pixi-reels.schmooky.dev/guides/hold-and-win/
-The Hold & Win lifecycle end to end — the mental model, the state
-
-### Infinity reels
-URL: https://pixi-reels.schmooky.dev/guides/infinity-reels/
-The base spin lands, then the board grows sideways a reel at a
-
-### MultiWays
-URL: https://pixi-reels.schmooky.dev/guides/multiways/
-Every reel can land on a different cell count, every spin. Cell
-
-### Nudge
-URL: https://pixi-reels.schmooky.dev/guides/nudge/
-Push a reel down or up by one or more positions after it has
-
-### Orientation & direction
-URL: https://pixi-reels.schmooky.dev/guides/orientation-and-direction/
-One engine, four layouts. How a reel's travel axis works, why start
-
-### Per-reel geometry
-URL: https://pixi-reels.schmooky.dev/guides/per-reel-geometry/
-Reels do not all need the same cell count. Static pyramids, the
-
-### Pins
-URL: https://pixi-reels.schmooky.dev/guides/pins/
-CellPin is the cell-persistence primitive. It survives spins,
-
 ### Recipe previews
 URL: https://pixi-reels.schmooky.dev/guides/recipe-previews/
 How to give a recipe a card thumbnail and inline body images.
-
-### Sound
-URL: https://pixi-reels.schmooky.dev/guides/sound/
-Snap a table of sound cues onto a reel set's events, with a port
-
-### Speed modes
-URL: https://pixi-reels.schmooky.dev/guides/speed-modes/
-Normal, turbo, super-turbo. and adding your own.
-
-### Spin lifecycle
-URL: https://pixi-reels.schmooky.dev/guides/spin-lifecycle/
-The full lifecycle of a spin. phases, events, and how to hook in.
-
-### Symbols
-URL: https://pixi-reels.schmooky.dev/guides/symbols/
-Register and implement reel symbols. sprites, animations, Spine, or custom.
-
-### Win animations
-URL: https://pixi-reels.schmooky.dev/guides/win-animations/
-Highlight winning symbols, cycle through lines, and dim the losers.
 
 ### Build your first cascade slot
 URL: https://pixi-reels.schmooky.dev/guides/your-first-cascade/
@@ -1527,67 +1467,51 @@ URL: https://pixi-reels.schmooky.dev/architecture/viewport-and-masks/
 
 ### Anticipation & near-miss
 URL: https://pixi-reels.schmooky.dev/recipes/anticipation/
-Tags: anticipation, tension, scatter, near-miss, spine, horizontal, reverse, curve, acceleration
 
 ### Big symbols & non-uniform grids
 URL: https://pixi-reels.schmooky.dev/recipes/big-symbols/
-Tags: big-symbols, multiways, pyramid, spine, geometry, sticky-wild, horizontal, reverse, orientation
 
 ### Cascade & tumble
 URL: https://pixi-reels.schmooky.dev/recipes/cascade/
-Tags: cascade, tumble, refill, anticipation, spine, thunderkick, horizontal, reverse, orientation, gravity
 
 ### Cells, bounds, paylines & overlays
 URL: https://pixi-reels.schmooky.dev/recipes/cells-and-banners/
-Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
 
 ### Feel: timings & landing FX
 URL: https://pixi-reels.schmooky.dev/recipes/feel/
-Tags: phases, steps, timing, fx, anticipation, speed, skip
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
-Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation, rectangular, clovers
 
 ### Infinity reels: growing the board
 URL: https://pixi-reels.schmooky.dev/recipes/infinity-reels/
-Tags: expand, addReels, removeReels, addRows, multiways, ways, big-symbols, skip, win-lines
 
 ### Masks & board shapes
 URL: https://pixi-reels.schmooky.dev/recipes/masks/
-Tags: mask, rounded, silhouette, pyramid, jagged, frame
 
 ### Nudge
 URL: https://pixi-reels.schmooky.dev/recipes/nudge/
-Tags: nudge, stagger, spotlight, big-symbols, abort, skip, horizontal, reverse, orientation
 
 ### Orientation & direction
 URL: https://pixi-reels.schmooky.dev/recipes/orientation-and-direction/
-Tags: horizontal, orientation, direction, reverse, roll-up, banner, ways, axis
 
 ### Reel curvature
 URL: https://pixi-reels.schmooky.dev/recipes/reel-curvature/
-Tags: curve, curvature, perspective, projection, cylinder, drum, 3d
 
 ### Skip & slam
 URL: https://pixi-reels.schmooky.dev/recipes/skip/
-Tags: skip, slam, anticipation, tease, phases, timing, groups
 
 ### Splitting symbols
 URL: https://pixi-reels.schmooky.dev/recipes/split-symbols/
-Tags: split, splitSymbol, setColumn, resetColumns, ways, multiways, stacked-symbols
 
 ### Starters
 URL: https://pixi-reels.schmooky.dev/recipes/starters/
-Tags: starter, 5x3, cascade, multiways, hold-and-win, horizontal, reverse, orientation
 
 ### Symbols, layering & motion blur
 URL: https://pixi-reels.schmooky.dev/recipes/symbols/
-Tags: symbols, reveal, mystery, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
 
 ### Wilds, multipliers & mystery (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/wilds-and-pins/
-Tags: wild, sticky, multiplier, mystery, respin, cell-pin, horizontal, reverse, orientation
 
 ## FAQ
 
