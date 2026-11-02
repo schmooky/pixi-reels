@@ -1,7 +1,17 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app,
-//                   SilkGraphics, DebugPlaque, roundRectPath
-//
+import * as PIXI from 'pixi.js';
+import { gsap } from 'gsap';
+import { SilkGraphics } from 'pixi-silk';
+import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { roundRectPath } from 'pixi-reels/debug';
+import { readout } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'A press that lands, not cuts',
+  topic: 'skip',
+  tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+} as const satisfies RecipeMeta;
+
 // A PRESS THAT LANDS, NOT CUTS. `requestSkip({ mode: 'quicken' })`.
 //
 // Every slam places the frame and lands in the same tick. The landing beat
@@ -22,108 +32,109 @@
 // A slam still cuts: `requestSkip({ mode: 'slam' })` places whatever is still
 // moving, quickened or not. Tapping the readout is that press, so the two
 // can be compared on the same spin.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const SCAT = 'SCAT';
+  const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+  const TEASE = [2, 3, 4];
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const SCAT = 'SCAT';
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
-const TEASE = [2, 3, 4];
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+      }
+      r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+    })
+    // A long hold per reel, so there is room to press through it, and a slow
+    // bounce, so a quickened landing is visibly a landing.
+    .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1600, bounceDuration: 520 })
+    // What a quickened reel lands on: the turbo spin-out and its short bounce.
+    .speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
-  })
-  // A long hold per reel, so there is room to press through it, and a slow
-  // bounce, so a quickened landing is visibly a landing.
-  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1600, bounceDuration: 520 })
-  // What a quickened reel lands on: the turbo spin-out and its short bounce.
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
+  const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+  // Tease outline: a thin dashed border on the reel's own bounds, blinking.
+  const glowLayer = new PIXI.Container();
+  reelSet.addChild(glowLayer);
+  const glows = new Map();
+  const stopGlow = (i: number) => {
+    const g = glows.get(i);
+    if (!g) return;
+    gsap.killTweensOf(g);
+    try { g.destroy(); } catch {}
+    glows.delete(i);
+  };
+  const startGlow = (i: number) => {
+    stopGlow(i);
+    const W = 1.5;
+    const g = new SilkGraphics();
+    roundRectPath(g, i * (SIZE + GAP) + W / 2, W / 2, SIZE - W, TOTAL_H - W, 4)
+      .stroke({ width: W, color: 0xfef08a, dash: [7, 5], cap: 'round' });
+    glowLayer.addChild(g);
+    gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
+    glows.set(i, g);
+  };
+  reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
+  reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
 
-// Tease outline: a thin dashed border on the reel's own bounds, blinking.
-const glowLayer = new PIXI.Container();
-reelSet.addChild(glowLayer);
-const glows = new Map();
-const stopGlow = (i) => {
-  const g = glows.get(i);
-  if (!g) return;
-  gsap.killTweensOf(g);
-  try { g.destroy(); } catch {}
-  glows.delete(i);
-};
-const startGlow = (i) => {
-  stopGlow(i);
-  const W = 1.5;
-  const g = new SilkGraphics();
-  roundRectPath(g, i * (SIZE + GAP) + W / 2, W / 2, SIZE - W, TOTAL_H - W, 4)
-    .stroke({ width: W, color: 0xfef08a, dash: [7, 5], cap: 'round' });
-  glowLayer.addChild(g);
-  gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
-  glows.set(i, g);
-};
-reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
-reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
+  // The numeric definition of "landed, not placed": the landing frame and the
+  // settle are a whole bounce apart on a quickened reel, and the same tick on a
+  // slammed one.
+  const landingAt = new Map();
+  reelSet.events.on('spin:reelLanding', (i) => landingAt.set(i, performance.now()));
 
-// The numeric definition of "landed, not placed": the landing frame and the
-// settle are a whole bounce apart on a quickened reel, and the same tick on a
-// slammed one.
-const landingAt = new Map();
-reelSet.events.on('spin:reelLanding', (i) => landingAt.set(i, performance.now()));
+  let press = 0;
+  const idle = 'spin, then press to walk the board:\nquickened reels spin out and bounce';
+  // Grid-wide and two rows tall from the start: the press on top, the settle
+  // under it. The canvas is fitted to this size once, at setup.
+  const hud = readout.plaque({ text: idle, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
+  hud.position.set(0, TOTAL_H + 10);
+  reelSet.addChild(hud);
+  reelSet.events.on('spin:start', () => { press = 0; landingAt.clear(); hud.text = idle; });
+  // One event for both modes; `mode` says which press it was.
+  reelSet.events.on('skip:requested', ({ reels, mode }) => {
+    press += 1;
+    hud.text = mode === 'quicken'
+      ? `press ${press}: quickened [${reels.join(', ')}] - landing through their stop`
+      : `press ${press}: SLAMMED [${reels.join(', ')}] - placed, no spin-out`;
+  });
+  reelSet.events.on('spin:reelLanded', (i) => {
+    const bounce = Math.round(performance.now() - (landingAt.get(i) ?? performance.now()));
+    hud.text = `${hud.text.split('\n')[0]}\nreel ${i} settled ${bounce} ms after its landing frame`;
+  });
 
-let press = 0;
-const idle = 'spin, then press to walk the board:\nquickened reels spin out and bounce';
-// Grid-wide and two rows tall from the start: the press on top, the settle
-// under it. The canvas is fitted to this size once, at setup.
-const hud = new DebugPlaque({ text: idle, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
-hud.position.set(0, TOTAL_H + 10);
-reelSet.addChild(hud);
-reelSet.events.on('spin:start', () => { press = 0; landingAt.clear(); hud.text = idle; });
-// One event for both modes; `mode` says which press it was.
-reelSet.events.on('skip:requested', ({ reels, mode }) => {
-  press += 1;
-  hud.text = mode === 'quicken'
-    ? `press ${press}: quickened [${reels.join(', ')}] - landing through their stop`
-    : `press ${press}: SLAMMED [${reels.join(', ')}] - placed, no spin-out`;
-});
-reelSet.events.on('spin:reelLanded', (i) => {
-  const bounce = Math.round(performance.now() - (landingAt.get(i) ?? performance.now()));
-  hud.text = `${hud.text.split('\n')[0]}\nreel ${i} settled ${bounce} ms after its landing frame`;
-});
+  // The cut, for comparison: a slam on the same spin. Wired to the HUD click
+  // rather than the skip button, which is the quicken.
+  hud.eventMode = 'static';
+  hud.cursor = 'pointer';
+  hud.on('pointertap', () => reelSet.requestSkip({ mode: 'slam' }));
 
-// The cut, for comparison: a slam on the same spin. Wired to the HUD click
-// rather than the skip button, which is the quicken.
-hud.eventMode = 'static';
-hud.cursor = 'pointer';
-hud.on('pointertap', () => reelSet.requestSkip({ mode: 'slam' }));
+  return {
+    reelSet,
+    cleanup: () => {
+      for (const i of [...glows.keys()]) stopGlow(i);
+      try { glowLayer.destroy({ children: true }); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
+    },
+    // Every press goes through the same call. The engine decides which reels
+    // this one frees, from `protect`; the mode decides how they land.
+    onSkip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
+    onSpin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      grid[0].visible[1] = SCAT;
+      grid[1].visible[1] = SCAT;
 
-return {
-  reelSet,
-  cleanup: () => {
-    for (const i of [...glows.keys()]) stopGlow(i);
-    try { glowLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy({ children: true }); } catch {}
-  },
-  // Every press goes through the same call. The engine decides which reels
-  // this one frees, from `protect`; the mode decides how they land.
-  onSkip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    grid[0].visible[1] = SCAT;
-    grid[1].visible[1] = SCAT;
-
-    const p = reelSet.spin();
-    reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'stepwise' });
-    await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(grid);
-    await p;
-  },
-};
+      const p = reelSet.spin();
+      reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'stepwise' });
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      await p;
+    },
+  };
+}

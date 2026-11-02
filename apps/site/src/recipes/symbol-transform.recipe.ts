@@ -1,94 +1,103 @@
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           PIXI, gsap, app, pickWeighted
+import { gsap } from 'gsap';
+import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import type { Container } from 'pixi.js';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 
-const LOW = ['7', '8', '9'];
-const HIGH = ['10', 'J'];
-const IDS = [...LOW, ...HIGH];
-const COLS = 5, ROWS = 3, CELL = 90;
+export const meta = {
+  title: 'Symbol transform',
+  topic: 'symbols',
+  tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
+} as const satisfies RecipeMeta;
 
-// Predictable grid. always has low-pays to upgrade.
-const GRID = [
-  ['7', '8', '7'],
-  ['8', '9', '10'],
-  ['9', '7', '8'],
-  ['J', '8', '9'],
-  ['7', '9', '8'],
-];
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const LOW = ['7', '8', '9'];
+  const HIGH = ['10', 'J'];
+  const IDS = [...LOW, ...HIGH];
+  const COLS = 5, ROWS = 3, CELL = 90;
 
-const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleCells(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
-  .symbols(r => {
-    for (const sym of CARD_DECK) {
-      if (IDS.includes(sym.id)) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+  // Predictable grid. always has low-pays to upgrade.
+  const GRID = [
+    ['7', '8', '7'],
+    ['8', '9', '10'],
+    ['9', '7', '8'],
+    ['J', '8', '9'],
+    ['7', '9', '8'],
+  ];
+
+  const reelSet = new ReelSetBuilder()
+    .reels(COLS).visibleCells(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
+    .symbols(r => {
+      for (const sym of CARD_DECK) {
+        if (IDS.includes(sym.id)) {
+          r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        }
       }
-    }
-  })
-  .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker).build();
+    })
+    .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker).build();
 
-// Bind a view's pivot to its cell center so transforms animate from the middle.
-function bindCenter(view) {
-  const ox = view.pivot.x, oy = view.pivot.y, px = view.x, py = view.y;
-  view.pivot.set(CELL / 2, CELL / 2);
-  view.x = px + (CELL / 2 - ox);
-  view.y = py + (CELL / 2 - oy);
-  return () => { view.pivot.set(ox, oy); view.x = px; view.y = py; };
+  // Bind a view's pivot to its cell center so transforms animate from the middle.
+  function bindCenter(view: Container) {
+    const ox = view.pivot.x, oy = view.pivot.y, px = view.x, py = view.y;
+    view.pivot.set(CELL / 2, CELL / 2);
+    view.x = px + (CELL / 2 - ox);
+    view.y = py + (CELL / 2 - oy);
+    return () => { view.pivot.set(ox, oy); view.x = px; view.y = py; };
+  }
+
+  return {
+    reelSet,
+    onSpin: async () => {
+      const p = reelSet.spin();
+      await new Promise(r => setTimeout(r, 150));
+      reelSet.setResult(GRID.map((visible) => ({ visible })));
+      const result = await p;
+      await new Promise(r => setTimeout(r, 250));
+
+      // Pick a random low-pay cell and upgrade it to a high-pay.
+      const candidates = [];
+      for (let r = 0; r < COLS; r++) {
+        for (let cell = 0; cell < ROWS; cell++) {
+          if (LOW.includes(result.symbols[r][cell])) candidates.push({ r, cell });
+        }
+      }
+      if (!candidates.length) return;
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      const upgradeId = HIGH[Math.floor(Math.random() * HIGH.length)];
+      const reel = reelSet.getReel(pick.r);
+
+      // Scale-out old symbol from center.
+      //
+      // Guard the post-await reads: the runner unmounts a demo that scrolls
+      // out of view, and `Reel.destroy()` empties `symbols`, so a
+      // `getSymbolAt` after any `await` can come back undefined. Without
+      // this the recipe throws "Cannot read properties of undefined
+      // (reading 'view')" whenever the player scrolls away mid-upgrade.
+      const oldSym = reel.getSymbolAt(pick.cell);
+      if (!oldSym) return;
+      const restoreOld = bindCenter(oldSym.view);
+      await new Promise(resolve => {
+        gsap.to(oldSym.view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
+        gsap.to(oldSym.view.scale, { x: 0.4, y: 0.4, duration: 0.3, ease: 'power2.in' });
+      });
+      restoreOld();
+
+      // Swap identity. setSymbolAt is the one-cell rewrite that doesn't
+      // touch the rest of the reel. leaves the symbol pool / motion layer
+      // alone and only cycles the single ReelSymbol at this cell.
+      reelSet.setSymbolAt(pick.r, pick.cell, upgradeId);
+
+      // Scale-in new symbol from center.
+      const next = reel.getSymbolAt(pick.cell);
+      if (!next) return;
+      next.view.alpha = 0;
+      next.view.scale.set(0.4);
+      const restoreNext = bindCenter(next.view);
+      await new Promise(resolve => {
+        gsap.to(next.view, { alpha: 1, duration: 0.35, ease: 'back.out(1.8)', onComplete: resolve });
+        gsap.to(next.view.scale, { x: 1, y: 1, duration: 0.35, ease: 'back.out(1.8)' });
+      });
+      restoreNext();
+    },
+  };
 }
-
-return {
-  reelSet,
-  onSpin: async () => {
-    const p = reelSet.spin();
-    await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID.map((visible) => ({ visible })));
-    const result = await p;
-    await new Promise(r => setTimeout(r, 250));
-
-    // Pick a random low-pay cell and upgrade it to a high-pay.
-    const candidates = [];
-    for (let r = 0; r < COLS; r++) {
-      for (let cell = 0; cell < ROWS; cell++) {
-        if (LOW.includes(result.symbols[r][cell])) candidates.push({ r, cell });
-      }
-    }
-    if (!candidates.length) return;
-    const pick = candidates[Math.floor(Math.random() * candidates.length)];
-    const upgradeId = HIGH[Math.floor(Math.random() * HIGH.length)];
-    const reel = reelSet.getReel(pick.r);
-
-    // Scale-out old symbol from center.
-    //
-    // Guard the post-await reads: the runner unmounts a demo that scrolls
-    // out of view, and `Reel.destroy()` empties `symbols`, so a
-    // `getSymbolAt` after any `await` can come back undefined. Without
-    // this the recipe throws "Cannot read properties of undefined
-    // (reading 'view')" whenever the player scrolls away mid-upgrade.
-    const oldSym = reel.getSymbolAt(pick.cell);
-    if (!oldSym) return;
-    const restoreOld = bindCenter(oldSym.view);
-    await new Promise(resolve => {
-      gsap.to(oldSym.view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
-      gsap.to(oldSym.view.scale, { x: 0.4, y: 0.4, duration: 0.3, ease: 'power2.in' });
-    });
-    restoreOld();
-
-    // Swap identity. setSymbolAt is the one-cell rewrite that doesn't
-    // touch the rest of the reel. leaves the symbol pool / motion layer
-    // alone and only cycles the single ReelSymbol at this cell.
-    reelSet.setSymbolAt(pick.r, pick.cell, upgradeId);
-
-    // Scale-in new symbol from center.
-    const next = reel.getSymbolAt(pick.cell);
-    if (!next) return;
-    next.view.alpha = 0;
-    next.view.scale.set(0.4);
-    const restoreNext = bindCenter(next.view);
-    await new Promise(resolve => {
-      gsap.to(next.view, { alpha: 1, duration: 0.35, ease: 'back.out(1.8)', onComplete: resolve });
-      gsap.to(next.view.scale, { x: 1, y: 1, duration: 0.35, ease: 'back.out(1.8)' });
-    });
-    restoreNext();
-  },
-};

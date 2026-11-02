@@ -4,14 +4,14 @@ import type { CSSProperties } from 'react';
 import { ExternalLink, Bug, Volume2, VolumeX } from 'lucide-react';
 import { TapHint } from './TapHint';
 import { Application } from 'pixi.js';
-import type { Texture, Ticker } from 'pixi.js';
+import type { Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 // DO NOT DELETE THESE TWO. Neither identifier is referenced in this file, so
 // they read as dead imports -- but they are load-bearing. They force the spine
 // runtime to be initialised eagerly, as one instance, before any recipe runs.
-// Remove them and spine arrives only through the dynamic LAZY_GROUPS path in
-// recipeGlobals, which races: /recipes/{cascade,hold-and-win,starters,symbols,
+// Remove them and spine arrives only through the dynamic import table in
+// lib/recipeModule, which races: /recipes/{cascade,hold-and-win,starters,symbols,
 // wilds-and-pins}/ then die on mount with "Cannot read properties of undefined
 // (reading 'validateRenderable')". Verified by bisect -- these two lines are
 // the difference between 21/21 and 16/21 on recipes-mount.spec.ts.
@@ -22,61 +22,16 @@ import { gsap } from 'gsap';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import {
-  ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol,
-  enableDebug, WinPresenter,
-  RectMaskStrategy, SharedRectMaskStrategy,
-  ReelSet, ReelSymbol,
-  EmptySymbol, HoldAndWinBuilder, BoardGrid,
-  anticipationForScatters,
-  SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
-} from 'pixi-reels';
+import { enableDebug, ReelSet } from 'pixi-reels';
 import {
   debugOverlay, SpinMetrics,
   type DebugOverlayHandle, type DebugOverlayLayer,
 } from 'pixi-reels/debug';
-import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
-import {
-  CoinSymbol,
-  COIN_TIER,
-  COIN_FEATURE,
-  COIN_MYSTERY,
-  COIN_TRIGGER,
-  coinValue,
-  coinMultiplier,
-  drawCoin,
-} from '../runtime/CoinSymbol.ts';
-import {
-  GoldCoinSymbol,
-  coinWaves,
-  bezierFly,
-  settleMoneyFace,
-  freezeAtEnd,
-  fitText,
-} from '../runtime/holdAndWinFx.ts';
-import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
+import { createAssets } from '@pixi-reels/kit';
+import type { RecipeResult } from '@pixi-reels/kit';
 import { reelSounds, boardSounds, readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
 import type { HoldAndWinBoard, ReelSoundsHandle } from 'pixi-reels';
-import {
-  loadGeneratedSpines,
-  buildSpineMap,
-} from '../runtime/generatedSpineLoader.ts';
-import {
-  loadThunderkickSpines,
-  buildThunderkickSpineMap,
-  THUNDERKICK_SYMBOL_IDS,
-} from '../runtime/thunderkickSpineLoader.ts';
-import {
-  loadCascadeSpines,
-  buildCascadeSpineMap,
-  CASCADE_SYMBOL_IDS,
-  CASCADE_PLATE_W,
-  CASCADE_PLATE_H,
-} from '../runtime/cascadeSpineLoader.ts';
-import { loadHoldAndWinSprites } from '../runtime/holdAndWinSprites.ts';
-import { transform as sucraseTransform } from 'sucrase';
-import { runRecipeSource } from '@/lib/recipeGlobals';
+import { runRecipeModule } from '@/lib/recipeModule';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
@@ -144,21 +99,6 @@ function releaseGsapApp(app: Application): void {
   }
 }
 
-// Use AsyncFunction so recipes can do top-level `await loadPixellabSymbols(...)`
-// inside the injected body. Plain `new Function(...)` returns a sync function
-// where top-level await is a SyntaxError.
-const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
-
-function pickWeighted(weights: Record<string, number>): string {
-  const total = Object.values(weights).reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (const [id, w] of Object.entries(weights)) {
-    r -= w;
-    if (r <= 0) return id;
-  }
-  return Object.keys(weights)[0];
-}
-
 /**
  * Every `ReelSet` currently on the stage, `primary` first.
  *
@@ -210,37 +150,15 @@ function layersFor(groups: readonly LayerGroup[]): DebugOverlayLayer[] {
   return groups.flatMap((g) => [...LAYER_GROUPS[g]]);
 }
 
-interface RunResult {
-  reelSet?: ReelSet;
-  /**
-   * A container holding a MULTI-SET composition (e.g. a horizontal banner
-   * above a vertical grid). When present the runner scales and centres THIS,
-   * not `reelSet`, so every set moves together.
-   *
-   * Without it a recipe that builds a second set has to `app.stage.addChild`
-   * it itself, and the runner's fit then scales and centres only `reelSet` -
-   * leaving the other set at unscaled stage coordinates, nowhere near where
-   * the recipe put it. Lay the composition out from its own origin (top-left
-   * at 0,0) so the fit's bounds math holds.
-   */
-  stage?: PIXI.Container;
-  nextResult?: () => string[][];
-  onSpin?: () => Promise<void>;
-  /**
-   * Optional override for the canvas button's "skip while running"
-   * behaviour. Recipes that drive a nudge / cascade / custom timeline
-   * can intercept the player's mid-action button press here. If absent,
-   * the runner falls back to: nudge in flight → `skipNudge()`; otherwise
-   * try `skip()` and fall through to `requestSkip()`.
-   */
-  onSkip?: () => void;
-  /**
-   * A board (HoldAndWinBoard) whose bus the events panel should hear beside
-   * the reel sets it finds on the stage. Cells are reel sets and are found on
-   * their own; this is for the board-level events (`feature:*`, `coin:*`).
-   */
-  board?: { events: AnyBus };
-  cleanup?: () => void;
+/**
+ * What a recipe returns. `stage` is a composition root the runner fits
+ * instead of `reelSet`; `board` is a bus the events panel listens to beside
+ * the sets it finds on the stage. See `RecipeResult` in `@pixi-reels/kit`.
+ */
+type RunResult = RecipeResult;
+
+interface Env {
+  app: Application;
 }
 
 /** The two methods the events panel needs from any bus, typed loosely on purpose. */
@@ -249,12 +167,9 @@ interface AnyBus {
   offAny(fn: (event: string, ...args: unknown[]) => void): unknown;
 }
 
-interface Env {
-  app: Application;
-  textures: Record<string, Texture>;
-  blurTextures: Record<string, Texture>;
-  SYMBOL_IDS: string[];
-}
+/** The kits every demo on the site loads from the site's own origin. */
+const assets = createAssets();
+const recipeSounds = { reelSounds, boardSounds };
 
 interface RecipeRunnerProps {
   code: string;
@@ -329,11 +244,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       host.innerHTML = '';
       host.appendChild(app.canvas);
 
-      const { textures, blurTextures } = await loadPrototypeSymbols();
-      if (cancelled) return;
-
-      const SYMBOL_IDS = Object.keys(textures);
-      const env: Env = { app, textures, blurTextures, SYMBOL_IDS };
+      const env: Env = { app };
       envRef.current = env;
 
       // Register only once the app is fully established (past every cancel
@@ -341,26 +252,16 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       liveApps.add(app);
       ensureGsapDriver();
 
-      let js: string;
-      try {
-        js = sucraseTransform(code, { transforms: ['typescript'] }).code;
-      } catch (e) {
-        setError(`Compile error: ${(e as Error).message}`);
-        return;
-      }
-
       let result: RunResult;
       try {
-        // One shared global surface for all three recipe runtimes. See
-        // lib/recipeGlobals.ts for why the hand-written parameter lists went.
-        result = await runRecipeSource<RunResult>(js, {
-          app, textures, blurTextures, SYMBOL_IDS, pickWeighted,
-          ReelSetBuilder,
-        });
+        // The recipe is a module: its imports resolve through the one table
+        // in lib/recipeModule.ts, the same for Studio and the share viewer.
+        result = await runRecipeModule(code, { app, assets, sounds: recipeSounds });
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);
         return;
       }
+      if (cancelled) return;
 
       if (!result?.reelSet && !result?.onSpin) {
         setError('Recipe must return { reelSet } or { onSpin }.');
@@ -439,7 +340,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           for (const off of reelOff) off();
         });
       });
-      if (result.board?.events) listen(result.board.events, 'board');
+      if (result.board?.events) listen(result.board.events as AnyBus, 'board');
       unsubscribeRef.current.push(onNotice((n) => record('notice')(n.code, { kind: n.kind, message: n.message, detail: n.detail })));
 
       if (result.reelSet) {

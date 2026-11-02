@@ -15,6 +15,7 @@ import {
   Share2,
   Eye,
   Gauge,
+  MessageSquare,
   X,
 } from 'lucide-react';
 import { SymbolsTab } from './studio/SymbolsTab.tsx';
@@ -24,42 +25,16 @@ import { useMinDisplay } from './useMinDisplay.ts';
 import { cn } from '@/lib/utils';
 import { Kbd, KbdChord } from '@/components/ui/kbd';
 import { Application, type Texture } from 'pixi.js';
-import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
-  SpeedPresets,
-  SpriteSymbol,
-  AnimatedSpriteSymbol,
   enableDebug,
-  WinPresenter,
-  RectMaskStrategy,
-  SharedRectMaskStrategy,
   type ReelSet,
   type SymbolData,
-  ReelSymbol,
-  EmptySymbol,
 } from 'pixi-reels';
-import { SpineReelSymbol } from 'pixi-reels/spine';
-import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
-import {
-  CoinSymbol,
-  COIN_TIER,
-  COIN_FEATURE,
-  COIN_MYSTERY,
-  COIN_TRIGGER,
-  coinValue,
-  coinMultiplier,
-  drawCoin,
-} from '../runtime/CoinSymbol.ts';
-import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
-import {
-  loadGeneratedSpines,
-  buildSpineMap,
-} from '../runtime/generatedSpineLoader.ts';
-import { transform as sucraseTransform } from 'sucrase';
-import { runRecipeSource } from '@/lib/recipeGlobals';
+import { createAssets, setReadouts, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
+import { reelSounds, boardSounds } from '../runtime/audio.ts';
+import { runRecipeModule } from '@/lib/recipeModule';
 import {
   loadConfig,
   saveConfig,
@@ -73,33 +48,28 @@ import {
 import type { StudioConfig } from '@/lib/studio/types.js';
 
 
-const DEFAULT_CODE = `// @ts-nocheck
-// ─── pixi-reels studio ─────────────────────────────────────────────────
-// Edit this code and press Run (Cmd/Ctrl+Enter). Recipes from /recipes/*
-// open here too. anything that runs in a recipe runs here.
+const DEFAULT_CODE = `// pixi-reels studio
+// Edit this module and press Run (Cmd/Ctrl+Enter). Recipes from /recipes/*
+// open here too: a recipe is a module, and what you read is what runs.
 //
-// Built-in globals (ready out of the box):
-//   - ReelSetBuilder, SpeedPresets, WinPresenter
-//   - SpriteSymbol, AnimatedSpriteSymbol, BlurSpriteSymbol
-//   - CardSymbol, CARD_DECK, WILD_CARD  (graphics-only debug cards)
-//   - CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
-//     coinValue, coinMultiplier, drawCoin  (graphics-only debug coins)
-//   - SpineReelSymbol, loadGeneratedSpines, buildSpineMap
-//   - RectMaskStrategy, SharedRectMaskStrategy
-//   - EmptySymbol, ReelSymbol
-//   - app         . PixiJS Application (.ticker, .screen)
-//   - textures, blurTextures, SYMBOL_IDS . prototype atlas, preloaded
-//   - pickWeighted, gsap, PIXI
+// Import what you need. The runtime resolves:
+//   pixi-reels, pixi-reels/spine, pixi-reels/debug, pixi.js, gsap, pixi-silk,
+//   @esotericsoftware/spine-pixi-v8, @pixi-reels/kit, @pixi-reels/kit/spine,
+//   @pixi-reels/cheats/ways
 //
-// Bring-your-own assets (Symbols tab):
-//   - userSymbols    . Record<id, { Class, options }> from your uploads
-//   - userSymbolData . Record<id, { unmask?: boolean }>, auto-applied
+// The host hands the recipe a RecipeContext:
+//   app      PixiJS Application (.ticker, .screen, .stage)
+//   assets   .prototypeAtlas(), .spineSet(id), .holdAndWinSprites(), .clover(), .cloverSpines()
+//   sounds   .reelSounds(reelSet, cues?), .boardSounds(board, cues?)
+//   userSymbols     Studio only: Record<id, { Class, options }> from the Symbols tab
+//   userSymbolData  Studio only: Record<id, { unmask?: boolean }>, applied by the builder
 //
-// Return { reelSet, nextResult? } from buildReels(). Or return { onSpin }
-// for a fully custom spin handler.
-// ───────────────────────────────────────────────────────────────────────
+// Return { reelSet, nextResult? }, or { onSpin } for a custom spin handler.
+import { ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
+import { pickWeighted } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeResult } from '@pixi-reels/kit';
 
-function buildReels() {
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const weights = {
     '7': 20, '8': 20, '9': 20, '10': 14, J: 14, Q: 10, K: 6, A: 5, wild: 3,
@@ -137,10 +107,9 @@ function buildReels() {
 
 interface StudioEnv {
   app: Application;
-  textures: Record<string, Texture>;
-  blurTextures: Record<string, Texture>;
-  SYMBOL_IDS: string[];
 }
+
+const sounds = { reelSounds, boardSounds };
 
 /**
  * Read `#code=<base64>` from `location.hash` once on mount. Returns the
@@ -163,26 +132,11 @@ function consumeHashCode(): string | null {
   return decoded;
 }
 
-interface BuildResult {
-  reelSet?: ReelSet;
-  nextResult?: () => string[][];
-  onSpin?: () => Promise<void>;
-  cleanup?: () => void;
-}
-
-function pickWeighted(weights: Record<string, number>): string {
-  const total = Object.values(weights).reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (const [id, w] of Object.entries(weights)) {
-    r -= w;
-    if (r <= 0) return id;
-  }
-  return Object.keys(weights)[0];
-}
+type BuildResult = RecipeResult;
 
 /**
- * Subclass of ReelSetBuilder injected into the studio's user code in
- * place of the engine's. Auto-applies the per-symbol overrides from the
+ * Subclass of ReelSetBuilder the studio resolves `import { ReelSetBuilder }
+ * from 'pixi-reels'` to in place of the engine's. Auto-applies the per-symbol overrides from the
  * Symbols tab (currently: `unmask`) in `.build()`, so the user doesn't
  * have to remember `.symbolData(userSymbolData)` themselves. The
  * Symbols-tab UI is the source of truth for these flags. if the user
@@ -205,6 +159,22 @@ function makeStudioReelSetBuilder(
       return super.build();
     }
   } as typeof ReelSetBuilder;
+}
+
+/**
+ * The site's asset kits, with the Symbols-tab uploads folded into the
+ * prototype atlas so `assets.prototypeAtlas()` in a recipe sees them.
+ */
+function studioAssets(uploads: Record<string, Texture>): RecipeAssets {
+  const base = createAssets();
+  if (Object.keys(uploads).length === 0) return base;
+  return {
+    ...base,
+    prototypeAtlas: async () => {
+      const set = await base.prototypeAtlas();
+      return { ...set, textures: { ...set.textures, ...uploads } };
+    },
+  };
 }
 
 type TabId = 'code' | 'symbols';
@@ -238,6 +208,9 @@ export default function Studio() {
   // automatically. Empty until the first successful Run.
   const [speeds, setSpeeds] = useState<string[]>([]);
   const [speedName, setSpeedName] = useState<string>('normal');
+  // The explanation layer (plaques, outlines drawn through `readout`). Off
+  // here by default: Studio is for the mechanic, the docs are for the notes.
+  const [readouts, setReadoutsOn] = useState(false);
 
   // Latched boot flag. keep the skeleton on screen for at least 250 ms
   // after first paint so very fast IDB+atlas loads don't flash a 1-frame
@@ -318,17 +291,7 @@ export default function Studio() {
       host.innerHTML = '';
       host.appendChild(app.canvas);
 
-      // Preload the prototype atlas so recipe-style code (BlurSpriteSymbol +
-      // `textures` lookups) works without any explicit loader call.
-      const { textures, blurTextures } = await loadPrototypeSymbols();
-      if (cancelled) return;
-
-      envRef.current = {
-        app,
-        textures,
-        blurTextures,
-        SYMBOL_IDS: Object.keys(textures),
-      };
+      envRef.current = { app };
       setIsBooting(false);
       setStatus({ kind: 'idle', msg: 'Press Run to mount the reels.' });
     })();
@@ -406,40 +369,30 @@ export default function Studio() {
     }
     lastInjectablesRef.current = injectables;
 
-    let js: string;
-    try {
-      js = sucraseTransform(config.code, { transforms: ['typescript'] }).code;
-    } catch (e) {
-      setStatus({ kind: 'err', msg: `Compile error: ${(e as Error).message}` });
-      return;
-    }
-
     let built: BuildResult;
     try {
-      // User uploads merge into `textures` so recipe-style `textures[id]`
-      // lookups also pick them up; ids collide -> studio uploads win.
-      const mergedTextures = { ...env.textures, ...injectables.textures };
-      // The global surface is shared with RecipeRunner and ShareViewer, so a
-      // recipe opened in Studio sees exactly the variables it saw in the
-      // docs. Hand-maintained parameter lists drifted by 26 names before
-      // this; see lib/recipeGlobals.ts.
-      built = await runRecipeSource<BuildResult>(js, {
+      setReadouts(readouts);
+      // The module loader is shared with RecipeRunner and ShareViewer, so a
+      // recipe opened in Studio resolves exactly the imports it resolved in
+      // the docs. Studio only swaps two things in: the atlas gains the
+      // Symbols-tab uploads (ids collide -> uploads win), and `ReelSetBuilder`
+      // becomes the subclass that applies the tab's per-symbol flags.
+      built = await runRecipeModule(config.code, {
         app: env.app,
-        textures: mergedTextures,
-        blurTextures: env.blurTextures,
-        SYMBOL_IDS: env.SYMBOL_IDS,
-        pickWeighted,
-        ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData),
+        assets: studioAssets(injectables.textures),
+        sounds,
         userSymbols: injectables.userSymbols,
         userSymbolData: injectables.userSymbolData,
-      }, ' ; return buildReels();');
+      }, {
+        overrides: { 'pixi-reels': { ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData) } },
+      });
     } catch (e) {
-      setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });
+      setStatus({ kind: 'err', msg: `${e instanceof SyntaxError ? 'Compile' : 'Runtime'} error: ${(e as Error).message}` });
       return;
     }
 
     if (!built || (!built.reelSet && !built.onSpin)) {
-      setStatus({ kind: 'err', msg: 'buildReels() must return { reelSet } or { onSpin }.' });
+      setStatus({ kind: 'err', msg: 'The recipe must return { reelSet } or { onSpin }.' });
       return;
     }
 
@@ -556,7 +509,7 @@ export default function Studio() {
     setPendingAutoRun(false);
     void run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingAutoRun, isBooting, config]);
+  }, [pendingAutoRun, isBooting, config, readouts]);
 
   // ── Recipe-prompt actions ──────────────────────────────────────────
   function applyHashCode(code: string, ephemeral: boolean): void {
@@ -652,6 +605,22 @@ export default function Studio() {
               ))}
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => { setReadoutsOn((v) => !v); if (reelSetRef.current || onSpinRef.current) setPendingAutoRun(true); }}
+            aria-pressed={readouts}
+            title={readouts ? 'Hide the recipe\'s plaques and outlines (re-runs)' : 'Show the recipe\'s plaques and outlines (re-runs)'}
+            className={cn(
+              'absolute bottom-3 right-16 inline-flex h-10 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[10px] uppercase tracking-wide',
+              'transition-[transform,background-color,color] duration-[133ms] active:scale-[0.97]',
+              readouts
+                ? 'border-foreground bg-foreground text-background'
+                : 'border-border/70 bg-background/80 text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <MessageSquare size={12} strokeWidth={2.25} />
+            Readouts
+          </button>
           <button
             type="button"
             onClick={() => void handleSpin()}
@@ -766,9 +735,10 @@ export default function Studio() {
                   padding: { top: 10, bottom: 10 },
                 }}
                 onMount={(_editor, monaco) => {
-                  // Injected globals (ReelSetBuilder, userSymbols, app, ...)
-                  // aren't declared anywhere Monaco can resolve, so semantic
-                  // diagnostics produce a sea of red squiggles. The code is
+                  // The imports (pixi-reels, @pixi-reels/kit, ...) resolve at
+                  // Run through the module loader, not through anything
+                  // Monaco can see, so semantic diagnostics would produce a
+                  // sea of red squiggles on every import. The code is
                   // transpiled at Run via sucrase (types stripped, no
                   // type-checking), so these errors aren't real. silence
                   // them here. Syntax errors still surface.

@@ -44,7 +44,7 @@
     "check:publish-contents": "node scripts/check-publish-contents.mjs",
     "check:migration-coverage": "node scripts/check-migration-coverage.mjs",
     "check:api-surface": "node scripts/check-api-surface.mjs",
-    "typecheck:fixtures": "pnpm --filter @pixi-reels/cheats typecheck && pnpm --filter orientation-matrix typecheck",
+    "typecheck:fixtures": "pnpm --filter @pixi-reels/cheats typecheck && pnpm --filter @pixi-reels/kit typecheck && pnpm --filter orientation-matrix typecheck",
     "check:type-probes": "node scripts/check-type-probes.mjs"
   },
   "lint-staged": {

@@ -3,8 +3,7 @@ import { Application, Graphics } from 'pixi.js';
 import { gsap } from 'gsap';
 import { ReelSetBuilder, SpeedPresets, type ReelSet } from 'pixi-reels';
 import RecipeBoard from '../RecipeBoard.tsx';
-import { BlurSpriteSymbol } from '../../runtime/BlurSpriteSymbol.ts';
-import { loadPrototypeSymbols } from '../../runtime/prototypeSpriteLoader.ts';
+import { BlurSpriteSymbol, loadPrototypeSymbols } from '@pixi-reels/kit';
 
 const FILLER = ['round/round_1', 'round/round_2', 'round/round_3', 'royal/royal_1'];
 const MARK = 'wild/wild_1';

@@ -1,7 +1,15 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, PhaseCardSymbol, gsap, app,
-//                   DebugPlaque
-//
+import { gsap } from 'gsap';
+import { PhaseCardSymbol, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import type { ReelBounce, SkipContext, SpeedProfile, StopPhaseConfig } from 'pixi-reels';
+import { readout } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'A phase that can be quickened',
+  topic: 'skip',
+  tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+} as const satisfies RecipeMeta;
+
 // A CUSTOM PHASE THAT CAN BE QUICKENED. `onSkip(ctx)` and `ctx.mode`.
 //
 // The instant stop from "A stop phase written from scratch", plus a
@@ -20,118 +28,127 @@
 //
 // The hold is violet on the PhaseCardSymbol cards (it is part of the stop);
 // press while it is violet and the slide starts at once.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+  const HOLD_MS = 900;
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
-const HOLD_MS = 900;
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  let note: (line: string) => void = () => {};
 
-let note = () => {};
+  type SlideProfile = SpeedProfile & { slideMs: number };
 
-class HeldInstantStopPhase extends ReelPhase {
-  name = 'stop';
-  skippable = true;
-  // "My onSkip branches on ctx.mode." Without this a quicken leaves the phase alone.
-  quickenable = true;
+  class HeldInstantStopPhase extends ReelPhase<StopPhaseConfig, SlideProfile> {
+    name = 'stop';
+    skippable = true;
+    // "My onSkip branches on ctx.mode." Without this a quicken leaves the phase alone.
+    quickenable = true;
+    private _landed = false;
+    private _rest!: number;
+    private _holdStarted!: number;
+    private _hold: gsap.core.Tween | null = null;
+    private _slide: gsap.core.Tween | null = null;
+    private _bounce: ReelBounce | null = null;
 
-  onEnter(config) {
-    const reel = this.reel;
-    const axis = reel.axis;
-    this._landed = false;
-    reel.forceSpeed(0);
-    reel.placeStrip(config.targetFrame);
-    this._rest = axis.getMain(reel.container);
-    axis.setMain(reel.container, this._rest - axis.polarity * reel.symbolHeight * 0.1);
-    this._holdStarted = performance.now();
-    this._hold = gsap.delayedCall(HOLD_MS / 1000, () => {
-      this._hold = null;
-      this._slideIn();
-    });
-  }
-
-  _slideIn() {
-    const reel = this.reel;
-    this._slide = gsap.to(reel.container, {
-      [reel.axis.mainProp]: this._rest,
-      duration: this.speed.slideMs / 1000,
-      ease: 'power2.out',
-      onComplete: () => {
-        this._slide = null;
-        this._landed = true;
-        this.land();
-        this._bounce = this.bounce();
-        this._bounce.done.then(() => this._complete());
-      },
-    });
-  }
-
-  update() {}
-
-  // The one hook, two branches.
-  onSkip(ctx) {
-    if (ctx.mode === 'quicken') {
-      // Cut the hold, keep the landing exactly as it would have been. A
-      // press during the slide or the bounce has nothing left to cut.
-      if (this._hold) {
-        this._hold.kill();
+    onEnter(config: StopPhaseConfig) {
+      const reel = this.reel;
+      const axis = reel.axis;
+      this._landed = false;
+      reel.forceSpeed(0);
+      reel.placeStrip(config.targetFrame);
+      this._rest = axis.getMain(reel.container);
+      axis.setMain(reel.container, this._rest - axis.polarity * reel.symbolHeight * 0.1);
+      this._holdStarted = performance.now();
+      this._hold = gsap.delayedCall(HOLD_MS / 1000, () => {
         this._hold = null;
-        note(`reel ${this.reel.reelIndex + 1}: hold cut after ${Math.round(performance.now() - this._holdStarted)} of ${HOLD_MS} ms`);
         this._slideIn();
-      }
-      return;
+      });
     }
-    // The slam pose: wherever the phase was, rest the reel on its frame,
-    // landed. The base completes the phase after this.
-    if (this._hold) { this._hold.kill(); this._hold = null; }
-    if (this._slide) { this._slide.kill(); this._slide = null; }
-    if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
-    this.reel.axis.setMain(this.reel.container, this._rest);
-    if (!this._landed) { this._landed = true; this.land(); }
+
+    _slideIn() {
+      const reel = this.reel;
+      this._slide = gsap.to(reel.container, {
+        [reel.axis.mainProp]: this._rest,
+        duration: this.speed.slideMs / 1000,
+        ease: 'power2.out',
+        onComplete: () => {
+          this._slide = null;
+          this._landed = true;
+          this.land();
+          this._bounce = this.bounce();
+          this._bounce.done.then(() => this._complete());
+        },
+      });
+    }
+
+    update() {}
+
+    // The one hook, two branches.
+    onSkip(ctx: SkipContext<SlideProfile>) {
+      if (ctx.mode === 'quicken') {
+        // Cut the hold, keep the landing exactly as it would have been. A
+        // press during the slide or the bounce has nothing left to cut.
+        if (this._hold) {
+          this._hold.kill();
+          this._hold = null;
+          note(`reel ${this.reel.reelIndex + 1}: hold cut after ${Math.round(performance.now() - this._holdStarted)} of ${HOLD_MS} ms`);
+          this._slideIn();
+        }
+        return;
+      }
+      // The slam pose: wherever the phase was, rest the reel on its frame,
+      // landed. The base completes the phase after this.
+      if (this._hold) { this._hold.kill(); this._hold = null; }
+      if (this._slide) { this._slide.kill(); this._slide = null; }
+      if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
+      this.reel.axis.setMain(this.reel.container, this._rest);
+      if (!this._landed) { this._landed = true; this.land(); }
+    }
   }
+
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+    })
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 200, minimumSpinTime: 600, slideMs: 160 } as SlideProfile)
+    .phases((f) => f.register('stop', HeldInstantStopPhase))
+    .ticker(app.ticker)
+    .build();
+
+  const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+  const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+
+  // Three rows reserved (the last three notes), so the plate keeps the size
+  // the canvas was fitted to.
+  const idle = 'spin, then press while the cards are violet:\nthe 900 ms hold is cut';
+  const hud = readout.plaque({ text: idle, reserveRows: 3, minWidth: TOTAL_W, maxWidth: TOTAL_W });
+  hud.position.set(0, TOTAL_H + 10);
+  reelSet.addChild(hud);
+  const lines: string[] = [];
+  note = (line) => {
+    lines.push(line);
+    hud.text = lines.slice(-3).join('\n');
+  };
+  reelSet.events.on('spin:start', () => {
+    lines.length = 0;
+    hud.text = idle;
+  });
+
+  return {
+    reelSet,
+    cleanup: () => {
+      unwatch();
+      try { hud.destroy({ children: true }); } catch {}
+    },
+    onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
+    onSpin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      await p;
+    },
+  };
 }
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 200, minimumSpinTime: 600, slideMs: 160 })
-  .phases((f) => f.register('stop', HeldInstantStopPhase))
-  .ticker(app.ticker)
-  .build();
-
-const unwatch = PhaseCardSymbol.watch(reelSet.reels);
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
-
-// Three rows reserved (the last three notes), so the plate keeps the size
-// the canvas was fitted to.
-const idle = 'spin, then press while the cards are violet:\nthe 900 ms hold is cut';
-const hud = new DebugPlaque({ text: idle, reserveRows: 3, minWidth: TOTAL_W, maxWidth: TOTAL_W });
-hud.position.set(0, TOTAL_H + 10);
-reelSet.addChild(hud);
-const lines = [];
-note = (line) => {
-  lines.push(line);
-  hud.text = lines.slice(-3).join('\n');
-};
-reelSet.events.on('spin:start', () => {
-  lines.length = 0;
-  hud.text = idle;
-});
-
-return {
-  reelSet,
-  cleanup: () => {
-    unwatch();
-    try { hud.destroy({ children: true }); } catch {}
-  },
-  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(grid);
-    await p;
-  },
-};

@@ -133,8 +133,8 @@ If you've tried three approaches and none work, do not try a fourth random appro
 
 **Monorepo layout:**
 - `packages/pixi-reels/`. The npm-publishable library
-- `apps/site/`. The docs site. Its `/recipes` route is where live, runnable demos live now: ~130 of them, each an `apps/site/src/recipes/<slug>.recipe.ts` driven by an umbrella page under `src/content/recipes/`
-- `apps/site/src/runtime/`. Symbol classes and asset loaders the recipes run on (BlurSpriteSymbol, CoinSymbol, Spine loaders, atlas loader)
+- `apps/site/`. The docs site. Its `/recipes` route is where live, runnable demos live now: ~230 of them, each an `apps/site/src/recipes/<slug>.recipe.ts` module (`export const meta`, `export default async function recipe(ctx)`) driven by an umbrella page under `src/content/recipes/`. `src/lib/recipeModule.ts` runs one from source; what you read is what runs, in the docs, in Studio and in a game
+- `packages/kit/`. `@pixi-reels/kit`: symbol classes and asset loaders the recipes run on (BlurSpriteSymbol, CoinSymbol, Spine loaders, atlas loader), `pickWeighted`, `readout` (the switchable explanation layer) and the `RecipeContext` / `RecipeResult` / `RecipeMeta` contract
 - `apps/site/public/prototype-symbols/`. Open-licensed sprite atlas the recipes draw with
 - `packages/cheats/`. `CheatEngine` + `SeededRng`. Deliberately outside the library (ADR 009); used by the docs site and by the library's own integration tests
 - `tests/e2e/fixtures/orientation-matrix/`. All four travel combinations on one page. The Playwright target for browser coverage of the axis
@@ -290,14 +290,16 @@ debugOverlay(reelSet, { layers: 'all', live: true, ticker: app.ticker });
 | `utils/` | Disposable (interface), TickerRef (safe ticker wrapper) |
 | `debug/` | debugSnapshot, debugGrid, enableDebug; the `pixi-reels/debug` subpath: debugOverlay, DebugPlaque, SpinMetrics, roundRectPath |
 
-### Recipe runtime (`apps/site/src/runtime/`)
-| Directory | Purpose |
+### Recipe kit (`packages/kit/src/`)
+| File | Purpose |
 |-----------|---------|
-| `shared/prototypeSpriteLoader.ts` | Loads the `prototype-symbols` TexturePacker atlas |
-| `shared/BlurSpriteSymbol.ts` | Sprite symbol that swaps to a pre-rendered motion-blur texture during SPIN |
-| `shared/mockServer.ts` | Fake spin results, cascade logic, win detection |
-| `shared/ui.ts` | HTML overlay (spin button, speed toggle, win display) |
-| `assets/prototype-symbols/` | 84-frame sprite atlas (base + motion-blur variants) |
+| `recipe.ts` | `RecipeContext` (`app`, `assets`, `sounds`), `RecipeResult`, `RecipeMeta`: the contract every recipe module is written against |
+| `assets.ts` | `createAssets(baseUrl)`: the atlas, Spine sets, Hold & Win and clover kits by name |
+| `readout.ts` | `readout.plaque()` / `readout.graphics()`: explanation drawings a host can switch off (`setReadouts`) |
+| `prototypeSpriteLoader.ts` | Loads the `prototype-symbols` TexturePacker atlas (`apps/site/public/prototype-symbols/`, 84 frames + blur variants) |
+| `BlurSpriteSymbol.ts` | Sprite symbol that swaps to a pre-rendered motion-blur texture during SPIN |
+| `CoinSymbol.ts`, `hwClover.ts`, `holdAndWinSprites.ts` | Example symbols and sheets for the Hold & Win recipes |
+| `spine.ts` | The `@pixi-reels/kit/spine` subpath: `GoldCoinSymbol`, `CloverSpineSymbol`, anything that pulls the Spine runtime in |
 
 ### Dependency flow (no circular deps)
 ```

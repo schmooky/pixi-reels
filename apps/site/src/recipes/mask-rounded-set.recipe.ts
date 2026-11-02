@@ -1,8 +1,20 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
-//                   RectMaskStrategy, CardSymbol, CARD_DECK, app,
-//                   SilkGraphics, DebugPlaque
-//
+import { SilkGraphics } from 'pixi-silk';
+import {
+  CARD_DECK,
+  CardSymbol,
+  ReelSetBuilder,
+  RoundedRectMaskStrategy,
+  SpeedPresets,
+} from 'pixi-reels';
+import { readout } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'A rounded window',
+  topic: 'masks',
+  tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+} as const satisfies RecipeMeta;
+
 // ROUNDED WINDOW AROUND THE WHOLE GRID.
 //
 // The default `RectMaskStrategy` clips each reel to a hard rectangle. That is
@@ -16,55 +28,56 @@
 // Press spin to watch symbols get clipped by the rounded corners on the way
 // past. The outline is drawn on the SAME geometry the mask uses, so you can
 // see where the clip actually is.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
+  const RADIUS = 28;
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
-const RADIUS = 28;
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+      }
+    })
+    .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS }))
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 140 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-  })
-  .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS }))
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 140 })
-  .ticker(app.ticker)
-  .build();
+  const W = REELS * SIZE + (REELS - 1) * GAP;
+  const H = ROWS * SIZE + (ROWS - 1) * GAP;
 
-const W = REELS * SIZE + (REELS - 1) * GAP;
-const H = ROWS * SIZE + (ROWS - 1) * GAP;
+  // Trace the mask boundary so the clip is legible without a screenshot diff.
+  // SilkGraphics rounds with true circular corners, the same curve the mask
+  // cuts, and keeps the line smooth at whatever scale the demo is fitted to.
+  const outline = new SilkGraphics();
+  outline.roundRect(0, 0, W, H, RADIUS).stroke({ width: 2, color: 0x6ad0ff, alpha: 0.9 });
+  reelSet.addChild(outline);
 
-// Trace the mask boundary so the clip is legible without a screenshot diff.
-// SilkGraphics rounds with true circular corners, the same curve the mask
-// cuts, and keeps the line smooth at whatever scale the demo is fitted to.
-const outline = new SilkGraphics();
-outline.roundRect(0, 0, W, H, RADIUS).stroke({ width: 2, color: 0x6ad0ff, alpha: 0.9 });
-reelSet.addChild(outline);
+  // Grid-wide, one row per part, so it never wraps mid-expression.
+  const hud = readout.plaque({
+    text: `RoundedRectMaskStrategy({ radius: ${RADIUS} })\nscope 'set' (default)`,
+    minWidth: W,
+    maxWidth: W,
+  });
+  hud.position.set(0, H + 10);
+  reelSet.addChild(hud);
 
-// Grid-wide, one row per part, so it never wraps mid-expression.
-const hud = new DebugPlaque({
-  text: `RoundedRectMaskStrategy({ radius: ${RADIUS} })\nscope 'set' (default)`,
-  minWidth: W,
-  maxWidth: W,
-});
-hud.position.set(0, H + 10);
-reelSet.addChild(hud);
-
-return {
-  reelSet,
-  cleanup: () => {
-    try { outline.destroy(); } catch {}
-    try { hud.destroy({ children: true }); } catch {}
-  },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 380));
-    reelSet.setResult(grid);
-    await p;
-  },
-};
+  return {
+    reelSet,
+    cleanup: () => {
+      try { outline.destroy(); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
+    },
+    onSpin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 380));
+      reelSet.setResult(grid);
+      await p;
+    },
+  };
+}

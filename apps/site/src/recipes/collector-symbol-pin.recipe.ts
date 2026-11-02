@@ -1,6 +1,20 @@
-// @ts-nocheck
-// Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine, bezierFly, fitText, PIXI, gsap, app, DebugPlaque
-//
+import * as PIXI from 'pixi.js';
+import { gsap } from 'gsap';
+import { Spine } from '@esotericsoftware/spine-pixi-v8';
+import { HoldAndWinBuilder } from 'pixi-reels';
+import type { HwCell } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
+import { readout } from '@pixi-reels/kit';
+import { bezierFly, fitText, GoldCoinSymbol } from '@pixi-reels/kit/spine';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'Collector symbol',
+  topic: 'hold-and-win',
+  tags: ['hold-and-win', 'coins', 'collector', 'respin', 'spine', 'horizontal', 'reverse', 'orientation', 'rectangular', 'clovers'],
+  needs: ['hw-spine'],
+} as const satisfies RecipeMeta;
+
 // Collector coin on a Hold & Win board.
 //
 // Built on `HoldAndWinBuilder` - no pins, no hand-rolled grid. Value coins
@@ -8,104 +22,105 @@
 // layer walks `board.lockedCoins`, sums the orb's neighbours, flies their
 // values in and `release()`s those cells. The collector's badge shows the
 // absorbed total.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const COIN = 'coin', COLLECTOR = 'collector', COLS = 5, ROWS = 3, CELL = 64, GAP = 6;
+  const ck = (c: HwCell) => `${c.reel},${c.cell}`;
 
-const COIN = 'coin', COLLECTOR = 'collector', COLS = 5, ROWS = 3, CELL = 64, GAP = 6;
-const ck = (c) => `${c.reel},${c.cell}`;
+  const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-goldfont': '/hw-spine/goldfont.fnt', 'hw-jackpot': '/hw-spine/jackpot.json', 'hw-collector': '/hw-spine/collector.json' };
+  for (const [alias, src] of Object.entries(ASSETS)) { if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} } }
+  await PIXI.Assets.load(Object.keys(ASSETS));
+  const SPINE_MAP = { [COIN]: { skeleton: 'hw-jackpot', atlas: 'hw-atlas' }, [COLLECTOR]: { skeleton: 'hw-collector', atlas: 'hw-atlas' } };
+  const probeScale = (skeleton: string, pose: string, pad: number) => { const s = Spine.from({ skeleton, atlas: 'hw-atlas' }); if (s.skeleton.data.findAnimation(pose)) s.state.setAnimation(0, pose, true); try { s.update(0); } catch {} const b = s.getLocalBounds(); const sc = (CELL + pad) / Math.max(1, b.width, b.height); s.destroy(); return sc; };
+  const COIN_SCALE = probeScale('hw-jackpot', 'mini_x', -6);
+  const ORB_SCALE = probeScale('hw-collector', 'idle_counter', 6);
 
-const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-goldfont': '/hw-spine/goldfont.fnt', 'hw-jackpot': '/hw-spine/jackpot.json', 'hw-collector': '/hw-spine/collector.json' };
-for (const [alias, src] of Object.entries(ASSETS)) { if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} } }
-await PIXI.Assets.load(Object.keys(ASSETS));
-const SPINE_MAP = { [COIN]: { skeleton: 'hw-jackpot', atlas: 'hw-atlas' }, [COLLECTOR]: { skeleton: 'hw-collector', atlas: 'hw-atlas' } };
-const probeScale = (skeleton, pose, pad) => { const s = Spine.from({ skeleton, atlas: 'hw-atlas' }); if (s.skeleton.data.findAnimation(pose)) s.state.setAnimation(0, pose, true); try { s.update(0); } catch {} const b = s.getLocalBounds(); const sc = (CELL + pad) / Math.max(1, b.width, b.height); s.destroy(); return sc; };
-const COIN_SCALE = probeScale('hw-jackpot', 'mini_x', -6);
-const ORB_SCALE = probeScale('hw-collector', 'idle_counter', 6);
+  const board = new HoldAndWinBuilder<{ value?: number; collector?: boolean }>()
+    .grid(COLS, ROWS)
+    .cellSize(CELL, { gap: GAP })
+    .symbols((r) => {
+      r.register(COIN, GoldCoinSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle', scale: COIN_SCALE, settleSize: CELL - 8 });
+      r.register(COLLECTOR, SpineReelSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle_counter', winAnimation: 'win', landingAnimation: 'fall', autoPlayLanding: true, scale: ORB_SCALE });
+    })
+    .weights({ [COIN]: 1, empty: 3, [COLLECTOR]: 0 }) // collector is server-placed
+    .symbolData({ [COLLECTOR]: { unmask: true } })
+    .respins(3)
+    .cellChrome((g, size) => g.roundRect(0, 0, size, size, 10).fill({ color: 0xfaf6ef, alpha: 0.6 }).stroke({ color: 0xe5dccf, width: 1, alpha: 0.8 }))
+    .ticker(app.ticker)
+    .build();
 
-const board = new HoldAndWinBuilder()
-  .grid(COLS, ROWS)
-  .cellSize(CELL, { gap: GAP })
-  .symbols((r) => {
-    r.register(COIN, GoldCoinSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle', scale: COIN_SCALE, settleSize: CELL - 8 });
-    r.register(COLLECTOR, SpineReelSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle_counter', winAnimation: 'win', landingAnimation: 'fall', autoPlayLanding: true, scale: ORB_SCALE });
-  })
-  .weights({ [COIN]: 1, empty: 3, [COLLECTOR]: 0 }) // collector is server-placed
-  .symbolData({ [COLLECTOR]: { unmask: true } })
-  .respins(3)
-  .cellChrome((g, size) => g.roundRect(0, 0, size, size, 10).fill({ color: 0xfaf6ef, alpha: 0.6 }).stroke({ color: 0xe5dccf, width: 1, alpha: 0.8 }))
-  .ticker(app.ticker)
-  .build();
+  const boardW = COLS * CELL + (COLS - 1) * GAP, boardH = ROWS * CELL + (ROWS - 1) * GAP;
+  board.container.x = (app.screen.width - boardW) / 2;
+  board.container.y = (app.screen.height - boardH) / 2 - 14;
+  app.stage.addChild(board.container);
 
-const boardW = COLS * CELL + (COLS - 1) * GAP, boardH = ROWS * CELL + (ROWS - 1) * GAP;
-board.container.x = (app.screen.width - boardW) / 2;
-board.container.y = (app.screen.height - boardH) / 2 - 14;
-app.stage.addChild(board.container);
+  const labels = new PIXI.Container();
+  app.stage.addChild(labels);
+  const labelAt = new Map<string, PIXI.BitmapText>();
+  const abs = (cell: HwCell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
+  const goldText = (text: string, size: number) => { const t = new PIXI.BitmapText({ text, style: { fontFamily: 'GoldDigits', fontSize: size } }); t.anchor.set(0.5); return t; };
+  const paintValue = (cell: HwCell, value: number) => {
+    labelAt.get(ck(cell))?.destroy();
+    const p = abs(cell);
+    const t = fitText(goldText(String(value), 30), CELL * 0.82, CELL * 0.46);
+    t.position.set(p.x, p.y);
+    labels.addChild(t); labelAt.set(ck(cell), t);
+    return t;
+  };
 
-const labels = new PIXI.Container();
-app.stage.addChild(labels);
-const labelAt = new Map();
-const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
-const goldText = (text, size) => { const t = new PIXI.BitmapText({ text, style: { fontFamily: 'GoldDigits', fontSize: size } }); t.anchor.set(0.5); return t; };
-const paintValue = (cell, value) => {
-  labelAt.get(ck(cell))?.destroy();
-  const p = abs(cell);
-  const t = fitText(goldText(String(value), 30), CELL * 0.82, CELL * 0.46);
-  t.position.set(p.x, p.y);
-  labels.addChild(t); labelAt.set(ck(cell), t);
-  return t;
-};
+  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
+  app.stage.addChild(hud);
 
-const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
-hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
-app.stage.addChild(hud);
+  const SEED = [
+    { cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 5 } },
+    { cell: { reel: 3, cell: 1 }, id: COIN, data: { value: 20 } },
+    { cell: { reel: 2, cell: 0 }, id: COIN, data: { value: 10 } },
+    { cell: { reel: 2, cell: 2 }, id: COIN, data: { value: 50 } },
+  ];
+  const COLLECTOR_CELL = { reel: 2, cell: 1 }; // orthogonally adjacent to all four seeds
+  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintValue(c.cell, c.data.value); hud.text = 'press spin · the collector sweeps its neighbours'; };
+  seedBoard();
 
-const SEED = [
-  { cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 5 } },
-  { cell: { reel: 3, cell: 1 }, id: COIN, data: { value: 20 } },
-  { cell: { reel: 2, cell: 0 }, id: COIN, data: { value: 10 } },
-  { cell: { reel: 2, cell: 2 }, id: COIN, data: { value: 50 } },
-];
-const COLLECTOR_CELL = { reel: 2, cell: 1 }; // orthogonally adjacent to all four seeds
-const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintValue(c.cell, c.data.value); hud.text = 'press spin · the collector sweeps its neighbours'; };
-seedBoard();
-
-const flyers = new Set();
-async function absorb(collectorCell) {
-  const target = abs(collectorCell);
-  const sumText = paintValue(collectorCell, 0); // the orb's running total
-  const neighbours = [{ reel: collectorCell.reel - 1, cell: collectorCell.cell }, { reel: collectorCell.reel + 1, cell: collectorCell.cell }, { reel: collectorCell.reel, cell: collectorCell.cell - 1 }, { reel: collectorCell.reel, cell: collectorCell.cell + 1 }];
-  let sum = 0;
-  for (const n of neighbours) {
-    const coin = board.lockedCoins.find((c) => c.id === COIN && ck(c.cell) === ck(n));
-    if (!coin) continue;
-    const from = abs(coin.cell);
-    const clone = fitText(goldText(String(coin.data.value), 30), CELL * 0.82, CELL * 0.46);
-    clone.position.set(from.x, from.y);
-    app.stage.addChild(clone); flyers.add(clone);
-    labelAt.get(ck(coin.cell))?.destroy(); labelAt.delete(ck(coin.cell));
-    board.release([coin.cell]); // the neighbour clears; its value flies in
-    await bezierFly(clone, from, target, { lean: 'up', curvature: 0.35, arriveScale: 0.3, duration: 0.45 });
-    try { clone.destroy(); } catch {} flyers.delete(clone);
-    sum += coin.data.value;
-    sumText.text = String(sum);
-    fitText(sumText, CELL * 0.82, CELL * 0.46);
+  const flyers = new Set<PIXI.BitmapText>();
+  async function absorb(collectorCell: HwCell) {
+    const target = abs(collectorCell);
+    const sumText = paintValue(collectorCell, 0); // the orb's running total
+    const neighbours = [{ reel: collectorCell.reel - 1, cell: collectorCell.cell }, { reel: collectorCell.reel + 1, cell: collectorCell.cell }, { reel: collectorCell.reel, cell: collectorCell.cell - 1 }, { reel: collectorCell.reel, cell: collectorCell.cell + 1 }];
+    let sum = 0;
+    for (const n of neighbours) {
+      const coin = board.lockedCoins.find((c) => c.id === COIN && ck(c.cell) === ck(n));
+      if (!coin) continue;
+      const from = abs(coin.cell);
+      const clone = fitText(goldText(String(coin.data!.value), 30), CELL * 0.82, CELL * 0.46);
+      clone.position.set(from.x, from.y);
+      app.stage.addChild(clone); flyers.add(clone);
+      labelAt.get(ck(coin.cell))?.destroy(); labelAt.delete(ck(coin.cell));
+      board.release([coin.cell]); // the neighbour clears; its value flies in
+      await bezierFly(clone, from, target, { lean: 'up', curvature: 0.35, arriveScale: 0.3, duration: 0.45 });
+      try { clone.destroy(); } catch {} flyers.delete(clone);
+      sum += coin.data!.value!;
+      sumText.text = String(sum);
+      fitText(sumText, CELL * 0.82, CELL * 0.46);
+    }
+    void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing; per-neighbour restarts would never let 'win' finish
+    return sum;
   }
-  void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing; per-neighbour restarts would never let 'win' finish
-  return sum;
-}
 
-let phase = 'ready';
-return {
-  board,
-  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
-  onSpin: async () => {
-    if (phase === 'running') return;
-    if (phase === 'done') { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); board.reset(); seedBoard(); phase = 'ready'; return; }
-    phase = 'running';
-    hud.text = 'collector landing…';
-    await board.respin([{ cell: COLLECTOR_CELL, id: COLLECTOR, data: { collector: true } }]);
-    await new Promise((r) => setTimeout(r, 300));
-    hud.text = 'absorbing neighbours…';
-    const sum = await absorb(COLLECTOR_CELL);
-    hud.text = `collector absorbed ${sum} · press spin to reset`;
-    phase = 'done';
-  },
-};
+  let phase = 'ready';
+  return {
+    board,
+    cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy({ children: true }); labels.destroy(); } catch {} board.destroy(); },
+    onSpin: async () => {
+      if (phase === 'running') return;
+      if (phase === 'done') { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); board.reset(); seedBoard(); phase = 'ready'; return; }
+      phase = 'running';
+      hud.text = 'collector landing…';
+      await board.respin([{ cell: COLLECTOR_CELL, id: COLLECTOR, data: { collector: true } }]);
+      await new Promise((r) => setTimeout(r, 300));
+      hud.text = 'absorbing neighbours…';
+      const sum = await absorb(COLLECTOR_CELL);
+      hud.text = `collector absorbed ${sum} · press spin to reset`;
+      phase = 'done';
+    },
+  };
+}

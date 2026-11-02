@@ -1,6 +1,12 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'Staggered nudge. wave reveal',
+  topic: 'nudge',
+  tags: ['nudge', 'stagger', 'spotlight', 'big-symbols', 'abort', 'skip', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // STAGGER NUDGE pattern.
 //
@@ -9,57 +15,58 @@
 // time. Cleaner than a sequential loop (each reel doesn't have to wait
 // for the previous to fully land), more visible than parallel (reels
 // kick off in sequence so the eye can follow the wave).
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const SYMBOLS = [...CARD_DECK, WILD_CARD];
+  const FILLER = ['7', '8', '9', '10', 'J'];
+  const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+  const col3 = () => [filler(), filler(), filler()];
 
-const SYMBOLS = [...CARD_DECK, WILD_CARD];
-const FILLER = ['7', '8', '9', '10', 'J'];
-const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
-const col3 = () => [filler(), filler(), filler()];
+  const NUDGE_COLS = [0, 1, 2, 3, 4];
+  const NUDGE_DURATION = 520;
+  const STAGGER_MS = 90;
 
-const NUDGE_COLS = [0, 1, 2, 3, 4];
-const NUDGE_DURATION = 520;
-const STAGGER_MS = 90;
+  const reelSet = new ReelSetBuilder()
+    .reels(5)
+    .visibleCells(3)
+    .symbolSize(72, 72)
+    .symbolGap(4, 4)
+    .symbols((r) => {
+      for (const sym of SYMBOLS) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color,
+          label: sym.label,
+          textColor: sym.textColor,
+        });
+      }
+    })
+    .speed('normal', SpeedPresets.NORMAL)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(5)
-  .visibleCells(3)
-  .symbolSize(72, 72)
-  .symbolGap(4, 4)
-  .symbols((r) => {
-    for (const sym of SYMBOLS) {
-      r.register(sym.id, CardSymbol, {
-        color: sym.color,
-        label: sym.label,
-        textColor: sym.textColor,
-      });
-    }
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .ticker(app.ticker)
-  .build();
+  return {
+    reelSet,
+    onSpin: async () => {
+      const p = reelSet.spin();
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+      await p;
+      await new Promise((resolve) => setTimeout(resolve, 320));
 
-return {
-  reelSet,
-  onSpin: async () => {
-    const p = reelSet.spin();
-    await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
-    await p;
-    await new Promise((resolve) => setTimeout(resolve, 320));
-
-    // All five reels dispatch synchronously inside Promise.all; each one's
-    // tween is deferred by `startDelay`. Total wall time:
-    //   startDelay of last reel + duration = 4*90 + 520 = 880ms.
-    // (Versus 5 * 520 = 2600ms for sequential or 520ms for fully parallel.)
-    await Promise.all(
-      NUDGE_COLS.map((reel, i) =>
-        reelSet.nudge(reel, {
-          distance: 1,
-          direction: 'forward',
-          incoming: ['wild'],
-          duration: NUDGE_DURATION,
-          startDelay: i * STAGGER_MS,
-        }),
-      ),
-    );
-  },
-};
+      // All five reels dispatch synchronously inside Promise.all; each one's
+      // tween is deferred by `startDelay`. Total wall time:
+      //   startDelay of last reel + duration = 4*90 + 520 = 880ms.
+      // (Versus 5 * 520 = 2600ms for sequential or 520ms for fully parallel.)
+      await Promise.all(
+        NUDGE_COLS.map((reel, i) =>
+          reelSet.nudge(reel, {
+            distance: 1,
+            direction: 'forward',
+            incoming: ['wild'],
+            duration: NUDGE_DURATION,
+            startDelay: i * STAGGER_MS,
+          }),
+        ),
+      );
+    },
+  };
+}

@@ -11,8 +11,7 @@ import {
   type ReelSet,
   type SymbolPosition,
 } from 'pixi-reels';
-import { BlurSpriteSymbol } from '../../runtime/BlurSpriteSymbol.ts';
-import { loadPrototypeSymbols } from '../../runtime/prototypeSpriteLoader.ts';
+import { BlurSpriteSymbol, loadPrototypeSymbols } from '@pixi-reels/kit';
 
 /**
  * Live reels for the landing page.

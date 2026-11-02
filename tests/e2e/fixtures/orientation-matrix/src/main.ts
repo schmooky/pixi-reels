@@ -23,8 +23,7 @@ import {
   type Orientation,
   type ReelSet,
 } from 'pixi-reels';
-import { loadPrototypeSymbols } from '../../../../../apps/site/src/runtime/prototypeSpriteLoader.js';
-import { BlurSpriteSymbol } from '../../../../../apps/site/src/runtime/BlurSpriteSymbol.js';
+import { BlurSpriteSymbol, loadPrototypeSymbols } from '@pixi-reels/kit';
 
 const REELS = 4;
 const CELLS = 3;
