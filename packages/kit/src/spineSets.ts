@@ -13,8 +13,7 @@
  * A registry fixes that by construction. A surface iterates `SPINE_SETS`; a
  * new set is one entry here and appears everywhere at once.
  *
- * The per-set loaders remain exported from their own modules - this wraps
- * them, it does not replace them.
+ * The per-set loaders are internal to the kit; this registry is the way in.
  */
 import type { SpineSymbolSource } from 'pixi-reels/spine';
 import {

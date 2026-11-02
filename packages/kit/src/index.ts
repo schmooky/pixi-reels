@@ -12,6 +12,7 @@
  */
 export { pickWeighted } from './pickWeighted.js';
 export { readout, setReadouts, readoutsEnabled } from './readout.js';
+export { fitText } from './fitText.js';
 export { tapToSpin, ownTap } from './tapToSpin.js';
 export type { TapToSpinOptions, TapToSpinHandle } from './tapToSpin.js';
 export { createAssets } from './assets.js';
@@ -36,42 +37,20 @@ export {
   COIN_TRIGGER,
   coinValue,
   coinMultiplier,
-  drawCoin,
 } from './CoinSymbol.js';
 export type { CoinSymbolOptions, CoinShapeOptions } from './CoinSymbol.js';
 
 export { loadPrototypeSymbols, PROTOTYPE_SYMBOL_IDS } from './prototypeSpriteLoader.js';
 export type { PrototypeTextureSet } from './prototypeSpriteLoader.js';
 
+// The three bundled Spine sets, behind one registry. `buildSpineMap` is the
+// one per-set helper worth a name: it maps your symbol ids onto the generated
+// skeletons when the identity map is not what you want.
 export { SPINE_SETS, SPINE_SET_IDS, loadSpineSet } from './spineSets.js';
 export type { SpineSet, SizedSpineSet, SpineSetId, LoadedSpineSet } from './spineSets.js';
-export {
-  GENERATED_SPINE_NAMES,
-  GENERATED_ATLAS_ALIAS,
-  loadGeneratedSpines,
-  buildSpineMap,
-} from './generatedSpineLoader.js';
+export { buildSpineMap } from './generatedSpineLoader.js';
 export type { GeneratedSpineName } from './generatedSpineLoader.js';
-export {
-  THUNDERKICK_ATLAS,
-  THUNDERKICK_SKELETONS,
-  THUNDERKICK_SYMBOL_IDS,
-  loadThunderkickSpines,
-  buildThunderkickSpineMap,
-} from './thunderkickSpineLoader.js';
-export type { ThunderkickSkeleton, ThunderkickSymbolId } from './thunderkickSpineLoader.js';
-export {
-  CASCADE_ATLAS,
-  CASCADE_SKELETONS,
-  CASCADE_SYMBOL_IDS,
-  CASCADE_PLATE_W,
-  CASCADE_PLATE_H,
-  loadCascadeSpines,
-  buildCascadeSpineMap,
-} from './cascadeSpineLoader.js';
-export type { CascadeSkeleton, CascadeSymbolId } from './cascadeSpineLoader.js';
 
-export { loadHoldAndWinSprites } from './holdAndWinSprites.js';
 export type { HoldAndWinSprites } from './holdAndWinSprites.js';
 
 export {
@@ -82,7 +61,6 @@ export {
   CLOVER_REEL_SPEED,
   CLOVER_SPEEDS,
   CLOVER_CELL_RADIUS,
-  loadHwClover,
   CloverSymbol,
   cloverCellMask,
   cloverGridBackground,

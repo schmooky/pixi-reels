@@ -44,7 +44,7 @@ const ladder = (name: string) => [`${baseUrl}${name}.webm`, `${baseUrl}${name}.m
  * the reels, the tease, the wins and the UI each on their own fader, under
  * a master with headroom and a limiter.
  */
-export function getAudio(): Engine<SoundBus> {
+export function soundEngine(): Engine<SoundBus> {
   if (engine) return engine;
   engine = createEngine<SoundBus>({
     buses: {
@@ -66,7 +66,7 @@ export function getAudio(): Engine<SoundBus> {
 /** Unlock from a gesture and load the sound set once. Safe to call often. */
 export function readyAudio(): Promise<void> {
   if (loading) return loading;
-  const e = getAudio();
+  const e = soundEngine();
   loading = (async () => {
     await e.unlock();
     await Promise.all([
@@ -124,12 +124,12 @@ export const DEFAULT_BOARD_CUES: BoardCues = {
  * warning rather than thrown.
  */
 export function reelSounds(reelSet: ReelSet, cues: ReelCues = DEFAULT_CUES): ReelSoundsHandle {
-  return attachReelSounds(reelSet, zvukPort(getAudio(), { warn: () => {} }), cues);
+  return attachReelSounds(reelSet, zvukPort(soundEngine(), { warn: () => {} }), cues);
 }
 
 /** The same for a Hold & Win board. */
 export function boardSounds(board: HoldAndWinBoard, cues: BoardCues = DEFAULT_BOARD_CUES): ReelSoundsHandle {
-  return attachBoardSounds(board, zvukPort(getAudio(), { warn: () => {} }), cues);
+  return attachBoardSounds(board, zvukPort(soundEngine(), { warn: () => {} }), cues);
 }
 
 /** Mute or unmute every bus. The engine keeps running, so cues stay in time. */

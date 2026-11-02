@@ -4,8 +4,8 @@ import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { readout, tapToSpin } from '@pixi-reels/kit';
-import { bezierFly, fitText, GoldCoinSymbol } from '@pixi-reels/kit/spine';
+import { readout, tapToSpin, fitText } from '@pixi-reels/kit';
+import { bezierFly, GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { boardSounds } from '@pixi-reels/kit/sound';
 

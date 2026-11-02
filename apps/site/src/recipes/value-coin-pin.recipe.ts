@@ -2,8 +2,8 @@ import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { HoldAndWinBuilder } from 'pixi-reels';
 import type { HwCell } from 'pixi-reels';
-import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
-import { fitText, GoldCoinSymbol } from '@pixi-reels/kit/spine';
+import { pickWeighted, readout, tapToSpin, fitText } from '@pixi-reels/kit';
+import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { boardSounds } from '@pixi-reels/kit/sound';
 
