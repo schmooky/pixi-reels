@@ -5,13 +5,12 @@ description: Mechanical changes to move from 0.x to 1.0.0. Every breaking change
   with a before and after.
 ---
 
-> **On v2?** This page covers the 0.x to 1.0.0 step. Its `After` snippets are
-> written in v2 form so they still run today, but several names changed again
-> in 2.0.0. Do this page's rewrites first, then
-> [Migrating to 2.0](/reference/migrating-to-2-0/), which starts with a codemod that
-> handles the mechanical half.
+This page covers the 0.x to 1.0.0 step. Its `After` snippets are written in v2
+form so they still run today, but several names changed again in 2.0.0. Do this
+page's rewrites first, then [Migrating to 2.0](/reference/migrating-to-2-0/),
+which starts with a codemod that handles the mechanical half.
 
-A list of every breaking change in 1.0.0 with a before and after snippet. Each section is mechanical: find the pattern, apply the rewrite. The page is intentionally greppable. every pre-1.0 pattern appears verbatim in a `Before` code block so a `git grep skip()` or `git grep visibleSymbols` in your repo lands on the matching rewrite here.
+Every breaking change in 1.0.0 is below with a before and after snippet. Each section is mechanical: find the pattern, apply the rewrite. Every pre-1.0 pattern appears verbatim in a `Before` code block, so a `git grep skip()` or `git grep visibleSymbols` in your repo lands on the matching rewrite here.
 
 ## visibleSymbols is gone
 
@@ -20,7 +19,7 @@ The deprecated `visibleSymbols` builder setter is removed. It aliased `visibleRo
 Before:
 
 ```ts
-// Pre-1.0 code. .visibleSymbols(3) is removed in 1.0.
+// Pre-1.0 code: .visibleSymbols(3) is removed in 1.0.
 builder
   .reels(5)
   .visibleSymbols(3);
@@ -34,7 +33,7 @@ builder.reels(5).visibleCells(3);
 
 ## setResult and initialFrame accept only ColumnTarget[]
 
-The legacy `string[][]` form, including the negative-index buffer-above mutation pattern, is removed. Both `ReelSet.setResult` and `ReelSetBuilder.initialFrame` now accept only `ColumnTarget[]`.
+The legacy `string[][]` form is removed, including the negative-index buffer-above mutation pattern. `ReelSet.setResult` and `ReelSetBuilder.initialFrame` accept only `ColumnTarget[]`.
 
 Before (legacy form with a buffer-above prefill):
 
@@ -82,13 +81,13 @@ Eight types and classes are no longer re-exported from `pixi-reels`. They remain
 | `RandomSymbolProvider` | Weighted symbol picker | Pass weights via `builder.weights({...})`. |
 | `OffsetCalculator` | Geometry helper for `ReelViewport` | Internal. |
 
-If you imported any of these from `pixi-reels`, remove the import. If you genuinely need the internal, import from the source path directly (acknowledging that internals can change without a major bump).
+If you imported any of these from `pixi-reels`, remove the import. If you need the internal, import it from the source path; internals can change without a major bump.
 
 ## SpinController and the built-in phase classes are hidden
 
-`SpinController`, `SpinControllerHooks`, and the built-in phase classes (`StartPhase`, `SpinPhase`, `StopPhase`, `AnticipationPhase`, `AdjustPhase`, `CascadeFallPhase`, `CascadePlacePhase`, `CascadeDropInPhase`) are no longer exported. Consumers never construct a `SpinController` directly. it's wired by `ReelSet`. and custom phases extend `ReelPhase` rather than the built-ins (the built-ins were not designed for safe subclassing).
+`SpinController`, `SpinControllerHooks` and the built-in phase classes (`StartPhase`, `SpinPhase`, `StopPhase`, `AnticipationPhase`, `AdjustPhase`, `CascadeFallPhase`, `CascadePlacePhase`, `CascadeDropInPhase`) are no longer exported. `ReelSet` wires the controller itself, so a game never constructs one. A custom phase extends `ReelPhase` rather than a built-in; the built-ins were not designed for subclassing.
 
-The phase Config TYPES stay exported (`StartPhaseConfig`, `SpinPhaseConfig`, etc.) as stable shape descriptions.
+The phase config types (`StartPhaseConfig`, `SpinPhaseConfig` and the rest) stay exported as stable shape descriptions.
 
 Before:
 
@@ -115,7 +114,7 @@ builder.phases((f) => f.register('start', MyStartPhase));
 
 ## Internal-leaking methods lost their leading underscore
 
-Three methods on `Reel` and `ReelSet` were called across files via the underscore convention. They are renamed to match how they are reached, with JSDoc that documents the call sites.
+Three methods on `Reel` and `ReelSet` were called across files under the underscore convention. They lose the underscore, and their JSDoc now names the call sites.
 
 | Before | After |
 |---|---|
@@ -123,11 +122,11 @@ Three methods on `Reel` and `ReelSet` were called across files via the underscor
 | `ReelSet._peekTargetShape()` | `ReelSet.peekTargetShape()` |
 | `ReelSet._clearTargetShape()` | `ReelSet.clearTargetShape()` |
 
-Consumers should not call these directly. They are marked `@internal` and stripped from the published `.d.ts` (see next section).
+Do not call these from a game. They are marked `@internal` and stripped from the published `.d.ts` (next section).
 
 ## Internal methods stripped from .d.ts (`stripInternal`)
 
-`tsconfig.json` now has `"stripInternal": true`. Methods marked `@internal` in JSDoc remain in the runtime JS (so cross-file internal callers still work) but are absent from the published `.d.ts`. TypeScript consumers no longer see them on autocomplete.
+`tsconfig.json` now sets `"stripInternal": true`. Methods marked `@internal` in JSDoc stay in the runtime JS, so the engine's own cross-file callers keep working, but they are absent from the published `.d.ts` and no longer show up in autocomplete.
 
 Affected methods on `Reel`:
 
@@ -135,17 +134,17 @@ Affected methods on `Reel`:
 
 If your code typechecked against `Reel.reshape(...)` or any of the above, switch to the public alternative:
 
-- For reshape: `reelSet.setShape([...])`. it gates on a MultiWays slot and migrates pins atomically.
-- For grid inspection: `reelSet.getVisibleGrid()`, `reelSet.getSymbolFootprint()`, `reelSet.getBlockBounds()`.
+- For reshape, `reelSet.setShape([...])`. It only runs on a MultiWays slot and migrates pins in the same step.
+- For grid inspection, `reelSet.getVisibleGrid()`, `reelSet.getSymbolFootprint()` and `reelSet.getBlockBounds()`.
 
 ## skip is now skipSpin
 
-`skipSpin()` reads cleanly alongside `skipNudge()`. `slamStop()` stays distinct (unconditional land-now, no boost).
+`skip()` is renamed `skipSpin()`, so it reads alongside `skipNudge()`. `slamStop()` is unchanged: it lands now, unconditionally, with no boost.
 
 Before:
 
 ```ts
-// Pre-1.0 code. reelSet.skip() is removed in 1.0.
+// Pre-1.0 code: reelSet.skip() is removed in 1.0.
 reelSet.skip();
 ```
 
@@ -155,7 +154,7 @@ After:
 reelSet.skipSpin();
 ```
 
-The new naming makes the three actions readable side by side:
+The three actions side by side:
 
 ```ts
 reelSet.skipSpin();   // Round-aware spin land. Applies the boost / auto-slam side effect.
@@ -165,12 +164,12 @@ reelSet.slamStop();   // Unconditional land-now. No boost. For tests, anti-cheat
 
 ## refill() returns RefillResult, accepts a signal
 
-`reelSet.refill()` now takes a typed `RefillOptions` object and returns a typed `RefillResult` (mirroring `runCascade`'s shape) instead of the misnamed `SpinResult`. The shape change is purely additive at the call boundary (existing callers that discard the return value keep working).
+`reelSet.refill()` takes a `RefillOptions` object and returns a `RefillResult`, shaped like the result of `runCascade`, instead of a `SpinResult`. A caller that discards the return value keeps working.
 
 Before:
 
 ```ts
-// Pre-1.0. refill returned SpinResult.
+// Pre-1.0: refill returned SpinResult.
 const result: SpinResult = await reelSet.refill({ winners, grid });
 console.log(result.symbols); // string[][]
 ```
@@ -188,11 +187,11 @@ const result: RefillResult = await reelSet.refill({
 console.log(result.finalGrid, result.winnersRefilled, result.wasSkipped);
 ```
 
-It shares `finalGrid` and `wasSkipped` with `RunCascadeResult`; `winnersRefilled` and `duration` are refill-specific. one stage's worth.
+`finalGrid` and `wasSkipped` are the same fields `RunCascadeResult` has. `winnersRefilled` and `duration` belong to a refill and cover one stage.
 
 ## Testing utilities moved to pixi-reels/testing
 
-The headless harness is now a separate subpath export so production bundles never pull it in, even with imperfect tree-shaking.
+The headless harness is a separate subpath export, so a production bundle never pulls it in, even when tree-shaking is imperfect.
 
 Before:
 
@@ -227,7 +226,7 @@ The types (`TestReelSetOptions`, `TestReelSetHandle`) move with them. The Spine 
 
 ## Concurrent calls during nudge() now throw
 
-`spin()`, `setResult()`, `pin()`, and `setShape()` throw when called while an in-flight `nudge()` is still tweening. The contract is now explicit: await the `nudge()` promise before calling any of those methods.
+`spin()`, `setResult()`, `pin()` and `setShape()` throw while a `nudge()` is still tweening. Await the nudge promise before calling any of them.
 
 Before (undefined behavior, no error):
 
@@ -244,12 +243,12 @@ await nudging;
 await reelSet.spin();
 ```
 
-If you have UI code that allows the player to press spin during a nudge, route through `reelSet.skipNudge()` first to fast-forward the nudge to its landed position, then call `spin()`.
+If your UI lets the player press spin during a nudge, call `reelSet.skipNudge()` first, which fast-forwards the nudge to its landed position, then call `spin()`.
 
 ## symbol:recycled event removed
 
-The `'symbol:recycled'` field on the per-`Reel` `ReelEvents` interface is removed. It was never emitted by any code path. If you had a listener registered for it, delete the listener.
+The `'symbol:recycled'` field on the per-reel `ReelEvents` interface is removed. Nothing ever emitted it. Delete any listener you registered for it.
 
 ## /guides/spine-pins/ renamed to /guides/pins/
 
-The pin primitive is general (works with `SpriteSymbol`, `AnimatedSpriteSymbol`, `SpineSymbol`, or any subclass of `ReelSymbol`); the old URL is misleading. The new canonical URL is `/guides/pins/`. The site emits a permanent redirect from the old path, so existing bookmarks keep working.
+A pin works with `SpriteSymbol`, `AnimatedSpriteSymbol`, `SpineSymbol` or any other `ReelSymbol` subclass, so the old URL was misleading. The page is now at `/guides/pins/`. The old path redirects permanently, so bookmarks keep working.

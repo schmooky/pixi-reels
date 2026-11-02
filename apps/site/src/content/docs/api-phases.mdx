@@ -2,15 +2,15 @@
 title: Phases
 order: 3
 eyebrow: API
-description: START, SPIN, ANTICIPATION, STOP. the four lifecycle phases and how
-  to extend them.
+description: "START, SPIN, ANTICIPATION, STOP: the four lifecycle phases and how
+  to extend them."
 ---
 
 import Tree from '../../components/docs/Tree.astro';
 import Timeline from '../../components/docs/Timeline.astro';
 
-A phase is one slice of a reel's lifecycle. Extend `ReelPhase<TConfig>`,
-implement three hooks.
+A phase is one slice of a reel's lifecycle. To write one, extend
+`ReelPhase<TConfig>` and implement three hooks.
 
 <Tree
   root="ReelPhase<TConfig, TProfile = SpeedProfile>"
@@ -21,35 +21,35 @@ implement three hooks.
   ]}
 />
 
-Every phase runs on ONE reel. Five reels in `StopPhase` are five instances, and
-`SpinController` builds them per reel per spin through the `PhaseFactory` -
-there are no long-lived phase objects to hold state across spins.
+Every phase runs on one reel. Five reels in `StopPhase` are five instances.
+`SpinController` builds them per reel, per spin, through the `PhaseFactory`, so
+no phase object lives long enough to hold state across spins.
 
 ## Built-ins
 
 Every one of these is exported, so you can subclass it as well as replace it.
-The KEY is the name to register under; registering a different class under an
-existing key is what swaps the built-in out.
+The key is the name to register under. Registering a different class under an
+existing key swaps the built-in out.
 
 | Class | Key | Config | Role | Skippable |
 |---|---|---|---|---|
 | `StartPhase` | `'start'` | `StartPhaseConfig` | Accelerate from rest, with a step-back pull | yes |
-| `SpinPhase` | `'spin'` | `SpinPhaseConfig` | Full speed until the result arrives | **no** |
+| `SpinPhase` | `'spin'` | `SpinPhaseConfig` | Full speed until the result arrives | no |
 | `AnticipationPhase` | `'anticipation'` | `AnticipationPhaseConfig` | Slow hold, for tension | yes |
 | `StopPhase` | `'stop'` | `StopPhaseConfig` | Decelerate onto the target frame, bounce | yes |
-| `CascadeFallPhase` | `'cascade:fall'` | `CascadeFallPhaseConfig` | Tumble fall-out. replaces `StartPhase` | yes |
+| `CascadeFallPhase` | `'cascade:fall'` | `CascadeFallPhaseConfig` | Tumble fall-out; replaces `StartPhase` | yes |
 | `CascadePlacePhase` | `'cascade:place'` | `CascadePlacePhaseConfig` | Tumble identity swap | yes |
 | `CascadeDropInPhase` | `'cascade:dropIn'` | `CascadeDropInPhaseConfig` | Tumble drop-in and gravity slide | yes |
-| `AdjustPhase` | `'adjust'` | `AdjustPhaseConfig` | MultiWays reshape. tweens pin overlays | yes |
+| `AdjustPhase` | `'adjust'` | `AdjustPhaseConfig` | MultiWays reshape; tweens pin overlays | yes |
 
-`SpinPhase` is the one that cannot be skipped: it is not animating toward
-anything, it is waiting for `setResult()`. A slam resolves it instead. Which is
-also why a per-reel `minimumSpinTime` matters. `SpinPhase` is where the floor
-that decides how early a reel may stop actually lives.
+`SpinPhase` is the one phase that cannot be skipped. It animates toward
+nothing; it waits for `setResult()`, and a slam resolves it from the outside.
+The floor that decides how early a reel may stop also lives here, which is why
+a per-reel `minimumSpinTime` matters.
 
-The bottom four are wired only when you asked for them. the cascade three by
-`builder.tumble(...)`, `AdjustPhase` by `builder.multiways(...)`. A plain slot
-never sees them.
+The bottom four are wired only when you ask for them: the three cascade phases
+by `builder.tumble(...)`, `AdjustPhase` by `builder.multiways(...)`. A plain
+slot never sees them.
 
 ## Register a custom phase
 
@@ -79,20 +79,20 @@ class FlashPhase extends ReelPhase<{ duration: number }> {
 builder.phases((f) => f.register('flash', FlashPhase));
 ```
 
-Replacing built-ins works the same way. register with the same name (`'start'`,
-`'spin'`, `'anticipation'`, `'stop'`) to override - and that is the only way a
-from-scratch phase ever runs. The controller asks the factory for the
-lifecycle keys and nothing else, so a phase registered under a NAME OF ITS OWN
-like `'flash'` above is orphaned: nothing constructs it. Own a phase by taking
-its key.
+Replacing a built-in works the same way: register your class under the same
+key (`'start'`, `'spin'`, `'anticipation'`, `'stop'`). This is also the only
+way a phase written from scratch gets to run. The controller asks the factory
+for the lifecycle keys and nothing else, so a phase registered under a name of
+its own, like `'flash'` above, is never constructed. To replace a phase,
+register under its key.
 
 <RecipeDemo code="phase-from-scratch-start" />
 
 ## What a phase may call
 
 A phase drives its reel through `this.reel`. Everything the built-in phases
-call on it is the contract a custom phase may rely on too, and it is in the
-published typings:
+call on it, a custom phase may call too, and it is all in the published
+typings:
 
 | Call | Does | Used by |
 |---|---|---|
@@ -101,24 +101,25 @@ published typings:
 | `reel.forceSpeed(v)` | Jump to a speed, drive included. Assigning `reel.speed` from a phase is ramped back under the drive model; this is not. | `StartPhase.onSkip`, `AnticipationPhase.onSkip` |
 | `reel.placeStrip(frame)` | Place a full strip, buffers included. `placeSymbols` is the visible-window form for game code and drops a big symbol's tail parked in a buffer row. | `StopPhase.onSkip` |
 | `this.land(cells?)` | Halt the drive, snap to the grid, tell the symbols the spin ended and that they landed, lift unmask art, raise `spin:reelLanding`. The only way a phase lands a reel. | `StopPhase`'s `land` step |
-| `this.bounce(options?)` | The landing overshoot, carrying lifted views along on every frame. Returns `{ done, cancel() }`; `done` settles on the rest position or right after `cancel()`. Defaults from the profile, `BounceOptions` (`distance`, `duration`, `ease`, and `animation` for a different shape) per call. | `StopPhase`'s `bounce` step |
+| `this.bounce(options?)` | The landing overshoot, carrying lifted views along on every frame. Returns `{ done, cancel() }`; `done` settles on the rest position or right after `cancel()`. Defaults come from the profile; `BounceOptions` (`distance`, `duration`, `ease`, and `animation` for a different shape) override them per call. | `StopPhase`'s `bounce` step |
 
 `land()` and `bounce()` are public on the base, so a step written outside the
 class reaches them as `ctx.phase.land()` / `ctx.phase.bounce()`. The reel's
 own `haltDrive`, `snapToGrid`, `notifySpinEnd`, `notifyLanded` and
-`offsetLiftedViews` stay internal: the two helpers are their whole use.
-`this.reel` and `this.speed` are the public getters; `this._reel` and
-`this._speed` are the same fields, kept for subclasses written against them.
+`offsetLiftedViews` stay internal; the two helpers are the only things that
+use them. `this.reel` and `this.speed` are the public getters; `this._reel`
+and `this._speed` are the same fields, kept for subclasses written against
+them.
 
-Two guarantees a phase that never moves its reel relies on: `SpinPhase` never
-writes `reel.speed`, and `Reel.update` does nothing at `speed === 0`. A stop
+A phase that never moves its reel relies on two guarantees. `SpinPhase` never
+writes `reel.speed`, and `Reel.update` does nothing at `speed === 0`. So a stop
 that places its frame and slides it in, with no spin-out at all, is supported.
 
-Timing that belongs to the phase can ride on the speed profile. Declare the
-profile the phase reads as the second type parameter and `this._speed` sees
-the extra fields; `register()` infers it from the class, so the registration
-needs no cast either. The manager hands every phase the profile instance the
-game registered, which is why the fields are there at run time.
+Timing that belongs to a phase can live on the speed profile. Declare the
+profile type the phase reads as the second type parameter, and `this._speed`
+sees the extra fields. `register()` infers it from the class, so the
+registration needs no cast. At run time the manager hands every phase the
+profile instance the game registered, so the fields are there.
 
 ```ts
 interface InstantProfile extends SpeedProfile { slideMs: number }
@@ -145,9 +146,9 @@ builder
   .phases((f) => f.register('stop', InstantStopPhase));
 ```
 
-The built-in phases take the same parameter, so subclassing one keeps the
-profile type instead of pinning it back to `SpeedProfile`. Name it on the
-class and `defaultSteps()`, `*PhaseOptions` and `ctx.profile` all follow:
+The built-in phases take the same parameter, so a subclass keeps the profile
+type instead of falling back to `SpeedProfile`. Name it on the class, and
+`defaultSteps()`, `*PhaseOptions` and `ctx.profile` follow:
 
 ```ts
 class TeasedStop extends StopPhase<InstantProfile> {
@@ -159,7 +160,7 @@ class TeasedStop extends StopPhase<InstantProfile> {
 }
 ```
 
-`StopPhase` with no argument is `StopPhase<SpeedProfile>`, exactly as before.
+`StopPhase` with no argument is `StopPhase<SpeedProfile>`, as before.
 
 <RecipeDemo code="phase-from-scratch-stop" />
 
@@ -186,24 +187,25 @@ builder.phases((f) => f.register('stop', StopPhase, {
 | `AnticipationPhase` | `tease` (the whole tease, whichever shape) | `tease` |
 | `SpinPhase`, cascade phases, `AdjustPhase` | none; they wait or run one parallel timeline | |
 
-A step is `step(name, (ctx) => result, { cut? })`. The result is waited on: a
-gsap tween or timeline (killed when a slam cuts it), a promise (told to stop
-through `ctx.signal`), a cancellable such as what `ctx.phase.bounce()`
-returns, or nothing. `ctx` carries `reel`, `profile`, `config`, `gsap`,
-`container`, `main` (the container property that is the travel axis),
-`phase`, `signal`, `quickened`, `anticipated` (the reel teased earlier in
-this spin), `step` (what the speed profile configured for THIS step, see
-below), and two waits a slam can cut: `wait(ms)` on the gsap clock and
-`until(predicate)`, checked from the phase's `update()`.
+A step is `step(name, (ctx) => result, { cut? })`. The runner waits on the
+result. It may be a gsap tween or timeline (killed when a slam cuts it), a
+promise (told to stop through `ctx.signal`), a cancellable like the one
+`ctx.phase.bounce()` returns, or nothing. `ctx` carries `reel`, `profile`,
+`config`, `gsap`, `container`, `main` (the container property that is the
+travel axis), `phase`, `signal`, `quickened`, `anticipated` (whether the reel
+teased earlier in this spin), and `step` (what the speed profile configured
+for this step; see below). It also carries two waits a slam can cut:
+`wait(ms)` on the gsap clock, and `until(predicate)`, checked from the phase's
+`update()`.
 
 `insertBefore`, `insertAfter`, `replaceStep` and `removeStep` return a copy
 and throw on a name the list does not have, so a stale edit fails at build.
 Plain array code works too.
 
-`land` and `bounce` are load-bearing: remove `land` and the reel never
-announces its landing. The bounce shape goes through `phase.bounce({
-animation })` rather than a raw tween of the container, because the base
-carries lifted unmask symbols along for as long as a bounce runs.
+`land` and `bounce` matter. Remove `land` and the reel never announces its
+landing. Change the bounce shape through `phase.bounce({ animation })` rather
+than a raw tween of the container, because the base carries lifted unmask
+symbols along for as long as a bounce runs.
 
 A subclass changes the list from the inside by overriding `defaultSteps()`,
 or any step method (`_beginSpinOut`, `land`, `bounce`). A phase written from
@@ -212,17 +214,17 @@ scratch may run its own list through `this.runSteps(steps)` and
 
 <RecipeDemo code="phase-steps" />
 
-A custom phase takes the same door. Write the class as before, let
+A custom phase can work the same way. Write the class as before, let
 `runSteps()` sequence it, mark the waits `cut`, and expose `defaultSteps()`
-through a constructor option: a quicken skips the hold with no `onSkip`
+through a constructor option. Then a quicken skips the hold with no `onSkip`
 branch, a slam cancels the step in flight, and the game edits the list with
-`f.register('stop', MyPhase, { steps })` exactly as it edits `StopPhase`'s.
+`f.register('stop', MyPhase, { steps })`, the same as it edits `StopPhase`'s.
 
 <RecipeDemo code="phase-steps-custom" />
 
-The feel work these lists are for, stagger curves, a wind-up launch, a landing
-kick, beats and FX that follow the speed profile, a spotlight around the tease
-and one extra beat on the last reel, is six short recipes on
+The feel work these lists are for (stagger curves, a wind-up launch, a landing
+kick, beats and FX that follow the speed profile, a spotlight around the tease,
+one extra beat on the last reel) is six short recipes on
 [Feel: timings & landing FX](/mechanics/feel/).
 
 ## Configure a phase from the speed profile
@@ -249,27 +251,27 @@ const normal = {
 } satisfies SpeedProfile;
 ```
 
-The flat fields are unchanged and still the contract: a phase reads
-`spinSpeed` the same way whether the profile set it at the top level or inside
-`start`. A section restates any of them for that phase alone, configures the
-phase's steps by name under `steps`, and carries a `whenAnticipated` half that
-is merged on top for a reel that ran an anticipation tease earlier in the
-spin. Resolution, lowest first:
+The flat fields are unchanged and still work: a phase reads `spinSpeed` the
+same way whether the profile set it at the top level or inside `start`. A
+section restates any of them for that phase alone, configures the phase's
+steps by name under `steps`, and carries a `whenAnticipated` half that is
+merged on top for a reel that ran an anticipation tease earlier in the spin.
+Resolution, lowest first:
 
 <Timeline beats={['flat field', 'profile[phase]', 'profile[phase].whenAnticipated', 'speed.tune()']} />
 
-A phase reads the result as `this.timing`, a step as `ctx.profile`, and its
-own entry as `ctx.step` — the segments configured for that step, in order. A
-single object in the profile arrives as one entry; the built-in steps read
-`ctx.step[0]`, and a list is for a step written to consume segments (a
-two-stage acceleration in a phase of your own).
+A phase reads the result as `this.timing`, a step reads it as `ctx.profile`,
+and a step reads its own entry as `ctx.step`, the segments configured for that
+step, in order. A single object in the profile arrives as one entry, and the
+built-in steps read `ctx.step[0]`. A list is for a step written to consume
+segments, such as a two-stage acceleration in a phase of your own.
 
-The bounce is three profile fields, not two: `bounceEase` sits beside
-`bounceDistance` and `bounceDuration` and is what `phase.bounce()` eases on
-when the call names no ease of its own. `bounce({ ease })` still wins, and
-with neither it is `'power1.out'`. Like any flat field it is sectionable, so
-a teased landing that differs only in its ease is `stop: { whenAnticipated: {
-bounceEase: 'sine.out' } }` and no phase code at all.
+The bounce has three profile fields. `bounceEase` sits beside `bounceDistance`
+and `bounceDuration`, and `phase.bounce()` uses it when the call names no ease
+of its own. `bounce({ ease })` still wins, and with neither the ease is
+`'power1.out'`. Like any flat field it can go in a section, so a teased landing
+that differs only in its ease is `stop: { whenAnticipated: { bounceEase:
+'sine.out' } }`, with no phase code.
 
 Override part of a section at run time with `speed.tune(phase, section)`; it
 merges rather than replaces, so naming one step's ease leaves the rest
@@ -309,7 +311,7 @@ timings. A phase that does not extend `ReelPhase` reads its section with
 ### Knowing that a reel teased
 
 `PhaseFactory` passes a `PhaseCreateContext` to a registered factory as its
-third argument — `phase`, `reelIndex`, `anticipated`, `quickened` — so a
+third argument, with `phase`, `reelIndex`, `anticipated` and `quickened`, so a
 registration can build a different phase per reel:
 
 ```ts
@@ -321,12 +323,12 @@ builder.phases((f) =>
 );
 ```
 
-`anticipated` means the reel ran a tease TO ITS END earlier in this spin:
-false for the tease itself, true for every phase after it, and false again
-when a `'quicken'` press cut the tease short — the press asked for the
-landing, and what it cut is the tease `whenAnticipated` pays off. `quickened`
-is right there in the same context if you want the other reading. The same context reaches the
-phase as `phase.anticipated` and `phase.context`, and every step as
+`anticipated` means the reel ran a tease to its end earlier in this spin. It
+is false for the tease itself, true for every phase after it, and false again
+when a `'quicken'` press cut the tease short: the press asked for the landing,
+and what it cut is the tease that `whenAnticipated` pays off. `quickened` is
+in the same context if you want the other reading. The same context reaches
+the phase as `phase.anticipated` and `phase.context`, and every step as
 `ctx.anticipated`.
 
 ## Subclass a built-in
@@ -356,64 +358,64 @@ builder.phases((f) => f.register('stop', ThudStopPhase));
 
 Five rules cover every subclass.
 
-**Call `super` from every hook you override.** The base `onEnter` is what
-actually starts the phase. a `StopPhase` whose override never reaches it spins
-forever and takes the spin promise with it. Order is yours: before `super` for
-"as the phase begins", after it for "once the phase is set up".
+Call `super` from every hook you override. The base `onEnter` is what starts
+the phase. A `StopPhase` whose override never reaches it spins forever and
+takes the spin promise with it. The order is yours: put your code before
+`super` to run it as the phase begins, or after it to run it once the phase is
+set up.
 
-**Resolve exactly once.** A phase ends by calling `this._complete()`, and the
-base classes already do that at the right moment. Only call it yourself in a
-phase you wrote from scratch, or in an override that deliberately replaces the
-base's ending. Calling it twice is harmless (the second is a no-op), never
-calling it hangs the reel.
+Resolve exactly once. A phase ends by calling `this._complete()`, and the base
+classes already do that at the right moment. Call it yourself only in a phase
+you wrote from scratch, or in an override that replaces the base's ending.
+Calling it twice is harmless, since the second call is a no-op. Never calling
+it hangs the reel.
 
-**`onSkip(ctx)` is the slam pose under `'slam'`, a cut wait under `'quicken'`.**
-`ctx` is a `SkipContext`: `{ mode, speed?, payload? }`. Under `'slam'` (a slam
-calls `forceComplete(ctx)`) the base has cancelled the step in flight; kill
-anything else and leave the reel in the state the phase would have ended in,
-speed and position where a natural finish would have; the base completes the
-phase after it. `StopPhase.onSkip` places the full target frame and rests the
-container; `StartPhase.onSkip` jumps to full spin speed. Under `'quicken'`
-the hook is reached only when the phase declares `quickenable = true`; then
-cut a wait, never the landing, and call `_complete()` yourself when the
-natural end is reached (right away if the slam pose already is that end,
-which is what `StartPhase` does). A phase on `runSteps()` needs nothing
-here: its `cut` steps are skipped for it. A phase without the flag is left
-alone by a quicken and runs its course, so a phase written for slams only
-keeps working. Override it when your addition also needs to fire on a
-pressed reel, and pass `ctx` to `super` so the built-in still sees the mode;
-a bare `super.onSkip()` is taken as a slam. `ctx.payload` is whatever the
-game put on the press.
+`onSkip(ctx)` sets the slam pose under `'slam'` and cuts a wait under
+`'quicken'`. `ctx` is a `SkipContext`: `{ mode, speed?, payload? }`. Under
+`'slam'` (a slam calls `forceComplete(ctx)`) the base has already cancelled the
+step in flight. Kill anything else and leave the reel in the state the phase
+would have ended in, with speed and position where a natural finish would have
+put them; the base completes the phase afterwards. `StopPhase.onSkip` places
+the full target frame and rests the container; `StartPhase.onSkip` jumps to
+full spin speed. Under `'quicken'` the hook is reached only when the phase
+declares `quickenable = true`. Then cut a wait, never the landing, and call
+`_complete()` yourself when the natural end is reached (right away if the slam
+pose already is that end, which is what `StartPhase` does). A phase on
+`runSteps()` needs nothing here, since its `cut` steps are skipped for it. A
+phase without the flag is left alone by a quicken and runs its course, so a
+phase written for slams only keeps working. Override the hook when your
+addition also needs to fire on a pressed reel, and pass `ctx` to `super` so
+the built-in still sees the mode; a bare `super.onSkip()` is taken as a slam.
+`ctx.payload` is whatever the game put on the press.
 
-**`update(deltaMs)` runs every frame while active, and only then.** It is
-ticker-driven accumulation, not wall clock, so it stays correct in a
+`update(deltaMs)` runs every frame while the phase is active, and only then.
+It accumulates ticker time, not wall-clock time, so it stays correct in a
 backgrounded tab. GSAP-driven phases leave it empty.
 
-**A quicken reaches every built-in the same way.** `StopPhase` skips its
-`delay` step and spins out at once, `AnticipationPhase` skips its `tease`
-step and returns to full speed, `SpinPhase` drops its floor, `StartPhase`
-completes at full speed. A press that names a profile swaps `this.speed`
-before any of that, so the spin-out and bounce that follow read the new one.
-A reel quickened before it reached its stop has the stop phase asked as soon
-as it is created, so a wait inside a custom stop is cut whether the press
-came before it or during it.
+A quicken reaches every built-in the same way. `StopPhase` skips its `delay`
+step and spins out at once, `AnticipationPhase` skips its `tease` step and
+returns to full speed, `SpinPhase` drops its floor, and `StartPhase` completes
+at full speed. A press that names a profile swaps `this.speed` before any of
+that, so the spin-out and bounce that follow read the new one. A reel
+quickened before it reached its stop has the stop phase asked as soon as it is
+created, so a wait inside a custom stop is cut whether the press came before
+it or during it.
 
-A subclass using the first four at once - `onEnter` to show a per-reel
-countdown, `update` to drive it, `onSkip` to take it off when a press cuts the
-tease short. The demo's button SLAMS (`skipSpin()`, queued through
+Here is a subclass that uses the first four at once: `onEnter` shows a
+per-reel countdown, `update` drives it, and `onSkip` takes it off when a press
+cuts the tease short. The demo's button slams (`skipSpin()`, queued through
 `requestSkip()` before the result). A `mode: 'quicken'` press would take the
 countdown off through the same `onSkip`, because `AnticipationPhase` completes
-on either mode; the difference is what the reel does next - placed on its
-frame here, spun out and bounced on a quicken:
+on either mode. The difference is what the reel does next: here it is placed on
+its frame, on a quicken it spins out and bounces.
 
 <RecipeDemo code="phase-subclass-anticipation" />
 
-`this.reel` (including `reel.reelIndex`), `this._speed` (the active
-`SpeedProfile`) and `this.isActive` are what a subclass reads. `name` and
-`skippable` are readonly fields on the class; a subclass inherits both, and
-overriding `skippable` on a built-in is not a supported way to protect a phase
-from a slam - `forceComplete()` ignores the flag by design. Use
-[tease protection](/reference/api-reelset/) for that.
+A subclass reads `this.reel` (including `reel.reelIndex`), `this._speed` (the
+active `SpeedProfile`) and `this.isActive`. `name` and `skippable` are readonly
+fields on the class, and a subclass inherits both. Overriding `skippable` on a
+built-in does not protect a phase from a slam; `forceComplete()` ignores the
+flag. Use [tease protection](/reference/api-reelset/) for that.
 
 ### Phases that take constructor arguments
 
@@ -455,35 +457,34 @@ takes `(reel, speed, { durationMs, ease })`.
 <RecipeDemo code="phase-subclass-cascade" />
 
 Chain position does not matter. `.phases(...)` configurators are deferred to
-`build()` and applied after the tumble / MultiWays defaults, so an override
-wins from anywhere in the chain, and the last override of a given key wins.
+`build()` and applied after the tumble and MultiWays defaults, so an override
+wins from anywhere in the chain. The last override of a given key wins.
 
-(Before 2.3 they ran at call time while `.tumble()` registered its defaults
-inside `build()`, so a `'cascade:*'` or `'adjust'` override was silently
-discarded no matter where it sat.)
+Before 2.3 they ran at call time, while `.tumble()` registered its defaults
+inside `build()`, so a `'cascade:*'` or `'adjust'` override was dropped
+wherever it sat.
 
 ### Stability
 
-These are engine internals with an engine-internal contract. Every field and
-method of a built-in phase is `protected`, so a subclass can reach
-`_beginSpinOut`, `_landAndBounce`, `_stage`, `_launch`, `_runSegment` and the
-rest instead of copying the phase; that surface can change in a minor release,
-so a subclass may need to follow. The config TYPES are the stable part, and so
-is the hook shape itself. If you want a guarantee
-rather than a hook, extend `ReelPhase` and own the whole phase.
+The built-in phases are engine internals. Every field and method on one is
+`protected`, so a subclass can reach `_beginSpinOut`, `_landAndBounce`,
+`_stage`, `_launch`, `_runSegment` and the rest instead of copying the phase.
+That surface can change in a minor release, so a subclass may need to follow.
+The config types and the hook shape are the stable parts. If you want a
+guarantee rather than a hook, extend `ReelPhase` and own the whole phase.
 
 ## Skip granularity
 
 A slam force-completes every active phase, `AnticipationPhase` included, so by
-default a skip press ends the tease before the player sees it. Three levers
+default a skip press ends the tease before the player sees it. These levers
 open that up:
 
 | Lever | What it does |
 |---|---|
 | `setAnticipation(reels, { protect })` | Skip presses stop ending the tease. `'once'` lands the reels around it and leaves the tease running (the next press ends it); `'stepwise'` then releases one tease reel per press, in tease order; `'always'` never lets a press end one. |
-| `slamStop({ reels })` / `slamStop({ except })` | Per-reel slam. Those reels land now, everything else keeps running its phase chain to a natural landing. |
-| `setMinimumSpinTime(ms \| ms[])` | Per-reel `SpinPhase` floor, replacing the profile's single shared `minimumSpinTime`. Without this, no individual reel can land below the profile floor except through an all-reels slam. |
-| `requestSkip({ mode: 'quicken', speed? })` | The press that lands instead of cutting. Frees the same reels a slam press would and quickens them: tease over, delay cut, spin-out and bounce still played, optionally on a named profile. A `mode: 'slam'` press afterwards still cuts what is moving. `builder.skipMode('quicken')` makes it the default. |
+| `slamStop({ reels })` / `slamStop({ except })` | A per-reel slam. Those reels land now; everything else keeps running its phase chain to a natural landing. |
+| `setMinimumSpinTime(ms \| ms[])` | A per-reel `SpinPhase` floor, replacing the profile's single shared `minimumSpinTime`. Without this, no individual reel can land below the profile floor except through an all-reels slam. |
+| `requestSkip({ mode: 'quicken', speed? })` | The press that lands instead of cutting. Frees the same reels a slam press would and quickens them: the tease ends, the delay is cut, and the spin-out and bounce still play, optionally on a named profile. A `mode: 'slam'` press afterwards still cuts what is moving. `builder.skipMode('quicken')` makes it the default. |
 
 `skip:requested` / `skip:completed` carry `{ reels, partial }` so a listener can
 tell a partial slam from a round-ending one.
@@ -495,8 +496,8 @@ where to put it when the floor is derived rather than configured:
 
 Every lever above has a worked demo on [Skip & slam](/mechanics/skip/).
 
-There is a fairness reason to reach for `protect` rather than raising the floor
-on teasing spins: if a scatterless skip lands instantly but a teasing skip
-settles slower, the response time itself tells the player a feature is coming
-before the reels have landed. `protect` keeps the non-tease reels landing at the
-exact same instant either way, and puts the tell where it belongs. on screen.
+There is a fairness reason to use `protect` rather than raising the floor on
+teasing spins. If a skip with no scatters lands at once but a skip during a
+tease settles slower, the response time itself tells the player a feature is
+coming before the reels have landed. `protect` keeps the non-tease reels
+landing at the same instant either way, so the only tell is on screen.
