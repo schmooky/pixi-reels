@@ -1,58 +1,12 @@
 ---
-import { getCollection, getEntry, render } from 'astro:content';
-import Topic from '../../layouts/Topic.astro';
-import RecipeDemo from '../../components/RecipeDemo.astro';
-import RecipeImage from '../../components/RecipeImage.astro';
-import AssetCredit from '../../components/AssetCredit.astro';
-import ConceptPart from '../../components/topic/ConceptPart.astro';
-import Grid from '../../components/docs/Grid.astro';
-import Strip from '../../components/docs/Strip.astro';
-import Timeline from '../../components/docs/Timeline.astro';
-import Tree from '../../components/docs/Tree.astro';
-import { TOPICS, TOPIC_BY_SLUG } from '../../content/topics.ts';
-import { FAQ_BY_TOPIC } from '../../content/faq.ts';
-import { getTopicDemos, parseRecipeDemos } from '../../lib/topicDemos.ts';
-import { apiForTopic } from '../../lib/topicApi.ts';
-import { getRecipeCode } from '../../lib/recipeCode.ts';
+import { getCollection } from 'astro:content';
+import TopicPage from '../../components/topic/TopicPage.astro';
 
 export async function getStaticPaths() {
   const topics = await getCollection('topics');
-  return topics.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+  return topics.map((entry) => ({ params: { slug: entry.id } }));
 }
 
-const { entry } = Astro.props;
-const slug = entry.id;
-const demosEntry = await getEntry('recipes', slug);
-if (!demosEntry) {
-  throw new Error(`Topic "${slug}" has no demos body. Expected src/content/recipes/${slug}.mdx.`);
-}
-const { Content: Concept } = await render(entry);
-const { Content: Demos } = await render(demosEntry);
-
-const conceptBody = entry.body ?? '';
-const demosBody = demosEntry.body ?? '';
-const demos = getTopicDemos(slug);
-// The nudge guide embeds demos of its own; its source counts for the API list too.
-const conceptDemos = parseRecipeDemos(conceptBody);
-const api = apiForTopic({
-  markdown: [conceptBody, demosBody],
-  code: [...demos, ...conceptDemos].map((d) => getRecipeCode(d.code)),
-});
-const topic = TOPIC_BY_SLUG[slug];
-const questions = FAQ_BY_TOPIC[slug] ?? [];
-
-// The MDX bodies carry no imports: every component they use is supplied here,
-// so the same files round-trip through Keystatic.
-const components = { RecipeDemo, Image: RecipeImage, AssetCredit, ConceptPart, Grid, Strip, Timeline, Tree };
+const { slug } = Astro.params;
 ---
-<Topic
-  topic={topic}
-  index={TOPICS.indexOf(topic)}
-  demos={demos}
-  api={api}
-  questions={questions}
-  hasConcept={conceptBody.trim().length > 0}
->
-  <Fragment slot="concept"><Concept components={components} /></Fragment>
-  <Fragment slot="demos"><Demos components={components} /></Fragment>
-</Topic>
+<TopicPage slug={slug!} />

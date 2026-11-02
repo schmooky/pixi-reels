@@ -1,0 +1,19 @@
+---
+/**
+ * The umbrella URLs from 2.0 serve their topic page in place, canonical on
+ * /mechanics/<slug>/. A meta-refresh redirect would do for a reader, but the
+ * recipes-mount e2e opens these URLs and counts canvases right after load
+ * (see components/topic/TopicPage.astro). The retired single-recipe slugs
+ * under /recipes/ are plain redirects (src/content/redirects.mjs).
+ */
+import { getCollection } from 'astro:content';
+import TopicPage from '../../components/topic/TopicPage.astro';
+
+export async function getStaticPaths() {
+  const topics = await getCollection('topics');
+  return topics.map((entry) => ({ params: { slug: entry.id } }));
+}
+
+const { slug } = Astro.params;
+---
+<TopicPage slug={slug!} alias />

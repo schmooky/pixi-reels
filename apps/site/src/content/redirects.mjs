@@ -11,7 +11,16 @@
  * moved to /learn/, the hand-written API guides, glossary, migrations and the
  * changelog to /reference/. The architecture tour and the TypeDoc output kept
  * their URLs.
+ *
+ * Two kinds of old URL are not in this table because they serve their topic
+ * page in place (canonical on /mechanics/): the sixteen umbrella URLs
+ * `/recipes/<topic>/` (src/pages/recipes/[slug].astro) and `/guides/nudge/`
+ * (src/pages/guides/nudge.astro). The recipes-mount e2e opens them and counts
+ * canvases right after load, which a static meta-refresh redirect cannot meet.
  */
+
+/** Merged guides that keep serving their topic page in place instead of redirecting. */
+export const GUIDE_ALIASES = ['nudge'];
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse } from 'yaml';
@@ -133,8 +142,8 @@ export function buildRedirects(siteRoot) {
   out['/guides/spine-pins/'] = '/mechanics/wilds-and-pins/#concept';
 
   for (const t of topics) {
-    out[`/recipes/${t.slug}/`] = `/mechanics/${t.slug}/`;
     for (const g of t.guides) {
+      if (GUIDE_ALIASES.includes(g)) continue;
       out[`/guides/${g}/`] = `/mechanics/${t.slug}/#${conceptAnchor(t, g)}`;
     }
   }
