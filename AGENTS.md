@@ -19,7 +19,7 @@ The library builds to two entry points:
 - `pixi-reels`. core (reel set, phases, symbols, events, testing, debug).
 - `pixi-reels/spine`. Spine 2D symbols with the Bonbon animation vocabulary.
 
-Everything else. cheats and seeded RNG live in `packages/cheats/`; Spine loaders and symbol classes live in `apps/site/src/runtime/`. Both are reference code, copy-pasteable, **not library API**.
+Everything else. cheats and seeded RNG live in `packages/cheats/`; Spine loaders, symbol classes and the recipe contract live in `packages/kit/` (`@pixi-reels/kit`). Both are reference code, copy-pasteable, **not library API**.
 
 ---
 
@@ -63,9 +63,10 @@ pixi-reels/
 │   │   └── index.ts               the only public barrel
 │   └── tests/                     vitest (unit + integration)
 ├── apps/site/                     Astro + shadcn docs site
-│   ├── src/recipes/               ~130 live runnable demos (the /recipes route)
-│   ├── src/runtime/               symbol classes + asset loaders the recipes run on
+│   ├── src/recipes/               ~230 live runnable demos, each a real module (the /recipes route)
+│   ├── src/lib/recipeModule.ts    runs a recipe module from source; the one table of imports it may use
 │   └── public/                    prototype atlas + spine sets
+├── packages/kit/                  @pixi-reels/kit: symbol classes, asset kits, readout, the RecipeContext contract
 ├── packages/cheats/               CheatEngine + SeededRng (private, ADR 009)
 ├── tests/e2e/                     Playwright specs + the orientation-matrix fixture
 ├── docs/
