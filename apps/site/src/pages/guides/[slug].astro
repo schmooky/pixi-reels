@@ -1,0 +1,22 @@
+---
+/**
+ * The one guide that embedded live demos. Its prose is the Concept of the
+ * nudge topic now; the URL still serves that page in place because the
+ * recipes-mount e2e opens it (see components/topic/TopicPage.astro). Every
+ * other merged guide URL is a redirect (src/content/redirects.mjs), which
+ * is also where GUIDE_ALIASES names the slugs served here.
+ *
+ * A dynamic route rather than nudge.astro: scripts/build-llms.mjs lists
+ * every static .astro page under src/pages and would print this one as a
+ * page of its own, with no title.
+ */
+import { GUIDE_ALIASES } from '../../content/redirects.mjs';
+import TopicPage from '../../components/topic/TopicPage.astro';
+
+export function getStaticPaths() {
+  return GUIDE_ALIASES.map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+---
+<TopicPage slug={slug!} alias />
