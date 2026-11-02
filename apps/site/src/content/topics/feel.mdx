@@ -138,6 +138,12 @@ Every context also carries `speed` (the active profile's name), `profile`
 (the profile itself) and `mode` (`'standard'`, or `'cascade'` for a tumble
 and its refills).
 
+The default table the demos run adds four beats through `on`, for the moments
+the spin lifecycle does not cover: a shove on `nudge:start`, a tick on
+`column:set` when a symbol splits or a column changes, a rising sweep when a
+set gains cells or reels (`expand:stepAdded`, `reels:added`, `rows:added`),
+and a soft pop on `pin:placed`.
+
 <a id="a-hold--win-board"></a>
 
 ## A Hold & Win board
