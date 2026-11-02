@@ -22,31 +22,30 @@ guides:
 
 <ConceptPart title="Per-reel geometry" id="concept-per-reel-geometry" lede="Reels do not all need the same cell count. Static pyramids, the mask that clips them, and what cannot be combined.">
 
-Most slots are uniform: every reel, the same number of cells. You do not need
-this page for those.
+Most slots are uniform: every reel has the same number of cells. You do not
+need this part for those. Three other shapes exist:
 
-Three other shapes exist:
-
-| Shape | Changes when | Guide |
+| Shape | Changes when | Where |
 |---|---|---|
-| **Static pyramid** (`3-5-5-5-3`) | Never. Fixed at build. | below |
-| **MultiWays** | Every spin | [MultiWays](/mechanics/big-symbols/#concept-multiways) |
-| **Big symbols** (`N x M` blocks) | Never. One symbol covers many cells. | [Big symbols](/mechanics/big-symbols/#concept-big-symbols) |
+| Static pyramid (`3-5-5-5-3`) | Never. Fixed at build. | below |
+| MultiWays | Every spin | [MultiWays](/mechanics/big-symbols/#concept-multiways) |
+| Big symbols (`N x M` blocks) | Never. One symbol covers many cells. | [Big symbols](/mechanics/big-symbols/#concept-big-symbols) |
 
 <a id="what-cannot-combine"></a>
 
 ## What cannot combine
 
-Two pairs throw at `build()`:
+Two pairs throw at `build()`.
 
-- **MultiWays + pyramid.** `visibleCellsPerReel()` declares a fixed shape.
-  `multiways()` declares a server-driven one. Both claim to own the cell
-  count. Pick one.
-- **MultiWays + big symbols.** A 2x2 block cannot fit a reel that just
-  reshaped to 2 cells. Truncate it? Skip it? Shrink it? That is a game-design
-  call, so the engine refuses to guess.
+MultiWays and a pyramid: `visibleCellsPerReel()` declares a fixed shape and
+`multiways()` declares a server-driven one. Both claim the cell count. Pick
+one.
 
-Big symbols and pyramids DO work together. So do MultiWays and cascades
+MultiWays and big symbols: a 2x2 block cannot fit a reel that just reshaped
+to 2 cells. Whether to truncate it, skip it or shrink it is a game design
+call, so the engine refuses to guess.
+
+Big symbols and pyramids do work together. So do MultiWays and cascades
 (ADR 015).
 
 <a id="static-pyramid"></a>
@@ -62,39 +61,40 @@ new ReelSetBuilder()
   .build();
 ```
 
-Short reels get a `mainOffset` so they sit where `reelAnchor` says. The
-default mask clips each reel to its own box, so a short reel never leaks its
-buffer cells.
+Short reels get a main-axis offset so they sit where `reelAnchor` says. The
+default mask clips each reel to its own box, so a short reel never shows its
+buffer cells. `getCellBounds(reel, cell)` includes the offset for you.
 
-`getCellBounds(reel, cell)` folds the offset in for you.
-
--> Recipe: [Per-reel shape](/mechanics/big-symbols/#pyramid-shape)
+The [per-reel shape demo](/mechanics/big-symbols/#pyramid-shape) runs this.
 
 <a id="masks"></a>
 
 ## Masks
 
-The clip mask comes from a `MaskStrategy`. Two ship:
+The clip mask comes from a `MaskStrategy`. Two ship with the library:
 
 | Strategy | Clips | Costs you |
 |---|---|---|
-| `RectMaskStrategy` (default) | One rect per reel | A symbol spanning two reels gets cut at the gap between them |
-| `SharedRectMaskStrategy` | One rect over everything | On a pyramid, buffer cells past short reels show. The "pyramid peek" |
+| `RectMaskStrategy` (default) | One rect per reel | A symbol spanning two reels is cut at the gap between them |
+| `SharedRectMaskStrategy` | One rect over everything | On a pyramid, buffer cells past short reels show (the "pyramid peek") |
 
 The engine picks `SharedRectMaskStrategy` for you when big or unmasked
-symbols are registered AND the cross-axis gap is non-zero -- the case where
-per-reel rects would visibly slice a block. Override with `.maskStrategy()`.
+symbols are registered and the cross-axis gap is non-zero, which is the case
+where per-reel rects would visibly slice a block. Override it with
+`.maskStrategy()`.
 
 ```ts
 import { SharedRectMaskStrategy } from 'pixi-reels';
 builder.maskStrategy(new SharedRectMaskStrategy());
 ```
 
-Want a rounded frame or a hex grid? Implement `MaskStrategy` yourself. It
+For a rounded frame or a hex grid, implement `MaskStrategy` yourself. It
 takes one `MaskContext` and returns a `Graphics` filled with any shape Pixi
-can draw. Set `version = MASK_STRATEGY_VERSION` on it.
+can draw. Set `version = MASK_STRATEGY_VERSION` on it. The
+[masks page](/mechanics/masks/) has ready-made strategies for the common
+shapes.
 
-To see what is actually clipped:
+To see what is clipped:
 
 ```ts
 import { debugOverlay } from 'pixi-reels/debug'; // needs pixi-silk, a dev dependency
@@ -106,24 +106,30 @@ debugOverlay(reelSet, { layers: ['mask', 'cells', 'buffers'] });
 
 ## See also
 
-- [MultiWays](/mechanics/big-symbols/#concept-multiways) -- per-spin shape, AdjustPhase, pin migration
-- [Big symbols](/mechanics/big-symbols/#concept-big-symbols) -- `N x M` blocks
-- [`pyramid-shape`](/mechanics/big-symbols/#pyramid-shape) -- runnable jagged layout
-- [`cell-bounds`](/mechanics/cells-and-banners/#cell-bounds) -- overlays aligned to cells
+- [MultiWays](/mechanics/big-symbols/#concept-multiways): per-spin shape, the adjust phase, pin migration
+- [Big symbols](/mechanics/big-symbols/#concept-big-symbols): `N x M` blocks
+- [Per-reel shape demo](/mechanics/big-symbols/#pyramid-shape): a runnable jagged layout
+- [Cell bounds demo](/mechanics/cells-and-banners/#cell-bounds): overlays aligned to cells
 
 </ConceptPart>
 
-<ConceptPart title="Big symbols" id="concept-big-symbols" lede="A big symbol is a single symbol that visually occupies an N×M block of cells. Declared via SymbolData.size; server places the anchor cell only and the engine paints OCCUPIED across the rest. Includes block lookup, validation, and mask interaction.">
+<ConceptPart title="Big symbols" id="concept-big-symbols" lede="A big symbol is one symbol that covers an N x M block of cells. You declare it with SymbolData.size, the server places the anchor cell, and the engine fills the rest of the block. This part covers lookup, validation and how the mask interacts.">
 
-A "big symbol" is a single symbol that visually occupies a rectangular block of cells: a 2×2 bonus, a 3×3 giant, a 1×3 bar, a 2×4 banner. Declared at registration via `SymbolData.size`. The wire format is `ColumnTarget[]`: the server places the anchor cell and the engine paints OCCUPIED across the rest.
+A big symbol is one symbol that covers a rectangular block of cells: a 2x2
+bonus, a 3x3 giant, a 1x3 bar, a 2x4 banner. You declare it at registration
+with a `size` in its symbol data. The wire format does not change: the server
+places the symbol id in the anchor cell and the engine fills the rest of the
+block with a placeholder.
 
-For the broader picture (pyramid layouts, MultiWays, mutual exclusivity rules), start at the [Per-reel geometry](/mechanics/big-symbols/#concept-per-reel-geometry) overview.
+For pyramids, MultiWays and what cannot be combined, start at
+[Per-reel geometry](/mechanics/big-symbols/#concept-per-reel-geometry).
 
 <a id="declaration"></a>
 
 ## Declaration
 
-Register it like any other symbol. Add a `size: { reels, cells }` to its metadata:
+Register it like any other symbol and add a `size` with a reel count and a
+cell count to its metadata:
 
 ```ts
 .symbols((registry) => {
@@ -131,19 +137,22 @@ Register it like any other symbol. Add a `size: { reels, cells }` to its metadat
 })
 .symbolData({
   bonus: { weight: 0, zIndex: 5, size: { reels: 2, cells: 2 } },
-  //         ^^^^^^^^^ big symbols MUST have weight 0. random fill can't
-  //                   place blocks in v1, so a non-zero weight would
-  //                   silently never be picked. Builder throws otherwise.
+  //         ^^^^^^^^^ big symbols must have weight 0. Random fill cannot
+  //                   place blocks, so a non-zero weight would silently
+  //                   never be picked. The builder throws otherwise.
 })
 ```
 
-`zIndex: 5` is recipe convention. sets the anchor's z-index above 1×1 neighbors so it draws on top.
+The `zIndex: 5` is a convention in the recipes. It puts the anchor's z-index
+above its 1x1 neighbours so it draws on top.
 
 <a id="how-the-wire-format-stays-unchanged"></a>
 
 ## How the wire format stays unchanged
 
-The server places the symbol id at the **anchor cell** of the block only; every other cell of the block can hold any string, since the engine overwrites it with `OCCUPIED_SENTINEL`.
+The server puts the symbol id in the anchor cell of the block only. Every
+other cell of the block can hold any string, because the engine overwrites it
+with the occupied placeholder.
 
 ```ts
 // 5x4 grid, 2x2 bonus anchored at (reel=2, cell=1):
@@ -156,58 +165,70 @@ setResult([
 ]);
 ```
 
-Internally:
-
-1. **Cross-reel coordinator** runs in `SpinController` ahead of per-reel frame building. It reads the result grid, finds big-symbol anchors, validates block fit, and paints `OCCUPIED_SENTINEL` across the rest of the block.
-2. **At land**, the anchor symbol is sized to span the whole block, gaps included: `(w*cellW + (w-1)*gapX, h*cellH + (h-1)*gapY)`. Non-anchor cells get an invisible `OccupiedStub` (a zero-alpha placeholder). the anchor's view visually covers them.
-3. **Public API** never sees the sentinel. Both `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED. same-reel and cross-reel. to the anchor's id. Iterating per reel and the grid surface return identical data.
+Internally, a cross-reel coordinator runs in the spin controller before the
+per-reel frames are built. It reads the result grid, finds the anchors,
+checks that each block fits, and paints the placeholder across the rest of
+the block. At landing, the anchor symbol is sized to span the whole block,
+gaps included: `w` cells wide plus `w - 1` gaps, `h` cells tall plus `h - 1`
+gaps. The non-anchor cells get an invisible stub, and the anchor's view
+covers them. The public API never shows the placeholder. Both
+`Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve it to the
+anchor's id, on the same reel and across reels, so the two surfaces return
+identical data.
 
 <a id="block-lookup"></a>
 
 ## Block lookup
 
-Two related APIs:
-
-- **`reelSet.getSymbolFootprint(reel, cell)`** -- logical info: `{ anchor, size }`. For evaluation and event payloads.
-- **`reelSet.getBlockBounds(reel, cell)`** -- pixel rect covering the whole block. For overlays.
+Two related calls. `getSymbolFootprint` returns the logical block (the anchor
+cell and the size), for evaluation and event payloads. `getBlockBounds`
+returns the pixel rect covering the whole block, for overlays.
 
 ```ts
 const fp = reelSet.getSymbolFootprint(reel, cell);
-// -> { anchor: { reel: 2, cell: 1 }, size: { reels: 2, cells: 2 } }
+// { anchor: { reel: 2, cell: 1 }, size: { reels: 2, cells: 2 } }
 
 const rect = reelSet.getBlockBounds(reel, cell);
-// → { x, y, width: 2*cellW + symbolGap.x, height: 2*cellH + symbolGap.y }
+// { x, y, width: 2*cellW + symbolGap.x, height: 2*cellH + symbolGap.y }
 gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
 ```
 
-Pass any cell of a block. anchor or non-anchor. both APIs return the same data. For 1×1 cells, `getBlockBounds` is equivalent to `getCellBounds`.
+Pass any cell of the block, anchor or not, and both return the same data. For
+a 1x1 cell, `getBlockBounds` returns the same rect as `getCellBounds`.
 
 <a id="validation"></a>
 
 ## Validation
 
-During a spin, the engine throws fail-fast at `setResult()` if a block doesn't fit:
+During a spin, `setResult()` throws at once if a block does not fit:
 
 - `"big symbol 'giant' (3x3) at (reel=4, cell=2) exceeds reel count 6."`
 - `"big symbol 'tallBar' (1x3) at (reel=0, cell=3) extends past the bottom of the strip on reel 0 (anchor cell + h = 6 > visibleCells + bufferEnd = 4)."`
 
-The vertical check is against the **full strip** (visible + bufferEnd), not just visible. Anchors are allowed to land partially, with the block extending into bufferStart or bufferEnd.
+The vertical check runs against the full strip, visible cells plus the end
+buffer, not the visible window alone. An anchor may land partially, with the
+block extending into either buffer.
 
-A `setResult()` with no spin in flight returns early, so it validates nothing.
+A `setResult()` with no spin in flight returns early and validates nothing.
 
-Pinning the **non-anchor** cell of a big symbol is not supported, but it does not throw: the cross-reel coordinator repaints that cell as OCCUPIED at the next `setResult()` and the pin quietly disappears. Pin the anchor instead, which covers the block visually because the anchor's view spans it. (`setSymbolAt()` on a non-anchor cell *does* throw.)
+Pinning a non-anchor cell of a big symbol is not supported, but it does not
+throw. The coordinator repaints that cell as occupied at the next
+`setResult()` and the pin quietly disappears. Pin the anchor instead. Its view
+spans the block, so the whole block looks pinned. `setSymbolAt()` on a
+non-anchor cell does throw.
 
-The **build-time** check refuses big symbols with non-zero weight (`big symbol 'bonus' (size 2x2) must have weight 0. ...`). Random fill can't place blocks, so non-zero weight would silently never be picked.
+The build-time check refuses a big symbol with a non-zero weight, with a
+message that starts `big symbol 'bonus' (size 2x2) must have weight 0`.
+Random fill cannot place blocks, so a non-zero weight would never be picked.
 
 <a id="partial-landings-anchors-in-a-buffer"></a>
 
 ## Partial landings (anchors in a buffer)
 
-An anchor does not have to be in a visible cell.
-
-Put a tall block's anchor in `bufferStart` and only its tail shows, at the top
-of the window. Anchor it at the last visible cell and its head shows while the
-rest spills into `bufferEnd`. Both are legal. Both look deliberate.
+An anchor does not have to be in a visible cell. Put a tall block's anchor in
+the start buffer and only its tail shows, at the top of the window. Anchor it
+at the last visible cell and its head shows while the rest spills into the
+end buffer. Both are legal and both look deliberate.
 
 Use the explicit `ColumnTarget` form to target buffer slots:
 
@@ -220,23 +241,39 @@ reelSet.setResult([
 ]);
 ```
 
-`getSymbolFootprint(reel, 0)` returns `anchor.cell = -2`. Negative, because the anchor sits before the window. `getBlockBounds(reel, 0)` gives you the WHOLE block's rect, off-screen part included -- the mask does the clipping, not the maths. See [Land a big symbol partially in buffer](/mechanics/big-symbols/#big-symbol-partial-land) for the runnable demo.
+For that reel, `getSymbolFootprint(reel, 0)` reports the anchor at cell -2.
+The index is negative because the anchor sits before the window.
+`getBlockBounds(reel, 0)` returns the whole block's rect, off-screen part
+included. The mask does the clipping, not the maths. The
+[partial landing demo](/mechanics/big-symbols/#big-symbol-partial-land) runs
+this.
 
 <a id="mask-interaction-sharedrectmaskstrategy"></a>
 
 ## Mask interaction (`SharedRectMaskStrategy`)
 
-If `symbolGap.x > 0`, the **default per-reel mask** has horizontal gaps between reel columns. A big symbol's anchor view extends across multiple reels' worth of width, but the per-reel mask **clips it at every column gap**. visible as transparent vertical strips through the symbol.
+With a horizontal gap between reels, the default per-reel mask has gaps
+between the columns. A big symbol's anchor view extends across several reels,
+and the per-reel mask clips it at every column gap, which shows as
+transparent vertical strips through the symbol.
 
-The engine **auto-picks `SharedRectMaskStrategy`** when:
+The engine picks `SharedRectMaskStrategy` on its own when all three hold:
 
-1. At least one big symbol **wider than one reel** is registered (`SymbolData.size.reels > 1`), **or any symbol sets `unmask: true`**, AND
-2. the **cross-axis** gap is above 0 -- `symbolGap.x` on a vertical set, `symbolGap.y` on a horizontal one, AND
+1. At least one registered big symbol is wider than one reel, or any symbol
+   sets `unmask: true`.
+2. The cross-axis gap is above 0: `symbolGap.x` on a vertical set,
+   `symbolGap.y` on a horizontal one.
 3. No explicit `.maskStrategy(...)` call was made.
 
-It logs a `console.info(...)` so you can see what happened. Pass `.maskStrategy(...)` to override.
+It reports the choice on the notice channel, and `.maskStrategy(...)`
+overrides it.
 
-A stack one reel wide (`size: { reels: 1, cells: 3 }`) never crosses a gap, so it keeps the per-reel mask: a reel that `setColumn()` or `splitSymbol()` makes taller or shorter than the rest needs its own mask, or one box shows the buffer cells past the shorter reels. Art that bleeds past its cell into the gap is clipped there; pass `.maskStrategy(new SharedRectMaskStrategy())` to keep one box.
+A stack one reel wide (`size: { reels: 1, cells: 3 }`) never crosses a gap,
+so it keeps the per-reel mask. That also suits a reel that `setColumn()` or
+`splitSymbol()` makes taller or shorter than the rest, which needs its own
+mask or one box would show the buffer cells past the shorter reels. Art that
+bleeds past its cell into the gap is clipped there. Pass the shared strategy
+yourself to keep one box.
 
 ```ts
 import { SharedRectMaskStrategy } from 'pixi-reels';
@@ -248,16 +285,21 @@ builder
 ```
 
 `SharedRectMaskStrategy` draws one rect over the whole set. On a pyramid that
-means buffer cells past the ends of short reels become visible -- the "pyramid
-peek". Production slots cover it with frame art.
+means the buffer cells past the ends of short reels become visible, the
+"pyramid peek". Production slots cover it with frame art.
 
 <a id="zindex-layering"></a>
 
 ## zIndex layering
 
-When the formula below is not the order you want -- a row-dominant grading
-where the symbol in the bottom row always fronts the one above it, whatever
-its type -- hand the engine a resolver and it stops computing:
+By default an anchor renders at `symbolData.zIndex * 100 + arrayIndex`, about
+500 with `zIndex: 5`. The 100x multiplier leaves room for per-cell stacking
+inside one layer, so cells at the larger coordinate still draw in front of
+their neighbours.
+
+When that is not the order you want, for example a row-dominant grading where
+the symbol in the bottom row always fronts the one above it whatever its
+type, hand the engine a resolver and it stops computing:
 
 ```ts
 .symbolZIndex((ctx) => {
@@ -269,28 +311,27 @@ its type -- hand the engine a resolver and it stops computing:
 })
 ```
 
-The resolver is asked with `symbolId`, `symbolData`, `reelIndex`, `reelCount`,
-`arrayIndex`, `visibleCell` (`null` for a buffer slot), `visibleCells`,
-`atRest` and `defaultZIndex` -- what the engine would have used -- and re-asked
-whenever a symbol's id, cell, reel shape or rest state changes, so its answer
-is never overwritten. Cross-reel order only exists for symbols that share a
-container: an `unmask: true` symbol at rest sits in the viewport-wide
-`unmaskedContainer` with every other lifted symbol; a masked one is bounded by
-its reel container's own `zIndex` (`reelStacking`). That is why the example
-grades at rest only and keeps the engine's order in motion. Keep every value
-below `Z_INDEX_BUDGET.pinOverlay`.
+The resolver receives the symbol id and data, the reel index and count, the
+array index, the visible cell (`null` for a buffer slot), the visible cell
+count, whether the reel is at rest, and the z-index the engine would have
+used. It is asked again whenever a symbol's id, cell, reel shape or rest
+state changes, so its answer is never overwritten. Cross-reel order only
+exists for symbols that share a container: an `unmask: true` symbol at rest
+sits in the viewport-wide unmasked container with every other lifted symbol,
+while a masked one is bounded by its reel container's own z-index
+(`reelStacking`). That is why the example grades at rest only and keeps the
+engine's order in motion. Keep every value below `Z_INDEX_BUDGET.pinOverlay`.
 
-Anchors render at `symbolData.zIndex * 100 + arrayIndex` -- about 500 with
-`zIndex: 5`. The 100x multiplier leaves room for per-cell stacking inside one
-layer, so cells at the larger coordinate still draw in front of their
-neighbours.
-
-Pin overlays render at zIndex `10000` (`Z_INDEX_BUDGET.pinOverlay`; `Z_INDEX_BUDGET.symbolLayer` is the 100x). So a big symbol that's also pinned (`reelSet.pin(anchorReel, anchorCell, id, ...)`) gets its overlay rendered above the cell. The overlay is sized to a **single cell**, so while the reel spins it does not cover the rest of the block; the block only spans again once the frame commits at land.
+Pin overlays render at z-index 10000 (`Z_INDEX_BUDGET.pinOverlay`;
+`Z_INDEX_BUDGET.symbolLayer` is the 100x). So a big symbol that is also
+pinned at its anchor gets its overlay above the cell. The overlay is sized to
+a single cell, so while the reel spins it does not cover the rest of the
+block. The block spans again once the frame commits at landing.
 
 | Layer | zIndex | Source |
 |---|---|---|
-| 1×1 symbol, default | `0 * 100 + arrayIndex` | `symbolData.zIndex ?? 0` |
-| 1×1 symbol, elevated | `1 * 100 + arrayIndex` | `symbolData.zIndex: 1` |
+| 1x1 symbol, default | `0 * 100 + arrayIndex` | `symbolData.zIndex ?? 0` |
+| 1x1 symbol, elevated | `1 * 100 + arrayIndex` | `symbolData.zIndex: 1` |
 | Big-symbol anchor (recipe convention) | `5 * 100 + arrayIndex` (~500) | `symbolData.zIndex: 5` |
 | Pin overlay during spin | `10000` | internal (engine-managed) |
 | Spotlight (winning symbols) | own container | `viewport.spotlightContainer` |
@@ -299,31 +340,32 @@ Pin overlays render at zIndex `10000` (`Z_INDEX_BUDGET.pinOverlay`; `Z_INDEX_BUD
 
 ## Constraints
 
-- **Weight 0 required.** Random fill cannot place blocks; the builder throws on non-zero weight. Server places via `setResult()`.
-- **Big symbols only at landing.** During the spin, every cell is 1×1; the block layout commits at stop.
-- **No random-fill big symbols.** Random fill has no footprint awareness; a future frame middleware could place blocks during scroll.
-- **Big symbols + MultiWays** is rejected at build. See the [Per-reel geometry](/mechanics/big-symbols/#concept-per-reel-geometry) constraint matrix.
+- Weight 0 is required. Random fill cannot place blocks and the builder
+  throws on a non-zero weight. The server places them through `setResult()`.
+- Big symbols exist only at landing. During the spin every cell is 1x1. The
+  block layout commits at the stop.
+- Big symbols and MultiWays are rejected at build. See the
+  [constraint table](/mechanics/big-symbols/#concept-per-reel-geometry).
 
 ## See also
 
-- [Guide: Per-reel geometry](/mechanics/big-symbols/#concept-per-reel-geometry). overview + constraint matrix + mask strategy
-- [Guide: MultiWays](/mechanics/big-symbols/#concept-multiways). mutually exclusive with big symbols
-- [`big-symbols-mxn`](/mechanics/big-symbols/#big-symbols-mxn) recipe. every shape: 1×3, 2×2, 3×3, 2×4
-- [`big-symbol-partial-land`](/mechanics/big-symbols/#big-symbol-partial-land) recipe. tail-visible landings via `bufferStart`
-- [`big-symbol-held-respin`](/mechanics/big-symbols/#big-symbol-held-respin) recipe. nudge to reveal, then hold across a respin
-- [`nudge-big-symbol`](/mechanics/nudge/#nudge-big-symbol) recipe. nudge a block through visible + buffer
-- [`card-symbol-debug`](/mechanics/symbols/#card-symbol-debug) recipe. the debug `CardSymbol` used in these recipes
-- [`cell-bounds`](/mechanics/cells-and-banners/#cell-bounds) recipe. pixel rects for any cell
+- [Per-reel geometry](/mechanics/big-symbols/#concept-per-reel-geometry): overview, constraints, mask strategy
+- [MultiWays](/mechanics/big-symbols/#concept-multiways): cannot be combined with big symbols
+- [Every shape](/mechanics/big-symbols/#big-symbols-mxn): 1x3, 2x2, 3x3, 2x4
+- [Partial landing](/mechanics/big-symbols/#big-symbol-partial-land): tail-visible landings through the start buffer
+- [Held respin](/mechanics/big-symbols/#big-symbol-held-respin): nudge to reveal, then hold across a respin
+- [Nudge a big symbol](/mechanics/nudge/#nudge-big-symbol): a block through visible and buffer cells
+- [CardSymbol](/mechanics/symbols/#card-symbol-debug): the debug symbol these demos use
+- [Cell bounds](/mechanics/cells-and-banners/#cell-bounds): pixel rects for any cell
 
 </ConceptPart>
 
-<ConceptPart title="MultiWays" id="concept-multiways" lede="Every reel can land on a different cell count, every spin. Cell size is derived from a fixed reel extent, and pins migrate via originCell.">
+<ConceptPart title="MultiWays" id="concept-multiways" lede="Every reel can land on a different cell count, every spin. The cell size comes from a fixed reel extent, and pins migrate by their origin cell.">
 
-Each reel lands on a different cell count. Every spin.
-
-The reel's LENGTH is fixed. The cell size is derived:
-`reelExtent / visibleCells[i]`. So a 2-cell reel has big cells, a 7-cell reel
-has small ones.
+In a MultiWays slot each reel lands on a different cell count, every spin.
+The reel's length is fixed and the cell size is derived from it: the extent
+divided by that reel's cell count. A 2-cell reel has big cells and a 7-cell
+reel has small ones.
 
 <a id="the-whole-mechanic"></a>
 
@@ -335,11 +377,11 @@ const reelSet = new ReelSetBuilder()
   .multiways({ minCells: 2, maxCells: 7, reelExtent: 480 })
   .pinMigrationDuration(300)         // ms for the pin-overlay tween. 0 = snap
   .pinMigrationEase('power2.inOut')  // any GSAP ease
-  .symbolSize(68, 68)                // the SPIN-time cell size
+  .symbolSize(68, 68)                // the spin-time cell size
   .build();
 
 const promise = reelSet.spin();
-reelSet.setShape([3, 5, 7, 4, 6, 2]);  // BEFORE setResult
+reelSet.setShape([3, 5, 7, 4, 6, 2]);  // before setResult
 reelSet.setResult(serverGrid);          // serverGrid[i].visible.length === shape[i]
 await promise;
 ```
@@ -348,26 +390,28 @@ await promise;
 
 ## Order matters
 
-1. `spin()` -- reels scroll at the previous shape's cell size.
-2. `setShape(cellsPerReel)` -- records the target, emits `shape:changed`, then
-   migrates pins (`pin:migrated`). **Before `setResult`.** After it, the engine throws:
-   frames are already cached by then.
-3. `setResult(grid)` -- `grid[i].visible.length` must equal `shape[i]`.
-4. Reshape, between SPIN and STOP. Per reel: `adjust:start`, commit the
-   geometry, refresh pin overlays, `adjust:complete`.
-5. `StopPhase` lands at the new shape.
+1. `spin()`: the reels scroll at the previous shape's cell size.
+2. `setShape(cellsPerReel)`: records the target, emits `shape:changed`, then
+   migrates pins (`pin:migrated`). This must come before `setResult`. After
+   it the engine throws, because the frames are already cached by then.
+3. `setResult(grid)`: each column's visible length must equal that reel's
+   entry in the shape.
+4. The reshape runs between the spin and stop phases. Per reel it fires
+   `adjust:start`, commits the geometry, refreshes pin overlays, and fires
+   `adjust:complete`.
+5. The stop phase lands at the new shape.
 
 <a id="pin-migration"></a>
 
 ## Pin migration
 
-A pin remembers where it started (`originCell`). Every reshape moves it
-according to its policy, and fires `pin:migrated` with
-`{ fromCell, toCell, clamped, reelIndex }`.
+A pin remembers where it started, its `originCell`. Every reshape moves it
+according to its policy and fires `pin:migrated` with the old cell, the new
+cell, whether it was clamped, and the reel index.
 
 <a id="origin--the-default-clamp-then-restore"></a>
 
-### `'origin'` -- the default. Clamp, then restore.
+### `'origin'`, the default: clamp, then restore
 
 A pin squeezed down by a shrink climbs back when the reel grows again. This
 is what a sticky wild should do.
@@ -376,21 +420,21 @@ is what a sticky wild should do.
 |---|---|---|---|---|
 | 1 | 5 | 4 | 4 | no |
 | 2 | 3 | 4 | 2 | yes |
-| 3 | 7 | 4 | 4 | **restored** |
+| 3 | 7 | 4 | 4 | restored |
 | 4 | 4 | 4 | 3 | yes |
 
 <a id="frozen--clamp-and-stay"></a>
 
-### `'frozen'` -- clamp, and stay.
+### `'frozen'`: clamp, and stay
 
-No restoring. Each clamp rewrites `originCell`, so the pin never climbs back.
-Right for walking wilds, or anything where where-it-is-now is the truth and
-the old position is history.
+No restoring. Each clamp rewrites the origin cell, so the pin never climbs
+back. Use it for walking wilds, or anything where the current position is
+the truth and the old position is history.
 
 | Spin | Cells on reel 2 | originCell before | Lands at | originCell after |
 |---|---|---|---|---|
 | 1 | 5 | 4 | 4 | 4 |
-| 2 | 3 | 4 | 2 (clamped) | **2** |
+| 2 | 3 | 4 | 2 (clamped) | 2 |
 | 3 | 7 | 2 | 2 | 2 |
 | 4 | 4 | 2 | 2 | 2 |
 
@@ -402,65 +446,65 @@ reelSet.pin(reel, cell, id, { migration: 'frozen' });
 
 ## What animates, and what does not
 
-`pinMigrationDuration` and `pinMigrationEase` move **pin overlays only**.
+`pinMigrationDuration` and `pinMigrationEase` move pin overlays only. The
+cells underneath snap. They have to, because the reel is still spinning at
+full speed during the reshape, and tweening a cell would fight the motion
+layer for the same coordinate.
 
-The cells underneath snap. They have to: the reel is still spinning at full
-speed during the reshape, and tweening a cell would fight the motion layer
-for the same coordinate.
+With no pins on a reel, no tween is built. `adjust:start` and
+`adjust:complete` still fire around the reshape, because they come from the
+reshape step and not from the tween. If nothing changed at all, nothing
+fires.
 
-No pins on a reel? No tween is built. `adjust:start` and `adjust:complete`
-still fire around the reshape, because they come from the reshape step, not
-the tween. Nothing changed at all? Nothing fires.
-
-`skipSpin()` bypasses the tween. Slam means now.
+`skipSpin()` bypasses the tween. A slam means now.
 
 <a id="events-only-multiways-fires"></a>
 
 ## Events only MultiWays fires
 
-- `shape:changed` -- `setShape()` accepted a target
-- `adjust:start` / `adjust:complete` -- per reel, around the reshape
-- `pin:migrated` -- a pin moved because the shape changed
+- `shape:changed`: `setShape()` accepted a target
+- `adjust:start` / `adjust:complete`: per reel, around the reshape
+- `pin:migrated`: a pin moved because the shape changed
 
 <a id="limits"></a>
 
 ## Limits
 
-- **No big symbols.** A 2x2 cannot fit a reel that reshaped to 2 cells.
-  Throws at `build()`.
-- **No pyramid.** `visibleCellsPerReel()` and `multiways()` both claim the
-  cell count. Throws at `build()`.
-- **`reelExtent` is fixed.** Change it, rebuild.
+- No big symbols. A 2x2 cannot fit a reel that reshaped to 2 cells, so
+  `build()` throws.
+- No pyramid. `visibleCellsPerReel()` and `multiways()` both claim the cell
+  count, so `build()` throws.
+- `reelExtent` is fixed. To change it, rebuild.
 
-Cascades DO work with MultiWays (ADR 015). See
-[multiways-cascade](/mechanics/big-symbols/#multiways-cascade).
+Cascades do work with MultiWays (ADR 015). See the
+[MultiWays cascade demo](/mechanics/big-symbols/#multiways-cascade).
 
 ## See also
 
-- [Per-reel geometry](/mechanics/big-symbols/#concept-per-reel-geometry) -- the overview
-- [Big symbols](/mechanics/big-symbols/#concept-big-symbols) -- the thing you cannot combine with this
-- [`multiways`](/mechanics/big-symbols/#multiways) -- basic per-spin reshape
-- [`multiways-cascade`](/mechanics/big-symbols/#multiways-cascade) -- reshape plus tumble
-- [`sticky-wild-multiways`](/mechanics/big-symbols/#sticky-wild-multiways) -- pin migration in action
+- [Per-reel geometry](/mechanics/big-symbols/#concept-per-reel-geometry): the overview
+- [Big symbols](/mechanics/big-symbols/#concept-big-symbols): what cannot be combined with this
+- [MultiWays demo](/mechanics/big-symbols/#multiways): the basic per-spin reshape
+- [MultiWays cascade](/mechanics/big-symbols/#multiways-cascade): reshape plus tumble
+- [Sticky wild on MultiWays](/mechanics/big-symbols/#sticky-wild-multiways): pin migration running
 
 </ConceptPart>
 
-<ConceptPart title="Buffer indexing" id="concept-buffer-indexing" lede="How ColumnTarget indices map to cells in initialFrame and setResult. Visible cells, buffer start, buffer end.">
+<ConceptPart title="Buffer indexing" id="concept-buffer-indexing" lede="How ColumnTarget indices map to cells in initialFrame and setResult: visible cells, buffer start, buffer end.">
 
-A reel is longer than what you see. `ColumnTarget` addresses the whole thing.
+A reel is longer than what you see. `ColumnTarget` addresses the whole
+thing.
 
 <a id="why-buffers-exist"></a>
 
 ## Why buffers exist
 
 Every reel keeps a few hidden cells past each end of the visible window.
+They hold the next symbol about to wrap onto the strip. They scroll through
+view during a spin, so the motion looks continuous. And they let a win
+animation pan past the edge without showing bare strip.
 
-They earn their keep three ways. They hold the next symbol about to wrap onto
-the strip. They scroll through view during a spin, so motion looks continuous.
-And they let a win animation pan past the edge without showing bare strip.
-
-Set the count with `.bufferSymbols(n)`. Most slots use 1 or 2. Above 2 is
-unusual.
+Set the count with `.bufferSymbols(n)`. Most slots use 1 or 2. More than 2
+is unusual.
 
 <a id="columntarget"></a>
 
@@ -475,18 +519,18 @@ unusual.
   ]}
 />
 
-One object per reel. Hand an array of them to `ReelSet.setResult` or
-`ReelSetBuilder.initialFrame`. Same shape, both places.
+One object per reel. Hand an array of them to `setResult` on the reel set or
+to `initialFrame` on the builder. Both take the same shape.
 
-**Start is the smaller screen coordinate.** Above on a vertical set, left on a
-horizontal one. It does NOT follow travel direction. See
+Start is the smaller screen coordinate: above on a vertical set, left on a
+horizontal one. It does not follow the travel direction. See
 [Orientation & direction](/mechanics/orientation-and-direction/#concept).
 
 <a id="which-index-is-which-cell"></a>
 
 ## Which index is which cell
 
-One reel. `bufferSymbols(2)`, `visibleCells(3)`. Seven cells total:
+One reel, with `bufferSymbols(2)` and `visibleCells(3)`, has seven cells:
 
 <Strip
   headers={['ColumnTarget field', 'Cell', 'Player sees it at rest?']}
@@ -501,7 +545,8 @@ One reel. `bufferSymbols(2)`, `visibleCells(3)`. Seven cells total:
   ]}
 />
 
-Buffers hide behind the mask at rest. They flash through during a spin.
+The buffers hide behind the mask at rest and pass through view during a
+spin.
 
 <a id="example"></a>
 
@@ -520,19 +565,18 @@ reelSet.setResult(grid);
 builder.initialFrame(grid);
 ```
 
-`bufferStart[0]` is the slot nearest the visible window. `[1]` is one further
-out. Anything past `bufferSymbols` is dropped -- and the engine throws rather
-than dropping it silently, so you find out at the call, not three spins later.
+Index 0 of a buffer array is the slot nearest the visible window and index 1
+is one further out. An entry past the configured buffer count throws, rather
+than being dropped, so you find out at the call and not three spins later.
 
 <a id="cells-you-skip"></a>
 
 ## Cells you skip
 
-Anything you leave unset gets a random symbol.
-
-Buffer cells are filled in the same pass. By default they draw from the same
-weight table as the strip, but they do not have to. A pool with
-`slots: 'buffer'` narrows the off-window cells only:
+Anything you leave unset gets a random symbol. Buffer cells are filled in the
+same pass. By default they draw from the same weight table as the strip, but
+they do not have to. A pool with `slots: 'buffer'` narrows the off-window
+cells only:
 
 ```ts
 // A coin may blur past mid-spin, but must never park half-visible
@@ -550,31 +594,32 @@ The two ends take their own pools, under the names this page already uses:
 reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'bufferStart' });
 ```
 
-Add `{ reel: n }` to any of them for one reel only -- `{ reel: 2, slots:
+Add `{ reel: n }` to any of them for one reel only, so `{ reel: 2, slots:
 'bufferEnd' }` is one end of one reel. Weights work the same way as
-exclusions: `{ weights: { COIN: 0 } }` bans it just as surely. Each layer
-stacks on the wider ones: what the strip may not show, no buffer cell may
-show either, and what a `'buffer'` pool bans is banned at both ends whatever
-the side pools say. An explicit `bufferStart` / `bufferEnd` target is the game
+exclusions: a weight of 0 bans a symbol as surely as `exclude` does. Each
+layer stacks on the wider ones. What the strip may not show, no buffer cell
+may show either, and what a `'buffer'` pool bans is banned at both ends
+whatever the side pools say. An explicit buffer entry in a target is the game
 speaking and always wins over a pool.
 
 <a id="big-symbols-in-buffers"></a>
 
 ## Big symbols in buffers
 
-A big-symbol anchor (`size.cells > 1`) can sit in `bufferStart[i]`, or in a
-visible cell whose block spills into `bufferEnd`. Pass the anchor. The
-coordinator paints `OCCUPIED` across the rest of the block for you.
+A big-symbol anchor with more than one cell can sit in the start buffer, or
+in a visible cell whose block spills into the end buffer. Pass the anchor and
+the coordinator fills the rest of the block for you.
 
-The rule: the block must fit on the STRIP, not inside the visible window.
-`anchor + cells <= visibleCells + bufferEnd`. That is what makes a
-tail-visible block possible -- most of it hidden, one cell peeking in.
+The rule is that the block must fit on the strip, not inside the visible
+window: the anchor cell plus the block's height may not exceed the visible
+cells plus the end buffer. That is what makes a tail-visible block possible,
+most of it hidden and one cell peeking in.
 
 ## See also
 
-- [Peek symbol from the buffer](/mechanics/cascade/#peek-from-above) -- smallest runnable version
-- [Anticipation teaser](/mechanics/anticipation/#anticipation-teaser) -- buffer plus `setAnticipation`
-- [Land a big symbol partially in buffer](/mechanics/big-symbols/#big-symbol-partial-land) -- tail-visible wild
-- [API: ReelSet](/reference/api-reelset/) -- the full `setResult` signature
+- [Peek symbol from the buffer](/mechanics/cascade/#peek-from-above): the smallest runnable version
+- [Anticipation teaser](/mechanics/anticipation/#anticipation-teaser): a buffer symbol plus `setAnticipation`
+- [Partial landing](/mechanics/big-symbols/#big-symbol-partial-land): a tail-visible wild
+- [ReelSet reference](/reference/api-reelset/): the full `setResult` signature
 
 </ConceptPart>

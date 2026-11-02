@@ -19,13 +19,18 @@ guides:
 
 <ConceptPart title="Infinity reels" lede="The base spin lands, then the board grows sideways a reel at a time, as far as the server's result says. One expand() call per round, and removeReels() to shrink back. Rows can grow too.">
 
-Infinity reels: the base spin lands, and while the win keeps going the board grows sideways, a reel at a time, as far as the server's result says. In pixi-reels that is one call per round: `reelSet.expand()`. Live demos are on the [infinity reels recipe page](/mechanics/infinity-reels/).
+In an infinity reels slot the base spin lands, and while the win keeps going
+the board grows sideways, a reel at a time, for as long as the server's
+result says. In pixi-reels that is one call per round, `expand()`. The
+demos are further down this page.
 
 <a id="1-the-servers-result"></a>
 
-## 1. The server's result
+## The server's result
 
-The server decides everything: the base board and every reel the board grows by, in order. Each reel is one `ColumnTarget`, the same shape `setResult()` takes.
+The server decides everything: the base board and every reel the board
+grows by, in order. Each reel is one `ColumnTarget`, the same shape
+`setResult()` takes.
 
 ```ts
 interface InfinityResult {
@@ -36,7 +41,7 @@ interface InfinityResult {
 
 <a id="2-spin-the-base-then-expand"></a>
 
-## 2. Spin the base, then expand
+## Spin the base, then expand
 
 ```ts
 const spin = reelSet.spin();
@@ -52,23 +57,30 @@ await reelSet.expand({
 });
 ```
 
-Each step adds its reels, spins only them with every earlier reel held, and lands them on their columns. `expand()` awaits your hooks, so a camera pan or a win readout plays before the next step. It validates the columns before the first reel is added, so a bad result throws on an untouched board.
+Each step adds its reels, spins only those with every earlier reel held, and
+lands them on their columns. The call awaits your hooks, so a camera pan or a
+win readout plays before the next step. It validates every column before the
+first reel is added, so a bad result throws on an untouched board.
 
 <a id="3-next-round-shrink-back"></a>
 
-## 3. Next round: shrink back
+## Next round: shrink back
 
 ```ts
 reelSet.removeReels(); // back to the reels the builder made; a no-op when the board did not grow
 ```
 
-That is the whole mechanic. The rest is choices.
+That is the whole mechanic. The rest of this page is choices.
 
 <a id="rows-can-grow-too"></a>
 
 ## Rows can grow too
 
-`addRows(count, { cells })` makes every reel `count` rows taller, at its own cell size, and the viewport and mask grow with it. `cells` is what the new rows show, one array per reel, from the server. Inside an expansion, grow the rows between steps, in `onStepLanded`; the reels after that arrive at the new height. `removeRows()` goes back to the rows the builder made.
+`addRows(count, { cells })` makes every reel `count` rows taller at its own
+cell size, and the viewport and mask grow with it. The `cells` option is what
+the new rows show, one array per reel, from the server. Inside an expansion,
+grow the rows between steps in `onStepLanded`. The reels after that arrive at
+the new height. `removeRows()` goes back to the rows the builder made.
 
 ```ts
 await reelSet.expand({
@@ -83,31 +95,55 @@ reelSet.removeReels();
 reelSet.removeRows();
 ```
 
-On MultiWays the rows are each reel's shape: an `expand()` column's `visible.length` is that reel's cell count, inside the fixed reel height.
+On MultiWays the rows are each reel's shape. The length of a column's
+`visible` array is that reel's cell count, inside the fixed reel height.
 
 <a id="stacked-symbols-that-split"></a>
 
 ## Stacked symbols that split
 
-Some infinity slots land a symbol stacked two to four cells tall and, when it wins, split the stack into more single symbols than it had cells, its reel growing past the frame. A stack is a big symbol one reel wide; the server says what it splits into.
+Some infinity slots land a symbol stacked two to four cells tall. When it
+wins, the stack splits into more single symbols than it had cells, and its
+reel grows past the frame. A stack is a big symbol one reel wide. The server
+says what it splits into.
 
 ```ts
 // .symbolData({ Q3: { weight: 0, size: { reels: 1, cells: 3 } } })
 const { from, count } = reelSet.splitSymbol(reel, cell, res.split); // e.g. six 'Q's
 ```
 
-The reel grows by the difference, the cells above and below keep their symbols, and the board re-centres around the taller reel: keep the other reels still on screen while your camera eases out, or they jump. Split at rest, or between `expand()` steps in `onStepLanded`. Next round, `resetColumns()` puts every reel back.
+The reel grows by the difference. The cells above and below keep their
+symbols, and the board re-centres around the taller reel. Keep the other
+reels still on screen while your camera eases out, or they jump. Split at
+rest, or between steps in `onStepLanded`. Next round, `resetColumns()` puts
+every reel back.
 
-Any symbol one reel wide splits, a 1x1 too. To keep the reel's height instead, its cells shrinking to share it, pass `{ height: 'keep' }`; it is the default on MultiWays, where a reel's height is fixed. For any other change to one reel, `setColumn(reel, column, { height })` shows a column of any length. The [splitting symbols recipes](/mechanics/split-symbols/) show both modes side by side, a tap-to-split playground and splits on MultiWays.
+Any symbol one reel wide can split, a 1x1 too. To keep the reel's height
+instead, with its cells shrinking to share it, pass `{ height: 'keep' }`.
+That is the default on MultiWays, where a reel's height is fixed. For any
+other change to one reel, `setColumn` shows a column of any length. The
+[splitting symbols page](/mechanics/split-symbols/) shows both modes side
+by side, a tap-to-split playground and splits on MultiWays.
 
 <a id="ways-count-them-and-draw-them"></a>
 
 ## Ways: count them and draw them
 
-The library computes no wins (see ADR 007); the server does. Two things help you show them.
+The library computes no wins (ADR 007). The server does. Two things help you
+show them.
 
-- **The board's ways** is the product of the reels' row counts: `reelSet.reels.reduce((ways, reel) => ways * reel.visibleCells, 1)`. Eight reels of three rows is 6,561 ways; eight MultiWays reels of seven is 5,764,801.
-- **`WinLines`** in `pixi-reels/debug` draws a payway as a lattice: every winning cell joined to every winning cell on the next reel. A win of millions of ways is still a few dozen segments. It draws the cells you hand it.
+The board's ways is the product of the reels' row counts:
+
+```ts
+const ways = reelSet.reels.reduce((ways, reel) => ways * reel.visibleCells, 1);
+```
+
+Eight reels of three rows is 6,561 ways. Eight MultiWays reels of seven is
+5,764,801.
+
+`WinLines` in `pixi-reels/debug` draws a payway as a lattice: every winning
+cell joined to every winning cell on the next reel. A win of millions of ways
+is still a few dozen segments. It draws the cells you hand it.
 
 ```ts
 import { WinLines } from 'pixi-reels/debug';
@@ -117,15 +153,23 @@ lines.ways(win.perReel); // winning cell indices per reel, from your server: [[0
 reelSet.events.on('spin:start', () => lines.clear());
 ```
 
-The demos on this site stand in for the server with `evaluateWays()` and `countWays()` from the repository's private `@pixi-reels/cheats` package. Copy them if you want the same left-to-right ways math in a prototype.
+The demos on this site stand in for the server with `evaluateWays()` and
+`countWays()` from `@pixi-reels/kit/ways`. Copy them if you want the same
+left-to-right ways math in a prototype.
 
 <a id="skip"></a>
 
 ## Skip
 
-The steps are one round. The first `skipSpin()` lands the step in flight and speeds up the rest: the fastest profile in standard mode; in cascade mode every later step lands at once. A press between steps, while a hook runs, carries to the next step. To land everything still to come at once, abort the expansion's `signal`.
+The steps are one round. The first `skipSpin()` lands the step in flight and
+speeds up the rest: the fastest profile in standard mode, and in cascade mode
+every later step lands at once. A press between steps, while a hook runs,
+carries to the next step. To land everything still to come in one go, abort
+the expansion's `signal`.
 
-**Gotcha:** an aborted expansion lands the remaining reels in one step, at the height the board has then. If your rows grow during the expansion, slam each step instead of aborting.
+An aborted expansion lands the remaining reels in one step, at the height the
+board has at that moment. If your rows grow during the expansion, slam each
+step instead of aborting.
 
 <a id="events"></a>
 
@@ -135,12 +179,13 @@ The steps are one round. The first `skipSpin()` lands the step in flight and spe
 |---|---|
 | `expand:start` | The chain starts: the board grows from `from` reels to `to`. |
 | `reels:added` | A step's reels are on the board. Move the camera here or in `onStepAdded`. |
-| `expand:stepAdded` / `expand:stepLanded` | A step's reels arrived / landed, before its hooks. |
-| `rows:added` / `rows:removed` | `addRows()` / `removeRows()` changed every reel's height. |
+| `expand:stepAdded` / `expand:stepLanded` | A step's reels arrived or landed, before its hooks. |
+| `rows:added` / `rows:removed` | `addRows()` or `removeRows()` changed every reel's height. |
 | `column:set` | One reel changed its cells: `setColumn()`, `splitSymbol()` or `resetColumns()`. |
 | `expand:complete` | Every step landed. Carries the final board. |
-| `expand:end` | Always last: `'complete'` or `'failed'`. Put the UI back here. |
+| `expand:end` | Always last, with `'complete'` or `'failed'`. Put the UI back here. |
 
-Each step also fires the usual `spin:*` events. `reelSet.isExpanding` tells them apart from a new round.
+Each step also fires the usual `spin:*` events. `reelSet.isExpanding` tells
+them apart from a new round.
 
 </ConceptPart>

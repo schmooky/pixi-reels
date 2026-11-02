@@ -14,10 +14,10 @@ guides:
   - win-animations
 ---
 
-<ConceptPart title="Win animations" lede="Highlight winning symbols, cycle through lines, and dim the losers.">
+<ConceptPart title="Win animations" lede="Highlight the winning symbols, cycle through the lines, and dim the losers.">
 
-`SymbolSpotlight` dims the losers, lifts the winners above the mask, and
-cycles through lines for you.
+`SymbolSpotlight` dims the losing symbols, lifts the winners above the mask,
+and cycles through lines for you.
 
 <a id="one-win-one-line"></a>
 
@@ -56,22 +56,21 @@ await reelSet.spotlight.cycle(
 
 ## Play per-symbol animations
 
-Set `playWinAnimation: true` and the spotlight calls `playWin()` on each
-highlighted symbol. `SpriteSymbol`, `AnimatedSpriteSymbol` and `SpineSymbol`
-all implement it.
+With `playWinAnimation: true` the spotlight calls `playWin()` on each
+highlighted symbol. The three built-in symbol classes all implement it.
 
 ```ts
 await reelSet.spotlight.show(wins[0].positions, { playWinAnimation: true });
 ```
 
-`show()` resolves when the animation is done, so `await` it to gate whatever
-comes next.
+`show()` resolves when the animation is done, so you can await it before
+whatever comes next.
 
 <a id="events"></a>
 
 ## Events
 
-`spotlight:start` and `spotlight:end` bracket a `cycle()`. Use them to disable
-the spin button while a win plays.
+`spotlight:start` and `spotlight:end` bracket a `cycle()`. Use them to
+disable the spin button while a win plays.
 
 </ConceptPart>

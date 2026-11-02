@@ -1,7 +1,7 @@
 ---
 title: Orientation & direction
 group: mechanics
-oneLiner: Reels that travel sideways, upward, or per-reel - horizontal banners, roll-up, mixed direction, reading reel.axis, and a banner that joins a ways win.
+oneLiner: Reels that travel sideways, upward, or per reel. Horizontal banners, roll-up, mixed direction, reading reel.axis, and a banner that joins a ways win.
 order: 55
 tags:
   - horizontal
@@ -18,9 +18,8 @@ guides:
 
 <ConceptPart title="Orientation & direction" lede="One engine, four layouts. How a reel's travel axis works, why start and end are geometric rather than travel-relative, and what stays screen-space.">
 
-Reel go down. Or up. Or sideways.
-
-Two knobs, and they do not touch each other:
+A reel can travel down, up, or sideways. Two builder settings control that,
+and they do not affect each other:
 
 ```ts
 new ReelSetBuilder()
@@ -28,74 +27,62 @@ new ReelSetBuilder()
   .direction('reverse')        // which way along it symbols move
 ```
 
-Four combinations. One engine.
-
-Anticipation, cascades, spotlight, pins, big symbols, pyramids, MultiWays --
-all of it works in all four. Not mirrored, not reimplemented. The same code,
-written against the axis instead of against `y`.
+That gives four combinations on one engine. Anticipation, cascades, the
+spotlight, pins, big symbols, pyramids and MultiWays work in all four. The
+code is written against the axis instead of against `y`, so nothing is
+mirrored or reimplemented for the other layouts.
 
 | | `direction('forward')` | `direction('reverse')` |
 |---|---|---|
-| `orientation('vertical')` | symbols fall (the default) | symbols rise. a roll-up |
-| `orientation('horizontal')` | symbols move right | symbols move left. a sideways banner |
+| `orientation('vertical')` | symbols fall (the default) | symbols rise, a roll-up |
+| `orientation('horizontal')` | symbols move right | symbols move left, a sideways banner |
 
 <a id="the-four-concepts-kept-apart"></a>
 
 ## The four concepts, kept apart
 
-Most engines mash these into one thing: the sign of `deltaY`. Then horizontal
-needs a second engine, and the second engine rots.
+Many engines fold all of this into the sign of a `deltaY`. Then a horizontal
+reel needs a second engine, and the second engine rots. pixi-reels keeps four
+things separate so that one engine is enough:
 
-Keep them apart and you only need one:
+- Orientation: which screen axis the strip runs on. Set for the whole set at
+  build time.
+- Direction: which way along that axis symbols travel. Per reel.
+- Gravity: which way cascade symbols fall. By default it follows the reel's
+  direction. `tumble({ gravity })` can pin it to `'forward'` or `'reverse'`
+  so a reel spins one way and drops the other.
+- Facing: which way is up for the art. Never touched by the other three.
 
-- **Orientation** -- which screen axis the strip runs on. Set-level, fixed at
-  `build()`.
-- **Direction** -- which way along that axis symbols travel. Per reel.
-- **Gravity** -- which way cascade symbols fall. Derived from the reel's
-  direction. There is no separate knob: the `tumble({ gravity })` option
-  sketched in ADR 016 was never implemented, and a `gravity` key on
-  `.tumble(...)` is ignored.
-- **Facing** -- which way is "up" for the art. Never touched by the other
-  three.
-
-The last one is a rule, not a habit: **travel never changes facing.**
-
-Reel spins sideways. Art stays upright. The engine never rotates a container
-to fake an axis -- that would break sprite anchors, flip filters, and render
-every third-party symbol on its side.
-
-A test asserts `rotation === 0` and unit scale on every symbol, in all four
-combinations, at rest, mid-spin, and landed. So it stays true.
+The last one is a rule: travel never changes facing. A reel can spin sideways
+and its art stays upright. The engine never rotates a container to fake an
+axis, because that would break sprite anchors, flip filters, and render every
+third-party symbol on its side. A test asserts zero rotation and unit scale on
+every symbol, in all four combinations, at rest, mid-spin and landed.
 
 <a id="main-and-cross"></a>
 
 ## Main and cross
 
-Learn two words. The whole engine speaks them.
+Two words cover the whole engine. The main axis is the one the strip travels
+along: `y` when vertical, `x` when horizontal. The cross axis is the one the
+reels are laid out along, the other one. On a vertical set the reels sit side
+by side across `x` and cells scroll down `y`. On a horizontal set it is the
+opposite.
 
-- The **main** axis is the one the strip travels along. `y` when vertical,
-  `x` when horizontal.
-- The **cross** axis is the one reels march along. The other one.
-
-Vertical set: reels march across `x`, cells scroll down `y`. Horizontal set:
-the exact opposite.
-
-`Reel` gives you both, for code that must not care which is which:
-`cellMain`, `cellCross`, `mainGap`, `crossGap`, `extent`, `mainOffset`.
+`Reel` exposes both for code that must not care which is which: `cellMain`,
+`cellCross`, `mainGap`, `crossGap`, `extent` and `mainOffset`.
 
 <a id="what-stays-screen-space"></a>
 
 ## What stays screen-space
 
-Your own `ReelSymbol` subclasses need zero changes. Here is why.
+Your own symbol classes need no changes, because everything a symbol sees is
+screen-space, whatever the orientation: `symbolSize(width, height)`,
+`symbolGap(x, y)`, `ReelSymbol.resize(width, height)`, `CellBounds`,
+`getCellBounds`, `getBlockBounds`, and the position of the `ReelSet` itself.
 
-**Unchanged, always screen-space:** `symbolSize(width, height)` ·
-`symbolGap(x, y)` · `ReelSymbol.resize(width, height)` ·
-`CellBounds { x, y, width, height }` · `getCellBounds` · `getBlockBounds` ·
-positioning the `ReelSet` itself.
-
-A horizontal set is the vertical one **transposed**. Swap width and height.
-Same board, on its side.
+A horizontal set is the vertical one transposed. Swap width and height and
+you have the same board on its side.
 
 ```ts
 // A 5x3 vertical board.
@@ -105,36 +92,34 @@ Same board, on its side.
 .orientation('horizontal').symbolSize(100, 120).symbolGap(6, 8)
 ```
 
-Indices do not move either. Same `ColumnTarget[]` into `setResult()`. Same
-shape out of `getVisibleGrid()`. Cell `(reel, cell)` means the same cell
-whichever way the strip runs.
+Indices do not move either. The same `ColumnTarget[]` goes into
+`setResult()`, the same shape comes out of `getVisibleGrid()`, and a cell
+address means the same cell whichever way the strip runs.
 
 <a id="start-and-end-are-geometric"></a>
 
 ## Start and end are geometric
 
-Buffers are named `start` and `end`, not `above`/`below` and not
-`lead`/`trail`:
+The buffers are named `start` and `end`, not above and below, and not lead
+and trail:
 
 ```ts
 .bufferSymbols({ start: 1, end: 1 })
 reelSet.setResult([{ visible: ['A','B','C'], bufferStart: ['COIN'] }]);
 ```
 
-**Start is the smaller screen coordinate.** Above for vertical. Left for
-horizontal. Always. Direction does not change it.
+Start is the smaller screen coordinate: above on a vertical set, left on a
+horizontal one. Direction does not change it.
 
-Why: a buffer symbol is decoration. The coin peeking above the top row. A big
-symbol's tail parked off-window. It means "the slot just outside the edge".
+The reason is that a buffer symbol is decoration. It is the coin peeking
+above the top row, or a big symbol's tail parked off-window. It means "the
+slot just outside this edge". If that were travel-relative, reversing a reel
+would teleport every teaser to the other side of the screen. So motion is
+directional and buffers are geometric.
 
-Make that travel-relative and flipping a reel teleports every teaser to the
-other side of the screen. Nobody wants that.
-
-So: motion is directional, buffers are geometric.
-
-The **feed edge** -- the side new symbols arrive from -- IS travel-relative.
-You do not set it. It is derived. Read it if you need it:
-`reel.axis.feedEdge`.
+The feed edge, the side new symbols arrive from, is travel-relative. You do
+not set it. The engine derives it, and you can read it as
+`reel.axis.feedEdge` when you need it.
 
 <a id="per-reel-direction"></a>
 
@@ -145,37 +130,31 @@ You do not set it. It is derived. Read it if you need it:
 .directionPerReel(['forward','reverse','forward','reverse','forward'])
 ```
 
-Alternating columns. One reversed reel. Whatever the design wants.
+Alternating columns, one reversed reel, whatever the design wants.
 
-One rule: a big symbol spanning **more than one reel** (`size.reels > 1`)
-cannot mix with **mixed** per-reel directions. `build()` throws only when
-`directionPerReel([...])` holds more than one distinct value -- a uniform
-array is fine, since the block still travels one way.
-
-The block coordinator assumes every reel a block covers feeds from the same
-edge. Mixed directions break that, and the block splits mid-spin. Better to
-fail at build than to ship a symbol that tears in half.
-
-Keep blocks inside one reel, or give the whole set one `direction()`.
+One rule: a big symbol wider than one reel cannot be combined with mixed
+per-reel directions. `build()` throws when the per-reel array holds more than
+one distinct value. A uniform array is fine, since the block still travels
+one way. The block coordinator assumes every reel a block covers feeds from
+the same edge. With mixed directions the block would split mid-spin, so the
+builder fails instead. Keep blocks inside one reel, or give the whole set one
+direction.
 
 <a id="render-order"></a>
 
 ## Render order
 
-`direction` does **not** change which symbol overlaps which:
+Direction does not change which symbol overlaps which:
 
 ```ts
 .cellStacking('ascending')   // default: the cell at the larger coordinate draws in front
 .reelStacking('ascending')   // default: the last reel draws in front
 ```
 
-Geometric on purpose.
-
-Art is lit from above. Flip the stacking on a roll-up and that lighting reads
-backwards. Worse: a per-spin reversal tease would re-layer the whole board
-mid-game, in front of the player.
-
-Want the opposite? Pass `'descending'`. Your art, your call.
+The stacking is geometric. Art is lit from above, and flipping the stacking
+on a roll-up would make that lighting read backwards. A per-spin reversal
+tease would also re-layer the whole board in front of the player. If your art
+wants the opposite, pass `'descending'`.
 
 <a id="nudge-is-relative"></a>
 
@@ -185,17 +164,16 @@ Want the opposite? Pass `'descending'`. Your art, your call.
 await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
 ```
 
-`'forward'` means "the way this reel goes". Not "down".
-
-On a reel built with `direction('reverse')`, forward nudges upward and feeds
-from the right edge. You write no branches.
+Here `'forward'` means the way this reel travels, not down. On a reel built
+with `direction('reverse')`, a forward nudge moves upward and feeds from the
+right edge. You write no branches.
 
 <a id="composing-two-sets"></a>
 
 ## Composing two sets
 
 A banner above a grid is two reel sets in one container. The engine does not
-model this. It does not need to.
+model this, and does not need to.
 
 ```ts
 const main = new ReelSetBuilder().reels(5).visibleCells(3)./* ... */.build();
@@ -212,18 +190,18 @@ main.y = CELL + GAP * 3;
 stage.addChild(banner, main);
 ```
 
-Lay it out from its own top-left. Scale the container, never the sets inside
-it -- scale one set and the other stays behind, at the wrong size, in the
-wrong place.
+Lay each set out from its own top-left. Scale the container, never the sets
+inside it. If you scale one set the other stays behind at the wrong size and
+in the wrong place.
 
-Full version, with a banner wild that extends a way:
-[banner-ways](/mechanics/orientation-and-direction/#banner-ways).
+The full version, with a banner wild that extends a ways win, is the
+[banner-ways](/mechanics/orientation-and-direction/#banner-ways) demo.
 
 <a id="seeing-it"></a>
 
 ## Seeing it
 
-You cannot see an axis in a screenshot. So the overlay draws it:
+You cannot see an axis in a screenshot, so the debug overlay draws it:
 
 ```ts
 import { debugOverlay } from 'pixi-reels/debug'; // needs pixi-silk, a dev dependency
@@ -231,21 +209,21 @@ import { debugOverlay } from 'pixi-reels/debug'; // needs pixi-silk, a dev depen
 const overlay = debugOverlay(reelSet, { layers: ['axis', 'feed', 'thresholds', 'hud'] });
 ```
 
-- `axis` -- one arrow per reel, pointing the way it actually travels
-- `feed` -- the edge new symbols arrive at
-- `thresholds` -- the wrap lines; no symbol should ever be drawn past one
-- `hud` -- `r0 VF feed=start spd=... cells=3`
+- `axis`: one arrow per reel, pointing the way it travels
+- `feed`: the edge new symbols arrive at
+- `thresholds`: the wrap lines; no symbol should ever be drawn past one
+- `hud`: a line per reel, such as `r0 VF feed=start spd=... cells=3`
 
-`overlay.describe()` hands the same thing back as plain JSON, for tests and
-for anything that cannot look at a canvas. See [Debugging](/learn/debugging/).
+`overlay.describe()` returns the same information as plain JSON, for tests
+and for anything that cannot look at a canvas. See [Debugging](/learn/debugging/).
 
 <a id="recipes"></a>
 
 ## Recipes
 
-- [Roll-up](/mechanics/orientation-and-direction/#roll-up) -- a whole set reversed
-- [Alternating columns](/mechanics/orientation-and-direction/#roll-up-alternating) -- `directionPerReel`
-- [Horizontal banner](/mechanics/orientation-and-direction/#horizontal-banner) -- a one-reel sideways strip
-- [Banner ways](/mechanics/orientation-and-direction/#banner-ways) -- a banner above a 5x3 that joins the win
+- [Roll-up](/mechanics/orientation-and-direction/#roll-up): a whole set reversed
+- [Alternating columns](/mechanics/orientation-and-direction/#roll-up-alternating): per-reel direction
+- [Horizontal banner](/mechanics/orientation-and-direction/#horizontal-banner): a one-reel sideways strip
+- [Banner ways](/mechanics/orientation-and-direction/#banner-ways): a banner above a 5x3 that joins the win
 
 </ConceptPart>

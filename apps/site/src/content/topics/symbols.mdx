@@ -20,25 +20,25 @@ guides:
   - symbols
 ---
 
-<ConceptPart title="Symbols" lede="Register and implement reel symbols. sprites, animations, Spine, or custom.">
+<ConceptPart title="Symbols" lede="Register and implement reel symbols: sprites, animations, Spine, or your own class.">
 
-A **symbol** is what fills one cell. Three ship with the library. The fourth
-is for everything else.
+A symbol is what fills one cell. Three classes ship with the library. The
+fourth is the base class for everything else.
 
 | Class | Use it for |
 |---|---|
 | `SpriteSymbol` | Static images. One texture per id. |
 | `AnimatedSpriteSymbol` | Sprite-sheet animation loops. |
 | `SpineSymbol` | Skeletal animation via `@esotericsoftware/spine-pixi-v8`. |
-| `ReelSymbol` (abstract) | Roll your own. |
+| `ReelSymbol` (abstract) | Your own drawing. |
 
 <a id="register"></a>
 
 ## Register
 
-`symbols()` hands you a registry. You register a class, not an instance.
-
-You never call `new` on a symbol. The engine does, and it pools them.
+The builder's `symbols()` call hands you a registry. You register a class
+with its options, not an instance. The engine constructs the symbols itself
+and pools them.
 
 ```ts
 builder.symbols((r) => {
@@ -51,10 +51,12 @@ builder.symbols((r) => {
 
 ## Custom symbol
 
-Extend `ReelSymbol`. Lifecycle: `activate` -> maybe `playWin` / `stopAnimation` -> `deactivate`.
+Extend `ReelSymbol`. The lifecycle is activate, then possibly `playWin` or
+`stopAnimation`, then deactivate.
 
-`resize(width, height)` runs on **every** swap. Put positioning there, not in
-the constructor, or your symbols scatter.
+`resize(width, height)` runs on every swap, so positioning belongs there and
+not in the constructor. Symbols that position themselves in the constructor
+scatter after the first swap.
 
 ```ts
 import { ReelSymbol } from 'pixi-reels';
@@ -100,8 +102,8 @@ builder.symbols((r) => {
 
 ## Headless testing
 
-`HeadlessSymbol` draws nothing. No textures to load, no canvas needed. Use it
-in tests.
+`HeadlessSymbol` draws nothing. It needs no textures and no canvas, which
+makes it the symbol for tests.
 
 ```ts
 import { HeadlessSymbol } from 'pixi-reels/testing';
@@ -112,26 +114,26 @@ builder.symbols((r) => {
 });
 ```
 
-See [Cheats & testing](/learn/cheats-and-testing/) for the full recipe.
+[Cheats & testing](/learn/cheats-and-testing/) has the full setup.
 
 <a id="weights"></a>
 
 ## Weights
 
-No weight given? You get `10`. Change it with `builder.weights({ id: n })`.
+A symbol with no weight gets 10. Change it with `weights()` on the builder.
 
 ```ts
 builder.weights({ cherry: 40, bar: 20, seven: 4 });
 ```
 
-Bigger number, more often. Weights only touch RANDOM fill -- the strip while
-it spins, and the buffer cells.
+A bigger number comes up more often. Weights only affect the random fill:
+the strip while it spins, and the buffer cells. A grid from `setResult()`
+ignores weights, because the server decides what lands. Weights decide what
+scrolls past on the way there.
 
-A grid from `setResult()` ignores weights completely. The server decides what
-lands. Weights decide what blurs past on the way there.
-
-`weights()` is one table for the whole set. To vary it -- ban a symbol from
-the buffer cells, or make one reel draw differently -- layer a pool on top:
+`weights()` is one table for the whole set. To vary it, for example to keep
+a symbol out of the buffer cells or to make one reel draw differently, add a
+pool on top:
 
 ```ts
 builder.randomSymbols({ exclude: ['EMPTY'] });                     // every reel
@@ -139,8 +141,8 @@ builder.randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' }); // buffers on
 builder.randomSymbols({ weights: { WILD: 40 } }, { reel: 2 });     // reel 2 only
 ```
 
-The same pools are reachable at run time as `reelSet.randomSymbols.set(...)`,
-which is where a game-mode switch belongs. See
-[Buffer indexing](/mechanics/big-symbols/#concept-buffer-indexing).
+The same pools are available at run time through `reelSet.randomSymbols`,
+which is where a game-mode switch belongs. [Buffer indexing](/mechanics/big-symbols/#concept-buffer-indexing)
+has the layering rules.
 
 </ConceptPart>
