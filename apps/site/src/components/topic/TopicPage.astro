@@ -17,7 +17,7 @@ import Timeline from '../docs/Timeline.astro';
 import Tree from '../docs/Tree.astro';
 import { TOPICS, TOPIC_BY_SLUG } from '../../content/topics.ts';
 import { FAQ_BY_TOPIC } from '../../content/faq.ts';
-import { getTopicDemos, parseRecipeDemos } from '../../lib/topicDemos.ts';
+import { getTopicDemos } from '../../lib/topicDemos.ts';
 import { apiForTopic } from '../../lib/topicApi.ts';
 import { getRecipeCode } from '../../lib/recipeCode.ts';
 
@@ -37,12 +37,11 @@ const { Content: Demos } = await render(demosEntry);
 
 const conceptBody = topicEntry.body ?? '';
 const demosBody = demosEntry.body ?? '';
-const demos = getTopicDemos(slug);
-// The nudge guide embeds demos of its own; its source counts for the API list too.
-const conceptDemos = parseRecipeDemos(conceptBody);
+// The Concept body may embed demos of its own (nudge does), so both bodies count.
+const demos = getTopicDemos(slug, [conceptBody, demosBody]);
 const api = apiForTopic({
   markdown: [conceptBody, demosBody],
-  code: [...demos, ...conceptDemos].map((d) => getRecipeCode(d.code)),
+  code: demos.map((d) => getRecipeCode(d.code)),
 });
 const topic = TOPIC_BY_SLUG[slug];
 const questions = FAQ_BY_TOPIC[slug] ?? [];

@@ -29,8 +29,8 @@ const BASE = `http://localhost:${PORT}`;
  */
 const PREVIEW_ENV = { ...process.env, ASTRO_PREVIEW_BACKGROUND: '1' };
 
-/** Umbrella pages that host at least one `runCascade` recipe. */
-const CASCADE_PAGES = ['/recipes/cascade/', '/recipes/big-symbols/'];
+/** Topic pages that host at least one `runCascade` recipe. */
+const CASCADE_PAGES = ['/mechanics/cascade/', '/mechanics/big-symbols/'];
 
 test.beforeAll(async () => {
   let occupied = false;
@@ -79,6 +79,9 @@ for (const path of CASCADE_PAGES) {
     // intersection margin and actually mounts.
     await page.setViewportSize({ width: 1280, height: 3000 });
     await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+    // A topic page's demos sit below its Concept prose; bring the section to
+    // the top so the whole viewport is demos.
+    await page.evaluate(() => document.getElementById('demos')?.scrollIntoView());
     await page.waitForTimeout(3000);
 
     // The runner renders one round button per demo, labelled Spin at rest.

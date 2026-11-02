@@ -3,7 +3,7 @@ group: chars
 topic: hold-and-win
 question: How do I sequence many throws so they arrive one after another?
 answer: >-
-  `coinWaves(items, 'sequence')` plus a per-item `delay` on `bezierFly` stagger the throws to arrive one after another. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+  `coinWaves(items, 'sequence')` plus a per-item `delay` on `bezierFly` stagger the throws to arrive one after another. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
 links:
   - label: "Recipe: Hold & Win — collector"
     href: /mechanics/hold-and-win/#hold-and-win-collector

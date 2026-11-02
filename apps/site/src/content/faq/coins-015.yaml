@@ -4,7 +4,7 @@ topic: hold-and-win
 question: How do I make a row/column of cells all act as collectors that sweep the board?
 answer: >-
   Use the shared `coinWaves(coins, 'by-cell' | 'by-reel')` helper (copy it from
-  `apps/site/src/runtime/holdAndWinFx.ts`) to order the sweep, and `bezierFly`
+  `packages/kit/src/holdAndWinFx.ts`) to order the sweep, and `bezierFly`
   each value into the collector cell, optionally trailed by particle streams.
 links:
   - label: "Recipe: Hold & Win — collector with particles"

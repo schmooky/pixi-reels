@@ -6,7 +6,7 @@ answer: >-
   The shared `coinWaves(board.lockedCoins, 'by-reel')` helper -- also
   `'by-cell'`, `'sequence'`, `'all'`, `{ chunk }`, or a custom
   `(item, index) => waveIndex` -- groups the flights into waves. It lives in
-  `apps/site/src/runtime/holdAndWinFx.ts`, not the package.
+  `packages/kit/src/holdAndWinFx.ts`, not the package.
 links:
   - label: "Recipe: Hold & Win — collector"
     href: /mechanics/hold-and-win/#hold-and-win-collector

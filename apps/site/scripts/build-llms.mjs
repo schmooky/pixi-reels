@@ -51,16 +51,30 @@ const SITE_URL = 'https://pixi-reels.schmooky.dev';
  * Section order for the rendered llms.txt. Within each section the items
  * are sorted alphabetically by slug for stable diffs.
  */
+/**
+ * Content slugs and the URLs the site serves them at. The content tree kept
+ * its collection names when the site collapsed into topic pages: `topics/x`
+ * is the Concept and `recipes/x` the Demos of `/mechanics/x/`, `guides/`
+ * became `/learn/`, `docs/` became `/reference/`.
+ */
+const URL_PREFIX = { topics: 'mechanics', recipes: 'mechanics', guides: 'learn', docs: 'reference' };
+function hrefFor(slug) {
+  const [head, ...rest] = slug.split('/');
+  return `${SITE_URL}/${URL_PREFIX[head] ?? head}/${rest.join('/')}${rest.length ? '/' : ''}`;
+}
+
 const SECTIONS = [
-  { id: 'guides', label: 'Guides', match: (p) => p.startsWith('guides/') },
-  { id: 'docs', label: 'API reference', match: (p) => p.startsWith('docs/') },
+  // One entry per mechanic: the Concept prose with the Demos body folded in
+  // below it (see foldDemos), because both render on the same page.
+  { id: 'mechanics', label: 'Mechanics', match: (p) => p.startsWith('topics/') },
+  { id: 'learn', label: 'Learn', match: (p) => p.startsWith('guides/') },
+  { id: 'reference', label: 'Reference', match: (p) => p.startsWith('docs/') || p.startsWith('reference/') },
   // TypeDoc output: one page per exported symbol. Listed by name, signature
   // and URL rather than inlined, because the bodies are 831KB - larger than
   // the rest of this file put together - and an LLM can fetch the one symbol
   // it needs. The point here is that it knows the symbol EXISTS.
   { id: 'api', label: 'Generated API (TypeDoc)', match: (p) => p.startsWith('api/') },
   { id: 'architecture', label: 'Architecture deep-dives', match: (p) => p.startsWith('architecture/') },
-  { id: 'recipes', label: 'Recipes', match: (p) => p.startsWith('recipes/') },
 ];
 
 const SKIP_BASENAMES = new Set(['llms.txt', 'index']);
@@ -82,12 +96,13 @@ async function main() {
     );
   }
 
-  const pages = [...(await collectPages(PAGES)), ...(await collectPages(CONTENT))];
+  const pages = foldDemos([...(await collectPages(PAGES)), ...(await collectPages(CONTENT))]);
   const demoUrls = demoUrlMap(pages);
-  const recipes = (await collectRecipes()).map((r) => ({
-    ...r,
-    href: demoUrls.get(r.slug) ?? `${SITE_URL}/recipes/${r.slug}/`,
-  }));
+  const recipes = (await collectRecipes()).map((r) => {
+    const href = demoUrls.get(r.slug);
+    if (!href) throw new Error(`build-llms: ${r.slug}.recipe.ts is rendered by no page body (no <RecipeDemo code="${r.slug}" />).`);
+    return { ...r, href };
+  });
   const faq = await collectFaq();
   const version = JSON.parse(await readFile(PKG, 'utf-8')).version;
 
@@ -123,7 +138,7 @@ async function collectPages(baseDir) {
     if (!fm) continue;
 
     const slug = relToSlug(rel);
-    const href = `${SITE_URL}/${slug}/`;
+    const href = hrefFor(slug);
     out.push({
       slug,
       href,
@@ -231,13 +246,33 @@ function jsxToText(tag, href, setAnchor, getAnchor) {
 }
 
 /**
+ * `/mechanics/x/` renders `topics/x` (Concept) and `recipes/x` (Demos) one
+ * above the other, so the text file lists one page with both bodies. A demos
+ * body without a topic is a site bug (the page would 404), so fail on it.
+ */
+function foldDemos(pages) {
+  const topics = new Map(pages.filter((p) => p.slug.startsWith('topics/')).map((p) => [p.slug.slice('topics/'.length), p]));
+  const out = [];
+  for (const p of pages) {
+    if (!p.slug.startsWith('recipes/')) {
+      out.push(p);
+      continue;
+    }
+    const topic = topics.get(p.slug.slice('recipes/'.length));
+    if (!topic) throw new Error(`build-llms: src/content/${p.slug}.mdx has no src/content/topics/ page to render under.`);
+    topic.body = [topic.body, '##### Demos', p.body].filter(Boolean).join('\n\n');
+  }
+  return out;
+}
+
+/**
  * Where each `*.recipe.ts` is shown live: scans every page body for the
- * `Live demo (code): url` lines cleanBody wrote. Recipe umbrella pages win
- * over guides when a demo appears on both.
+ * `Live demo (code): url` lines cleanBody wrote. Mechanic pages win over
+ * guides when a demo appears on both.
  */
 function demoUrlMap(pages) {
   const map = new Map();
-  const ranked = [...pages].sort((a, b) => Number(b.slug.startsWith('recipes/')) - Number(a.slug.startsWith('recipes/')));
+  const ranked = [...pages].sort((a, b) => Number(b.slug.startsWith('topics/')) - Number(a.slug.startsWith('topics/')));
   for (const p of ranked) {
     for (const m of p.body.matchAll(/^Live demo \(([^)]+)\): (\S+)$/gm)) {
       if (!map.has(m[1])) map.set(m[1], m[2]);
@@ -443,7 +478,11 @@ function render(sections, recipes, faq, version, demoUrls) {
         lines.push(`#### Q: ${q.question}`);
         lines.push(`URL: ${SITE_URL}/faq/${q.id}/`);
         lines.push(`A: ${String(q.answer).trim()}`);
-        if (q.recipe) lines.push(`Recipe: ${demoUrls.get(q.recipe) ?? `${SITE_URL}/recipes/${q.recipe}/`}`);
+        if (q.recipe) {
+          const url = demoUrls.get(q.recipe);
+          if (!url) throw new Error(`build-llms: FAQ ${q.id} names recipe "${q.recipe}", which no page renders.`);
+          lines.push(`Recipe: ${url}`);
+        }
         lines.push('');
       }
     }

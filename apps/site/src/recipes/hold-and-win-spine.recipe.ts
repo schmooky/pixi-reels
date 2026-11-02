@@ -94,8 +94,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     jackpot_major: { idle: 'major_x' },
   };
 
-  // freezeAtEnd / settleMoneyFace / GoldCoinSymbol come from the shared
-  // holdAndWinFx kit (injected) - see apps/site/src/runtime/holdAndWinFx.ts.
+  // settleMoneyFace / GoldCoinSymbol come from the @pixi-reels/kit/spine import above.
   const SETTLE_SIZE = CELL - 10;
 
   // Skeletons are authored at wildly different sizes - measure each once and

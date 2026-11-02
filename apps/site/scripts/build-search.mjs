@@ -33,16 +33,16 @@ const SECTIONS = [
   { prefix: '/index.html', label: 'Home', weight: 0.5 },
   { prefix: '/api/', label: 'API reference', weight: 0.3 },
   { prefix: '/architecture/', label: 'Architecture' },
-  { prefix: '/guides/', label: 'Guide' },
-  { prefix: '/recipes/', label: 'Recipe' },
+  { prefix: '/mechanics/', label: 'Mechanic' },
+  { prefix: '/learn/', label: 'Learn' },
   { prefix: '/faq/', label: 'FAQ' },
-  { prefix: '/docs/', label: 'Docs' },
-  { prefix: '/changelog/', label: 'Changelog', weight: 0.5 },
+  { prefix: '/reference/changelog/', label: 'Changelog', weight: 0.5 },
+  { prefix: '/reference/', label: 'Reference' },
 ];
 
 /** Pages that duplicate what they link to, or are not reading material. */
 const SKIP = [
-  /^\/(guides|recipes|faq|docs|architecture|api)\/index\.html$/,
+  /^\/(mechanics|learn|reference|faq|architecture|api)\/index\.html$/,
   /^\/(og|share|studio|keystatic|_astro|pagefind|ask)\//,
   /^\/404\.html$/,
 ];

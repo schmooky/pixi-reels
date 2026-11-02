@@ -223,7 +223,12 @@ for (const { path, anchor, ms } of DRIVEN) {
       .map((t) => t.trim()).filter(Boolean);
     expect(mountFailures, `${anchor} threw on mount`).toEqual([]);
 
-    await frame.getByRole('button', { name: 'Spin' }).click();
+    // The canvas appears before the recipe has finished loading its kits; the
+    // control stays disabled until then, and on a page of 48 demos that can
+    // take longer than click()'s own 10 s wait.
+    const spin = frame.getByRole('button', { name: 'Spin' });
+    await expect(spin, `${anchor} never became ready`).toBeEnabled({ timeout: 60_000 });
+    await spin.click();
     await page.waitForTimeout(ms);
 
     // Both assertions below are load-bearing, and they catch different
@@ -280,7 +285,10 @@ for (const path of SCROLL_PAGES) {
     // scrolled in cost to mount. On CI's software GL a Spine-heavy page (Hold
     // & Win stacks ~40 demos) spent the whole fixed 60s inside this loop, so
     // budget by page height instead: a longer page is not a red build.
-    test.setTimeout(Math.ceil(height / 700) * 2500 + 30_000);
+    // Measured on the 48-demo Hold & Win topic page (42k px, 61 steps) with
+    // the headless shell: 2.9 s a step on average, 13 s for the one that
+    // mounts the clover skeletons, so 4 s a step is the budget.
+    test.setTimeout(Math.ceil(height / 700) * 4000 + 30_000);
     for (let y = 0; y < height; y += 700) {
       await page.evaluate((to) => window.scrollTo(0, to), y);
       await page.waitForTimeout(700);
