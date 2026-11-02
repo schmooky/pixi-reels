@@ -1,0 +1,14 @@
+{
+  "name": "@pixi-reels/ask",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Answer endpoint for the docs Ask box: takes a question plus the retrieved chunks, streams a grounded answer from the Anthropic Messages API and appends an audit line per question.",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0"
+  }
+}
