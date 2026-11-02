@@ -4,42 +4,16 @@ import { AlertCircle, CheckCircle2, Lock, Loader2, Square, RefreshCw } from 'luc
 import Editor from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
 import { Application, type Texture } from 'pixi.js';
-import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
-  SpeedPresets,
-  SpriteSymbol,
-  AnimatedSpriteSymbol,
   enableDebug,
-  WinPresenter,
-  RectMaskStrategy,
-  SharedRectMaskStrategy,
   type ReelSet,
   type SymbolData,
-  ReelSymbol,
-  EmptySymbol,
 } from 'pixi-reels';
-import { SpineReelSymbol } from 'pixi-reels/spine';
-import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
-import {
-  CoinSymbol,
-  COIN_TIER,
-  COIN_FEATURE,
-  COIN_MYSTERY,
-  COIN_TRIGGER,
-  coinValue,
-  coinMultiplier,
-  drawCoin,
-} from '../runtime/CoinSymbol.ts';
-import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
-import {
-  loadGeneratedSpines,
-  buildSpineMap,
-} from '../runtime/generatedSpineLoader.ts';
-import { transform as sucraseTransform } from 'sucrase';
-import { runRecipeSource } from '@/lib/recipeGlobals';
+import { createAssets, setReadouts, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
+import { reelSounds, boardSounds } from '../runtime/audio.ts';
+import { runRecipeModule } from '@/lib/recipeModule';
 
 import { getShare, ShareApiError } from '@/lib/studio/share/api.js';
 import { openEnvelope } from '@/lib/studio/share/crypto.js';
@@ -77,14 +51,19 @@ type Phase =
   | { kind: 'ready'; meta: GetShareResponse['meta']; config: StudioConfig; assets: Map<string, StoredAsset> }
   | { kind: 'error'; message: string };
 
-function pickWeighted(weights: Record<string, number>): string {
-  const total = Object.values(weights).reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (const [id, w] of Object.entries(weights)) {
-    r -= w;
-    if (r <= 0) return id;
-  }
-  return Object.keys(weights)[0];
+const sounds = { reelSounds, boardSounds };
+
+/** Sibling of `studioAssets` in Studio.tsx: the shared uploads join the atlas. */
+function sharedAssets(uploads: Record<string, Texture>): RecipeAssets {
+  const base = createAssets();
+  if (Object.keys(uploads).length === 0) return base;
+  return {
+    ...base,
+    prototypeAtlas: async () => {
+      const set = await base.prototypeAtlas();
+      return { ...set, textures: { ...set.textures, ...uploads } };
+    },
+  };
 }
 
 /** Sibling of `makeStudioReelSetBuilder` in Studio.tsx. Studio overrides
@@ -235,11 +214,6 @@ interface SharedStudioProps {
 function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JSX.Element {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
-  // Prototype-atlas textures + blur variants loaded once at boot, injected
-  // into shared code so recipe-style snippets that reference
-  // `BlurSpriteSymbol` / `textures` work. Mirrors Studio.tsx
-  //. anything a recipe injects must be injected here too.
-  const builtinsRef = useRef<{ textures: Record<string, Texture>; blurTextures: Record<string, Texture>; SYMBOL_IDS: string[] } | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
   const nextResultRef = useRef<(() => string[][]) | null>(null);
   const onSpinRef = useRef<(() => Promise<void>) | null>(null);
@@ -275,10 +249,6 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
       host.innerHTML = '';
       host.appendChild(app.canvas);
       appRef.current = app;
-
-      const { textures, blurTextures } = await loadPrototypeSymbols();
-      if (cancelled) return;
-      builtinsRef.current = { textures, blurTextures, SYMBOL_IDS: Object.keys(textures) };
     })();
 
     const observer = typeof ResizeObserver !== 'undefined' && canvasHostRef.current
@@ -318,36 +288,24 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
     }
     lastInjectablesRef.current = injectables;
 
-    let js: string;
+    let built: RecipeResult;
     try {
-      js = sucraseTransform(config.code, { transforms: ['typescript'] }).code;
-    } catch (e) {
-      setError(`Compile error: ${(e as Error).message}`);
-      return;
-    }
-
-    let built: { reelSet?: ReelSet; nextResult?: () => string[][]; onSpin?: () => Promise<void>; cleanup?: () => void };
-    try {
-      const builtins = builtinsRef.current;
-      if (!builtins) {
-        setError('Prototype atlas not loaded yet.');
-        return;
-      }
-      const mergedTextures = { ...builtins.textures, ...injectables.textures };
-      // Shared with Studio.tsx and RecipeRunner.tsx by construction now, not
-      // by a comment asking for lock-step. See lib/recipeGlobals.ts.
-      built = await runRecipeSource<typeof built>(js, {
+      // A shared studio shows the mechanic, not the notes: readouts off.
+      setReadouts(false);
+      // The module loader is shared with Studio.tsx and RecipeRunner.tsx by
+      // construction, not by a comment asking for lock-step. See
+      // lib/recipeModule.ts.
+      built = await runRecipeModule(config.code, {
         app,
-        textures: mergedTextures,
-        blurTextures: builtins.blurTextures,
-        SYMBOL_IDS: builtins.SYMBOL_IDS,
-        pickWeighted,
-        ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData),
+        assets: sharedAssets(injectables.textures),
+        sounds,
         userSymbols: injectables.userSymbols,
         userSymbolData: injectables.userSymbolData,
-      }, ' ; return buildReels();');
+      }, {
+        overrides: { 'pixi-reels': { ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData) } },
+      });
     } catch (e) {
-      setError(`Runtime error: ${(e as Error).message}`);
+      setError(`${e instanceof SyntaxError ? 'Compile' : 'Runtime'} error: ${(e as Error).message}`);
       return;
     }
 
@@ -361,15 +319,17 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
     enableDebug(reelSet);
 
     const PADDING = 24;
+    // Fit the composition root when the code returns one, as Studio does.
+    const fitted = built.stage ?? reelSet;
     const fit = (): void => {
-      const rawW = reelSet.width / (reelSet.scale.x || 1);
-      const rawH = reelSet.height / (reelSet.scale.y || 1);
+      const rawW = fitted.width / (fitted.scale.x || 1);
+      const rawH = fitted.height / (fitted.scale.y || 1);
       const availW = Math.max(40, app.screen.width - PADDING * 2);
       const availH = Math.max(40, app.screen.height - PADDING * 2);
       const scale = Math.min(availW / rawW, availH / rawH);
-      reelSet.scale.set(scale);
-      reelSet.x = (app.screen.width - rawW * scale) / 2;
-      reelSet.y = (app.screen.height - rawH * scale) / 2;
+      fitted.scale.set(scale);
+      fitted.x = (app.screen.width - rawW * scale) / 2;
+      fitted.y = (app.screen.height - rawH * scale) / 2;
     };
     app.stage.removeChildren();
     app.stage.addChild(fitted);

@@ -9,12 +9,14 @@
 import RecipeFrame from './RecipeFrame.astro';
 import { LazyRecipeRunner } from './LazyRecipeRunner.tsx';
 import { getRecipeCode } from '../lib/recipeCode.ts';
+import { RECIPE_META } from '../lib/recipeMeta.ts';
 
 interface Props {
   code: string;
+  /** Canvas height. Defaults to the recipe's own `meta.height`, then 300. */
   height?: number;
 }
-const { code, height = 300 } = Astro.props as Props;
+const { code, height = RECIPE_META[code]?.height ?? 300 } = Astro.props as Props;
 const source = getRecipeCode(code);
 ---
 <RecipeFrame height={height}>
