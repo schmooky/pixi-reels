@@ -1,0 +1,24 @@
+{
+  "name": "@pixi-reels/kit",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "The asset kits, example symbols and recipe contract the pixi-reels docs recipes run on. Deliberately outside the library: these are canonical patterns to copy into a game, not engine API.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./spine": "./src/spine.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@esotericsoftware/spine-pixi-v8": "~4.2.110",
+    "gsap": "^3.15.0",
+    "pixi-reels": "workspace:*",
+    "pixi-silk": "^0.1.0",
+    "pixi.js": "^8.20.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

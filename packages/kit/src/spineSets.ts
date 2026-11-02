@@ -57,7 +57,12 @@ export interface SpineSet {
   readonly cellSize?: { width: number; height: number };
 }
 
-export const SPINE_SETS: Record<SpineSetId, SpineSet> = {
+/** A set whose art has an authored cell size. */
+export interface SizedSpineSet extends SpineSet {
+  readonly cellSize: { width: number; height: number };
+}
+
+export const SPINE_SETS = {
   generated: {
     id: 'generated',
     label: 'Generated (tools/symbol-gen)',
@@ -89,7 +94,7 @@ export const SPINE_SETS: Record<SpineSetId, SpineSet> = {
     buildMap: buildCascadeSpineMap,
     cellSize: { width: CASCADE_PLATE_W, height: CASCADE_PLATE_H },
   },
-};
+} satisfies Record<SpineSetId, SpineSet> as { generated: SpineSet; thunderkick: SpineSet; cascade: SizedSpineSet };
 
 /** Every set, for pickers and for "load them all" demo pages. */
 export const SPINE_SET_IDS = Object.keys(SPINE_SETS) as SpineSetId[];
@@ -105,20 +110,19 @@ export const SPINE_SET_IDS = Object.keys(SPINE_SETS) as SpineSetId[];
  * });
  * ```
  */
-export async function loadSpineSet(
-  id: SpineSetId,
-  basePath?: string,
-): Promise<{
-  set: SpineSet;
+export interface LoadedSpineSet<I extends SpineSetId = SpineSetId> {
+  set: (typeof SPINE_SETS)[I];
   spineMap: Record<string, SpineSymbolSource>;
   symbolIds: readonly string[];
-}> {
-  const set = SPINE_SETS[id];
+}
+
+export async function loadSpineSet<I extends SpineSetId>(id: I, basePath?: string): Promise<LoadedSpineSet<I>> {
+  const set: SpineSet = SPINE_SETS[id];
   if (!set) {
     throw new Error(
       `loadSpineSet: unknown set '${String(id)}'. Known sets: ${SPINE_SET_IDS.join(', ')}.`,
     );
   }
   await set.load(basePath);
-  return { set, spineMap: set.buildMap(), symbolIds: set.symbolIds };
+  return { set: SPINE_SETS[id], spineMap: set.buildMap(), symbolIds: set.symbolIds };
 }

@@ -8,11 +8,9 @@ import {
 import { gsap } from 'gsap';
 import {
   BlurSpriteSymbol,
-} from '../runtime/BlurSpriteSymbol.ts';
-import {
   loadPrototypeSymbols,
   type PrototypeTextureSet,
-} from '../runtime/prototypeSpriteLoader.ts';
+} from '@pixi-reels/kit';
 
 let gsapSynced = false;
 function syncGsap(app: Application): void {
