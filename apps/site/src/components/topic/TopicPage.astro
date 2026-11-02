@@ -1,11 +1,9 @@
 ---
 /**
- * The whole /mechanics/<slug>/ page, as a component so an old URL can serve
- * it too. The e2e suite (tests/e2e/recipes-mount.spec.ts) opens the umbrella
- * URLs and /guides/nudge/ and counts canvases three seconds after load; a
- * static site can only redirect with a meta refresh, which `page.goto` does
- * not wait for, so the Spine-heavy pages ran out of time. Those URLs render
- * the page itself instead, with the canonical pointing at /mechanics/.
+ * The whole /mechanics/<slug>/ page: the two content entries that share the
+ * slug (topics/ for the Concept, recipes/ for the Demos), the API list derived
+ * from what they and their demo sources name, and the FAQ answers tagged with
+ * the topic, handed to the Topic layout.
  */
 import { getEntry, render } from 'astro:content';
 import Topic from '../../layouts/Topic.astro';
@@ -25,10 +23,8 @@ import { getRecipeCode } from '../../lib/recipeCode.ts';
 
 interface Props {
   slug: string;
-  /** True on an old URL: canonical and OG point at /mechanics/<slug>/, robots noindex. */
-  alias?: boolean;
 }
-const { slug, alias = false } = Astro.props as Props;
+const { slug } = Astro.props as Props;
 
 const topicEntry = await getEntry('topics', slug);
 if (!topicEntry) throw new Error(`No topic "${slug}". Expected src/content/topics/${slug}.mdx.`);
@@ -62,8 +58,6 @@ const components = { RecipeDemo, Image: RecipeImage, AssetCredit, ConceptPart, G
   api={api}
   questions={questions}
   hasConcept={conceptBody.trim().length > 0}
-  path={`/mechanics/${slug}/`}
-  noIndex={alias}
 >
   <Fragment slot="concept"><Concept components={components} /></Fragment>
   <Fragment slot="demos"><Demos components={components} /></Fragment>

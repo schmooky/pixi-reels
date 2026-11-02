@@ -22,12 +22,9 @@ interface Props {
   questions: FaqQuestionResolved[];
   /** False when the topic has no Concept prose yet; the section then shows the one-liner. */
   hasConcept: boolean;
-  /** The canonical URL. An old URL serving this page in place passes the /mechanics/ one. */
-  path?: string;
-  noIndex?: boolean;
 }
-const { topic, index, demos, api, questions, hasConcept, noIndex = false } = Astro.props as Props;
-const pathname = Astro.props.path ?? Astro.url.pathname;
+const { topic, index, demos, api, questions, hasConcept } = Astro.props as Props;
+const pathname = Astro.url.pathname;
 const number = String(index + 1).padStart(2, '0');
 
 const jsonLd = [
@@ -63,7 +60,6 @@ const open = questions.filter((q) => !q.answer);
   type="article"
   article={{ section: 'Mechanics', tags: topic.tags }}
   jsonLd={jsonLd}
-  noIndex={noIndex}
 >
   <div class="container max-w-[880px] py-10 animate-fade-in">
     <header class="border-b border-border pb-8">

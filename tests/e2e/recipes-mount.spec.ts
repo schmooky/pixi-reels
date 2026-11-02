@@ -39,22 +39,22 @@ const BASE = `http://localhost:${PORT}`;
 const PREVIEW_ENV = { ...process.env, ASTRO_PREVIEW_BACKGROUND: '1' };
 
 /**
- * Every recipe umbrella page. Recipes are evaluated from source at runtime,
- * so a page that builds can still throw on mount; only a real browser
- * catches that.
+ * Every topic page with live demos. Recipes are evaluated from source at
+ * runtime, so a page that builds can still throw on mount; only a real
+ * browser catches that.
  *
  * The `/demos` route used to be covered here too. It was deleted in 2.0 when
- * the standalone example apps moved to their own repo -- `/recipes` is the
- * only live-demo surface now.
+ * the standalone example apps moved to their own repo. The recipe umbrella
+ * pages that replaced it became the Demos section of the /mechanics/ topic
+ * pages (their old /recipes/ URLs redirect there), and the one guide that
+ * embedded recipes, nudge, is the Concept section of its topic. A topic page
+ * opens with that Concept prose, so the mount test scrolls to `#demos` first;
+ * on Hold & Win the prose alone is taller than the 3000px viewport.
  */
 const PAGES = [
   ...['anticipation', 'big-symbols', 'cascade', 'cells-and-banners', 'hold-and-win',
       'masks', 'nudge', 'orientation-and-direction', 'starters', 'symbols', 'wilds-and-pins',
-     ].map((s) => `/recipes/${s}/`),
-  // The only guide that embeds recipes. Kept explicit rather than globbed so
-  // adding <RecipeDemo> to another guide is a deliberate act, not a silent
-  // gap in coverage.
-  '/guides/nudge/',
+     ].map((s) => `/mechanics/${s}/`),
   // The landing page mounts four live sets (hero + three mechanic panels)
   // through LandingReels, not RecipeRunner. A mount failure there renders no
   // canvas and no `.text-destructive`, so the canvas-count assertion is the
@@ -145,6 +145,9 @@ for (const path of PAGES) {
     // only; `recipes survive scrolling` below covers unmount/teardown.
     await page.setViewportSize({ width: 1280, height: 3000 });
     await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+    // A topic page's demos sit below its Concept prose; bring the section to
+    // the top of the viewport so the runner's intersection margin reaches them.
+    await page.evaluate(() => document.getElementById('demos')?.scrollIntoView());
     await page.waitForTimeout(3000);
 
     const canvases = await page.locator('canvas').count();
@@ -181,15 +184,15 @@ for (const path of PAGES) {
 const DRIVEN: { path: string; anchor: string; ms: number }[] = [
   // A lift held across three respin landings, each one a whole-board
   // `refreshCellZIndex()` over the lifted cell.
-  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift', ms: 12_000 },
+  { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-lift', ms: 12_000 },
   // `dim({ except })` under a `lift()`, both released in a `finally`.
-  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift-dim', ms: 9_000 },
+  { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-lift-dim', ms: 9_000 },
   // `dim()` and `dimSymbols()` back to back, both under a `lift()`.
-  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-symbols', ms: 12_000 },
+  { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-dim-symbols', ms: 12_000 },
   // One cell, chrome background vs symbol art, four dims in a row.
-  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-one-cell', ms: 12_000 },
+  { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-dim-one-cell', ms: 12_000 },
   // `reelSet.promote()` around a GSAP tween, run twice.
-  { path: '/recipes/symbols/', anchor: 'clover-promote-win-line', ms: 12_000 },
+  { path: '/mechanics/symbols/', anchor: 'clover-promote-win-line', ms: 12_000 },
 ];
 
 for (const { path, anchor, ms } of DRIVEN) {
@@ -244,11 +247,11 @@ for (const { path, anchor, ms } of DRIVEN) {
  * corrupt OTHER apps are invisible on a single-demo page.
  */
 const SCROLL_PAGES = [
-  '/recipes/big-symbols/',
-  '/recipes/nudge/',
-  '/recipes/cascade-6x5/',
-  '/recipes/hold-and-win/',
-  '/recipes/multiways/',
+  '/mechanics/big-symbols/',
+  '/mechanics/nudge/',
+  '/mechanics/cascade/',
+  '/mechanics/hold-and-win/',
+  '/mechanics/skip/',
 ];
 
 for (const path of SCROLL_PAGES) {
@@ -314,7 +317,7 @@ test('the debug overlay draws a spin without throwing', async ({ page }) => {
   page.on('pageerror', (err) => errors.push(String(err)));
 
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto(`${BASE}/recipes/anticipation/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/mechanics/anticipation/`, { waitUntil: 'networkidle' });
   // The page's first demo.
   const frame = page.locator('[data-recipe-frame]').first();
   await frame.scrollIntoViewIfNeeded();
