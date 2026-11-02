@@ -1,5 +1,6 @@
 id: motion-004
 group: motion
+topic: symbols
 question: How do I make symbols rise up from below (roll-up)?
 answer: >-
   `.direction('reverse')` on the builder makes the strip travel toward the

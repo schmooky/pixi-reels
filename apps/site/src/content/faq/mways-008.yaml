@@ -1,7 +1,8 @@
 id: mways-008
 group: mways
+topic: big-symbols
 question: How do I keep a pyramid (fixed jagged shape) instead of random cell counts?
 answer: For a fixed jagged shape use `.visibleCellsPerReel([...])` instead of MultiWays.
 links:
   - label: "Recipe: Pyramid shape"
-    href: /recipes/pyramid-shape/
+    href: /mechanics/big-symbols/#pyramid-shape

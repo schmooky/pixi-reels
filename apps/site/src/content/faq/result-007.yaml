@@ -1,5 +1,6 @@
 id: result-007
 group: result
+topic:
 question: How do I use a seeded RNG so a spin is exactly reproducible?
 answer: >-
   Inject a deterministic generator with `.rng(fn)` on the builder. The engine
@@ -9,4 +10,4 @@ answer: >-
   than importing it from `pixi-reels`.
 links:
   - label: "Guide: Cheats & testing"
-    href: /guides/cheats-and-testing/
+    href: /learn/cheats-and-testing/

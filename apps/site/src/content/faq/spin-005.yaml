@@ -1,5 +1,6 @@
 id: spin-005
 group: spin
+topic:
 question: How do I make the reels stop left to right?
 answer: >-
   `reelSet.setDropOrder('ltr')` -- also `'rtl'`, `'all'`, a per-reel delay array,

@@ -1,5 +1,6 @@
 id: result-001
 group: result
+topic:
 question: How do I tell the reels exactly what grid to land on?
 answer: "Give `reelSet.setResult(grid)` an array of one `ColumnTarget` per reel:
   `{ visible: ['A','B','C'], bufferStart?: [...], bufferEnd?: [...] }`. The

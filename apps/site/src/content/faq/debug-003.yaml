@@ -1,5 +1,6 @@
 id: debug-003
 group: debug
+topic:
 question: How do I log every domain event as it fires?
 answer: >-
   `__PIXI_REELS_DEBUG.trace()` logs the spin, skip, speed, spotlight,
@@ -8,4 +9,4 @@ answer: >-
   `reelSet.events.on(...)` directly for those.
 links:
   - label: "Guide: Debugging"
-    href: /guides/debugging/
+    href: /learn/debugging/

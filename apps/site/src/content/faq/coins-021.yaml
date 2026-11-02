@@ -1,5 +1,6 @@
 id: coins-021
 group: coins
+topic: hold-and-win
 question: How do I order the collect flights by row, by column, or all at once?
 answer: >-
   The shared `coinWaves(board.lockedCoins, 'by-reel')` helper -- also
@@ -8,4 +9,4 @@ answer: >-
   `apps/site/src/runtime/holdAndWinFx.ts`, not the package.
 links:
   - label: "Recipe: Hold & Win — collector"
-    href: /recipes/hold-and-win-collector/
+    href: /mechanics/hold-and-win/#hold-and-win-collector

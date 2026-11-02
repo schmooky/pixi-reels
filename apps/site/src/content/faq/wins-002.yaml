@@ -1,8 +1,9 @@
 id: wins-002
 group: wins
+topic: cells-and-banners
 question: How do I draw a payline across the winning cells?
 answer: Core never draws lines — subscribe to `win:group` and draw your own
   overlay using `reelSet.getCellBounds(col, row)`.
 links:
   - label: "Recipe: Paylines (events only)"
-    href: /recipes/paylines-events-only/
+    href: /mechanics/cells-and-banners/#paylines-events-only

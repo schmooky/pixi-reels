@@ -1,8 +1,9 @@
 id: triggers-007
 group: triggers
+topic: cells-and-banners
 question: How do I play a "bonus triggered" celebration before the mode swap?
 answer: Detect the trigger, play your celebration, then swap to the feature
   (hide base, show the feature display).
 links:
   - label: "Recipe: Feature mode swap"
-    href: /recipes/feature-mode-swap/
+    href: /mechanics/cells-and-banners/#feature-mode-swap

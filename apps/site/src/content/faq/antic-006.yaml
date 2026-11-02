@@ -1,8 +1,9 @@
 id: antic-006
 group: antic
+topic: anticipation
 question: How do I show an "almost" frame where the symbol overshoots then settles?
 answer: Prefill the teased symbol into `bufferStart` so it scrolls into view on
   the slowed reel, then settles back.
 links:
   - label: "Recipe: Anticipation teaser"
-    href: /recipes/anticipation-teaser/
+    href: /mechanics/anticipation/#anticipation-teaser

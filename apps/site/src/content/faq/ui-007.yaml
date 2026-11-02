@@ -1,8 +1,9 @@
 id: ui-007
 group: ui
+topic: cells-and-banners
 question: How do I position an overlay using a cell's exact pixel bounds?
 answer: "`reelSet.getCellBounds(col, row)` returns the pixel rect to align any
   overlay exactly."
 links:
   - label: "Recipe: Cell bounds"
-    href: /recipes/cell-bounds/
+    href: /mechanics/cells-and-banners/#cell-bounds

@@ -1,5 +1,6 @@
 id: cascade-013
 group: cascade
+topic: cascade
 question: How do I order the refills (which column fills first)?
 answer: >-
   `setDropOrder('all' | 'ltr' | 'rtl' | [perReelDelaysMs])` chooses which reel
@@ -8,4 +9,4 @@ answer: >-
   `.tumble({ dropIn: { cellOrder: 'endFirst' | 'startFirst' } })`.
 links:
   - label: "Recipe: Refill orders"
-    href: /recipes/refill-orders/
+    href: /mechanics/cascade/#refill-orders

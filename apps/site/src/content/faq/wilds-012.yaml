@@ -1,7 +1,8 @@
 id: wilds-012
 group: wilds
+topic: wilds-and-pins
 question: How do I turn a whole reel wild for the duration of a feature?
 answer: Pin every cell of that reel to wild for the feature's duration.
 links:
   - label: "Recipe: Expanding wild (CellPin)"
-    href: /recipes/expanding-wild-pin/
+    href: /mechanics/wilds-and-pins/#expanding-wild-pin

@@ -1,5 +1,6 @@
 id: anim-010
 group: anim
+topic: cascade
 question: How do I play a different destroy animation per symbol art (shatter vs
   disintegrate)?
 answer: >-
@@ -8,4 +9,4 @@ answer: >-
   no rotation.
 links:
   - label: "Recipe: Remove symbol"
-    href: /recipes/remove-symbol/
+    href: /mechanics/cascade/#cascade-destroy-and-present

@@ -1,5 +1,6 @@
 id: hw-021
 group: hw
+topic: hold-and-win
 question: How do I make a single skip fast-forward every spin, flight and
   collect at once, then fire one "feature done" event?
 answer: '`board.skip()` slams every in-flight cell to its landed position and
@@ -7,4 +8,4 @@ answer: '`board.skip()` slams every in-flight cell to its landed position and
   them short, and treat `feature:end` as the single "all done" event.'
 links:
   - label: "Recipe: Hold & Win — skip the whole feature"
-    href: /recipes/hold-and-win-skip/
+    href: /mechanics/hold-and-win/#hold-and-win-skip

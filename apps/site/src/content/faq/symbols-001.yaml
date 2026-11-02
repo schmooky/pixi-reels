@@ -1,5 +1,6 @@
 id: symbols-001
 group: symbols
+topic: symbols
 question: How do I add a brand-new symbol type to the game?
 answer: >-
   Subclass `ReelSymbol` and implement all five abstract members -- `onActivate`,
@@ -8,4 +9,4 @@ answer: >-
   anything positional belongs there rather than in the constructor.
 links:
   - label: "Guide: Symbols"
-    href: /guides/symbols/
+    href: /mechanics/symbols/#concept

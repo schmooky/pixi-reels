@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { FAQ, FAQ_COUNT, FAQ_ANSWERED, FAQ_ANSWERED_COUNT } from '../../content/faq.ts';
+import { FAQ_BY_TOPIC, FAQ_COUNT, FAQ_ANSWERED, FAQ_ANSWERED_COUNT, FAQ_GROUP_TITLE } from '../../content/faq.ts';
+import { TOPICS } from '../../content/topics.ts';
 import { ArrowRight, Search } from 'lucide-react';
 import { SITE, articleLd, breadcrumbLd, faqLd } from '../../lib/seo.ts';
 
@@ -18,6 +19,20 @@ const faqEntries = FAQ_ANSWERED.map((q) => ({
 }));
 
 const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
+
+// One section per mechanic, in /mechanics/ order, then General for the
+// questions no mechanic claims (setup, bet, HUD, integration, testing).
+// Each row keeps its original FAQ group as a label on the right.
+const sections = [
+  ...TOPICS.map((t) => ({
+    id: t.slug,
+    title: t.title,
+    blurb: t.oneLiner,
+    href: `/mechanics/${t.slug}/#questions`,
+    questions: FAQ_BY_TOPIC[t.slug] ?? [],
+  })),
+  { id: 'general', title: 'General', blurb: '', href: null, questions: FAQ_BY_TOPIC.general ?? [] },
+].filter((s) => s.questions.length > 0);
 ---
 <Base
   title={`FAQ · ${SITE.name}`}
@@ -66,11 +81,17 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
 
   <section class="py-12">
     <div class="container max-w-3xl space-y-14">
-      {FAQ.map((group, i) => (
+      {sections.map((group, i) => (
         <div class="faq-group" id={group.id} data-group={group.id}>
-          <h2 class="eyebrow">{String(i + 1).padStart(2, '0')} / {group.title.en}</h2>
-          <p class="mb-5 mt-2 max-w-xl text-sm text-muted-foreground">{group.blurb.en}</p>
-          <ul class="divide-y divide-border border-y border-border">
+          <h2 class="eyebrow">{String(i + 1).padStart(2, '0')} / {group.title}</h2>
+          {group.blurb && <p class="mt-2 max-w-xl text-sm text-muted-foreground">{group.blurb}</p>}
+          {group.href && (
+            <a href={group.href} class="mt-2 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground">
+              The mechanic
+              <ArrowRight size={12} strokeWidth={2.5} />
+            </a>
+          )}
+          <ul class="mt-5 divide-y divide-border border-y border-border">
             {group.questions.map((q) => {
               const answered = !!q.answer;
               const Row = answered ? 'a' : 'div';
@@ -92,6 +113,7 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
                         answered ? 'text-foreground' : 'text-muted-foreground',
                       ]}
                     >{q.en}</span>
+                    <span class="hidden shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70 sm:inline">{FAQ_GROUP_TITLE[q.group].en}</span>
                     {answered ? (
                       <ArrowRight size={16} strokeWidth={2.5} className="shrink-0 self-center text-muted-foreground transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1 group-hover:text-foreground" />
                     ) : (

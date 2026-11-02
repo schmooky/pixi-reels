@@ -1,8 +1,9 @@
 id: hw-017
 group: hw
+topic: hold-and-win
 question: How do I make a special coin upgrade all adjacent coins when it lands?
 answer: On `coin:locked`, walk the other coins and bump their ids/data — the
   board hands you `symbolAt(cell)` and the coin payload.
 links:
   - label: "Recipe: Hold & Win — payer / doubler coin"
-    href: /recipes/hold-and-win-payer-coin/
+    href: /mechanics/hold-and-win/#hold-and-win-payer-coin

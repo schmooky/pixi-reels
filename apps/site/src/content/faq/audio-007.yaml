@@ -1,5 +1,6 @@
 id: audio-007
 group: audio
+topic: feel
 question: How do I fire haptics/vibration on a jackpot hit?
 answer: Fire `navigator.vibrate(...)` in your `coin:locked` / `board:full` handler.
 links: []

@@ -1,5 +1,6 @@
 id: bet-008
 group: bet
+topic:
 question: How do I lock the bet during a feature?
 answer: Disable the bet control in your UI for the feature's duration.
 links: []

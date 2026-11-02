@@ -1,7 +1,8 @@
 id: mways-002
 group: mways
+topic: big-symbols
 question: How do I set a min and max row count per reel?
 answer: "`.multiways({ minCells, maxCells, reelExtent })`."
 links:
   - label: "Guide: MultiWays"
-    href: /guides/multiways/
+    href: /mechanics/big-symbols/#concept-multiways

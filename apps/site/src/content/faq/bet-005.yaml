@@ -1,7 +1,8 @@
 id: bet-005
 group: bet
+topic: cells-and-banners
 question: How do I draw and highlight which lines are active?
 answer: Draw line overlays with `getCellBounds`; highlighting is your render layer.
 links:
   - label: "Recipe: Paylines (events only)"
-    href: /recipes/paylines-events-only/
+    href: /mechanics/cells-and-banners/#paylines-events-only
