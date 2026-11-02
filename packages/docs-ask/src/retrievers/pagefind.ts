@@ -7,12 +7,21 @@ export interface PagefindRetrieverOptions {
   options?: Record<string, unknown>;
   /** Map a URL path to a section label for the citation. */
   sectionOf?: (url: string) => string;
+  /**
+   * Score multipliers by section label. Pagefind's ranking favours short,
+   * repetitive pages, so a generated API reference crowds out topic pages;
+   * the default demotes it unless the query is that page's title (a symbol
+   * name looked up on purpose).
+   */
+  sectionWeights?: Record<string, number>;
 }
 
 interface PagefindModule {
   options(o: Record<string, unknown>): Promise<void>;
-  search(q: string): Promise<{ results: Array<{ data(): Promise<PagefindResult> }> }>;
+  search(q: string): Promise<{ results: Array<{ score: number; data(): Promise<PagefindResult> }> }>;
 }
+
+export const DEFAULT_SECTION_WEIGHTS: Record<string, number> = { 'API reference': 0.15, Api: 0.15, Changelog: 0.5, Home: 0.6 };
 interface PagefindResult {
   url: string;
   excerpt: string;
@@ -52,8 +61,19 @@ export class PagefindRetriever implements Retriever {
     if (!q) return [];
     const pf = await this.mod();
     const res = await pf.search(q);
-    const pages = await Promise.all(res.results.slice(0, k).map((r) => r.data()));
     const sectionOf = this.opts.sectionOf ?? defaultSection;
+    const weights = this.opts.sectionWeights ?? DEFAULT_SECTION_WEIGHTS;
+    const pool = await Promise.all(
+      res.results.slice(0, Math.max(k * 4, 20)).map(async (r) => ({ score: r.score, p: await r.data() })),
+    );
+    const exact = q.toLowerCase().replace(/\s+/g, '');
+    for (const h of pool) {
+      const f = weights[h.p.meta.section ?? ''] ?? weights[sectionOf(h.p.url)];
+      const title = (h.p.meta.title ?? '').toLowerCase().replace(/\s+|\(\)$/g, '');
+      if (f !== undefined && title !== exact) h.score *= f;
+    }
+    pool.sort((a, b) => b.score - a.score);
+    const pages = pool.slice(0, k).map((h) => h.p);
     return pages.map((p, i) => {
       const best = p.sub_results?.[0];
       const url = best?.url ?? p.url;
@@ -61,7 +81,7 @@ export class PagefindRetriever implements Retriever {
       const chunk: Chunk = {
         id: `pagefind:${url}`,
         url,
-        section: sectionOf(p.url),
+        section: p.meta.section ?? sectionOf(p.url),
         title: p.meta.title ?? p.url,
         text,
         tokens: Math.ceil(text.length / 4),

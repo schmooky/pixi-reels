@@ -1,28 +1,60 @@
 ---
 /**
- * ⌘K search modal backed by Pagefind. The static index is built into
- * dist/pagefind/* by the docs build pipeline (`pagefind --site dist`),
- * which runs after Astro emits HTML.
+ * Cmd+K modal with two tabs.
  *
- * The modal listens for ⌘K / Ctrl+K everywhere; it fetches
- * `/pagefind/pagefind.js` lazily on first open so readers who never
- * use search don't pay for the index download.
+ * Search: Pagefind over the built HTML. The index is written into
+ * dist/pagefind/* by scripts/build-search.mjs after Astro emits HTML, with
+ * topic pages weighted above the generated API reference and the page
+ * section stored as meta, so every hit shows where it comes from. Recipe
+ * hits deep-link to the demo's own anchor through Pagefind's sub_results.
+ *
+ * Ask: the AskBox island (src/components/ask/AskBox.tsx), configured from
+ * src/ask.config.ts. It hydrates when the modal first becomes visible and
+ * loads its retriever and model on the first question.
+ *
+ * `/pagefind/pagefind.js` is fetched lazily on first open so readers who
+ * never search pay nothing for the index.
  */
+import { AskBox } from './ask/AskBox.tsx';
+import { askConfig } from '../ask.config.ts';
 ---
-<div id="search-root" class="hidden fixed inset-0 z-[100] flex items-start justify-center bg-background/80 pt-24">
+<div id="search-root" class="hidden fixed inset-0 z-[100] flex items-start justify-center bg-background/80 pt-24" role="dialog" aria-modal="true" aria-label="Search and ask">
   <div class="w-full max-w-xl rounded-sm border border-border bg-card">
-    <div class="flex items-center gap-2 border-b border-border px-4 py-2">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input
-        id="search-input"
-        type="search"
-        placeholder="Search docs, recipes, guides…"
-        class="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-        autocomplete="off"
-      />
-      <kbd class="ml-auto rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">esc</kbd>
+    <div class="flex items-center border-b border-border" role="tablist">
+      <button id="search-tab-search" type="button" role="tab" aria-selected="true" aria-controls="search-panel-search" data-tab="search"
+        class="search-tab inline-flex h-10 items-center gap-2 border-b-2 border-brand px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        Search
+      </button>
+      <button id="search-tab-ask" type="button" role="tab" aria-selected="false" aria-controls="search-panel-ask" data-tab="ask"
+        class="search-tab inline-flex h-10 items-center gap-2 border-b-2 border-transparent px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden><path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/></svg>
+        Ask
+      </button>
+      <kbd class="ml-auto mr-3 rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">esc</kbd>
     </div>
-    <ol id="search-results" class="max-h-[60vh] overflow-y-auto px-2 py-2 text-sm"></ol>
+
+    <div id="search-panel-search" role="tabpanel">
+      <div class="flex items-center gap-2 border-b border-border px-4 py-2">
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Search guides, recipes, FAQ, API..."
+          class="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+          autocomplete="off"
+          aria-label="Search the docs"
+        />
+      </div>
+      <ol id="search-results" class="max-h-[60vh] overflow-y-auto px-2 py-2 text-sm" aria-live="polite"></ol>
+      <div id="search-ask-hint" class="hidden border-t border-border px-4 py-2 text-xs text-muted-foreground">
+        Looking for an explanation?
+        <button type="button" id="search-ask-this" class="ml-1 font-medium text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground">Ask this as a question</button>
+      </div>
+    </div>
+
+    <div id="search-panel-ask" role="tabpanel" class="hidden max-h-[70vh] overflow-y-auto">
+      <AskBox config={askConfig} client:visible />
+    </div>
   </div>
 </div>
 <button
@@ -31,14 +63,14 @@
   type="button"
   aria-label="Open search"
 >
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
   Search
-  <kbd class="ml-1 rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+  <kbd class="ml-1 rounded-sm border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px]">&#8984;K</kbd>
 </button>
 
 <!--
   Inline + raw JS so Vite doesn't try to resolve /pagefind/pagefind.js at build
-  time. that file is emitted by `pagefind --site dist` AFTER Astro finishes,
+  time. that file is emitted by scripts/build-search.mjs AFTER Astro finishes,
   so a normal ESM import would fail the build. The dynamic import sits inside
   a string template literal hidden from the bundler.
 -->
@@ -49,6 +81,10 @@
     var input = document.getElementById('search-input');
     var results = document.getElementById('search-results');
     var trigger = document.getElementById('search-trigger');
+    var askHint = document.getElementById('search-ask-hint');
+    var askThis = document.getElementById('search-ask-this');
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.search-tab'));
+    var panels = { search: document.getElementById('search-panel-search'), ask: document.getElementById('search-panel-ask') };
 
     async function ensure() {
       if (pagefind) return pagefind;
@@ -66,10 +102,31 @@
       }
     }
 
-    function open() {
+    function showTab(name) {
+      tabs.forEach(function (t) {
+        var on = t.getAttribute('data-tab') === name;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.classList.toggle('border-brand', on);
+        t.classList.toggle('border-transparent', !on);
+        t.classList.toggle('text-foreground', on);
+        t.classList.toggle('text-muted-foreground', !on);
+      });
+      panels.search.classList.toggle('hidden', name !== 'search');
+      panels.ask.classList.toggle('hidden', name !== 'ask');
+      if (name === 'search') input && input.focus();
+      else {
+        var ta = panels.ask.querySelector('textarea');
+        ta && ta.focus();
+      }
+    }
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () { showTab(t.getAttribute('data-tab')); });
+    });
+
+    function open(tab) {
       if (!root) return;
       root.classList.remove('hidden');
-      input && input.focus();
+      showTab(tab || 'search');
     }
     function close() {
       if (!root) return;
@@ -77,13 +134,14 @@
     }
 
     trigger && trigger.addEventListener('click', function () {
-      void ensure().then(open);
+      void ensure().then(function () { open('search'); });
     });
 
     document.addEventListener('keydown', function (e) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        void ensure().then(open);
+        var tab = e.shiftKey ? 'ask' : 'search';
+        void ensure().then(function () { open(tab); });
       } else if (e.key === 'Escape') {
         close();
       }
@@ -93,25 +151,93 @@
       if (e.target === root) close();
     });
 
+    askThis && askThis.addEventListener('click', function () {
+      var q = input ? input.value.trim() : '';
+      showTab('ask');
+      // The island may still be hydrating; it reads the event once mounted,
+      // so retry briefly until a textarea exists to receive it.
+      var tries = 0;
+      (function send() {
+        var ta = panels.ask.querySelector('textarea');
+        if (ta || tries++ > 40) {
+          window.dispatchEvent(new CustomEvent('docs-ask:prefill', { detail: q }));
+          return;
+        }
+        setTimeout(send, 50);
+      })();
+    });
+
     var last = 0;
     input && input.addEventListener('input', async function () {
       var q = input.value.trim();
       var id = ++last;
       if (!q) {
         if (results) results.innerHTML = '';
+        askHint && askHint.classList.add('hidden');
         return;
       }
       var pf = await ensure();
       if (!pf || id !== last) return;
       var search = await pf.search(q);
       if (id !== last) return;
-      var data = await Promise.all(search.results.slice(0, 10).map(function (r) { return r.data(); }));
+      var data = await rerank(search.results, 10, q);
+      if (id !== last) return;
       if (!results) return;
-      results.innerHTML = data.map(function (d) {
-        var title = escapeHtml((d.meta && d.meta.title) || d.url);
-        return '<li class="rounded-sm hover:bg-secondary/40"><a href="' + d.url + '" class="block px-3 py-2"><div class="text-sm font-semibold">' + title + '</div><div class="text-xs text-muted-foreground line-clamp-2">' + d.excerpt + '</div></a></li>';
-      }).join('');
+      askHint && askHint.classList.toggle('hidden', q.split(/\s+/).length < 3);
+      if (!data.length) {
+        results.innerHTML = '<li class="px-3 py-2 text-xs text-muted-foreground">No pages match. Try the Ask tab for a question in your own words.</li>';
+        return;
+      }
+      results.innerHTML = data.map(renderHit).join('');
     });
+
+    // Pagefind's ranking favours short, repetitive pages, and the generated
+    // API reference is 341 of them: for "anticipation" every Anticipation*
+    // type scores four times the architecture page. Scale each hit's score
+    // by its section before taking the top n. A query that IS a symbol name
+    // (case-insensitive match on the page title) keeps its reference page on
+    // top.
+    var SECTION_FACTOR = { 'API reference': 0.15, 'Changelog': 0.5, 'Home': 0.6 };
+    async function rerank(all, n, q) {
+      var pool = await Promise.all(all.slice(0, 40).map(function (r) {
+        return r.data().then(function (d) { return { score: r.score, d: d }; });
+      }));
+      var exact = q.toLowerCase().replace(/\s+/g, '');
+      pool.forEach(function (h) {
+        var section = (h.d.meta && h.d.meta.section) || '';
+        var title = ((h.d.meta && h.d.meta.title) || '').toLowerCase().replace(/\s+|\(\)$/g, '');
+        var f = SECTION_FACTOR[section];
+        if (f && !(section === 'API reference' && title === exact)) h.score *= f;
+      });
+      pool.sort(function (a, b) { return b.score - a.score; });
+      return pool.slice(0, n).map(function (h) { return h.d; });
+    }
+
+    function renderHit(d) {
+      var section = (d.meta && d.meta.section) || '';
+      var title = (d.meta && d.meta.title) || d.url;
+      var url = d.url;
+      var heading = '';
+      var excerpt = d.excerpt;
+      // A hit inside a page (a recipe demo, a guide section) links to its own
+      // anchor and shows that heading under the page title.
+      var sub = (d.sub_results || []).filter(function (s) { return s.url.indexOf('#') >= 0; })[0];
+      if (sub && sub.title !== title) {
+        url = sub.url;
+        heading = sub.title;
+        excerpt = sub.excerpt || excerpt;
+      }
+      return (
+        '<li class="border-b border-border/60 last:border-b-0 hover:bg-secondary/40"><a href="' + escapeHtml(url) + '" class="block px-3 py-2">' +
+        '<div class="flex items-baseline gap-2">' +
+        (section ? '<span class="font-mono text-[10px] uppercase tracking-[0.14em] text-brand-text">' + escapeHtml(section) + '</span>' : '') +
+        '<span class="truncate text-sm font-semibold">' + escapeHtml(title) + '</span>' +
+        (heading ? '<span class="truncate text-xs text-muted-foreground">' + escapeHtml(heading) + '</span>' : '') +
+        '</div>' +
+        '<div class="mt-0.5 text-xs text-muted-foreground line-clamp-2">' + excerpt + '</div>' +
+        '</a></li>'
+      );
+    }
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"]/g, function (c) {
