@@ -1,7 +1,14 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, PHASE_CARD_COLORS, PIXI, app,
-//                   DebugPlaque
-//
+import * as PIXI from 'pixi.js';
+import { PHASE_CARD_COLORS, PhaseCardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { readout } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'PhaseCardSymbol: read the phase off the board',
+  topic: 'symbols',
+  tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
+} as const satisfies RecipeMeta;
+
 // SEE THE PHASE. `PhaseCardSymbol`.
 //
 // A CardSymbol that is grey at rest and takes the colour of the phase its
@@ -19,58 +26,59 @@
 // gets a colour too (`other`, or one you add through `colors`). Skip presses
 // show why the symbol exists: a slam goes amber-or-blue straight to green,
 // a quicken (see Skip & slam) shows the violet stop in between.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+  const TEASE = [3, 4];
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
-const TEASE = [3, 4];
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+    })
+    // Slow enough that every colour is on screen long enough to read.
+    .speed('normal', { ...SpeedPresets.NORMAL, accelerationDuration: 600, stopDelay: 350, anticipationDelay: 1400, bounceDuration: 500 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
-  })
-  // Slow enough that every colour is on screen long enough to read.
-  .speed('normal', { ...SpeedPresets.NORMAL, accelerationDuration: 600, stopDelay: 350, anticipationDelay: 1400, bounceDuration: 500 })
-  .ticker(app.ticker)
-  .build();
+  // One call, every reel. Returns the release.
+  const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 
-// One call, every reel. Returns the release.
-const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+  const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+  // Legend: a swatch per phase, in lifecycle order, read left to right. Three
+  // plaques of two rows each, so it stays two rows tall under the board.
+  const legend = new PIXI.Container();
+  const ORDER = ['rest', 'start', 'spin', 'anticipation', 'stop', 'landed'];
+  const COL_GAP = 6;
+  const COL_W = (TOTAL_W - COL_GAP * 2) / 3;
+  for (let col = 0; col < 3; col++) {
+    const plaque = readout.plaque({
+      rows: [ORDER[col], ORDER[col + 3]].map((phase) => ({ text: phase, swatch: PHASE_CARD_COLORS[phase] })),
+      fontSize: 10,
+      minWidth: COL_W,
+    });
+    plaque.position.set(col * (COL_W + COL_GAP), TOTAL_H + 10);
+    legend.addChild(plaque);
+  }
+  reelSet.addChild(legend);
 
-// Legend: a swatch per phase, in lifecycle order, read left to right. Three
-// plaques of two rows each, so it stays two rows tall under the board.
-const legend = new PIXI.Container();
-const ORDER = ['rest', 'start', 'spin', 'anticipation', 'stop', 'landed'];
-const COL_GAP = 6;
-const COL_W = (TOTAL_W - COL_GAP * 2) / 3;
-for (let col = 0; col < 3; col++) {
-  const plaque = new DebugPlaque({
-    rows: [ORDER[col], ORDER[col + 3]].map((phase) => ({ text: phase, swatch: PHASE_CARD_COLORS[phase] })),
-    fontSize: 10,
-    minWidth: COL_W,
-  });
-  plaque.position.set(col * (COL_W + COL_GAP), TOTAL_H + 10);
-  legend.addChild(plaque);
+  return {
+    reelSet,
+    cleanup: () => {
+      unwatch();
+      try { legend.destroy({ children: true }); } catch {}
+    },
+    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+    onSpin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      reelSet.setAnticipation(TEASE, { stagger: 'sequential' });
+      await new Promise((r) => setTimeout(r, 400));
+      reelSet.setResult(grid);
+      await p;
+    },
+  };
 }
-reelSet.addChild(legend);
-
-return {
-  reelSet,
-  cleanup: () => {
-    unwatch();
-    try { legend.destroy({ children: true }); } catch {}
-  },
-  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    const p = reelSet.spin();
-    reelSet.setAnticipation(TEASE, { stagger: 'sequential' });
-    await new Promise((r) => setTimeout(r, 400));
-    reelSet.setResult(grid);
-    await p;
-  },
-};

@@ -1,7 +1,15 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, CardSymbol, CARD_DECK, gsap, app,
-//                   DebugPlaque
-//
+import { gsap } from 'gsap';
+import { CARD_DECK, CardSymbol, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { readout } from '@pixi-reels/kit';
+import type { ReelBounce, SkipContext, SpeedProfile, StopPhaseConfig } from 'pixi-reels';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'What a phase may call',
+  topic: 'docs/api-phases',
+  tags: [],
+} as const satisfies RecipeMeta;
+
 // A STOP PHASE WRITTEN FROM SCRATCH, on `ReelPhase`. The instant stop.
 //
 // The reel never scrolls its frame in. It stops dead, the result is placed,
@@ -30,90 +38,97 @@
 // `this._speed` read it in TypeScript. The manager hands every phase the
 // profile instance the game registered, so the field is there at run time;
 // the generic is what types it.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  type SlideProfile = SpeedProfile & { slideMs: number };
 
-class InstantStopPhase extends ReelPhase {
-  name = 'stop';
-  skippable = true;
+  class InstantStopPhase extends ReelPhase<StopPhaseConfig, SlideProfile> {
+    name = 'stop';
+    skippable = true;
+    private _landed = false;
+    private _rest!: number;
+    private _slide: gsap.core.Tween | null = null;
+    private _bounce: ReelBounce | null = null;
 
-  onEnter(config) {
-    const reel = this.reel;
-    const axis = reel.axis;
-    this._landed = false;
-    // Stop dead first: while the reel moves, the ticker would scroll the
-    // placed frame straight back out of the window.
-    reel.forceSpeed(0);
-    reel.placeStrip(config.targetFrame);
-    // Slide in from a tenth of a cell back, along the reel's own axis, then
-    // land and bounce. Lifted unmask art would need carrying here the way
-    // `bounce()` carries it; none is registered in this demo, so a bare tween
-    // of the container is honest.
-    this._rest = axis.getMain(reel.container);
-    axis.setMain(reel.container, this._rest - axis.polarity * reel.symbolHeight * 0.1);
-    this._slide = gsap.to(reel.container, {
-      [axis.mainProp]: this._rest,
-      duration: this._speed.slideMs / 1000,
-      ease: 'power2.out',
-      onComplete: () => {
-        this._slide = null;
-        this._landed = true;
-        this.land();
-        this._bounce = this.bounce();
-        this._bounce.done.then(() => this._complete());
-      },
-    });
-  }
-
-  update() {}
-
-  // The slam pose: wherever the phase was, leave the reel where a natural
-  // finish would have - resting on its frame, landed. A quicken has nothing
-  // to cut in this phase, so it is left to finish on its own.
-  onSkip(ctx) {
-    if (ctx.mode === 'quicken') return;
-    if (this._slide) { this._slide.kill(); this._slide = null; }
-    if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
-    this.reel.axis.setMain(this.reel.container, this._rest);
-    if (!this._landed) { this._landed = true; this.land(); }
-  }
-}
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    onEnter(config: StopPhaseConfig) {
+      const reel = this.reel;
+      const axis = reel.axis;
+      this._landed = false;
+      // Stop dead first: while the reel moves, the ticker would scroll the
+      // placed frame straight back out of the window.
+      reel.forceSpeed(0);
+      reel.placeStrip(config.targetFrame);
+      // Slide in from a tenth of a cell back, along the reel's own axis, then
+      // land and bounce. Lifted unmask art would need carrying here the way
+      // `bounce()` carries it; none is registered in this demo, so a bare tween
+      // of the container is honest.
+      this._rest = axis.getMain(reel.container);
+      axis.setMain(reel.container, this._rest - axis.polarity * reel.symbolHeight * 0.1);
+      this._slide = gsap.to(reel.container, {
+        [axis.mainProp]: this._rest,
+        duration: this._speed.slideMs / 1000,
+        ease: 'power2.out',
+        onComplete: () => {
+          this._slide = null;
+          this._landed = true;
+          this.land();
+          this._bounce = this.bounce();
+          this._bounce.done.then(() => this._complete());
+        },
+      });
     }
-  })
-  // `slideMs` is the phase's own field on the profile.
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 160, minimumSpinTime: 700, slideMs: 140 })
-  .phases((f) => f.register('stop', InstantStopPhase))
-  .ticker(app.ticker)
-  .build();
 
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
-const hud = new DebugPlaque({
-  text: 'StopPhase replaced: stop dead, place, slide a tenth of a cell in, land, bounce.',
-  minWidth: TOTAL_W,
-  maxWidth: TOTAL_W,
-});
-hud.position.set(0, TOTAL_H + 10);
-reelSet.addChild(hud);
+    update() {}
 
-return {
-  reelSet,
-  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(grid);
-    await p;
-  },
-};
+    // The slam pose: wherever the phase was, leave the reel where a natural
+    // finish would have - resting on its frame, landed. A quicken has nothing
+    // to cut in this phase, so it is left to finish on its own.
+    onSkip(ctx: SkipContext<SlideProfile>) {
+      if (ctx.mode === 'quicken') return;
+      if (this._slide) { this._slide.kill(); this._slide = null; }
+      if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
+      this.reel.axis.setMain(this.reel.container, this._rest);
+      if (!this._landed) { this._landed = true; this.land(); }
+    }
+  }
+
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+      }
+    })
+    // `slideMs` is the phase's own field on the profile.
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 160, minimumSpinTime: 700, slideMs: 140 } as SlideProfile)
+    .phases((f) => f.register('stop', InstantStopPhase))
+    .ticker(app.ticker)
+    .build();
+
+  const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+  const hud = readout.plaque({
+    text: 'StopPhase replaced: stop dead, place, slide a tenth of a cell in, land, bounce.',
+    minWidth: TOTAL_W,
+    maxWidth: TOTAL_W,
+  });
+  hud.position.set(0, TOTAL_H + 10);
+  reelSet.addChild(hud);
+
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
+    onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+    onSpin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      await p;
+    },
+  };
+}

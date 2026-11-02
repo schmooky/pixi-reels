@@ -1,6 +1,12 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app, pickWeighted
+import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { pickWeighted } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'Horizontal starter',
+  topic: 'starters',
+  tags: ['starter', '5x3', 'cascade', 'multiways', 'hold-and-win', 'horizontal', 'reverse', 'orientation'],
+} as const satisfies RecipeMeta;
 
 // A sideways slot: three strips stacked down the screen, each scrolling along
 // X. Clone this when the board should read left-to-right instead of top-down.
@@ -16,44 +22,45 @@
 // thing either way - three strips of five cells - and the ColumnTarget[] you
 // feed `setResult()` is unchanged, because index space is orientation-neutral.
 // Nothing rotates: every card still renders upright.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
-const SYMBOLS = [...CARD_DECK, WILD_CARD];
+  const weights = {
+    '7': 20, '8': 20, '9': 20,
+    '10': 14, J: 14,
+    Q: 10, K: 6, A: 5,
+    wild: 3,
+  };
 
-const weights = {
-  '7': 20, '8': 20, '9': 20,
-  '10': 14, J: 14,
-  Q: 10, K: 6, A: 5,
-  wild: 3,
-};
+  const REELS = 3;  // strips, marching down the screen
+  const CELLS = 5;  // cells along each strip, running across the screen
 
-const REELS = 3;  // strips, marching down the screen
-const CELLS = 5;  // cells along each strip, running across the screen
+  const reelSet = new ReelSetBuilder()
+    .orientation('horizontal')
+    .reels(REELS)
+    .visibleCells(CELLS)
+    .symbolSize(96, 72) // screen width x height. travel eats the width
+    .symbolGap(6, 6)    // x separates cells along a strip, y separates strips
+    .symbols((r) => {
+      for (const sym of SYMBOLS) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color,
+          label: sym.label,
+          textColor: sym.textColor,
+        });
+      }
+    })
+    .weights(weights)
+    .speed('normal', SpeedPresets.NORMAL)
+    .speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .orientation('horizontal')
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(96, 72) // screen width x height. travel eats the width
-  .symbolGap(6, 6)    // x separates cells along a strip, y separates strips
-  .symbols((r) => {
-    for (const sym of SYMBOLS) {
-      r.register(sym.id, CardSymbol, {
-        color: sym.color,
-        label: sym.label,
-        textColor: sym.textColor,
-      });
-    }
-  })
-  .weights(weights)
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-return {
-  reelSet,
-  nextResult: () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => pickWeighted(weights)),
-    ),
-};
+  return {
+    reelSet,
+    nextResult: () =>
+      Array.from({ length: REELS }, () =>
+        Array.from({ length: CELLS }, () => pickWeighted(weights)),
+      ),
+  };
+}

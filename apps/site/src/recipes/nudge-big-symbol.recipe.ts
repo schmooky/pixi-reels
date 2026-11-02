@@ -1,6 +1,12 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, app
+import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'Nudge through a big symbol',
+  topic: 'nudge',
+  tags: ['nudge', 'stagger', 'spotlight', 'big-symbols', 'abort', 'skip', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // NUDGE THROUGH A BIG SYMBOL.
 //
@@ -17,72 +23,73 @@
 // visibleCells=3, bufferEnd=1, total=5). block fits.
 //
 // Cross-reel blocks (w > 1) throw; that case is intentionally excluded.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
+  const REELS = 5;
+  const ROWS = 3;
+  const SIZE = 80;
+  const GAP = 4;
 
-const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
-const REELS = 5;
-const ROWS = 3;
-const SIZE = 80;
-const GAP = 4;
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(ROWS)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(GAP, GAP)
-  .symbols((registry) => {
-    for (const card of CARD_DECK) {
-      registry.register(card.id, CardSymbol, {
-        color: card.color, label: card.label, textColor: card.textColor,
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCells(ROWS)
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(GAP, GAP)
+    .symbols((registry) => {
+      for (const card of CARD_DECK) {
+        registry.register(card.id, CardSymbol, {
+          color: card.color, label: card.label, textColor: card.textColor,
+        });
+      }
+      registry.register(MEGA.id, CardSymbol, {
+        color: MEGA.color, label: MEGA.label, textColor: MEGA.textColor,
       });
-    }
-    registry.register(MEGA.id, CardSymbol, {
-      color: MEGA.color, label: MEGA.label, textColor: MEGA.textColor,
-    });
-  })
-  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({
-    [MEGA.id]: { weight: 0, zIndex: 5, size: { reels: MEGA.w, cells: MEGA.h } },
-  })
-  // Big symbols don't tolerate the default 56px landing bounce. zero it
-  // so the anchor lands flush on grid.
-  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
-  .ticker(app.ticker)
-  .build();
+    })
+    .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+    .symbolData({
+      [MEGA.id]: { weight: 0, zIndex: 5, size: { reels: MEGA.w, cells: MEGA.h } },
+    })
+    // Big symbols don't tolerate the default 56px landing bounce. zero it
+    // so the anchor lands flush on grid.
+    .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+    .ticker(app.ticker)
+    .build();
 
-const FILLER_IDS = ['7', '8', '9', '10', 'J'];
-const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
-const col3 = () => [filler(), filler(), filler()];
+  const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+  const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+  const col3 = () => [filler(), filler(), filler()];
 
-return {
-  reelSet,
-  onSpin: async () => {
-    // 1. Land a 1x2 MEGA wild at column 2, cells 0+1. The OCCUPIED stub
-    //    at cell 1 is placed by the big-symbol coordinator inside setResult.
-    const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(grid.map((visible) => ({ visible })));
-    await p;
-    await new Promise((r) => setTimeout(r, 500));
+  return {
+    reelSet,
+    onSpin: async () => {
+      // 1. Land a 1x2 MEGA wild at column 2, cells 0+1. The OCCUPIED stub
+      //    at cell 1 is placed by the big-symbol coordinator inside setResult.
+      const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 220));
+      reelSet.setResult(grid.map((visible) => ({ visible })));
+      await p;
+      await new Promise((r) => setTimeout(r, 500));
 
-    // 2. Nudge column 2 DOWN by 2. Survival: 1 + 2 - 1 + 2 = 4 < 5 ✓.
-    //    After: anchor at cell 2, stub at bufferEnd → only top half of
-    //    the block is visible.
-    await reelSet.nudge(2, {
-      distance: 2,
-      direction: 'forward',
-      incoming: [filler(), filler()],
-      duration: 600,
-    });
-    await new Promise((r) => setTimeout(r, 700));
+      // 2. Nudge column 2 DOWN by 2. Survival: 1 + 2 - 1 + 2 = 4 < 5 ✓.
+      //    After: anchor at cell 2, stub at bufferEnd → only top half of
+      //    the block is visible.
+      await reelSet.nudge(2, {
+        distance: 2,
+        direction: 'forward',
+        incoming: [filler(), filler()],
+        duration: 600,
+      });
+      await new Promise((r) => setTimeout(r, 700));
 
-    // 3. Nudge UP by 1 to bring the full block back into view at cells 1+2.
-    //    Survival up: anchorCell (3) >= distance (1) ✓.
-    await reelSet.nudge(2, {
-      distance: 1,
-      direction: 'reverse',
-      incoming: [filler()],
-      duration: 480,
-    });
-  },
-};
+      // 3. Nudge UP by 1 to bring the full block back into view at cells 1+2.
+      //    Survival up: anchorCell (3) >= distance (1) ✓.
+      await reelSet.nudge(2, {
+        distance: 1,
+        direction: 'reverse',
+        incoming: [filler()],
+        duration: 480,
+      });
+    },
+  };
+}

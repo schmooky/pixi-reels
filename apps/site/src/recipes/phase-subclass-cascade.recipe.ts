@@ -1,7 +1,21 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CascadeDropInPhase, resolveTumbleConfig, CardSymbol, CARD_DECK, app,
-//                   DebugPlaque
-//
+import {
+  CARD_DECK,
+  CardSymbol,
+  CascadeDropInPhase,
+  ReelSetBuilder,
+  resolveTumbleConfig,
+  SpeedPresets,
+} from 'pixi-reels';
+import type { CascadeDropInPhaseConfig, TumbleConfig } from 'pixi-reels';
+import { readout } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'Phases that take constructor arguments',
+  topic: 'skip',
+  tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+} as const satisfies RecipeMeta;
+
 // SUBCLASSING A PHASE THAT TAKES CONSTRUCTOR ARGUMENTS.
 //
 // The four standard phases are built with `(reel, speed)`, so
@@ -19,69 +33,70 @@
 // position does not decide the winner. (It used to: `.phases()` ran at call
 // time and `.tumble()` registered its defaults later, inside `build()`, which
 // silently discarded any `'cascade:*'` override.)
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const REELS = 5, ROWS = 3, SIZE = 76, GAP = 4;
+  const TUMBLE: TumbleConfig = {
+    fall: { duration: 300, ease: 'power3.in', cellStagger: 60 },
+    dropIn: { duration: 500, ease: 'power2.out', cellStagger: 60, distance: 'perHole' },
+  };
+  const RESOLVED = resolveTumbleConfig(TUMBLE);
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const REELS = 5, ROWS = 3, SIZE = 76, GAP = 4;
-const TUMBLE = {
-  fall: { duration: 300, ease: 'power3.in', cellStagger: 60 },
-  dropIn: { duration: 500, ease: 'power2.out', cellStagger: 60, distance: 'perHole' },
-};
-const RESOLVED = resolveTumbleConfig(TUMBLE);
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  let drops = 0;
+  const bumpDrops = () => { drops += 1; };
 
-let drops = 0;
-const bumpDrops = () => { drops += 1; };
-
-class CountingDropInPhase extends CascadeDropInPhase {
-  onEnter(config) {
-    bumpDrops();
-    super.onEnter(config);
-  }
-}
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+  class CountingDropInPhase extends CascadeDropInPhase {
+    onEnter(config: CascadeDropInPhaseConfig) {
+      bumpDrops();
+      super.onEnter(config);
     }
-  })
-  // Registered BEFORE .tumble() on purpose - it still wins.
-  .phases((f) =>
-    f.registerFactory(
-      'cascade:dropIn',
-      (reel, speed) => new CountingDropInPhase(reel, speed, RESOLVED.dropIn, RESOLVED.gravity),
-    ),
-  )
-  .tumble(TUMBLE)
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
-  .ticker(app.ticker)
-  .build();
+  }
 
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
-// Grid-wide from the start. The prompt and the result both wrap to two rows
-// at this width, so the plate is already the size the count needs.
-const hud = new DebugPlaque({
-  text: 'press spin: the drop-in phase is the subclass, one per reel',
-  minWidth: TOTAL_W,
-  maxWidth: TOTAL_W,
-});
-hud.position.set(0, TOTAL_H + 10);
-reelSet.addChild(hud);
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+      }
+    })
+    // Registered BEFORE .tumble() on purpose - it still wins.
+    .phases((f) =>
+      f.registerFactory(
+        'cascade:dropIn',
+        (reel, speed) => new CountingDropInPhase(reel, speed, RESOLVED.dropIn, RESOLVED.gravity),
+      ),
+    )
+    .tumble(TUMBLE)
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+    .ticker(app.ticker)
+    .build();
 
-return {
-  reelSet,
-  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-  onSpin: async () => {
-    drops = 0;
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(grid);
-    await p;
-    hud.text = `CountingDropInPhase constructed ${drops}x - once per reel, ` +
-      'from a registration made before .tumble()';
-  },
-};
+  const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+  // Grid-wide from the start. The prompt and the result both wrap to two rows
+  // at this width, so the plate is already the size the count needs.
+  const hud = readout.plaque({
+    text: 'press spin: the drop-in phase is the subclass, one per reel',
+    minWidth: TOTAL_W,
+    maxWidth: TOTAL_W,
+  });
+  hud.position.set(0, TOTAL_H + 10);
+  reelSet.addChild(hud);
+
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
+    onSpin: async () => {
+      drops = 0;
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      await p;
+      hud.text = `CountingDropInPhase constructed ${drops}x - once per reel, ` +
+        'from a registration made before .tumble()';
+    },
+  };
+}

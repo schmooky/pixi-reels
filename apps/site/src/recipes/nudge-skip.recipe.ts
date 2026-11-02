@@ -1,6 +1,12 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'Skip an in-flight nudge',
+  topic: 'nudge',
+  tags: ['nudge', 'stagger', 'spotlight', 'big-symbols', 'abort', 'skip', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // SKIP NUDGE pattern.
 //
@@ -10,57 +16,58 @@
 // to its landed state. The `nudge()` promise still resolves normally,
 // so the consumer's success path (win re-detect, spotlight, whatever)
 // runs unchanged. only the animation got cut short.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const SYMBOLS = [...CARD_DECK, WILD_CARD];
+  const FILLER = ['7', '8', '9', '10', 'J'];
+  const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+  const col3 = () => [filler(), filler(), filler()];
 
-const SYMBOLS = [...CARD_DECK, WILD_CARD];
-const FILLER = ['7', '8', '9', '10', 'J'];
-const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
-const col3 = () => [filler(), filler(), filler()];
+  const NUDGE_COLS = [1, 2, 3];
+  const NUDGE_DURATION = 1500;
 
-const NUDGE_COLS = [1, 2, 3];
-const NUDGE_DURATION = 1500;
+  const reelSet = new ReelSetBuilder()
+    .reels(5)
+    .visibleCells(3)
+    .symbolSize(72, 72)
+    .symbolGap(4, 4)
+    .symbols((r) => {
+      for (const sym of SYMBOLS) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color,
+          label: sym.label,
+          textColor: sym.textColor,
+        });
+      }
+    })
+    .speed('normal', SpeedPresets.NORMAL)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(5)
-  .visibleCells(3)
-  .symbolSize(72, 72)
-  .symbolGap(4, 4)
-  .symbols((r) => {
-    for (const sym of SYMBOLS) {
-      r.register(sym.id, CardSymbol, {
-        color: sym.color,
-        label: sym.label,
-        textColor: sym.textColor,
-      });
-    }
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .ticker(app.ticker)
-  .build();
+  return {
+    reelSet,
+    onSpin: async () => {
+      const p = reelSet.spin();
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+      await p;
+      await new Promise((resolve) => setTimeout(resolve, 320));
 
-return {
-  reelSet,
-  onSpin: async () => {
-    const p = reelSet.spin();
-    await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
-    await p;
-    await new Promise((resolve) => setTimeout(resolve, 320));
-
-    // Sequential nudges, each 1.5s long. Tap the canvas button during
-    // any of them to fast-forward. the loop's `await` resolves
-    // immediately at that tween's landed state and the loop continues
-    // with the next reel.
-    for (const reel of NUDGE_COLS) {
-      await reelSet.nudge(reel, {
-        distance: 1,
-        direction: 'forward',
-        incoming: ['wild'],
-        duration: NUDGE_DURATION,
-      });
-    }
-  },
-  // No `onSkip` override needed. the RecipeRunner's built-in fallback
-  // detects an in-flight nudge and calls `reelSet.skipNudge()` for us.
-  // The recipe deliberately leaves the default behaviour in place so
-  // readers can copy the minimal pattern.
-};
+      // Sequential nudges, each 1.5s long. Tap the canvas button during
+      // any of them to fast-forward. the loop's `await` resolves
+      // immediately at that tween's landed state and the loop continues
+      // with the next reel.
+      for (const reel of NUDGE_COLS) {
+        await reelSet.nudge(reel, {
+          distance: 1,
+          direction: 'forward',
+          incoming: ['wild'],
+          duration: NUDGE_DURATION,
+        });
+      }
+    },
+    // No `onSkip` override needed. the RecipeRunner's built-in fallback
+    // detects an in-flight nudge and calls `reelSet.skipNudge()` for us.
+    // The recipe deliberately leaves the default behaviour in place so
+    // readers can copy the minimal pattern.
+  };
+}

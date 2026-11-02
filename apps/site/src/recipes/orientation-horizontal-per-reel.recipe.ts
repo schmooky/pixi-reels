@@ -1,6 +1,13 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app, pickWeighted
+import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { pickWeighted } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'Both knobs at once',
+  topic: 'orientation-and-direction',
+  tags: ['horizontal', 'orientation', 'direction', 'reverse', 'roll-up', 'banner', 'ways', 'axis'],
+  height: 340,
+} as const satisfies RecipeMeta;
 
 // The two knobs compose. Orientation is set-level and fixed at build();
 // direction is per reel and can differ on every one of them.
@@ -14,45 +21,46 @@
 // mixed per-reel directions, because the block coordinator assumes every reel
 // it covers feeds from the same edge. `build()` throws rather than shipping a
 // symbol that tears in half mid-spin.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
-const SYMBOLS = [...CARD_DECK, WILD_CARD];
+  const weights = {
+    '7': 20, '8': 20, '9': 20,
+    '10': 14, J: 14,
+    Q: 10, K: 6, A: 5,
+    wild: 3,
+  };
 
-const weights = {
-  '7': 20, '8': 20, '9': 20,
-  '10': 14, J: 14,
-  Q: 10, K: 6, A: 5,
-  wild: 3,
-};
+  const REELS = 4;
+  const CELLS = 5;
 
-const REELS = 4;
-const CELLS = 5;
+  const reelSet = new ReelSetBuilder()
+    .orientation('horizontal')
+    .reels(REELS)
+    .visibleCells(CELLS)
+    .symbolSize(84, 64)
+    .symbolGap(6, 6)
+    .directionPerReel(['forward', 'reverse', 'forward', 'reverse'])
+    .symbols((r) => {
+      for (const sym of SYMBOLS) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color,
+          label: sym.label,
+          textColor: sym.textColor,
+        });
+      }
+    })
+    .weights(weights)
+    .speed('normal', SpeedPresets.NORMAL)
+    .speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .orientation('horizontal')
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(84, 64)
-  .symbolGap(6, 6)
-  .directionPerReel(['forward', 'reverse', 'forward', 'reverse'])
-  .symbols((r) => {
-    for (const sym of SYMBOLS) {
-      r.register(sym.id, CardSymbol, {
-        color: sym.color,
-        label: sym.label,
-        textColor: sym.textColor,
-      });
-    }
-  })
-  .weights(weights)
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-return {
-  reelSet,
-  nextResult: () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => pickWeighted(weights)),
-    ),
-};
+  return {
+    reelSet,
+    nextResult: () =>
+      Array.from({ length: REELS }, () =>
+        Array.from({ length: CELLS }, () => pickWeighted(weights)),
+      ),
+  };
+}

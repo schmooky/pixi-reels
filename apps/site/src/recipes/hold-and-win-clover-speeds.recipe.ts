@@ -1,7 +1,24 @@
-// @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines,
-//           CLOVER_SPEEDS, cloverCellMask, CLOVER_CELL, gsap, app, DebugPlaque
-//
+import { gsap } from 'gsap';
+import { HoldAndWinBuilder } from 'pixi-reels';
+import type { HwCell } from 'pixi-reels';
+import {
+  CLOVER_CELL,
+  CLOVER_SPEEDS,
+  cloverCellMask,
+  cloverGridBackground,
+  readout,
+} from '@pixi-reels/kit';
+import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'One speed switch for every cell',
+  topic: 'hold-and-win',
+  tags: ['hold-and-win', 'coins', 'collector', 'respin', 'spine', 'horizontal', 'reverse', 'orientation', 'rectangular', 'clovers'],
+  height: 420,
+  needs: ['hw-clover-spine'],
+} as const satisfies RecipeMeta;
+
 // One speed switch for the whole board. Every cell is its own 1x1 reel set
 // with its own SpeedManager, so speeds are registered board-wide with
 // speeds({ normal, turbo, superTurbo }) and switched board-wide with
@@ -10,100 +27,101 @@
 // next wave runs on the new one, and skip() is how a turbo press cuts the
 // wave in progress. Three waves here: normal, turbo (switched mid-wave and
 // slammed home), superTurbo.
+export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+  const COLS = 5, ROWS = 3;
+  const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+  const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const fmt = (v: number) => v.toFixed(2);
+  const pick = (a: number[]) => a[Math.floor(Math.random() * a.length)];
+  const VALUES = [1, 1.5, 2, 2.5, 3, 5];
 
-const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
-const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const fmt = (v) => v.toFixed(2);
-const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+  const art = await assets.cloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
+  const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+  class Clover extends CloverSpineSymbol {
+    onActivate(id: string) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
+  }
 
-const art = await loadHwCloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
-const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
-class Clover extends CloverSpineSymbol {
-  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
+  const board = new HoldAndWinBuilder<{ value: number }>()
+    .grid(COLS, ROWS)
+    .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+    .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
+    .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+    .symbolData(UNMASK)
+    // every name lands in every cell's SpeedManager; 'normal' is active at build.
+    // The landing wave steps by each profile's stopDelay (70, 25, 0 ms), so it
+    // flattens as the speed goes up with no stagger of its own.
+    .speeds(CLOVER_SPEEDS)
+    .cellMask(cloverCellMask)
+    .respins(3)
+    .lockAnimation('landing')
+    .ticker(app.ticker)
+    .build();
+  const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+  const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+  board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+  const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+  app.stage.addChild(grid, board.container);
+
+  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+  app.stage.addChild(hud);
+  // Placed by its own height, so the pill sits clear of the frame's 8px margin.
+  const badge = readout.plaque({ text: 'normal', fontSize: 12, color: 0xf5b400, radius: 'pill', anchor: { x: 1, y: 0 } });
+  badge.position.set(board.container.x + boardW, board.container.y - 14 - badge.plateHeight);
+  app.stage.addChild(badge);
+  board.events.on('speed:changed', ({ name, previous }) => {
+    badge.text = name;
+    gsap.fromTo(badge.scale, { x: 1.4, y: 1.4 }, { x: 1, y: 1, duration: 0.3, ease: 'back.out(2)' });
+    hud.text = `setSpeed('${name}') from ${previous}: every cell's SpeedManager at once`;
+  });
+  board.events.on('cell:landed', ({ cell, coin }) => { if (coin) (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value)); });
+
+  const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
+  const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }].map(gold);
+
+  let busy = false;
+  return {
+    board,
+    cleanup: () => { try { hud.destroy({ children: true }); badge.destroy({ children: true }); grid.destroy({ children: true }); } catch {} board.destroy(); },
+    onSpin: async () => {
+      if (busy) return;
+      busy = true;
+      board.reset();
+      board.setSpeed('normal');
+      board.enter(SEED);
+      for (const c of SEED) { const s = board.symbolAt(c.cell) as Clover; s.setLabel(fmt(c.data.value)); s.playIdle(); }
+      hud.text = 'wave 1 on normal';
+      await sleep(400);
+
+      // wave 1: normal
+      await board.respin([gold({ reel: 0, cell: 0 })]);
+      await sleep(400);
+
+      // wave 2: switched to turbo WHILE the cells spin. They finish on normal
+      // (the engine never retunes a reel in flight), so slam them - that is
+      // what a turbo press does - and the wave after runs turbo end to end.
+      const wave = board.respin([gold({ reel: 4, cell: 1 })]);
+      await sleep(350);
+      board.setSpeed('turbo');
+      hud.text = "turbo mid-wave: cells finish on normal, skip() cuts them, next wave is turbo";
+      await sleep(250);
+      board.skip();
+      await wave;
+      await sleep(400);
+      await board.respin([gold({ reel: 2, cell: 0 })]);
+      await sleep(400);
+
+      // wave 3: superTurbo, stagger 0 - the whole board lands as one
+      board.setSpeed('superTurbo');
+      await sleep(300);
+      const res = await board.respin([gold({ reel: 2, cell: 2 })]);
+      await sleep(300);
+      if (!res.done) for (let i = 0; i < 3; i++) { const r = await board.respin([]); if (r.done) break; }
+      await board.playWin();
+      const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
+      hud.text = `feature over on ${board.speed} · TOTAL ${fmt(total)} · press spin to replay`;
+      busy = false;
+    },
+  };
 }
-
-const board = new HoldAndWinBuilder()
-  .grid(COLS, ROWS)
-  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
-  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
-  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
-  .symbolData(UNMASK)
-  // every name lands in every cell's SpeedManager; 'normal' is active at build.
-  // The landing wave steps by each profile's stopDelay (70, 25, 0 ms), so it
-  // flattens as the speed goes up with no stagger of its own.
-  .speeds(CLOVER_SPEEDS)
-  .cellMask(cloverCellMask)
-  .respins(3)
-  .lockAnimation('landing')
-  .ticker(app.ticker)
-  .build();
-const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
-const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
-board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
-const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
-app.stage.addChild(grid, board.container);
-
-const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
-hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
-app.stage.addChild(hud);
-// Placed by its own height, so the pill sits clear of the frame's 8px margin.
-const badge = new DebugPlaque({ text: 'normal', fontSize: 12, color: 0xf5b400, radius: 'pill', anchor: { x: 1, y: 0 } });
-badge.position.set(board.container.x + boardW, board.container.y - 14 - badge.plateHeight);
-app.stage.addChild(badge);
-board.events.on('speed:changed', ({ name, previous }) => {
-  badge.text = name;
-  gsap.fromTo(badge.scale, { x: 1.4, y: 1.4 }, { x: 1, y: 1, duration: 0.3, ease: 'back.out(2)' });
-  hud.text = `setSpeed('${name}') from ${previous}: every cell's SpeedManager at once`;
-});
-board.events.on('cell:landed', ({ cell, coin }) => { if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value)); });
-
-const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
-const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }].map(gold);
-
-let busy = false;
-return {
-  board,
-  cleanup: () => { try { hud.destroy({ children: true }); badge.destroy({ children: true }); grid.destroy({ children: true }); } catch {} board.destroy(); },
-  onSpin: async () => {
-    if (busy) return;
-    busy = true;
-    board.reset();
-    board.setSpeed('normal');
-    board.enter(SEED);
-    for (const c of SEED) { const s = board.symbolAt(c.cell); s.setLabel(fmt(c.data.value)); s.playIdle(); }
-    hud.text = 'wave 1 on normal';
-    await sleep(400);
-
-    // wave 1: normal
-    await board.respin([gold({ reel: 0, cell: 0 })]);
-    await sleep(400);
-
-    // wave 2: switched to turbo WHILE the cells spin. They finish on normal
-    // (the engine never retunes a reel in flight), so slam them - that is
-    // what a turbo press does - and the wave after runs turbo end to end.
-    const wave = board.respin([gold({ reel: 4, cell: 1 })]);
-    await sleep(350);
-    board.setSpeed('turbo');
-    hud.text = "turbo mid-wave: cells finish on normal, skip() cuts them, next wave is turbo";
-    await sleep(250);
-    board.skip();
-    await wave;
-    await sleep(400);
-    await board.respin([gold({ reel: 2, cell: 0 })]);
-    await sleep(400);
-
-    // wave 3: superTurbo, stagger 0 - the whole board lands as one
-    board.setSpeed('superTurbo');
-    await sleep(300);
-    const res = await board.respin([gold({ reel: 2, cell: 2 })]);
-    await sleep(300);
-    if (!res.done) for (let i = 0; i < 3; i++) { const r = await board.respin([]); if (r.done) break; }
-    await board.playWin();
-    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
-    hud.text = `feature over on ${board.speed} · TOTAL ${fmt(total)} · press spin to replay`;
-    busy = false;
-  },
-};

@@ -1,8 +1,22 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadSpineSet, app, pickWeighted, DebugPlaque
-//
+import {
+  prewarmSpinTextures,
+  ReelSetBuilder,
+  SpeedPresets,
+  SpinTextureCache,
+  StaticSpinSymbol,
+} from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
+import { pickWeighted, readout } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+
+export const meta = {
+  title: 'Symbol layering - zIndex, unmask, promote',
+  topic: 'symbols',
+  tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
+  height: 420,
+  needs: ['spine:thunderkick'],
+} as const satisfies RecipeMeta;
+
 // SYMBOL GRADING: the consumer owns the draw order.
 //
 // The engine's formula is type-dominant (`symbolData.zIndex * 100 + cell`),
@@ -16,73 +30,74 @@
 //
 // In motion the resolver returns `defaultZIndex`, so the spin looks exactly
 // as it did - the grading is an at-rest presentation.
+export default async function recipe({ app, assets }: RecipeContext): Promise<RecipeResult> {
+  const thunderkick = await assets.spineSet("thunderkick");
 
-const thunderkick = await loadSpineSet("thunderkick");
+  const SPINE_SCALE = 0.6;
+  const CELL_W = 175 * SPINE_SCALE;
+  const CELL_H = 203 * SPINE_SCALE;
+  const ROWS_PER_REEL = [3, 4, 4, 4, 4, 3];
 
-const SPINE_SCALE = 0.6;
-const CELL_W = 175 * SPINE_SCALE;
-const CELL_H = 203 * SPINE_SCALE;
-const ROWS_PER_REEL = [3, 4, 4, 4, 4, 3];
+  const spineMap = thunderkick.spineMap;
+  const weights = {
+    low1: 6, low2: 6, low3: 6, low4: 6, low5: 6,
+    mid1: 12, mid2: 12, mid3: 12, mid4: 12, high: 10,
+  };
+  // The spec: lows ungraded (engine order), mids one grade, high above them.
+  const GRADE: Record<string, number> = { mid1: 1, mid2: 1, mid3: 1, mid4: 1, high: 2 };
+  const UNMASK = Object.fromEntries(Object.keys(GRADE).map((id) => [id, { unmask: true }]));
 
-const spineMap = thunderkick.spineMap;
-const weights = {
-  low1: 6, low2: 6, low3: 6, low4: 6, low5: 6,
-  mid1: 12, mid2: 12, mid3: 12, mid4: 12, high: 10,
-};
-// The spec: lows ungraded (engine order), mids one grade, high above them.
-const GRADE = { mid1: 1, mid2: 1, mid3: 1, mid4: 1, high: 2 };
-const UNMASK = Object.fromEntries(Object.keys(GRADE).map((id) => [id, { unmask: true }]));
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const createInner = () =>
+    new SpineReelSymbol({ spineMap, scale: SPINE_SCALE, landingAnimation: 'land', autoPlayLanding: true });
 
-const cache = new SpinTextureCache({ renderer: app.renderer });
-const createInner = () =>
-  new SpineReelSymbol({ spineMap, scale: SPINE_SCALE, landingAnimation: 'land', autoPlayLanding: true });
+  prewarmSpinTextures({
+    cache,
+    ids: Object.keys(weights),
+    createSymbol: createInner,
+    width: CELL_W,
+    height: CELL_H,
+  });
 
-prewarmSpinTextures({
-  cache,
-  ids: Object.keys(weights),
-  createSymbol: createInner,
-  width: CELL_W,
-  height: CELL_H,
-});
+  const reelSet = new ReelSetBuilder()
+    .reels(6)
+    .visibleCellsPerReel(ROWS_PER_REEL)
+    .reelAnchor('center')
+    .symbolSize(CELL_W, CELL_H)
+    .symbolGap(0, 0)
+    .symbols((r) => {
+      for (const id of Object.keys(weights)) {
+        r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 160 });
+      }
+    })
+    .weights(weights)
+    .symbolData(UNMASK)
+    // Row-dominant within a grade: cell * 10 beats reel, grade * 1000 beats both.
+    .symbolZIndex((ctx) => {
+      if (!ctx.atRest || ctx.visibleCell === null) return ctx.defaultZIndex;
+      const grade = GRADE[ctx.symbolId];
+      return grade === undefined
+        ? ctx.defaultZIndex
+        : grade * 1000 + ctx.visibleCell * 10 + ctx.reelIndex;
+    })
+    .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
+    .speed('turbo', { ...SpeedPresets.TURBO, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(6)
-  .visibleCellsPerReel(ROWS_PER_REEL)
-  .reelAnchor('center')
-  .symbolSize(CELL_W, CELL_H)
-  .symbolGap(0, 0)
-  .symbols((r) => {
-    for (const id of Object.keys(weights)) {
-      r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 160 });
-    }
-  })
-  .weights(weights)
-  .symbolData(UNMASK)
-  // Row-dominant within a grade: cell * 10 beats reel, grade * 1000 beats both.
-  .symbolZIndex((ctx) => {
-    if (!ctx.atRest || ctx.visibleCell === null) return ctx.defaultZIndex;
-    const grade = GRADE[ctx.symbolId];
-    return grade === undefined
-      ? ctx.defaultZIndex
-      : grade * 1000 + ctx.visibleCell * 10 + ctx.reelIndex;
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
-  .speed('turbo', { ...SpeedPresets.TURBO, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
-  .ticker(app.ticker)
-  .build();
+  const hud = readout.plaque({
+    text: 'at rest: lower row in front, then the reel to the right, high above every mid',
+    align: 'center',
+    anchor: { x: 0.5, y: 0 },
+    minWidth: 6 * CELL_W,
+  });
+  hud.position.set(3 * CELL_W, 4 * CELL_H + 6);
+  reelSet.addChild(hud);
 
-const hud = new DebugPlaque({
-  text: 'at rest: lower row in front, then the reel to the right, high above every mid',
-  align: 'center',
-  anchor: { x: 0.5, y: 0 },
-  minWidth: 6 * CELL_W,
-});
-hud.position.set(3 * CELL_W, 4 * CELL_H + 6);
-reelSet.addChild(hud);
-
-return {
-  reelSet,
-  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-  nextResult: () =>
-    ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights))),
-};
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
+    nextResult: () =>
+      ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights))),
+  };
+}
