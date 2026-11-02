@@ -1,20 +1,20 @@
 ---
 import Docs from '../../layouts/Docs.astro';
-import { WIKI_NAV } from '../../content/nav.ts';
+import { REFERENCE_NAV } from '../../content/nav.ts';
 import { ARCH_PAGES } from '../../content/architectureNav.ts';
 ---
-<Docs title="Docs & API reference" section="wiki" eyebrow="Reference">
+<Docs title="Reference" section="reference" eyebrow="Reference" description="The pixi-reels API in prose, the generated TypeDoc reference, the glossary, the migration guides, the changelog and the architecture tour.">
   <p>
     The full API reference for <code>pixi-reels</code>, plus an architecture tour and a plain-English glossary.
     Each page below explains one axis in common language first, then drops into signatures and examples.
   </p>
 
   <p class="!mt-2 text-sm text-muted-foreground">
-    Looking for a how-to? Start with <a href="/guides/getting-started/">Getting started</a> or a <a href="/recipes/">recipe</a>.
+    Looking for a how-to? Start with <a href="/learn/getting-started/">Getting started</a> or a <a href="/mechanics/">mechanic</a>.
   </p>
 
   <div class="mt-12 space-y-12">
-    {WIKI_NAV.map((section, i) => (
+    {REFERENCE_NAV.filter((s) => s.title !== 'Architecture').map((section, i) => (
       <section>
         <h2 class="eyebrow mb-4 mt-0">{String(i + 1).padStart(2, '0')} / {section.title}</h2>
         <div class="divide-y divide-border border-y border-border">
@@ -34,7 +34,7 @@ import { ARCH_PAGES } from '../../content/architectureNav.ts';
     ))}
 
     <section>
-      <h2 class="eyebrow mb-4 mt-0">{String(WIKI_NAV.length + 1).padStart(2, '0')} / Architecture</h2>
+      <h2 class="eyebrow mb-4 mt-0">{String(REFERENCE_NAV.length).padStart(2, '0')} / Architecture</h2>
       <p class="mb-4 mt-0 text-sm text-muted-foreground">A tour of the internals: construction, ownership, the viewport, symbols, motion, the spin lifecycle and its timeline, skipping, anticipation, events, cascades, pins and boards, debug and testing. Hand-laid SVG, no UML, no mermaid.</p>
       <div class="divide-y divide-border border-y border-border">
         {ARCH_PAGES.map((p) => (

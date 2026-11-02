@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SITE } from '../lib/seo.ts';
-import { RECIPES } from '../content/recipes.ts';
+import { TOPICS } from '../content/topics.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
-import { GUIDES_NAV, WIKI_NAV } from '../content/nav.ts';
+import { LEARN_NAV, REFERENCE_NAV } from '../content/nav.ts';
 import { FAQ_ANSWERED } from '../content/faq.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -48,27 +48,27 @@ export const GET: APIRoute = async () => {
   const entries: Entry[] = [];
 
   entries.push({ loc: url('/'), priority: '1.0', changefreq: 'weekly' });
-  entries.push({ loc: url('/guides/'), priority: '0.9', changefreq: 'weekly' });
-  entries.push({ loc: url('/docs/'), priority: '0.9', changefreq: 'weekly' });
+  entries.push({ loc: url('/learn/'), priority: '0.9', changefreq: 'weekly' });
+  entries.push({ loc: url('/reference/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/studio/'), priority: '0.9', changefreq: 'weekly' });
-  entries.push({ loc: url('/recipes/'), priority: '0.9', changefreq: 'weekly' });
+  entries.push({ loc: url('/mechanics/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/faq/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/architecture/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/api/'), priority: '0.9', changefreq: 'weekly' });
-  entries.push({ loc: url('/changelog/'), priority: '0.7', changefreq: 'weekly' });
+  entries.push({ loc: url('/reference/changelog/'), priority: '0.7', changefreq: 'weekly' });
 
   for (const route of apiRoutes()) {
     entries.push({ loc: url(route), priority: '0.75', changefreq: 'monthly' });
   }
 
-  for (const r of RECIPES) {
-    entries.push({ loc: url(`/recipes/${r.slug}/`), priority: '0.85', changefreq: 'monthly' });
+  for (const t of TOPICS) {
+    entries.push({ loc: url(`/mechanics/${t.slug}/`), priority: '0.85', changefreq: 'monthly' });
   }
   for (const p of ARCH_PAGES) {
     entries.push({ loc: url(`/architecture/${p.slug}/`), priority: '0.85', changefreq: 'monthly' });
   }
 
-  for (const section of [...GUIDES_NAV, ...WIKI_NAV]) {
+  for (const section of [...LEARN_NAV, ...REFERENCE_NAV]) {
     for (const item of section.items) {
       entries.push({ loc: url(item.href), priority: '0.8', changefreq: 'monthly' });
     }
