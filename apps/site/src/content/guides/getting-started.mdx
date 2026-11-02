@@ -5,13 +5,13 @@ eyebrow: Start here
 description: Install pixi-reels and run your first reel set in under 2 minutes.
 ---
 
-pixi-reels is a reel engine. You drop it into a PixiJS v8 app.
+pixi-reels is a reel engine for a PixiJS v8 app. You add it to the stage like any other container.
 
 ## You need
 
-- Node 20+, and pnpm or npm or yarn
+- Node 20 or newer, and pnpm, npm or yarn
 - A PixiJS v8 app. The engine runs off `app.ticker`
-- Spine symbols? Also install `@esotericsoftware/spine-pixi-v8`
+- For Spine symbols, `@esotericsoftware/spine-pixi-v8` as well
 
 ## Install
 
@@ -53,19 +53,19 @@ console.log(result.symbols);
 
 ## Did it work
 
-Reels spin. Reels stop. Three rows of random symbols.
+The reels spin, then stop on three rows of random symbols.
 
-Nothing happened? One of these:
+If nothing happened, it is usually one of these.
 
 | You see | Do this |
 |---|---|
-| Blank canvas | Set `reelSet.x` and `reelSet.y`. It sits at (0,0). |
-| `ticker() must be called` | You forgot `.ticker(app.ticker)`. |
-| Symbols invisible | The texture never loaded, or `symbolSize()` does not match your art. `resize()` runs on every swap. |
+| Blank canvas | Set `reelSet.x` and `reelSet.y`. The set sits at (0,0) until you move it. |
+| `ticker() must be called` | Add `.ticker(app.ticker)` to the builder. |
+| Symbols invisible | The texture never loaded, or `symbolSize()` does not match your art. The engine calls `resize()` on every symbol swap. |
 
 ## Where next
 
-- **Build a real slot** -> [Your first reelset](/learn/your-first-reelset/)
-- **Learn the spin API** -> [Spin lifecycle](/mechanics/skip/#concept)
-- **Test a mechanic** -> [Cheats & testing](/learn/cheats-and-testing/)
-- **See what is possible** -> [Recipes](/mechanics/)
+- [Your first reelset](/learn/your-first-reelset/) builds a real slot step by step
+- [Spin lifecycle](/mechanics/skip/#concept) explains the spin API
+- [Cheats & testing](/learn/cheats-and-testing/) shows how to test a mechanic
+- [Recipes](/mechanics/) shows what the engine can do

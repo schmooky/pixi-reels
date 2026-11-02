@@ -7,21 +7,23 @@ description: Snapshot the reel state as JSON, render an ASCII grid, trace every 
 
 import Grid from '../../components/docs/Grid.astro';
 
-PixiJS draws to a canvas, so AI agents and automated tooling can't *see* the
-reels. pixi-reels ships three utilities that solve this: `debugSnapshot`,
-`debugGrid`, and `enableDebug`. They are data only and live in the main entry.
+PixiJS draws to a canvas, so AI agents and automated tooling cannot see the
+reels. For that, pixi-reels ships three utilities: `debugSnapshot`,
+`debugGrid` and `enableDebug`. They return data only and live in the main entry.
 
 Drawing the same state on the canvas (cell geometry, a per-reel hud, a metrics
-plaque and a phase timeline for every spin) is the `pixi-reels/debug` subpath,
-[further down](#the-visual-overlay).
+plaque and a phase timeline for every spin) is the job of the `pixi-reels/debug`
+subpath, described [further down](#the-visual-overlay).
 
 ## One-liner: attach to window
 
 ```ts
 import { enableDebug } from 'pixi-reels';
 enableDebug(reelSet);
-// → window.__PIXI_REELS_DEBUG is now live
+// window.__PIXI_REELS_DEBUG is now live
 ```
+
+In Node, `enableDebug` does nothing. It checks `typeof window` and returns.
 
 In the browser devtools console:
 
@@ -50,14 +52,15 @@ __PIXI_REELS_DEBUG.metrics();
 //   totals: { rounds: 1, skipped: 0, averageDuration: 2310 } }
 ```
 
-`metrics()` answers for every spin since `enableDebug` was called: per reel,
-when each phase started and ended, when the reel was asked to stop, when it
-landed, its tease window; per round, every skip press, the landing order, and
-how many symbols were swapped into cells. Times are ms since the round's
-`spin:start`. It is the text half of the timeline described below.
+`metrics()` covers every spin since `enableDebug` was called. For each reel it
+records when each phase started and ended, when the reel was asked to stop,
+when it landed, and its tease window. For each round it records every skip
+press, the landing order, and how many symbols were swapped into cells. Times
+are in ms since the round's `spin:start`. It is the text half of the timeline
+described below.
 
-`trace()` is `reelSet.events.onAny(...)` with a `console.log` in it. The same
-hook is yours on every bus, and `onNotice` is its twin for engine notices:
+`trace()` is `reelSet.events.onAny(...)` with a `console.log` inside. The same
+hook exists on every bus, and `onNotice` does the same for engine notices.
 
 ```ts
 import { onNotice } from 'pixi-reels';
@@ -71,19 +74,20 @@ const off = onNotice(({ kind, code, message }) => telemetry.note(kind, code, mes
 
 ## The events panel on the recipes site
 
-Every live recipe on this site has a **Debug** button (top-left of the
-canvas). It opens the events panel beside the canvas, under it on a narrow
-screen: every event every reel set, reel and board in the demo raised, as it
-happens, with a timestamp relative to the round's `spin:start` and the
-payload unwrapped under the event, one member per line. The filter
-takes words and `!words` (`skip !symbol:created`), pause freezes the view
-while the recorder keeps going, copy puts the visible rows on the clipboard
-as JSON. Engine notices show up as `notice` rows. On a recipe that returns a
-reel set the same button also draws the overlay described below, with a
-toggle per group of layers: `info` (hud, metrics, timeline), `grid` (mask,
-cells, blocks, pins), `motion` (axis, feed, buffers, thresholds) and
-`bounds`. Every demo records its spins from the moment it mounts, so the
-timeline shows the spin that made you reach for the button.
+Every live recipe on this site has a Debug button at the top left of the
+canvas. It opens the events panel beside the canvas, or under it on a narrow
+screen. The panel lists every event that every reel set, reel and board in the
+demo raised, as it happens, with a timestamp relative to the round's
+`spin:start`. The payload is unwrapped under the event, one member per line.
+The filter takes words and `!words`, for example `skip !symbol:created`. Pause
+freezes the view while the recorder keeps going. Copy puts the visible rows on
+the clipboard as JSON. Engine notices show up as `notice` rows.
+
+On a recipe that returns a reel set, the same button also draws the overlay
+described below, with a toggle per group of layers: `info` (hud, metrics,
+timeline), `grid` (mask, cells, blocks, pins), `motion` (axis, feed, buffers,
+thresholds) and `bounds`. Every demo records its spins from the moment it
+mounts, so the timeline shows the spin that made you reach for the button.
 
 ## Programmatic snapshot
 
@@ -97,10 +101,17 @@ const snap = debugSnapshot(reelSet);
 console.log(debugGrid(reelSet));   // ASCII table
 ```
 
+`debugGrid` returns plain text, so you can log it, assert against it or paste
+it anywhere.
+
+The snapshot shapes are typed as `DebugSnapshot` and `DebugReelSnapshot`. They
+contain no PixiJS objects, so `JSON.stringify()` always works, and they survive
+`structuredClone` and `postMessage` without losing anything.
+
 ## Using snapshots in tests
 
-The test harness pipes snapshots into readable error messages automatically
-when `expectGrid()` fails:
+When `expectGrid()` fails, the test harness puts a snapshot into the error
+message for you.
 
 ```
 Grid mismatch:
@@ -117,17 +128,15 @@ Current grid:
   ]}
 />
 
-The snapshot shapes are typed as `DebugSnapshot` and `DebugReelSnapshot`. they're plain data so they survive `structuredClone` / `postMessage` / `JSON.stringify` without losing fidelity.
-
 ## Recording sessions
 
 When a bug only reproduces across a whole spin, record it and read the
 sequence back offline.
 
-Recording is **event-driven, not per-frame**: `startRecording` listens for
-`spin:start`, `spin:reelLanded`, `spin:allLanded`, `spin:complete` and
-`destroyed`, and captures a snapshot at each. A spin yields a handful of
-frames, not one per render tick.
+Recording is driven by events rather than frames. `startRecording` listens for
+`spin:start`, `spin:reelLanded`, `spin:allLanded` and `spin:complete`, and
+captures a snapshot at each. It also detaches itself when the reel set emits
+`destroyed`. A spin yields a handful of frames.
 
 ```ts
 import { startRecording, stopRecording, getFrames, clearFrames } from 'pixi-reels';
@@ -143,25 +152,25 @@ console.log(`captured ${frames.length} frames`);
 clearFrames();
 ```
 
-Each `RecordedFrame` is `{ tag, trigger, snapshot }` -- the tag you passed,
+Each `RecordedFrame` is `{ tag, trigger, snapshot }`: the tag you passed,
 the event name that triggered the capture, and the `DebugSnapshot`. The
 timestamp lives inside `snapshot`.
 
-Two things to know about the buffer:
+Two things to know about the buffer.
 
-- It is **process-wide and not cleared between sessions**, so bare
-  `getFrames()` returns every take since the page loaded. Pass the tag.
-- It is a rolling window, 1000 frames by default (`maxFrames`). A long
-  session silently drops the oldest.
+- It is shared by the whole process and is not cleared between sessions, so
+  a bare `getFrames()` returns every take since the page loaded. Pass the tag.
+- It is a rolling window of 1000 frames by default (`maxFrames`). A long
+  session drops the oldest frames without telling you.
 
 ## The visual overlay
 
-`debugSnapshot` tells you what the engine thinks; `debugOverlay` draws it on
+`debugSnapshot` tells you what the engine thinks. `debugOverlay` draws it on
 top of the canvas, so you can see whether the picture agrees. It lives at the
 `pixi-reels/debug` subpath and draws with
 [pixi-silk](https://pixi-silk.schmooky.dev), an optional peer dependency that
 renders every shape as an exact distance field, so a 1px outline stays a clean
-1px line at whatever scale the reel set is fitted to:
+1px line at whatever scale the reel set is fitted to.
 
 ```bash
 pnpm add -D pixi-silk
@@ -181,49 +190,50 @@ overlay.redraw();
 overlay.destroy();
 ```
 
-A build that never imports `pixi-reels/debug` never needs `pixi-silk`. It draws
-through WebGL: on a WebGPU renderer the overlay's shapes draw nothing, so debug
-on `app.init({ preference: 'webgl' })`. Building one in a headless test needs a
-canvas stand-in; the [4.0 migration guide](/reference/migrating-to-4-0/) has it.
+A build that never imports `pixi-reels/debug` never needs `pixi-silk`. The
+overlay draws through WebGL. On a WebGPU renderer its shapes draw nothing, so
+debug on `app.init({ preference: 'webgl' })`. Building one in a headless test
+needs a canvas stand-in; the [4.0 migration guide](/reference/migrating-to-4-0/)
+has it.
 
 | Layer | Draws | Catches |
 |---|---|---|
-| `mask` | Mask box + per-reel rects | Pyramid peek; a mask strategy clipping on the wrong axis |
+| `mask` | Mask box and per-reel rects | Pyramid peek; a mask strategy clipping on the wrong axis |
 | `cells` | Every visible cell, with `reel,cell` labels | Off-by-one in cell indexing |
 | `buffers` | The off-window strip cells, dimmer | Buffer targets and big-symbol tails, which are otherwise invisible |
-| `axis` | One arrow per reel, pointing the way it travels | Reverse polarity and horizontal orientation become obvious instead of inferred |
-| `feed` | The edge new symbols arrive at | Confirms `feedEdge` derives from direction rather than being set twice |
-| `thresholds` | The wrap lines | No symbol should ever be drawn past one |
+| `axis` | One arrow per reel, pointing the way it travels | A reverse direction or a horizontal orientation, at a glance |
+| `feed` | The edge new symbols arrive at | Confirms `feedEdge` follows from the direction |
+| `thresholds` | The wrap lines | A symbol drawn past one |
 | `bounds` | Real `view.getBounds()` per symbol | Spine overrun past its cell |
 | `blocks` | `getBlockBounds` outline for big symbols | 2x2 anchors, and block/screen transposition |
 | `pins` | Pin cells and pin-overlay positions | A pin overlay drifting off its cell |
 | `hud` | A row per reel, `r0 VF feed=start spd=0.0 idle cells=3`, with a phase swatch and a speed meter | Reading state without opening the console |
-| `metrics` | A plaque under the mask for the current round: its length, time to the first stop, landing order and the largest gap, tease windows, the last skip press, symbols built, events, fps | "Why did that spin feel slow?" answered with numbers |
+| `metrics` | A plaque under the mask for the current round: its length, time to the first stop, landing order and the largest gap, tease windows, the last skip press, symbols built, events, fps | Why a spin felt slow, in numbers |
 | `timeline` | Every reel's phases for the round on one time axis, the speed trace on top, a tick at the stop request, a dot at the landing, a dashed line per skip press | Stagger, tease holds and a slam that cut a stop short, as shapes |
 
 The overlay draws into the `ReelSet` itself, so it renders above the viewport
-*and* above the spotlight container. The geometry and the hud stay inside the
-mask; `metrics` and `timeline` sit under it, side by side when the set is wide
-enough, so they add to the reel set's bounds: fit your camera after enabling
-them. It is dev-only: it reads internals, it is not semver-protected, and it
-must not reach a production bundle.
+and above the spotlight container. The geometry and the hud stay inside the
+mask. `metrics` and `timeline` sit under it, side by side when the set is wide
+enough, so they add to the reel set's bounds. Fit your camera after enabling
+them. The overlay is dev-only. It reads internals, it is not semver-protected,
+and it must not reach a production bundle.
 
-### The timeline, read
+### How to read the timeline
 
 Each lane is one reel. The colored blocks are its phases, in the colors
-`PhaseCardSymbol` paints (sky `start`, blue `spin`, amber `anticipation`,
-violet `stop`); the white line on top is `speedNormalized`, so a surge-then-
-crawl tease is a bump and a slope, not a guess. The white tick is when the
-controller asked the reel to stop, the green dot is when it came to rest, and
-the amber underline is its tease window. A red dashed line is a slam press, a
-yellow one a quicken. While the round runs a cursor marks now.
+`PhaseCardSymbol` paints: sky for `start`, blue for `spin`, amber for
+`anticipation`, violet for `stop`. The white line on top is `speedNormalized`,
+so a surge-then-crawl tease shows as a bump and a slope. The white tick is when
+the controller asked the reel to stop, the green dot is when it came to rest,
+and the amber underline is its tease window. A red dashed line is a slam press,
+a yellow one a quicken. While the round runs, a cursor marks now.
 
 ### Recording from the start
 
 The `metrics` and `timeline` layers read a `SpinMetrics`. By default the
 overlay starts its own, so they show the rounds from the moment it was
 created. To see the spin before that, keep a recorder running and hand it
-over:
+over.
 
 ```ts
 import { SpinMetrics, debugOverlay } from 'pixi-reels/debug';
@@ -233,18 +243,18 @@ const metrics = new SpinMetrics(reelSet, { ticker: app.ticker }); // at boot
 debugOverlay(reelSet, { layers: ['timeline', 'metrics'], live: true, ticker: app.ticker, metrics });
 ```
 
-`metrics.current` is the latest round, `metrics.rounds` the last 20,
+`metrics.current` is the latest round, `metrics.rounds` the last 20, and
 `metrics.snapshot()` a plain-JSON copy. Without a `ticker` it still records
 every event-driven time; the ticker adds the speed trace. It lets go of the
 buses when the reel set is destroyed.
 
 ### DebugPlaque
 
-The plate every panel is built from, exported for your own readouts: rows of
-monospace text on a smooth rounded plate, with an optional title, swatches
-for a legend and meters for a speed or a progress. It sizes itself from the
-character count, so it is exact without measuring text and cheap to update
-every frame.
+Every panel is built from this plate, and it is exported for your own
+readouts. It shows rows of monospace text on a smooth rounded plate, with an
+optional title, swatches for a legend, and meters for a speed or a progress.
+It sizes itself from the character count, so it is exact without measuring
+text and cheap to update every frame.
 
 ```ts
 import { DebugPlaque } from 'pixi-reels/debug';
@@ -260,17 +270,17 @@ hud.update({ rows: [{ text: 'spin', swatch: 0x2563eb, meter: reel.speedNormalize
 `minWidth` and `reserveRows` fix its size up front, and `maxWidth` wraps long
 rows, so a readout never outgrows a camera that was fitted to it once.
 
-Every status line, label and legend in the recipes on this site is one.
-`roundRectPath(g, x, y, w, h, r)` is its companion for dashed boxes:
-pixi-silk dashes paths but strokes `roundRect` solid, so it traces the box as
-one path and `.stroke({ dash: [7, 5] })` then dashes it round the corners.
+Every status line, label and legend in the recipes on this site is one of
+these. Its companion for dashed boxes is `roundRectPath(g, x, y, w, h, r)`.
+pixi-silk dashes paths but strokes `roundRect` solid, so this helper traces the
+box as one path. A following `.stroke({ dash: [7, 5] })` then dashes it round
+the corners.
 
-### describe() - the overlay as data
+### The overlay as data
 
-A canvas is opaque to CI and to AI agents, and some of what the overlay draws
-cannot be recovered from a screenshot anyway: a travel arrow pointing up has
-exactly the same bounding box as one pointing down. So the overlay also hands
-back plain JSON:
+A canvas is opaque to CI and to AI agents, and a screenshot loses some of what
+the overlay draws anyway. A travel arrow pointing up has the same bounding box
+as one pointing down. So the overlay also hands back plain JSON.
 
 ```ts
 const info = debugOverlay(reelSet, { layers: 'all' }).describe();
@@ -288,19 +298,19 @@ info.reels[0];
 // }
 ```
 
-`axisArrow`'s signed span is the assertion worth making: it is the one thing
-that distinguishes a reverse reel from a forward one, and a bounding box
-cannot see it.
+The signed span of `axisArrow` is the assertion worth making. It is the one
+thing that tells a reverse reel from a forward one, and a bounding box cannot
+see it.
 
 ## Console notices
 
-Separate from the debug tooling above: the library itself talks to you through
-one channel, for things a DEVELOPER should act on - a call that will not do
-what you meant, a hook of yours that threw, a value that had to be clamped.
-Never per-frame state, and nothing in the hot path.
+Separate from the debug tooling above, the library talks to you through one
+channel, for things a developer should act on: a call that will not do what
+you meant, a hook of yours that threw, a value that had to be clamped. It
+never reports per-frame state, and nothing in it runs in the hot path.
 
-Every notice carries a stable CODE, so it can be grepped, searched for in these
-docs, or quoted in a bug report:
+Every notice carries a stable code, so you can grep for it, search for it in
+these docs, or quote it in a bug report.
 
 ```
 pixi-reels  quicken-cascade      requestSkip({ mode: 'quicken' }) has nothing to quicken in
@@ -309,14 +319,14 @@ pixi-reels  quicken-cascade      requestSkip({ mode: 'quicken' }) has nothing to
 
 ### Levels
 
-One knob, four settings, each level including the ones before it:
+One knob, four settings. Each level includes the ones before it.
 
 | Level | Prints | Use it when |
 |---|---|---|
 | `'info'` | everything | The default. Advisory notices (the mask-strategy auto-pick, warp/unmask caveats) plus every problem. |
 | `'warn'` | errors + warnings | You have read the advisories and want them out of the way, but still want to hear about problems. |
 | `'error'` | errors only | Something the library could not do, and recovered from. Nothing else. |
-| `'silent'` | nothing | Production - once you have read the warnings at least once. |
+| `'silent'` | nothing | Production, once you have read the warnings at least once. |
 
 ```ts
 import { setLogLevel, getLogLevel } from 'pixi-reels';
@@ -325,36 +335,38 @@ setLogLevel('silent');
 getLogLevel(); // 'silent'
 ```
 
-The default is `'info'` rather than something quieter on purpose: several
-notices - the mask-strategy auto-pick in particular - used to print
-unconditionally, and a quieter default would have silently removed advice the
-engine had always given.
+The default is `'info'` rather than something quieter because several
+notices, the mask-strategy auto-pick in particular, used to print
+unconditionally. A quieter default would have removed advice the engine had
+always given, without telling anyone.
 
 ### What it looks like where
 
 In a browser a notice renders as a styled badge: a `pixi-reels` pill, then the
-code, then the message. Everywhere else - Node, a test runner, CI - `%c` is not
-a thing and the console would print the style directives literally, so it
-degrades to a plain line instead:
+code, then the message. Everywhere else (Node, a test runner, CI) `%c` styling
+does not exist and the console would print the style directives literally, so
+the notice degrades to a plain line.
 
 ```
 [pixi-reels] warn(quicken-cascade) requestSkip({ mode: 'quicken' }) has nothing to quicken...
 ```
 
-Notices go out on `console.warn` / `console.error` / `console.info` rather than
-funnelling through one `console.log`, which is what keeps devtools level
-filtering, stack capture and the browser's own warn/error styling working. Any
-extra detail is passed straight through, so an `Error` argument keeps its
-stack rather than being stringified.
+Notices go out on `console.warn`, `console.error` and `console.info` rather
+than through one `console.log`. That keeps devtools level filtering, stack
+capture and the browser's own warn/error styling working. Any extra detail is
+passed straight through, so an `Error` argument keeps its stack instead of
+being stringified.
 
-A few notices fire only once per process (`buffer-clamped`, for instance) so a
+A few notices fire only once per process (`buffer-clamped`, for instance), so a
 builder constructed in a loop cannot flood the console.
 
 The full list of codes lives in the [events reference](/reference/api-events/).
 
-## Gotchas
+## The DEFAULTS constant
 
-- `debugGrid` returns plain text. safe to log, assert against, or paste anywhere.
-- `enableDebug` is a no-op in Node (it checks `typeof window`).
-- Snapshots contain no PixiJS objects, so `JSON.stringify()` will always work.
-- The `DEFAULTS` constant (exported from `pixi-reels`) holds five of the engine's defaults: `bufferSymbols`, `symbolGap`, `initialSpeed`, `maxPoolPerKey`, `zIndexStep`. Read it when you want to set a value relative to one of those (e.g. `builder.bufferSymbols(DEFAULTS.bufferSymbols + 2)`). Other defaults live with the feature that owns them -- tumble's in `TumbleConfig`, stacking and pin migration on the builder.
+`DEFAULTS`, exported from `pixi-reels`, holds five of the engine's defaults:
+`bufferSymbols`, `symbolGap`, `initialSpeed`, `maxPoolPerKey` and `zIndexStep`.
+Read it when you want to set a value relative to one of those, for example
+`builder.bufferSymbols(DEFAULTS.bufferSymbols + 2)`. Other defaults live with
+the feature that owns them: tumble's in `TumbleConfig`, stacking and pin
+migration on the builder.
