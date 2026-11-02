@@ -1,0 +1,27 @@
+{
+  "name": "@pixi-reels/docs-ask",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Keyword + semantic search and a grounded Ask box for a static docs site. Build step embeds an llms.txt corpus with a local model; the browser retrieves with the same model and an answerer streams a reply. Corpus, retriever and answerer are each swappable.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./build": "./src/build.ts"
+  },
+  "bin": {
+    "docs-ask": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.0"
+  }
+}
