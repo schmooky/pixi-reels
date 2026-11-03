@@ -60,7 +60,7 @@
 ### Negative
 
 - Adopters sometimes want a more "batteries-included" framework. The library points them at the examples + recipes, which are copy-pasteable but not library API. Some reimplement the same win-detection or bonus-state code. That's fine — the site documents the common shapes (see `/recipes/` and `/spine/`), so the re-implementation is never from scratch.
-- A small category of utilities sits outside the library: `packages/cheats/` (cheats, seeded RNG), intentionally **not** published, and `packages/kit/` (symbol classes, Spine and atlas loaders, the tap-to-spin control, the sound set), published as `@pixi-reels/kit` since 2026-11 so that a recipe copied from the docs resolves its imports. Both are reference code, not engine API. See ADR 009.
+- A small category of utilities sits outside the library: `packages/cheats/` (cheats, seeded RNG), intentionally **not** published, and `packages/kit/` (symbol classes, Spine and atlas loaders, the tap-to-spin control, the sound set), laid out to publish as `@pixi-reels/kit` (private until its npm scope exists) so that a recipe copied from the docs resolves its imports. Both are reference code, not engine API. See ADR 009.
 
 ## Enforcement
 

@@ -19,7 +19,7 @@ The library builds to two entry points:
 - `pixi-reels`. core (reel set, phases, symbols, events, testing, debug).
 - `pixi-reels/spine`. Spine 2D symbols with the Bonbon animation vocabulary.
 
-Everything else. cheats and seeded RNG live in `packages/cheats/` (private); Spine loaders, symbol classes, the asset kits, `tapToSpin`, the sound set, the pay-ways evaluator and the recipe contract live in `packages/kit/` (`@pixi-reels/kit`, published, with the subpaths `/spine`, `/sound` and `/ways`). Neither is **library API**: import what fits, copy the rest.
+Everything else. cheats and seeded RNG live in `packages/cheats/` (private); Spine loaders, symbol classes, the asset kits, `tapToSpin`, the sound set, the pay-ways evaluator and the recipe contract live in `packages/kit/` (`@pixi-reels/kit`, publishable but private until its npm scope exists, with the subpaths `/spine`, `/sound` and `/ways`). Neither is **library API**: import what fits, copy the rest.
 
 ---
 
