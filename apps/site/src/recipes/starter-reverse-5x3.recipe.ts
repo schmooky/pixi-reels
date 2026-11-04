@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { prewarmSpinTextures, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { pickWeighted, tapToSpin, createAssets, GENERIC_SYMBOL_IDS, GENERIC_WEIGHTS, StickerSymbol } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -7,6 +7,7 @@ export const meta = {
   title: 'Reverse starter',
   topic: 'starters',
   tags: ['starter', '5x3', 'cascade', 'multiways', 'hold-and-win', 'horizontal', 'reverse', 'orientation'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // The classic 5x3 starter with the travel flipped: symbols rise, and the reel
@@ -25,14 +26,14 @@ export const meta = {
 // For a sideways board see the horizontal starter above; the two knobs compose,
 // so `.orientation('horizontal').direction('reverse')` is a right-to-left slot.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
-  const SYMBOLS = [...CARD_DECK, WILD_CARD];
-
-  const weights = {
-    '7': 20, '8': 20, '9': 20,
-    '10': 14, J: 14,
-    Q: 10, K: 6, A: 5,
-    wild: 3,
-  };
+  // Eleven flat stickers, one texture each; the rig does the motion.
+  const { textures } = await createAssets().genericSymbols();
+  const weights = GENERIC_WEIGHTS;
+  // One spin-texture cache per set: the reels spin a baked motion blur of
+  // each sticker, no filter per frame, baked up front so the first spin
+  // never pays the capture.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: () => new StickerSymbol({ textures }), width: 90, height: 90 });
 
   const reelSet = new ReelSetBuilder()
     .reels(5)
@@ -41,12 +42,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .direction('reverse') // the only line that differs from classic-5x3
     .symbols((r) => {
-      for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+      for (const id of GENERIC_SYMBOL_IDS) {
+        r.register(id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)

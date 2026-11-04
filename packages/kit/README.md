@@ -10,7 +10,7 @@ It is not on npm yet. Until it is, copy `packages/kit/src` into your project nex
 
 | Import | Holds |
 | --- | --- |
-| `@pixi-reels/kit` | `tapToSpin` (the canvas as the spin button), `readout` (plaques and outlines a host can switch off), `createAssets` (the bundled asset kits by name), `BlurSpriteSymbol`, `CoinSymbol`, the sprite loaders, `pickWeighted`, and the `RecipeContext` / `RecipeResult` / `RecipeMeta` types a recipe is written against. |
+| `@pixi-reels/kit` | `tapToSpin` (the canvas as the spin button), `readout` (plaques and outlines a host can switch off), `createAssets` (the bundled asset kits by name), `StickerSymbol` with the generic set and `playMotion` (one flat sticker, the studio motion on a two-container rig), `BlurSpriteSymbol`, `CoinSymbol`, the sprite loaders, `pickWeighted`, and the `RecipeContext` / `RecipeResult` / `RecipeMeta` types a recipe is written against. |
 | `@pixi-reels/kit/spine` | The Spine symbol sets and the Hold & Win skeleton helpers. Pulls the Spine runtime in, so it is its own entry. |
 | `@pixi-reels/kit/sound` | One zvuk engine, the eight-file sound set and the default cue tables: `reelSounds(reelSet)`, `boardSounds(board)`. |
 | `@pixi-reels/kit/ways` | `evaluateWays` and `countWays`, the pay-ways stand-in a demo uses in place of a server. |
@@ -18,16 +18,21 @@ It is not on npm yet. Until it is, copy `packages/kit/src` into your project nex
 ## A recipe
 
 ```ts
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { prewarmSpinTextures, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { createAssets, GENERIC_SYMBOL_IDS, GENERIC_WEIGHTS, pickWeighted, StickerSymbol, tapToSpin } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 import type { RecipeContext, RecipeResult } from '@pixi-reels/kit';
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
-  const weights = { '7': 20, '8': 20, '9': 20, '10': 14, J: 14, Q: 10, K: 6, A: 5, wild: 3 };
+  const { textures } = await createAssets().genericSymbols();
+  const weights = GENERIC_WEIGHTS;
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled up front.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const sticker = () => new StickerSymbol({ textures });
+  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: sticker, width: 90, height: 90 });
   const reelSet = new ReelSetBuilder()
     .reels(5).visibleCells(3).symbolSize(90, 90).symbolGap(4, 4)
-    .symbols((r) => { for (const s of [...CARD_DECK, WILD_CARD]) r.register(s.id, CardSymbol, s); })
+    .symbols((r) => { for (const id of GENERIC_SYMBOL_IDS) r.register(id, StaticSpinSymbol, { createInner: sticker, cache }); })
     .weights(weights)
     .speed('normal', SpeedPresets.NORMAL)
     .ticker(app.ticker)

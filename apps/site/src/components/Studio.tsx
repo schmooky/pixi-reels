@@ -64,16 +64,20 @@ const DEFAULT_CODE = `// pixi-reels studio
 // starts a round, a tap mid-round skips it) and its sounds, and returns
 // { reelSet } so the host can draw the debug overlay on it. Copy the module
 // into a game as it is: npm i pixi-reels @pixi-reels/kit.
-import { ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { prewarmSpinTextures, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { createAssets, GENERIC_SYMBOL_IDS, GENERIC_WEIGHTS, pickWeighted, StickerSymbol, tapToSpin } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 import type { RecipeContext, RecipeResult } from '@pixi-reels/kit';
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
-  const SYMBOLS = [...CARD_DECK, WILD_CARD];
-  const weights = {
-    '7': 20, '8': 20, '9': 20, '10': 14, J: 14, Q: 10, K: 6, A: 5, wild: 3,
-  };
+  // Eleven flat stickers, one texture each; the rig does the motion.
+  const { textures } = await createAssets().genericSymbols();
+  const weights = GENERIC_WEIGHTS;
+  // One spin-texture cache per set: the reels spin a baked motion blur of
+  // each sticker, no filter per frame, baked up front so the first spin
+  // never pays the capture.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: () => new StickerSymbol({ textures }), width: 90, height: 90 });
 
   const reelSet = new ReelSetBuilder()
     .reels(5)
@@ -81,12 +85,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolSize(90, 90)
     .symbolGap(4, 4)
     .symbols((r) => {
-      for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+      for (const id of GENERIC_SYMBOL_IDS) {
+        r.register(id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)

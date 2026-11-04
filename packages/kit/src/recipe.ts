@@ -56,6 +56,7 @@ export interface RecipeResult {
 /** An asset kit a recipe loads, by name, so a host can prefetch or list them. */
 export type RecipeNeed =
   | 'prototype-atlas'
+  | 'generic-symbols'
   | 'spine:generated'
   | 'spine:thunderkick'
   | 'spine:cascade'

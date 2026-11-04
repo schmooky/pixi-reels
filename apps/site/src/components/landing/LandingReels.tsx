@@ -6,18 +6,21 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
+  SpinTextureCache,
+  StaticSpinSymbol,
   anticipationForScatters,
+  prewarmSpinTextures,
   type ColumnTarget,
   type ReelSet,
   type SymbolPosition,
 } from 'pixi-reels';
-import { BlurSpriteSymbol, loadPrototypeSymbols } from '@pixi-reels/kit';
+import { StickerSymbol, loadGenericSymbols } from '@pixi-reels/kit';
 
 /**
  * Live reels for the landing page.
  *
  * Four variants, one component. Every variant is a real `ReelSet` built with
- * the public builder and the prototype sprite atlas, so what the visitor sees
+ * the public builder and the generic sticker set, so what the visitor sees
  * spinning is the engine itself, not a video. The loop auto-spins while the
  * canvas is on screen, idles when it scrolls away or the tab hides, and a
  * click (or Space / Enter) spins at once, or slams a running spin.
@@ -46,35 +49,35 @@ interface VariantConfig {
   speed: typeof SpeedPresets.NORMAL;
 }
 
-const ROUND = ['round/round_1', 'round/round_2', 'round/round_3', 'round/round_4', 'round/round_5', 'round/round_6'];
-const ROYAL = ['royal/royal_1', 'royal/royal_2', 'royal/royal_3', 'royal/royal_4', 'royal/royal_5'];
-const SQUARE = ['square/square_1', 'square/square_2', 'square/square_3', 'square/square_4', 'square/square_5'];
+// The generic set's highs (seven, diamond, bell, clover) and royals.
+const HIGHS = ['H1', 'H2', 'H3', 'H4'];
+const ROYALS = ['L5', 'L4', 'L3', 'L2', 'L1'];
 
 const VARIANTS: Record<LandingVariant, VariantConfig> = {
   hero: {
     reels: 5, cells: 3, cell: 104, gap: 8, pad: 16,
     orientation: 'vertical',
-    ids: [...ROUND, 'wild/wild_1'],
+    ids: [...HIGHS, 'L5', 'L4', 'W'],
     speed: SpeedPresets.NORMAL,
   },
   cascade: {
     reels: 5, cells: 4, cell: 58, gap: 5, pad: 12,
     orientation: 'vertical',
-    ids: [...ROUND.slice(0, 4), ...SQUARE.slice(0, 2)],
+    ids: [...HIGHS.slice(1), ...ROYALS.slice(0, 3)],
     tumble: true,
     speed: { ...SpeedPresets.NORMAL, stopDelay: 120 },
   },
   horizontal: {
     reels: 3, cells: 5, cell: 58, gap: 5, pad: 12,
     orientation: 'horizontal',
-    ids: ROYAL,
+    ids: ROYALS,
     speed: SpeedPresets.NORMAL,
   },
   anticipation: {
     reels: 5, cells: 3, cell: 58, gap: 5, pad: 12,
     orientation: 'vertical',
-    ids: [...ROUND.slice(0, 4), 'bonus/bonus_1'],
-    scatter: 'bonus/bonus_1',
+    ids: [...HIGHS.slice(0, 3), 'L5', 'S'],
+    scatter: 'S',
     speed: SpeedPresets.NORMAL,
   },
 };
@@ -126,15 +129,7 @@ interface Mounted {
 }
 
 async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted> {
-  const atlas = await loadPrototypeSymbols();
-  const textures: Record<string, import('pixi.js').Texture> = {};
-  const blurTextures: Record<string, import('pixi.js').Texture> = {};
-  for (const id of cfg.ids) {
-    const t = atlas.textures[id];
-    if (!t) throw new Error(`prototype atlas missing frame "${id}"`);
-    textures[id] = t;
-    if (atlas.blurTextures[id]) blurTextures[id] = atlas.blurTextures[id];
-  }
+  const { textures } = await loadGenericSymbols();
 
   const app = new Application();
   await app.init({
@@ -151,6 +146,12 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
   liveApps.add(app);
   ensureGsapDriver();
 
+  // The reels spin a baked motion blur of each sticker (the library's
+  // StaticSpinSymbol over a SpinTextureCache), baked up front.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const sticker = () => new StickerSymbol({ textures });
+  prewarmSpinTextures({ cache, ids: cfg.ids, createSymbol: sticker, width: cfg.cell, height: cfg.cell });
+
   const builder = new ReelSetBuilder()
     .reels(cfg.reels)
     .visibleCells(cfg.cells)
@@ -159,7 +160,7 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
     .orientation(cfg.orientation)
     .symbols((r) => {
       for (const id of cfg.ids) {
-        r.register(id, BlurSpriteSymbol, { textures, blurTextures, anchor: { x: 0.5, y: 0.5 }, fit: true });
+        r.register(id, StaticSpinSymbol, { createInner: sticker, cache, blurRampMs: 140 });
       }
     })
     .speed('normal', cfg.speed)
@@ -172,29 +173,6 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
     });
   }
   const reelSet = builder.build();
-
-  // Blur while a reel is in SPIN, crisp again from STOP on.
-  const blurring = new Array<boolean>(cfg.reels).fill(false);
-  const setBlur = (reelIdx: number, on: boolean) => {
-    const reel = reelSet.getReel(reelIdx);
-    for (let c = 0; c < cfg.cells; c++) {
-      const s = reel.getSymbolAt(c);
-      if (s instanceof BlurSpriteSymbol) s.setBlurred(on);
-    }
-  };
-  for (let i = 0; i < cfg.reels; i++) {
-    const reel = reelSet.getReel(i);
-    // Only SPIN blurs. Every other phase is crisp, including the cascade
-    // phases (fall, place, dropIn), which never pass through STOP.
-    reel.events.on('phase:enter', (name) => {
-      blurring[i] = name === 'spin';
-      setBlur(i, blurring[i]);
-    });
-    reel.events.on('symbol:created', () => { if (blurring[i]) setBlur(i, true); });
-  }
-  reelSet.events.on('skip:requested', () => {
-    for (let i = 0; i < cfg.reels; i++) { blurring[i] = false; setBlur(i, false); }
-  });
 
   // Geometry of the well around the set. Screen-space: on a horizontal set the
   // reels stack down the screen and cells run along x.

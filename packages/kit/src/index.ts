@@ -27,6 +27,12 @@ export type {
   RecipeResult,
 } from './recipe.js';
 
+export { StickerSymbol } from './StickerSymbol.js';
+export type { StickerSymbolOptions } from './StickerSymbol.js';
+export { loadGenericSymbols, GENERIC_SYMBOL_IDS, GENERIC_SYMBOL_NAMES, GENERIC_WEIGHTS } from './genericSymbols.js';
+export type { GenericSymbolId, GenericSymbolSet } from './genericSymbols.js';
+export { playMotion, resetMotion, MOTION, EASE, FRAMES, frames, seconds, REST } from './motion.js';
+export type { MotionName, MotionPrimitive, MotionStep, MotionState, MotionRig, MotionHandle, EaseName, FrameName } from './motion.js';
 export { BlurSpriteSymbol } from './BlurSpriteSymbol.js';
 export type { BlurSpriteSymbolOptions } from './BlurSpriteSymbol.js';
 export {

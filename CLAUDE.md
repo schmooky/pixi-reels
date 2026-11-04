@@ -300,6 +300,7 @@ debugOverlay(reelSet, { layers: 'all', live: true, ticker: app.ticker });
 | `ways.ts` | The `@pixi-reels/kit/ways` subpath: `evaluateWays`, `countWays` (moved here from `@pixi-reels/cheats/ways`) |
 | `readout.ts` | `readout.plaque()` / `readout.graphics()`: explanation drawings a host can switch off (`setReadouts`) |
 | `prototypeSpriteLoader.ts` | Loads the `prototype-symbols` TexturePacker atlas (`apps/site/public/prototype-symbols/`, 84 frames + blur variants) |
+| `StickerSymbol.ts`, `motion.ts`, `genericSymbols.ts` | One flat sticker on a two-container rig (`move` for where, `body` for shape) with the studio motion primitives (`impact` on land, `wowL` plus an additive flash and a masked shine on a win); `playMotion(rig, name)` drives any container pair from the same table; the generic set is eleven 384 px WebP stickers under `apps/site/public/generic-symbols/` with `GENERIC_WEIGHTS` |
 | `BlurSpriteSymbol.ts` | Sprite symbol that swaps to a pre-rendered motion-blur texture during SPIN |
 | `CoinSymbol.ts`, `hwClover.ts`, `holdAndWinSprites.ts` | Example symbols and sheets for the Hold & Win recipes |
 | `spine.ts` | The `@pixi-reels/kit/spine` subpath: `GoldCoinSymbol`, `CloverSpineSymbol`, anything that pulls the Spine runtime in |

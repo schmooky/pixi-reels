@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { prewarmSpinTextures, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { pickWeighted, tapToSpin, createAssets, GENERIC_SYMBOL_IDS, GENERIC_WEIGHTS, StickerSymbol } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -7,6 +7,7 @@ export const meta = {
   title: 'Horizontal starter',
   topic: 'starters',
   tags: ['starter', '5x3', 'cascade', 'multiways', 'hold-and-win', 'horizontal', 'reverse', 'orientation'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // A sideways slot: three strips stacked down the screen, each scrolling along
@@ -22,16 +23,16 @@ export const meta = {
 // Everything else is untouched. `reels(3).visibleCells(5)` means the same
 // thing either way - three strips of five cells - and the ColumnTarget[] you
 // feed `setResult()` is unchanged, because index space is orientation-neutral.
-// Nothing rotates: every card still renders upright.
+// Nothing rotates: every symbol still renders upright.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
-  const SYMBOLS = [...CARD_DECK, WILD_CARD];
-
-  const weights = {
-    '7': 20, '8': 20, '9': 20,
-    '10': 14, J: 14,
-    Q: 10, K: 6, A: 5,
-    wild: 3,
-  };
+  // Eleven flat stickers, one texture each; the rig does the motion.
+  const { textures } = await createAssets().genericSymbols();
+  const weights = GENERIC_WEIGHTS;
+  // One spin-texture cache per set: the reels spin a baked motion blur of
+  // each sticker, no filter per frame, baked up front so the first spin
+  // never pays the capture.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: () => new StickerSymbol({ textures }), width: 96, height: 72 });
 
   const REELS = 3;  // strips, marching down the screen
   const CELLS = 5;  // cells along each strip, running across the screen
@@ -43,12 +44,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolSize(96, 72) // screen width x height. travel eats the width
     .symbolGap(6, 6)    // x separates cells along a strip, y separates strips
     .symbols((r) => {
-      for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+      for (const id of GENERIC_SYMBOL_IDS) {
+        r.register(id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)

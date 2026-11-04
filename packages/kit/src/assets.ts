@@ -2,6 +2,7 @@ import { loadPrototypeSymbols, type PrototypeTextureSet } from './prototypeSprit
 import { loadSpineSet, type LoadedSpineSet, type SpineSetId } from './spineSets.js';
 import { loadHoldAndWinSprites, type HoldAndWinSprites } from './holdAndWinSprites.js';
 import { loadHwClover, type HwCloverArt } from './hwClover.js';
+import { loadGenericSymbols, type GenericSymbolSet } from './genericSymbols.js';
 
 /**
  * The asset kits a recipe can ask its host for, by name. Every method
@@ -17,6 +18,8 @@ export interface RecipeAssets {
   readonly baseUrl: string;
   /** The `prototype-symbols` sprite atlas: 84 frames, each with a motion-blur variant. */
   prototypeAtlas(): Promise<PrototypeTextureSet>;
+  /** The generic slot set: eleven flat stickers for `StickerSymbol`. */
+  genericSymbols(): Promise<GenericSymbolSet>;
   /** A bundled Spine symbol set (`generated`, `thunderkick`, `cascade`) with its `spineMap`. */
   spineSet<I extends SpineSetId>(id: I): Promise<LoadedSpineSet<I>>;
   /** The sprite-based Hold & Win sheets (Supercharged Diamonds 3 art). */
@@ -33,6 +36,7 @@ export function createAssets(baseUrl = '/'): RecipeAssets {
   return {
     baseUrl: base,
     prototypeAtlas: () => loadPrototypeSymbols(`${base}prototype-symbols/`),
+    genericSymbols: () => loadGenericSymbols(`${base}generic-symbols/`),
     spineSet: (id) => loadSpineSet(id, `${base}${SPINE_SET_DIRS[id]}/`),
     holdAndWinSprites: () => loadHoldAndWinSprites(`${base}hw-sprites/`),
     clover: () => loadHwClover(`${base}hw-clover/`),
