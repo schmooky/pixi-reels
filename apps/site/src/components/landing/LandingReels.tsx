@@ -14,7 +14,7 @@ import {
   type ReelSet,
   type SymbolPosition,
 } from 'pixi-reels';
-import { StickerSymbol, loadGenericSymbols } from '@pixi-reels/kit';
+import { StickerSymbol, loadGenericSymbols, presentWithSpotlight } from '@pixi-reels/kit';
 
 /**
  * Live reels for the landing page.
@@ -215,40 +215,23 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
   root.addChild(reelSet);
   app.stage.addChild(root);
 
-  // The whole well sits `thud.dy` below its fitted place while a landing
-  // reel's weight is still in it (see `landed` below).
-  const thud = { dy: 0 };
-  let baseY = 0;
-  let fitScale = 1;
+  // The well stays put when a reel lands: the reels carry the bounce, the
+  // frame around them does not shake.
   const fit = () => {
-    fitScale = Math.min(app.screen.width / W, app.screen.height / H);
+    const fitScale = Math.min(app.screen.width / W, app.screen.height / H);
     root.scale.set(fitScale);
     root.x = (app.screen.width - W * fitScale) / 2;
-    baseY = (app.screen.height - H * fitScale) / 2;
-    root.y = baseY + thud.dy;
+    root.y = (app.screen.height - H * fitScale) / 2;
   };
   fit();
   app.renderer.on('resize', fit);
   const ro = new ResizeObserver(() => app.resize());
   ro.observe(host);
 
-  // Every reel that lands puts its weight into the well: a 5 f drop and a
-  // 34 f elastic settle, a few screen pixels at most. A slam lands all reels
-  // in one frame, which `overwrite` folds into one heavier thud.
-  const amp = (vertical ? cfg.cell : cfg.cell * 0.8) * 0.045;
-  const landed = () => {
-    gsap.timeline({ overwrite: true })
-      .to(thud, { dy: amp * fitScale, duration: 5 / 60, ease: 'power2.out', onUpdate: () => { root.y = baseY + thud.dy; } })
-      .to(thud, { dy: 0, duration: 34 / 60, ease: 'elastic.out(1, 0.4)', onUpdate: () => { root.y = baseY + thud.dy; } });
-  };
-  reelSet.events.on('spin:reelLanded', landed);
-
   return {
     app,
     reelSet,
     destroy() {
-      try { reelSet.events.off('spin:reelLanded', landed); } catch { /* ignore */ }
-      gsap.killTweensOf(thud);
       try { ro.disconnect(); } catch { /* ignore */ }
       try { app.renderer.off('resize', fit); } catch { /* ignore */ }
       try { reelSet.destroy(); } catch { /* ignore */ }
@@ -333,7 +316,7 @@ export function LandingReels({ variant, className }: Props) {
           if (alive) console.warn('LandingReels: round failed', err);
         }
         first = false;
-        if (!reduced) await sleep(variant === 'hero' ? 2200 : 2800, kick);
+        if (!reduced) await sleep(variant === 'hero' ? 700 : 600, kick);
       }
       clearInterval(gate);
     };
@@ -385,7 +368,8 @@ export function LandingReels({ variant, className }: Props) {
 async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boolean }, still: boolean): Promise<void> {
   if (cfg.tumble) return cascadeRound(reelSet, cfg, kick, still);
 
-  const win = !still && Math.random() < 0.55;
+  // Every round shows the mechanic: a line win on the plain sets.
+  const win = !still;
   const row = Math.floor(Math.random() * cfg.cells);
   const id = pick(cfg.ids.filter((s) => s !== cfg.scatter && !s.startsWith('wild/')));
   // A fourth reel only where the set has one (the horizontal variant has three).
@@ -408,7 +392,7 @@ async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boole
     await spin;
     return;
   }
-  await sleep(cfg.scatter ? 400 : 550, { kicked: false });
+  await sleep(cfg.scatter ? 300 : 350, { kicked: false });
   reelSet.setResult(grid);
   if (tease.length) reelSet.setAnticipation(tease, { stagger: 'sequential', slowdown: { from: 0.45, to: 0.12 } });
   await spin;
@@ -427,7 +411,7 @@ async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boole
       wows.push(symbol.playWin());
     }
     await Promise.all(wows);
-    await sleep(500, kick);
+    await sleep(350, kick);
     reelSet.spotlight.hide();
   }
 }
@@ -454,15 +438,16 @@ async function cascadeRound(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked
     await spin;
     return;
   }
-  await sleep(200, { kicked: false });
+  await sleep(150, { kicked: false });
   reelSet.setResult(grid);
   await spin;
-  await sleep(350, kick);
+  await sleep(200, kick);
   if (kick.kicked) return;
 
   reelSet.setDropOrder('all');
   let detected = false;
   await reelSet.runCascade({
+    presentWinners: presentWithSpotlight(reelSet, { hold: 200 }),
     detectWinners: () => {
       if (detected) return [];
       detected = true;
