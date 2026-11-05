@@ -170,6 +170,40 @@ export class StickerSymbol extends ReelSymbol {
     this._paintPlate(false);
   }
 
+  /**
+   * A winner being consumed by a cascade: the playbook's `exit`, a short
+   * lift and then a shrink into nothing. An abort snaps to the end, as the
+   * engine asks, and the view is left hidden for the refill to reveal.
+   */
+  async playDestroy(opts?: { delay?: number; signal?: AbortSignal }): Promise<void> {
+    await this._exit(opts);
+  }
+
+  /** A reveal's out beat is the same exit. */
+  override async playOut(opts?: { delay?: number; signal?: AbortSignal }): Promise<void> {
+    await this._exit(opts);
+  }
+
+  private async _exit(opts?: { delay?: number; signal?: AbortSignal }): Promise<void> {
+    this._fx?.kill();
+    this._fx = null;
+    this._flash.alpha = 0;
+    this._band.alpha = 0;
+    this._paintPlate(false);
+    if (opts?.delay) await new Promise((r) => setTimeout(r, opts.delay));
+    if (opts?.signal?.aborted || this._w <= 0) {
+      this._move.alpha = 0;
+      return;
+    }
+    this._motion?.kill();
+    this._motion = playMotion(this._rig, 'exit');
+    const onAbort = () => this._motion?.kill();
+    opts?.signal?.addEventListener('abort', onAbort, { once: true });
+    await this._motion.finished;
+    opts?.signal?.removeEventListener('abort', onAbort);
+    this._move.alpha = 0;
+  }
+
   stopAnimation(): void {
     this._motion?.kill();
     this._motion = null;

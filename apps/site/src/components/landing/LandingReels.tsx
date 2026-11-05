@@ -160,7 +160,9 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
     .orientation(cfg.orientation)
     .symbols((r) => {
       for (const id of cfg.ids) {
-        r.register(id, StaticSpinSymbol, { createInner: sticker, cache, blurRampMs: 140 });
+        // A tumble never spins, so its stickers need no blur.
+        if (cfg.tumble) r.register(id, StickerSymbol, { textures });
+        else r.register(id, StaticSpinSymbol, { createInner: sticker, cache, blurRampMs: 140 });
       }
     })
     .speed('normal', cfg.speed)

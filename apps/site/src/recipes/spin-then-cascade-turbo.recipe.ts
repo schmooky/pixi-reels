@@ -7,7 +7,7 @@ import {
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import type { Cell } from 'pixi-reels';
-import { createAssets, tapToSpin } from '@pixi-reels/kit';
+import { createAssets, tapToSpin, presentWithSpotlight } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -127,6 +127,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setDropOrder('all');
       let trigger = TRIGGER1;
       await reelSet.runCascade({
+        // The winners get their beat before they go: losers dim, winners wow, a short hold.
+        presentWinners: presentWithSpotlight(reelSet),
         detectWinners: (grid) => HIT_COLS
           .map((c) => grid[c][HIT_ROW] === trigger ? { reel: c, cell: HIT_ROW } : null)
           .filter(Boolean) as Cell[],

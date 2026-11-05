@@ -1,5 +1,5 @@
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
-import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets, presentWithSpotlight } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -44,8 +44,6 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [MATCH.id]: set.textures.H4, [TALL.id]: set.textures.H1 };
-  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
-  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 3;
   const ROWS = 4;
   const SIZE = 76;
@@ -60,10 +58,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+        registry.register(card.id, StickerSymbol, { textures });
       }
-      registry.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: TALL.w, cells: TALL.h } }), cache, blurRampMs: 140 });
-      registry.register(MATCH.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.w, cells: TALL.h } });
+      registry.register(MATCH.id, StickerSymbol, { textures });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
@@ -114,6 +112,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       let chained = false;
       reelSet.setDropOrder('all');
       await reelSet.runCascade({
+        // The winners get their beat before they go: losers dim, winners wow, a short hold.
+        presentWinners: presentWithSpotlight(reelSet),
         detectWinners: () => {
           if (chained) return [];
           chained = true;

@@ -1,6 +1,6 @@
 import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { createAssets, tapToSpin } from '@pixi-reels/kit';
+import { createAssets, tapToSpin, presentWithSpotlight } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -103,6 +103,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       reelSet.setDropOrder('all');
       let detected = false;
       await reelSet.runCascade({
+        // The winners get their beat before they go: losers dim, winners wow, a short hold.
+        presentWinners: presentWithSpotlight(reelSet),
         detectWinners: () => {
           if (detected) return [];
           detected = true;

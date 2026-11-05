@@ -1,5 +1,5 @@
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
-import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets, presentWithSpotlight } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -31,8 +31,6 @@ export const meta = {
 //     `[...survivors, ...fresh]` instead.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
-  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
-  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['7', '8', '9', '10', 'J', 'Q'];
   const REELS = 5, CELLS = 4, SIZE = 68;
   const RUN = 3;
@@ -71,7 +69,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols((r) => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+          r.register(sym.id, StickerSymbol, { textures });
         }
       }
     })
@@ -104,6 +102,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
       reelSet.setDropOrder('all');
       await reelSet.runCascade({
+        // The winners get their beat before they go: losers dim, winners wow, a short hold.
+        presentWinners: presentWithSpotlight(reelSet),
         detectWinners: (g, chain) => (chain >= 3 ? [] : linesIn(g)),
         nextGrid: (prev, winners) => {
           const winsByReel = new Map();

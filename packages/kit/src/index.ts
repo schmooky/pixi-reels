@@ -46,6 +46,7 @@ export {
 } from './genericSymbols.js';
 export type { GenericSymbolId, GenericSymbolSet, FrameColor, PillarVariant, PillarPart } from './genericSymbols.js';
 export { WildPillar } from './pillar.js';
+export { presentWithSpotlight } from './presenters.js';
 export { playMotion, resetMotion, MOTION, EASE, FRAMES, frames, seconds, REST } from './motion.js';
 export type { MotionName, MotionPrimitive, MotionStep, MotionState, MotionRig, MotionHandle, EaseName, FrameName } from './motion.js';
 export { BlurSpriteSymbol } from './BlurSpriteSymbol.js';
