@@ -96,7 +96,18 @@ export async function loadGenericSymbols(basePath = '/generic-symbols/'): Promis
     ...FRAME_COLORS.map((c) => `frame-${c}`),
     ...(['a', 'b'] as const).flatMap((v) => PILLAR_PARTS.map((p) => `pillar-${v}-${p}`)),
   ];
-  const loaded = (await Assets.load(names.map(url))) as Record<string, Texture>;
+  // A 384 px sticker drawn into a 70 to 90 px cell is shrunk four or five
+  // times on a 1x screen, and linear filtering at that ratio skips most of
+  // the image: the edges speckle. Mipmaps fix the speckle but average the
+  // white border into the ink line and turn it grey. A 2x screen shrinks
+  // about twice, which looks right, so a 1x screen gets the same ratio from
+  // half-size copies in `1x/`, loaded at resolution 0.5 so every size and
+  // slice cut below stays in the full art's units.
+  const half = typeof window !== 'undefined' && window.devicePixelRatio < 1.5;
+  const file = (name: string) => `${basePath}${half ? '1x/' : ''}${name}.webp`;
+  const loaded = (await Assets.load(
+    names.map((name) => ({ alias: url(name), src: file(name), data: half ? { resolution: 0.5 } : {} })),
+  )) as Record<string, Texture>;
   const get = (name: string): Texture => {
     const tex = loaded[url(name)];
     if (!tex) throw new Error(`loadGenericSymbols: ${url(name)} did not load.`);
