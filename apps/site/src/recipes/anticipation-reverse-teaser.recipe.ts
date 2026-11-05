@@ -23,7 +23,9 @@ export const meta = {
 // engine derives it, and `reel.axis.feedEdge` reports 'start' on a forward reel
 // and 'end' on a reverse one.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
-  const { textures } = await createAssets().genericSymbols();
+  const set = await createAssets().genericSymbols();
+  // The teaser's coin is the scatter sticker; the deck's ids map onto the set.
+  const textures = { ...set.textures, coin: set.textures.S };
   // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
   const cache = new SpinTextureCache({ renderer: app.renderer });
   const COIN = 'coin';

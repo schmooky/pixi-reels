@@ -48,8 +48,8 @@ const PREVIEW_ENV = { ...process.env, ASTRO_PREVIEW_BACKGROUND: '1' };
  * pages that replaced it became the Demos section of the /mechanics/ topic
  * pages (their old /recipes/ URLs redirect there), and the one guide that
  * embedded recipes, nudge, is the Concept section of its topic. A topic page
- * opens with that Concept prose, so the mount test scrolls to `#demos` first;
- * on Hold & Win the prose alone is taller than the 3000px viewport.
+ * opens on its Demos section; the mount test still scrolls to `#demos` so it
+ * does not depend on the header's height.
  */
 const PAGES = [
   ...['anticipation', 'big-symbols', 'cascade', 'cells-and-banners', 'hold-and-win',

@@ -108,9 +108,17 @@ interface Env {
 interface RecipeRunnerProps {
   code: string;
   height?: number;
+  /**
+   * The browser took this demo's WebGL context away (it drops the oldest
+   * once too many are alive). The host remounts the demo on a fresh one
+   * rather than showing the failure as the recipe's.
+   */
+  onContextLost?: () => void;
 }
 
-export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
+export function RecipeRunner({ code, height = 300, onContextLost }: RecipeRunnerProps) {
+  const onContextLostRef = useRef(onContextLost);
+  onContextLostRef.current = onContextLost;
   const hostRef = useRef<HTMLDivElement>(null);
   const envRef = useRef<Env | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
@@ -149,6 +157,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
       host.innerHTML = '';
       host.appendChild(app.canvas);
+      // Removed in the cleanup before `app.destroy`, which loses the context
+      // on purpose and would otherwise report our own teardown.
+      const onLost = () => onContextLostRef.current?.();
+      app.canvas.addEventListener('webglcontextlost', onLost);
+      unsubscribeRef.current.push(() => app.canvas.removeEventListener('webglcontextlost', onLost));
 
       const env: Env = { app };
       envRef.current = env;
@@ -164,6 +177,12 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         // in lib/recipeModule.ts, the same for Studio and the share viewer.
         result = await runRecipeModule(code, { app });
       } catch (e) {
+        // A recipe that dies because the context went away did nothing wrong.
+        const gl = (app.renderer as { gl?: WebGLRenderingContext }).gl;
+        if (gl?.isContextLost() && onContextLostRef.current) {
+          onContextLostRef.current();
+          return;
+        }
         setError(`Runtime error: ${(e as Error).message}`);
         return;
       }

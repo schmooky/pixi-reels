@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RecipeRunner } from './RecipeRunner.tsx';
 
 interface Props {
@@ -17,6 +17,26 @@ interface Props {
 export function LazyRecipeRunner({ code, height = 300 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
+  // Bumped to remount the runner on a fresh context after the browser took
+  // the old one. Three losses inside ten seconds means the machine is out of
+  // contexts: stop and wait for a tap rather than thrash.
+  const [generation, setGeneration] = useState(0);
+  const [stalled, setStalled] = useState(false);
+  const losses = useRef<number[]>([]);
+  const onContextLost = useCallback(() => {
+    const now = performance.now();
+    losses.current = losses.current.filter((t) => now - t < 10_000).concat(now);
+    if (losses.current.length > 3) {
+      setStalled(true);
+      return;
+    }
+    setTimeout(() => setGeneration((g) => g + 1), 250);
+  }, []);
+  const retry = useCallback(() => {
+    losses.current = [];
+    setStalled(false);
+    setGeneration((g) => g + 1);
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -42,8 +62,12 @@ export function LazyRecipeRunner({ code, height = 300 }: Props) {
 
   return (
     <div ref={ref} style={{ minHeight: height }}>
-      {active ? (
-        <RecipeRunner code={code} height={height} />
+      {active && !stalled ? (
+        <RecipeRunner key={generation} code={code} height={height} onContextLost={onContextLost} />
+      ) : stalled ? (
+        <button type="button" onClick={retry} className="block w-full text-left" aria-label="Reload this demo">
+          <Placeholder height={height} label="Too many demos open. Tap to reload" spinner={false} />
+        </button>
       ) : (
         <Placeholder height={height} label="Scroll to load" />
       )}
@@ -51,13 +75,13 @@ export function LazyRecipeRunner({ code, height = 300 }: Props) {
   );
 }
 
-function Placeholder({ height, label }: { height: number; label: string }) {
+function Placeholder({ height, label, spinner = true }: { height: number; label: string; spinner?: boolean }) {
   // Same shape as the runner: the well at `height`, then its toolbar strip.
   return (
     <div aria-hidden="true">
       <div className="flex w-full items-center justify-center bg-[#111114]" style={{ height }}>
         <div className="flex flex-col items-center gap-3 text-white/40">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          {spinner && <div className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />}
           <p className="font-mono text-[11px] uppercase tracking-[0.14em]">{label}</p>
         </div>
       </div>

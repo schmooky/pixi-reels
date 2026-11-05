@@ -36,9 +36,11 @@ const jsonLd = [
   ]),
 ];
 
+// Demos first: a mechanic page opens on a reel you can tap, and the
+// concept is the "how it works" under it.
 const sections = [
-  { id: 'concept', label: 'Concept', count: null },
   { id: 'demos', label: 'Demos', count: demos.length },
+  { id: 'concept', label: 'Concept', count: null },
   { id: 'api', label: 'API', count: api.length },
   { id: 'questions', label: 'Questions', count: questions.length },
 ];
@@ -62,7 +64,7 @@ const open = questions.filter((q) => !q.answer);
   jsonLd={jsonLd}
 >
   <div class="container max-w-[880px] py-10 animate-fade-in">
-    <header class="border-b border-border pb-8">
+    <header class="border-b border-border pb-6">
       <a href="/mechanics/" class="group inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
         <svg class="h-3.5 w-3.5 transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M19 12H5M11 6l-6 6 6 6" />
@@ -87,17 +89,17 @@ const open = questions.filter((q) => !q.answer);
       ))}
     </nav>
 
-    <section id="concept" class="scroll-mt-20 py-10">
-      <p class="eyebrow">01 / Concept</p>
-      <article class="prose-docs mt-6">
-        {hasConcept ? <slot name="concept" /> : <p>{topic.oneLiner}</p>}
+    <section id="demos" class="scroll-mt-20 pb-10 pt-8">
+      <p class="eyebrow">01 / Demos</p>
+      <article class="prose-docs mt-4">
+        <slot name="demos" />
       </article>
     </section>
 
-    <section id="demos" class="scroll-mt-20 border-t border-border py-10">
-      <p class="eyebrow">02 / Demos</p>
+    <section id="concept" class="scroll-mt-20 border-t border-border py-10">
+      <p class="eyebrow">02 / Concept</p>
       <article class="prose-docs mt-6">
-        <slot name="demos" />
+        {hasConcept ? <slot name="concept" /> : <p>{topic.oneLiner}</p>}
       </article>
     </section>
 

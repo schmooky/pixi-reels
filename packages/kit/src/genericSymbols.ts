@@ -39,6 +39,8 @@ export const GENERIC_ALIASES: Record<string, GenericSymbolId> = {
   wild: 'W', WILD: 'W', SCAT: 'S', scatter: 'S', F: 'S', bonus: 'S', seven: 'H1', diamond: 'H2', bell: 'H3', clover: 'H4',
   // The block ids the big-symbol recipes register, each on a high sticker.
   tall: 'H1', mega: 'H1', big: 'H2', giant: 'H3', wide: 'H3', square: 'H4', match: 'H4', block: 'W', bigwild: 'W',
+  // The other ids the recipes place: a teaser or a coin reads as the scatter, a mystery too.
+  tease: 'S', coin: 'S', mystery: 'S', gold: 'H3', multi: 'H2', off: 'L1', base: 'L1', plate: 'L5',
 };
 
 /** The sticker behind any id the set knows, or null. */
