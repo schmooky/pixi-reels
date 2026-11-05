@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -14,6 +14,7 @@ export const meta = {
 // stages. `reelSet.runCascade({ detectWinners, nextGrid })` owns the
 // orchestration; the two callbacks own the game rules.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['7', '8', '9', '10', 'J', 'Q'];
   const REELS = 6, ROWS = 4, SIZE = 72;
   const CLUSTER = '10';
@@ -31,7 +32,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols(r => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+          r.register(sym.id, StickerSymbol, { textures });
         }
       }
     })

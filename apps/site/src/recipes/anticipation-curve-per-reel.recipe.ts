@@ -1,11 +1,10 @@
 import {
   anticipationForScatters,
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -13,6 +12,7 @@ export const meta = {
   title: 'A different curve per reel',
   topic: 'anticipation',
   tags: ['anticipation', 'tension', 'scatter', 'near-miss', 'spine', 'horizontal', 'reverse', 'curve', 'acceleration'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // A DIFFERENT CURVE PER REEL, BY TEASE ORDER.
@@ -32,6 +32,7 @@ export const meta = {
 // holds a little longer - the escalating build-up, but with the whole shape
 // under control rather than two endpoints.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
@@ -42,9 +43,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
-      r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+      r.register(SCAT, StickerSymbol, { textures });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 110 })
     .ticker(app.ticker)

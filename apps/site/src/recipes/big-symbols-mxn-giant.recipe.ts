@@ -1,11 +1,10 @@
 import {
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   SharedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -21,6 +20,10 @@ export const meta = {
 // of a 6×5 grid, so weight 0 and place sparingly via the server.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const GIANT = { id: 'giant', color: 0xfff3a0, label: 'GIANT', textColor: 0x6b5400, w: 3, h: 3 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [GIANT.id]: set.textures.H3 };
   const REELS = 6;
   const ROWS = 5;
   const SIZE = 70;
@@ -34,11 +37,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+        registry.register(card.id, StickerSymbol, { textures });
       }
-      registry.register(GIANT.id, CardSymbol, {
-        color: GIANT.color, label: GIANT.label, textColor: GIANT.textColor,
-      });
+      registry.register(GIANT.id, StickerSymbol, { textures, frames, span: { reels: GIANT.w, cells: GIANT.h } });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { reels: GIANT.w, cells: GIANT.h } } })

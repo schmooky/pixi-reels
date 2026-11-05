@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, SpinPhase } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinPhase } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { SpinPhaseConfig } from 'pixi-reels';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -9,6 +9,7 @@ export const meta = {
   title: 'A spin floor the phase decides for itself',
   topic: 'skip',
   tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // SUBCLASS `SpinPhase`. Per-reel spin floor, decided by the phase itself.
@@ -23,6 +24,7 @@ export const meta = {
 // off the reel, off game state at the moment the phase enters, off whatever
 // the feature currently is. Here it comes from the reel index.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -45,7 +47,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, minimumSpinTime: 0 })

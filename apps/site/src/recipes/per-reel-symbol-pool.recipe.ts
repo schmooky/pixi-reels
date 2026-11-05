@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -21,6 +21,7 @@ export const meta = {
 // Watch the spin, not the landing: pools decide what SCROLLS past. What
 // stops on screen is whatever `setResult` says, exactly as before.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const WILD = WILD_CARD.id;
   const LOW = ['7', '8'];
   const HIGH = ['J', 'Q', 'K', 'A'];
@@ -34,7 +35,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     // The base table every reel starts from: low cards common, wild rare.

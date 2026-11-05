@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -27,6 +27,10 @@ export const meta = {
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const TALL = { id: 'tall', color: 0xffb86b, label: 'TALL', textColor: 0x6b3e0a, cells: 3 };
   const SCATTER = { id: 'scatter', color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
   const COLS = 5, ROWS = 3, SIZE = 84, GAP = 4;
   const FILLER_IDS = CARD_DECK.map((c) => c.id);
   const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
@@ -44,10 +48,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const card of CARD_DECK) {
-        r.register(card.id, CardSymbol, { color: card.color, label: card.label, textColor: card.textColor });
+        r.register(card.id, StickerSymbol, { textures });
       }
-      r.register(TALL.id, CardSymbol, { color: TALL.color, label: TALL.label, textColor: TALL.textColor });
-      r.register(SCATTER.id, CardSymbol, { color: SCATTER.color, label: SCATTER.label, textColor: SCATTER.textColor });
+      r.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: 1, cells: TALL.cells } });
+      r.register(SCATTER.id, StickerSymbol, { textures });
     })
     // The base table: cards everywhere, neither special symbol anywhere.
     .weights({ ...Object.fromEntries(FILLER_IDS.map((id) => [id, 10])), [SCATTER.id]: 0 })

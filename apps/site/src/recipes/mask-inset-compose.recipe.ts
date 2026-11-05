@@ -2,7 +2,6 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   CARD_DECK,
-  CardSymbol,
   composeMasks,
   inset,
   PathMaskStrategy,
@@ -10,7 +9,7 @@ import {
   RoundedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -18,6 +17,7 @@ export const meta = {
   title: 'Insetting and composing',
   topic: 'masks',
   tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // TWO DECORATORS: `inset(...)` AND `composeMasks(...)`.
@@ -37,6 +37,7 @@ export const meta = {
 // strip above the reels that is outside the reel bounds entirely - so a symbol
 // promoted into that strip stays visible instead of being clipped away.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
   const BANNER_H = 46, BANNER_GAP = 8;
@@ -47,7 +48,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .maskStrategy(composeMasks(

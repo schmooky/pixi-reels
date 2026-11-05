@@ -2,13 +2,12 @@ import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
 import {
   CARD_DECK,
-  CardSymbol,
   inset,
   ReelSetBuilder,
   RoundedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -16,6 +15,7 @@ export const meta = {
   title: 'A different trim per side',
   topic: 'masks',
   tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // `inset(strategy, { top, right, bottom, left })`: a different trim per
@@ -29,6 +29,7 @@ export const meta = {
 // The frame behind the reels is drawn from the same LIP numbers, so the
 // gold outline IS the mask window: nothing peeks past it on any side.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -42,7 +43,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(0, 0)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     // One rounded window, pulled in by each lip. An omitted side would be 0.

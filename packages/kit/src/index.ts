@@ -29,8 +29,23 @@ export type {
 
 export { StickerSymbol } from './StickerSymbol.js';
 export type { StickerSymbolOptions } from './StickerSymbol.js';
-export { loadGenericSymbols, GENERIC_SYMBOL_IDS, GENERIC_SYMBOL_NAMES, GENERIC_WEIGHTS } from './genericSymbols.js';
-export type { GenericSymbolId, GenericSymbolSet } from './genericSymbols.js';
+export {
+  loadGenericSymbols,
+  genericIdOf,
+  GENERIC_SYMBOL_IDS,
+  GENERIC_SYMBOL_NAMES,
+  GENERIC_WEIGHTS,
+  GENERIC_HUES,
+  GENERIC_ALIASES,
+  FRAME_COLORS,
+  FRAME_OF,
+  FRAME_METRICS,
+  FRAME_SCALE,
+  PILLAR_METRICS,
+  PILLAR_PARTS,
+} from './genericSymbols.js';
+export type { GenericSymbolId, GenericSymbolSet, FrameColor, PillarVariant, PillarPart } from './genericSymbols.js';
+export { WildPillar } from './pillar.js';
 export { playMotion, resetMotion, MOTION, EASE, FRAMES, frames, seconds, REST } from './motion.js';
 export type { MotionName, MotionPrimitive, MotionStep, MotionState, MotionRig, MotionHandle, EaseName, FrameName } from './motion.js';
 export { BlurSpriteSymbol } from './BlurSpriteSymbol.js';

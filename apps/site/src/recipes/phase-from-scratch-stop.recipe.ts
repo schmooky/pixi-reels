@@ -1,6 +1,6 @@
 import { gsap } from 'gsap';
-import { CARD_DECK, CardSymbol, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { ReelBounce, SkipContext, SpeedProfile, StopPhaseConfig } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -9,6 +9,7 @@ export const meta = {
   title: 'What a phase may call',
   topic: 'docs/api-phases',
   tags: [],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // A STOP PHASE WRITTEN FROM SCRATCH, on `ReelPhase`. The instant stop.
@@ -40,6 +41,7 @@ export const meta = {
 // profile instance the game registered, so the field is there at run time;
 // the generic is what types it.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -101,7 +103,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     // `slideMs` is the phase's own field on the profile.

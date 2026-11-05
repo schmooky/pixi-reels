@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -8,6 +8,7 @@ export const meta = {
   title: 'Per-reel spin floor',
   topic: 'skip',
   tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // PER-REEL SPIN FLOOR. No slam here at all - this is the other half of skip
@@ -23,6 +24,7 @@ export const meta = {
 // the moment the result arrives while 3 and 4 are held for a full second,
 // with no anticipation phase and no slam involved.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const FLOORS = [0, 0, 0, 1000, 1000];
@@ -33,7 +35,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 0, minimumSpinTime: 0 })

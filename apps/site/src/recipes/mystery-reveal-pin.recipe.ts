@@ -1,9 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -12,7 +12,7 @@ export const meta = {
   topic: 'wilds-and-pins',
   tags: ['wild', 'sticky', 'multiplier', 'mystery', 'respin', 'cell-pin', 'horizontal', 'reverse', 'orientation'],
   height: 300,
-  needs: ['hw-spine'],
+  needs: ['hw-spine', 'generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // Mystery symbol (reveal-to-same-class) using CellPin with `turns: 'eval'`.
@@ -25,6 +25,7 @@ export const meta = {
 // plasma orb (a Spine skeleton) with no label. the "what is it?" reads from
 // shape alone - the player only learns the value through the reveal.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const FILLER = ['7', '8', '10', 'Q'];
   const MYSTERY = 'mystery';
   const REVEAL_CANDIDATES = FILLER; // mystery can reveal to any filler
@@ -51,7 +52,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
       r.register(MYSTERY, SpineReelSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle_counter', scale: MYSTERY_SCALE });
     })

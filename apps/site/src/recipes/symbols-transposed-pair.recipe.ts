@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { SymbolRegistry } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -15,7 +15,7 @@ export const meta = {
 // The same board twice: four reels of three cells, vertical on the left and
 // horizontal on the right, landing the SAME grid on every spin.
 //
-// One symbol registration serves both. `CardSymbol` knows nothing about the
+// One symbol registration serves both. `StickerSymbol` knows nothing about the
 // axis, and neither should yours - the only thing that differs between the two
 // builds is that `symbolSize` swaps its two numbers, because it is screen space
 // and a horizontal board is the vertical one transposed.
@@ -26,11 +26,12 @@ export const meta = {
 // The cards land in the same index order in both, and every glyph stays
 // upright in both. Facing is not derived from travel.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const weights = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 3 };
   const registerAll = (r: SymbolRegistry) => {
     for (const s of SYMBOLS) {
-      r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+      r.register(s.id, StickerSymbol, { textures });
     }
   };
 

@@ -2,7 +2,6 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   SpeedPresets,
   WILD_CARD,
@@ -11,7 +10,7 @@ import {
 import type { SymbolPosition } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { evaluateWays } from '@pixi-reels/kit/ways';
-import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -32,6 +31,7 @@ export const meta = {
 // them one at a time, each drawn as it is shown; even spins pay ways and draw
 // every winning symbol's lattice at once.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const COLS = 5;
   const ROWS = 3;
   const SIZE = 86;
@@ -51,7 +51,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+        r.register(s.id, StickerSymbol, { textures });
       }
     })
     .weights(W)

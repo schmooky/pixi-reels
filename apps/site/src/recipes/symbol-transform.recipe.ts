@@ -1,7 +1,7 @@
 import { gsap } from 'gsap';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import type { Container } from 'pixi.js';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -9,9 +9,11 @@ export const meta = {
   title: 'Symbol transform',
   topic: 'symbols',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const LOW = ['7', '8', '9'];
   const HIGH = ['10', 'J'];
   const IDS = [...LOW, ...HIGH];
@@ -31,7 +33,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols(r => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+          r.register(sym.id, StickerSymbol, { textures });
         }
       }
     })

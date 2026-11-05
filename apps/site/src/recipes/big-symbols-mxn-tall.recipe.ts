@@ -1,11 +1,10 @@
 import {
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   SharedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -21,6 +20,10 @@ export const meta = {
 // columns that span the visible area without occupying neighbouring reels.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const TALL = { id: 'tall', color: 0xffb86b, label: 'TALL', textColor: 0x6b3e0a, w: 1, h: 3 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
   const REELS = 6;
   const ROWS = 5;
   const SIZE = 70;
@@ -34,11 +37,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+        registry.register(card.id, StickerSymbol, { textures });
       }
-      registry.register(TALL.id, CardSymbol, {
-        color: TALL.color, label: TALL.label, textColor: TALL.textColor,
-      });
+      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.w, cells: TALL.h } });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })

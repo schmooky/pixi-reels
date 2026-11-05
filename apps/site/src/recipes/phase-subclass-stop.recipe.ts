@@ -1,8 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, StopPhase } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, StopPhase } from 'pixi-reels';
 import type { StopPhaseConfig } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -10,6 +10,7 @@ export const meta = {
   title: 'Subclass a built-in phase',
   topic: 'skip',
   tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // SUBCLASS A BUILT-IN PHASE. The built-in phase classes are exported, so a
@@ -24,6 +25,7 @@ export const meta = {
 // stop - target placement, bounce, the `onSkip` pose a slam uses - is
 // inherited untouched.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -65,7 +67,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 220 })

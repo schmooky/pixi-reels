@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -7,6 +7,7 @@ export const meta = {
   title: 'Pressing before the server answers',
   topic: 'skip',
   tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // PRESSING BEFORE THE SERVER ANSWERS. `requestSkip()`.
@@ -23,6 +24,7 @@ export const meta = {
 // requirement: a press queued in this window can only protect a tease the
 // engine already knows about.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -34,9 +36,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
-      r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+      r.register(SCAT, StickerSymbol, { textures });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1200 })
     .ticker(app.ticker)

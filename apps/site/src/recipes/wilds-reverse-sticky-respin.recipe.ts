@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -22,6 +22,7 @@ export const meta = {
 // respins follow, wilds picked up on the way stick too, and the pins are
 // released when the round ends.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const REELS = 5, CELLS = 3, SIZE = 84;
   const WILD = WILD_CARD.id;
   const RESPINS = 3;
@@ -37,7 +38,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .direction('reverse')
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))

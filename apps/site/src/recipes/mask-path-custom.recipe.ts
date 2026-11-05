@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, PathMaskStrategy, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, PathMaskStrategy, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -7,6 +7,7 @@ export const meta = {
   title: 'Any shape, without a class',
   topic: 'masks',
   tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // ANY SHAPE, WITHOUT WRITING A CLASS.
@@ -26,6 +27,7 @@ export const meta = {
 // is visible. Anything PixiJS Graphics can express works here, `regularPoly`
 // for hex boards included.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 4, SIZE = 74, GAP = 0;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -35,7 +37,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .maskStrategy(new PathMaskStrategy((g, ctx) => {

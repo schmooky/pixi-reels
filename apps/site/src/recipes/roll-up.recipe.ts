@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -7,6 +7,7 @@ export const meta = {
   title: 'Roll-up (reverse direction)',
   topic: 'orientation-and-direction',
   tags: ['horizontal', 'orientation', 'direction', 'reverse', 'roll-up', 'banner', 'ways', 'axis'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // Roll-up: every reel spins UPWARD instead of down. Same engine, same math,
@@ -14,6 +15,7 @@ export const meta = {
 // New in v2: direction is a property of the axis, not the sign of a delta, so
 // the whole spin lifecycle just runs the other way.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const weights = {
@@ -31,11 +33,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .direction('reverse') // <- roll-up: symbols rise from below and land at the top
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights(weights)

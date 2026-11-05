@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, ReelSymbol, SpeedPresets } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, ReelSymbol, SpeedPresets } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -22,6 +22,7 @@ export const meta = {
 //
 // Both cases are on screen at once below. Same symbol, one cell apart.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const PLATE = 'plate';
   const FILLER = ['7', '8', '9', '10'];
 
@@ -90,7 +91,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
       r.register(PLATE, PlateSymbol, {});
     })

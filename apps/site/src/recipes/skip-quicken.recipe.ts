@@ -1,9 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
-import { ownTap, readout, tapToSpin } from '@pixi-reels/kit';
+import { ownTap, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -11,6 +11,7 @@ export const meta = {
   title: 'A press that lands, not cuts',
   topic: 'skip',
   tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // A PRESS THAT LANDS, NOT CUTS. `requestSkip({ mode: 'quicken' })`.
@@ -34,6 +35,7 @@ export const meta = {
 // moving, quickened or not. Tapping the readout is that press, so the two
 // can be compared on the same spin.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -45,9 +47,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
-      r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+      r.register(SCAT, StickerSymbol, { textures });
     })
     // A long hold per reel, so there is room to press through it, and a slow
     // bounce, so a quickened landing is visibly a landing.

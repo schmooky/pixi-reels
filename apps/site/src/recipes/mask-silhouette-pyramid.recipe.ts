@@ -1,11 +1,10 @@
 import {
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   SilhouetteMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -13,6 +12,7 @@ export const meta = {
   title: 'Rounding a jagged board',
   topic: 'masks',
   tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // ROUNDING A JAGGED BOARD.
@@ -35,6 +35,7 @@ export const meta = {
 // disjoint, their union is several rings rather than one, and the strategy says
 // so once and falls back to per-reel rounded rects.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SHAPE = [3, 4, 5, 4, 3];
   const REELS = SHAPE.length, SIZE = 76, GAP = 0;
@@ -48,7 +49,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .maskStrategy(new SilhouetteMaskStrategy({ radius: RADIUS, concaveRadius: CONCAVE }))

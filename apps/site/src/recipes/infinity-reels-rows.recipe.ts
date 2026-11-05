@@ -1,9 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { countWays, evaluateWays } from '@pixi-reels/kit/ways';
-import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -27,6 +27,7 @@ export const meta = {
 // an aborted expansion lands every reel still to come in one step, at the
 // height the board has then, so it cannot cross a row the server unlocks.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const BASE = 5;
   const ROWS = 3;
   const MAX_ROWS = 6;
@@ -43,7 +44,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+        r.register(s.id, StickerSymbol, { textures });
       }
     })
     .weights(W)

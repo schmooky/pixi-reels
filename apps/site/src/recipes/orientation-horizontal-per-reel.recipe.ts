@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -23,6 +23,7 @@ export const meta = {
 // it covers feeds from the same edge. `build()` throws rather than shipping a
 // symbol that tears in half mid-spin.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const weights = {
@@ -44,11 +45,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .directionPerReel(['forward', 'reverse', 'forward', 'reverse'])
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights(weights)

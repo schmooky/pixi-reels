@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28,6 +28,7 @@ export const meta = {
 // the four states one per spin and prints what every hidden cell actually
 // holds, so you can watch it work.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const COIN = 'coin';
   const COIN_CARD = { id: COIN, color: 0xf6c945, label: 'COIN', textColor: 0x3b2f00 };
   const FILLER = ['7', '8', '9', '10'];
@@ -43,7 +44,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, COIN_CARD]) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     // Coin-heavy on purpose: with no pool, nearly every random cell is a COIN,

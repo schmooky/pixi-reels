@@ -1,6 +1,6 @@
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -21,6 +21,7 @@ export const meta = {
 // CellPin with numeric `turns` provides the lock lifecycle for free.
 // "any 3 in a cell" counts as a win for this demo.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const FILLER = ['7', '8', '10', 'Q'];
   const COLS = 5, ROWS = 3, SIZE = 90;
   const RESPIN_WINDOW = 2; // symbol stays pinned for 2 additional respins
@@ -32,7 +33,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights({

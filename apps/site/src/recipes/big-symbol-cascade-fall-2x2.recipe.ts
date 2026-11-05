@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -24,6 +24,10 @@ export const meta = {
 //     the block visually falls as one rigid piece.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const BIG = { id: 'big', color: 0x9a6cff, label: 'BIG', textColor: 0x2a0a4a, w: 2, h: 2 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [BIG.id]: set.textures.H2 };
   const REELS = 4;
   const ROWS = 4;
   const SIZE = 76;
@@ -38,13 +42,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, CardSymbol, {
-          color: card.color, label: card.label, textColor: card.textColor,
-        });
+        registry.register(card.id, StickerSymbol, { textures });
       }
-      registry.register(BIG.id, CardSymbol, {
-        color: BIG.color, label: BIG.label, textColor: BIG.textColor,
-      });
+      registry.register(BIG.id, StickerSymbol, { textures, frames, span: { reels: BIG.w, cells: BIG.h } });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { reels: BIG.w, cells: BIG.h } } })

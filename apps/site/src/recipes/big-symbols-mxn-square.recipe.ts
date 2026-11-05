@@ -1,11 +1,10 @@
 import {
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   SharedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -20,6 +19,10 @@ export const meta = {
 // height, so the symbol scales without distorting the grid's aspect ratio.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const SQUARE = { id: 'square', color: 0xa3e4d7, label: '2×2', textColor: 0x0e5345, w: 2, h: 2 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [SQUARE.id]: set.textures.H4 };
   const REELS = 6;
   const ROWS = 5;
   const SIZE = 70;
@@ -33,11 +36,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+        registry.register(card.id, StickerSymbol, { textures });
       }
-      registry.register(SQUARE.id, CardSymbol, {
-        color: SQUARE.color, label: SQUARE.label, textColor: SQUARE.textColor,
-      });
+      registry.register(SQUARE.id, StickerSymbol, { textures, frames, span: { reels: SQUARE.w, cells: SQUARE.h } });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [SQUARE.id]: { weight: 0, zIndex: 5, size: { reels: SQUARE.w, cells: SQUARE.h } } })

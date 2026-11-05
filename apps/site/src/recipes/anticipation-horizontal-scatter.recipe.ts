@@ -1,12 +1,11 @@
 import {
   anticipationForScatters,
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   SpeedPresets,
   WILD_CARD,
 } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -26,6 +25,7 @@ export const meta = {
 // as the bottom two rows crawling sideways while the top two have already
 // landed. Nothing in the tension code branches on orientation.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const A = '7', B = '8', C = '9';
   const S = 'scatter';
   const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
@@ -50,7 +50,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(6, 6)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD, SCATTER_SYM]) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights({ [A]: 10, [B]: 10, [C]: 10, [S]: 2 })

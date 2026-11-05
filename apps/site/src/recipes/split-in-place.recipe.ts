@@ -1,10 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import type { Reel } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
-import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -26,6 +26,7 @@ export const meta = {
 // MultiWays; pass it on any other board. This demo splits off one copy at a
 // time, so each pop squeezes the reel once more.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const REELS = 6;
   const MIN_CELLS = 2;
   const MAX_CELLS = 8;
@@ -43,7 +44,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolSize(CW, (REEL_H - (MAX_CELLS - 1) * GAP) / MAX_CELLS)
     .symbolGap(GAP, GAP)
     .symbols((r) => {
-      for (const c of CARD_DECK) r.register(c.id, CardSymbol, { color: c.color, label: c.label });
+      for (const c of CARD_DECK) r.register(c.id, StickerSymbol, { textures });
     })
     .weights({ ...FILL, A: 1, K: 1, Q: 1 })
     .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })

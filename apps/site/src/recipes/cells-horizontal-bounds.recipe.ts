@@ -1,6 +1,6 @@
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -9,6 +9,7 @@ export const meta = {
   title: 'Cell bounds on a horizontal set',
   topic: 'cells-and-banners',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // `getCellBounds(reel, cell)` on a set that spins sideways.
@@ -22,6 +23,7 @@ export const meta = {
 // reel runs vertically here, where the identical code draws a horizontal
 // payline on a vertical set. Read the rects, do not assume them.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const A = '7', B = '8', C = '9';
   const PAY = 'A';
 
@@ -37,7 +39,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(6, 6)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights({ [A]: 10, [B]: 10, [C]: 10, [PAY]: 3 })

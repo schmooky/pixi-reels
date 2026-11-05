@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -7,6 +7,7 @@ export const meta = {
   title: 'Teaser on a reel that spins up',
   topic: 'anticipation',
   tags: ['anticipation', 'tension', 'scatter', 'near-miss', 'spine', 'horizontal', 'reverse', 'curve', 'acceleration'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // The buffer teaser, on a reel that spins UP.
@@ -22,6 +23,7 @@ export const meta = {
 // engine derives it, and `reel.axis.feedEdge` reports 'start' on a forward reel
 // and 'end' on a reverse one.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const COIN = 'coin';
   const COIN_CARD = { id: COIN, color: 0xfacc15, label: 'BIG', textColor: 0x6b5400 };
 
@@ -37,7 +39,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD, COIN_CARD]) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)

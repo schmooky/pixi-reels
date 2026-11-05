@@ -1,12 +1,11 @@
 import { SilkGraphics } from 'pixi-silk';
 import {
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   RoundedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -14,6 +13,7 @@ export const meta = {
   title: 'A rounded window',
   topic: 'masks',
   tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // ROUNDED WINDOW AROUND THE WHOLE GRID.
@@ -30,6 +30,7 @@ export const meta = {
 // past. The outline is drawn on the SAME geometry the mask uses, so you can
 // see where the clip actually is.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
   const RADIUS = 28;
@@ -40,7 +41,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS }))

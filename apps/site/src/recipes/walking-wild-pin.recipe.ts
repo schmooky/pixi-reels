@@ -1,7 +1,7 @@
 import { gsap } from 'gsap';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import type { ReelSymbol } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -20,6 +20,7 @@ export const meta = {
 // it back to the pool. State is atomic; the pin coordinates in the map flip
 // before the animation starts.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const FILLER = ['7', '8', '10', 'Q'];
   const WILD = WILD_CARD.id;
   const COLS = 5, ROWS = 3, SIZE = 90;
@@ -31,9 +32,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color, label: sym.label, textColor: sym.textColor,
-        });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights({ '7': 22, '8': 22, '10': 18, Q: 18 })

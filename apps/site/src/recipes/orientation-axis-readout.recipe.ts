@@ -1,7 +1,7 @@
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import type { DebugPlaque } from 'pixi-reels/debug';
-import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -9,6 +9,7 @@ export const meta = {
   title: 'Read the axis instead of remembering it',
   topic: 'orientation-and-direction',
   tags: ['horizontal', 'orientation', 'direction', 'reverse', 'roll-up', 'banner', 'ways', 'axis'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // Ask the reel which way it goes instead of remembering.
@@ -28,6 +29,7 @@ export const meta = {
 // lines draw a downward arrow on a vertical forward reel and a leftward one on
 // this set's reverse rows.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const weights = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 3 };
 
@@ -43,7 +45,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .directionPerReel(['forward', 'reverse', 'forward'])
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights(weights)

@@ -1,12 +1,11 @@
 import { SilkGraphics } from 'pixi-silk';
 import {
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   SharedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -23,6 +22,10 @@ export const meta = {
 // getBlockBounds === getCellBounds).
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const SQUARE = { id: 'square', color: 0xa3e4d7, label: '2×2', textColor: 0x0e5345, w: 2, h: 2 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, square: set.textures.H4, tall: set.textures.H1 };
   const TALL   = { id: 'tall',   color: 0xffb86b, label: '1×3', textColor: 0x6b3e0a, w: 1, h: 3 };
   const SHAPES = [SQUARE, TALL];
   const REELS = 5;
@@ -38,10 +41,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+        registry.register(card.id, StickerSymbol, { textures });
       }
       for (const s of SHAPES) {
-        registry.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+        registry.register(s.id, StickerSymbol, { textures, frames, span: { reels: s.w, cells: s.h } });
       }
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))

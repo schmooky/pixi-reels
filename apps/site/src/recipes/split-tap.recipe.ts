@@ -1,8 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { ownTap, pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { ownTap, pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { Reel } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -24,6 +24,7 @@ export const meta = {
 // The board anchors its reels at the top (`reelAnchor('start')`), so a reel
 // grows downward and nothing else moves.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const REELS = 5;
   const ROWS = 4;
   const SIZE = 64;
@@ -44,7 +45,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .reelAnchor('start')
     .symbols((r) => {
-      for (const c of CARD_DECK) r.register(c.id, CardSymbol, { color: c.color, label: c.label });
+      for (const c of CARD_DECK) r.register(c.id, StickerSymbol, { textures });
     })
     .weights(FILL)
     .speed('normal', SpeedPresets.NORMAL)

@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -23,6 +23,10 @@ export const meta = {
 // view. Tail in bufferStart. nudge to reveal.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [MEGA.id]: set.textures.H1 };
   const REELS = 5;
   const ROWS = 3;
   const SIZE = 80;
@@ -35,13 +39,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, CardSymbol, {
-          color: card.color, label: card.label, textColor: card.textColor,
-        });
+        registry.register(card.id, StickerSymbol, { textures });
       }
-      registry.register(MEGA.id, CardSymbol, {
-        color: MEGA.color, label: MEGA.label, textColor: MEGA.textColor,
-      });
+      registry.register(MEGA.id, StickerSymbol, { textures, frames, span: { reels: MEGA.w, cells: MEGA.h } });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [MEGA.id]: { weight: 0, zIndex: 5, size: { reels: MEGA.w, cells: MEGA.h } } })

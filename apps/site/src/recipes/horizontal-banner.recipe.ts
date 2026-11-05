@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -15,6 +15,7 @@ export const meta = {
 // the normal builder - same spin lifecycle, events, and speed profiles as a
 // vertical set. It replaces the old standalone HorizontalReel.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const weights = {
@@ -32,11 +33,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(6, 0)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights(weights)

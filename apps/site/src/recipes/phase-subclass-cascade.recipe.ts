@@ -1,13 +1,12 @@
 import {
   CARD_DECK,
-  CardSymbol,
   CascadeDropInPhase,
   ReelSetBuilder,
   resolveTumbleConfig,
   SpeedPresets,
 } from 'pixi-reels';
 import type { CascadeDropInPhaseConfig, TumbleConfig } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -15,6 +14,7 @@ export const meta = {
   title: 'Phases that take constructor arguments',
   topic: 'skip',
   tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // SUBCLASSING A PHASE THAT TAKES CONSTRUCTOR ARGUMENTS.
@@ -35,6 +35,7 @@ export const meta = {
 // time and `.tumble()` registered its defaults later, inside `build()`, which
 // silently discarded any `'cascade:*'` override.)
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 76, GAP = 4;
   const TUMBLE: TumbleConfig = {
@@ -59,7 +60,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     // Registered BEFORE .tumble() on purpose - it still wins.

@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -24,6 +24,10 @@ export const meta = {
 // reverse reel 'forward' travels UP.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, reels: 1, cells: 3 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
   const REELS = 5;
   const CELLS = 3;
   const SIZE = 78;
@@ -43,13 +47,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .direction('reverse') // symbols rise from below and land at the top
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, CardSymbol, {
-          color: card.color, label: card.label, textColor: card.textColor,
-        });
+        registry.register(card.id, StickerSymbol, { textures });
       }
-      registry.register(TALL.id, CardSymbol, {
-        color: TALL.color, label: TALL.label, textColor: TALL.textColor,
-      });
+      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.reels, cells: TALL.cells } });
     })
     .weights(Object.fromEntries(FILLER_IDS.map((id) => [id, 1])))
     .symbolData({

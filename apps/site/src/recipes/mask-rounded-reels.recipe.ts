@@ -1,12 +1,11 @@
 import { SilkGraphics } from 'pixi-silk';
 import {
   CARD_DECK,
-  CardSymbol,
   ReelSetBuilder,
   RoundedRectMaskStrategy,
   SpeedPresets,
 } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -14,6 +13,7 @@ export const meta = {
   title: 'Each reel as its own card',
   topic: 'masks',
   tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // EACH REEL AS ITS OWN ROUNDED CARD.
@@ -30,6 +30,7 @@ export const meta = {
 // The gap is also why this scope is not the default: most slots butt their
 // reels together, and there `scope: 'set'` or SilhouetteMaskStrategy is right.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80;
   // Non-zero CROSS gap. This is the precondition for scope 'reel'.
@@ -44,7 +45,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, 0)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS, scope: 'reel' }))

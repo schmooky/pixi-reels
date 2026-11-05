@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { SymbolRegistry } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -20,11 +20,12 @@ export const meta = {
 // container; there is no ReelStage composition layer (ADR 017 section B was
 // never shipped).
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const W = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 0 };
   const registerAll = (r: SymbolRegistry) => {
     for (const s of SYMBOLS) {
-      r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+      r.register(s.id, StickerSymbol, { textures });
     }
   };
 

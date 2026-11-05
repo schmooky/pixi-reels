@@ -1,8 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import type { Reel, ReelSet } from 'pixi-reels';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -27,6 +27,7 @@ export const meta = {
 // grows both ways and the board re-centres around it; the infinity reels
 // split demo holds the other reels still with its camera.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const REELS = 5;
   const ROWS = 3;
   const SIZE = 56;
@@ -48,7 +49,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       .symbolGap(GAP, GAP)
       .reelAnchor('start')
       .symbols((r) => {
-        for (const c of CARD_DECK) r.register(c.id, CardSymbol, { color: c.color, label: c.label });
+        for (const c of CARD_DECK) r.register(c.id, StickerSymbol, { textures });
       })
       .weights(FILL)
       .speed('normal', SpeedPresets.NORMAL)

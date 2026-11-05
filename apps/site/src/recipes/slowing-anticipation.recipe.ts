@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -8,7 +8,7 @@ export const meta = {
   title: 'Slowing anticipation',
   topic: 'anticipation',
   tags: ['anticipation', 'tension', 'scatter', 'near-miss', 'spine', 'horizontal', 'reverse', 'curve', 'acceleration'],
-  needs: ['hw-sprites'],
+  needs: ['hw-sprites', 'generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // SLOWING anticipation. Each teasing reel decelerates DEEPER than the last
@@ -18,6 +18,7 @@ export const meta = {
 // Each teasing reel wears the Hold & Win anticipation glow (the `in`→`loop`
 // additive sprite burst), driven off the anticipation:reel / reelEnd events.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -29,9 +30,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
-      r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+      r.register(SCAT, StickerSymbol, { textures });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 500 })
     .ticker(app.ticker)

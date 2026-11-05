@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -40,6 +40,10 @@ export const meta = {
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, w: 1, h: 3 };
   const MATCH = { id: 'match', color: 0x4ade80, label: 'MATCH', textColor: 0x0a4a1d };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [MATCH.id]: set.textures.H4, [TALL.id]: set.textures.H1 };
   const REELS = 3;
   const ROWS = 4;
   const SIZE = 76;
@@ -54,16 +58,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, CardSymbol, {
-          color: card.color, label: card.label, textColor: card.textColor,
-        });
+        registry.register(card.id, StickerSymbol, { textures });
       }
-      registry.register(TALL.id, CardSymbol, {
-        color: TALL.color, label: TALL.label, textColor: TALL.textColor,
-      });
-      registry.register(MATCH.id, CardSymbol, {
-        color: MATCH.color, label: MATCH.label, textColor: MATCH.textColor,
-      });
+      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.w, cells: TALL.h } });
+      registry.register(MATCH.id, StickerSymbol, { textures });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })

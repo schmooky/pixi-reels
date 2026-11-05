@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -22,6 +22,7 @@ export const meta = {
 // cell short, just below it. One 'forward' nudge rolls that reel up by one
 // and the wild arrives on the line, which then spotlights.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const REELS = 5, CELLS = 3, SIZE = 84;
   const LINE = 1;          // the middle line
@@ -40,11 +41,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .direction('reverse') // roll-up: symbols rise from below
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))

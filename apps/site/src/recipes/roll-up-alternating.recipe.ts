@@ -1,5 +1,5 @@
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
-import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -7,6 +7,7 @@ export const meta = {
   title: 'Mixed direction per reel',
   topic: 'orientation-and-direction',
   tags: ['horizontal', 'orientation', 'direction', 'reverse', 'roll-up', 'banner', 'ways', 'axis'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // Mixed direction per reel: odd columns spin up, even columns spin down.
@@ -14,6 +15,7 @@ export const meta = {
 // alternating-column look from one build call. Each reel still lands the exact
 // server frame because its StopSequencer feeds from its own edge.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const weights = {
@@ -31,11 +33,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .directionPerReel(['forward', 'reverse', 'forward', 'reverse', 'forward'])
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+        r.register(sym.id, StickerSymbol, { textures });
       }
     })
     .weights(weights)

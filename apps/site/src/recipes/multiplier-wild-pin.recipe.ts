@@ -1,8 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
-import { tapToSpin } from '@pixi-reels/kit';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -11,7 +11,7 @@ export const meta = {
   topic: 'wilds-and-pins',
   tags: ['wild', 'sticky', 'multiplier', 'mystery', 'respin', 'cell-pin', 'horizontal', 'reverse', 'orientation'],
   height: 300,
-  needs: ['hw-sprites', 'hw-spine'],
+  needs: ['hw-sprites', 'hw-spine', 'generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // Multiplier wild. the wild carries a per-instance multiplier value.
@@ -22,6 +22,7 @@ export const meta = {
 // numeric multiplier so game-layer win evaluation can read it without parsing
 // the id. Filler cards stay rectangular (they're playing-card themed).
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const FILLER = ['7', '8', '10', 'Q'];
   const COLS = 5, ROWS = 3, SIZE = 90;
   const MULTIPLIERS = [2, 3, 5];
@@ -50,7 +51,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, StickerSymbol, { textures });
       }
       for (const m of MULTIPLIERS) {
         r.register(wildId(m), GoldCoinSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle', scale: COIN_SCALE, settleSize: SIZE - 10 });

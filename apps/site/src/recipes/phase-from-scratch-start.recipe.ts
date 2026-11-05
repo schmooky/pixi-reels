@@ -1,6 +1,6 @@
-import { CARD_DECK, CardSymbol, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
 import type { StartPhaseConfig } from 'pixi-reels';
-import { readout, tapToSpin } from '@pixi-reels/kit';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -8,6 +8,7 @@ export const meta = {
   title: 'A phase written from scratch',
   topic: 'skip',
   tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+  needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
 
 // A PHASE WRITTEN FROM SCRATCH, on `ReelPhase`.
@@ -29,6 +30,7 @@ export const meta = {
 //                       would have left it
 // and call `this._complete()` exactly once, or the reel never advances.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const RAMP_MS = 700;
@@ -85,7 +87,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+        r.register(c.id, StickerSymbol, { textures });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 120, minimumSpinTime: 900 })

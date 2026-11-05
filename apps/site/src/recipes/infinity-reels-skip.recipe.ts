@@ -1,10 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, CardSymbol, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import type { DebugPlaqueRow } from 'pixi-reels/debug';
-import { pickWeighted, readout, tapToSpin } from '@pixi-reels/kit';
+import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
@@ -36,6 +36,7 @@ export const meta = {
 // The button calls `reelSet.skipSpin()` and nothing else: every rule above
 // is the engine's.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
   const BASE = 5;
   const ROWS = 3;
   const CELL = 76;
@@ -51,7 +52,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+        r.register(s.id, StickerSymbol, { textures });
       }
     })
     .weights(W)
