@@ -1,5 +1,5 @@
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { Container } from 'pixi.js';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -14,6 +14,8 @@ export const meta = {
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const LOW = ['7', '8', '9'];
   const HIGH = ['10', 'J'];
   const IDS = [...LOW, ...HIGH];
@@ -33,7 +35,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols(r => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures });
+          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
         }
       }
     })

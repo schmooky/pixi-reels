@@ -1,9 +1,4 @@
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SilhouetteMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SilhouetteMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -36,6 +31,8 @@ export const meta = {
 // so once and falls back to per-reel rounded rects.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SHAPE = [3, 4, 5, 4, 3];
   const REELS = SHAPE.length, SIZE = 76, GAP = 0;
@@ -49,7 +46,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .maskStrategy(new SilhouetteMaskStrategy({ radius: RADIUS, concaveRadius: CONCAVE }))

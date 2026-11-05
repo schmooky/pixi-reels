@@ -1,5 +1,5 @@
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -22,6 +22,8 @@ export const meta = {
 // "any 3 in a cell" counts as a win for this demo.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const COLS = 5, ROWS = 3, SIZE = 90;
   const RESPIN_WINDOW = 2; // symbol stays pinned for 2 additional respins
@@ -33,7 +35,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({

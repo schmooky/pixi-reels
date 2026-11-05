@@ -1,4 +1,4 @@
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -25,6 +25,8 @@ export const meta = {
 // with no anticipation phase and no slam involved.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const FLOORS = [0, 0, 0, 1000, 1000];
@@ -35,7 +37,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 0, minimumSpinTime: 0 })

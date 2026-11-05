@@ -10421,7 +10421,7 @@ Each recipe page on the site renders one of the following TypeScript files. Inli
 ### anticipate-a-reel
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -10435,6 +10435,8 @@ export const meta = {
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const S = 'scatter'; // registered as a custom card below
   const IDS = [A, B, C, S];
@@ -10457,7 +10459,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols(r => {
       for (const sym of [...CARD_DECK, WILD_CARD, SCATTER_SYM]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -10488,7 +10490,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### anticipation-cells
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#anticipation-cells
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -10521,6 +10523,8 @@ export const meta = {
 // requested count regardless of which speed the curve picked.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
@@ -10533,9 +10537,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 600, stopDelay: 110 })
     .ticker(app.ticker)
@@ -10608,12 +10612,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### anticipation-curve-per-reel
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#anticipation-curve-per-reel
 ```ts
-import {
-  anticipationForScatters,
-  CARD_DECK,
-  ReelSetBuilder,
-  SpeedPresets,
-} from 'pixi-reels';
+import { anticipationForScatters, CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -10643,6 +10642,8 @@ export const meta = {
 // under control rather than two endpoints.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
@@ -10653,9 +10654,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 110 })
     .ticker(app.ticker)
@@ -10725,7 +10726,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#anticipation-drive
 ```ts
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { DEBUG_FONT } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -10768,6 +10769,8 @@ export const meta = {
 // in the tween model, so neither is the drive's to smooth.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
@@ -10779,9 +10782,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .motionModel('drive', {
       // Roughly 20 frames from rest to full speed.
@@ -10930,13 +10933,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### anticipation-horizontal-scatter
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#anticipation-horizontal-scatter
 ```ts
-import {
-  anticipationForScatters,
-  CARD_DECK,
-  ReelSetBuilder,
-  SpeedPresets,
-  WILD_CARD,
-} from 'pixi-reels';
+import { anticipationForScatters, CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -10958,6 +10955,8 @@ export const meta = {
 // landed. Nothing in the tension code branches on orientation.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const S = 'scatter';
   const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
@@ -10982,7 +10981,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(6, 6)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD, SCATTER_SYM]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({ [A]: 10, [B]: 10, [C]: 10, [S]: 2 })
@@ -11017,7 +11016,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### anticipation-reverse-teaser
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#anticipation-reverse-teaser
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -11043,6 +11042,8 @@ export const meta = {
 // and 'end' on a reverse one.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COIN = 'coin';
   const COIN_CARD = { id: COIN, color: 0xfacc15, label: 'BIG', textColor: 0x6b5400 };
 
@@ -11058,7 +11059,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD, COIN_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -11105,7 +11106,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#anticipation-surge-
 ```ts
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { DEBUG_FONT } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -11138,6 +11139,8 @@ export const meta = {
 // It goes ABOVE 1 before it goes below it.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
@@ -11149,9 +11152,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // The profile hold still gates whether the tease runs at all; the CURVE sets
     // how long it actually lasts.
@@ -11273,7 +11276,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### anticipation-teaser
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -11290,6 +11293,8 @@ export const meta = {
 // the bonus coming as the reel decelerates.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COIN = 'coin';
   const COIN_CARD = { id: COIN, color: 0xfacc15, label: 'BIG', textColor: 0x6b5400 };
 
@@ -11304,7 +11309,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD, COIN_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -11354,7 +11359,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/#banner-ways
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { SymbolRegistry } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -11376,11 +11381,13 @@ export const meta = {
 // never shipped).
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const W = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 0 };
   const registerAll = (r: SymbolRegistry) => {
     for (const s of SYMBOLS) {
-      r.register(s.id, StickerSymbol, { textures });
+      r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     }
   };
 
@@ -11479,7 +11486,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbol-cascade-fall-2x2
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbol-cascade-fall
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -11509,6 +11516,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [BIG.id]: set.textures.H2 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 4;
   const ROWS = 4;
   const SIZE = 76;
@@ -11523,9 +11532,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(BIG.id, StickerSymbol, { textures, frames, span: { reels: BIG.w, cells: BIG.h } });
+      registry.register(BIG.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: BIG.w, cells: BIG.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { reels: BIG.w, cells: BIG.h } } })
@@ -11604,7 +11613,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbol-cascade-fall
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbol-cascade-fall
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -11650,6 +11659,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [MATCH.id]: set.textures.H4, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 3;
   const ROWS = 4;
   const SIZE = 76;
@@ -11664,10 +11675,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.w, cells: TALL.h } });
-      registry.register(MATCH.id, StickerSymbol, { textures });
+      registry.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: TALL.w, cells: TALL.h } }), cache, blurRampMs: 140 });
+      registry.register(MATCH.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
@@ -11754,7 +11765,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbol-held-respin
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbol-held-respin
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -11798,6 +11809,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5;
   const HELD_REEL = 2;
   const ROWS = 3;
@@ -11814,9 +11827,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.w, cells: TALL.h } });
+      registry.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: TALL.w, cells: TALL.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
@@ -11894,7 +11907,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbol-partial-land
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbol-partial-land
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -11930,6 +11943,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5;
   const ROWS = 3;
   const SIZE = 80;
@@ -11945,9 +11960,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.w, cells: TALL.h } });
+      registry.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: TALL.w, cells: TALL.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
@@ -12027,12 +12042,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbols-horizontal-block
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SharedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -12061,6 +12071,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [BLOCK.id]: set.textures.W };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 4;   // 4 rows down the screen
   const CELLS = 5;   // 5 cells along each row
   const SIZE = 64;
@@ -12078,9 +12090,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(BLOCK.id, StickerSymbol, { textures, frames, span: { reels: BLOCK.reels, cells: BLOCK.cells } });
+      registry.register(BLOCK.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: BLOCK.reels, cells: BLOCK.cells } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
     .symbolData({
@@ -12129,12 +12141,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbols-mxn-giant
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbols-mxn
 ```ts
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SharedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -12155,6 +12162,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [GIANT.id]: set.textures.H3 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 6;
   const ROWS = 5;
   const SIZE = 70;
@@ -12168,9 +12177,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(GIANT.id, StickerSymbol, { textures, frames, span: { reels: GIANT.w, cells: GIANT.h } });
+      registry.register(GIANT.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: GIANT.w, cells: GIANT.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { reels: GIANT.w, cells: GIANT.h } } })
@@ -12204,12 +12213,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbols-mxn-square
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbols-mxn
 ```ts
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SharedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -12229,6 +12233,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [SQUARE.id]: set.textures.H4 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 6;
   const ROWS = 5;
   const SIZE = 70;
@@ -12242,9 +12248,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(SQUARE.id, StickerSymbol, { textures, frames, span: { reels: SQUARE.w, cells: SQUARE.h } });
+      registry.register(SQUARE.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: SQUARE.w, cells: SQUARE.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [SQUARE.id]: { weight: 0, zIndex: 5, size: { reels: SQUARE.w, cells: SQUARE.h } } })
@@ -12279,12 +12285,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbols-mxn-tall
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbols-mxn
 ```ts
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SharedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -12305,6 +12306,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 6;
   const ROWS = 5;
   const SIZE = 70;
@@ -12318,9 +12321,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.w, cells: TALL.h } });
+      registry.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: TALL.w, cells: TALL.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
@@ -12353,12 +12356,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbols-mxn-wide
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbols-mxn
 ```ts
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SharedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -12380,6 +12378,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [WIDE.id]: set.textures.H3 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 6;
   const ROWS = 5;
   const SIZE = 70;
@@ -12393,9 +12393,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(WIDE.id, StickerSymbol, { textures, frames, span: { reels: WIDE.w, cells: WIDE.h } });
+      registry.register(WIDE.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: WIDE.w, cells: WIDE.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [WIDE.id]: { weight: 0, zIndex: 5, size: { reels: WIDE.w, cells: WIDE.h } } })
@@ -12428,7 +12428,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### big-symbols-reverse-tail
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#big-symbols-reverse-tail
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -12458,6 +12458,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5;
   const CELLS = 3;
   const SIZE = 78;
@@ -12477,9 +12479,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .direction('reverse') // symbols rise from below and land at the top
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: TALL.reels, cells: TALL.cells } });
+      registry.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: TALL.reels, cells: TALL.cells } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(FILLER_IDS.map((id) => [id, 1])))
     .symbolData({
@@ -12646,7 +12648,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-pools
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -12676,6 +12678,8 @@ export const meta = {
 // holds, so you can watch it work.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COIN = 'coin';
   const COIN_CARD = { id: COIN, color: 0xf6c945, label: 'COIN', textColor: 0x3b2f00 };
   const FILLER = ['7', '8', '9', '10'];
@@ -12691,7 +12695,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, COIN_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // Coin-heavy on purpose: with no pool, nearly every random cell is a COIN,
@@ -13048,7 +13052,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### cascade-6x5
 URL: https://pixi-reels.schmooky.dev/mechanics/cascade/#cascade-6x5
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -13065,6 +13069,8 @@ export const meta = {
 // orchestration; the two callbacks own the game rules.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['7', '8', '9', '10', 'J', 'Q'];
   const REELS = 6, ROWS = 4, SIZE = 72;
   const CLUSTER = '10';
@@ -13082,7 +13088,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols(r => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures });
+          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, tile: false }), cache, blurRampMs: 140 });
         }
       }
     })
@@ -13145,7 +13151,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### cascade-drain-upward
 URL: https://pixi-reels.schmooky.dev/mechanics/cascade/#cascade-drain-upward
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -13176,6 +13182,8 @@ export const meta = {
 //     case, and the engine never reorders what you send.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['7', '8', '9', '10', 'J', 'Q'];
   const REELS = 5, CELLS = 4, SIZE = 68;
   const RUN = 3;
@@ -13214,7 +13222,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols((r) => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures });
+          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
         }
       }
     })
@@ -13275,7 +13283,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### cascade-horizontal-tumble
 URL: https://pixi-reels.schmooky.dev/mechanics/cascade/#cascade-horizontal-tumble
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -13302,6 +13310,8 @@ export const meta = {
 // `[...fresh, ...survivors]`.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['7', '8', '9', '10', 'J'];
   const REELS = 4;   // 4 rows down the screen
   const CELLS = 6;   // 6 cells along each row
@@ -13353,7 +13363,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols((r) => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures });
+          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
         }
       }
     })
@@ -13560,7 +13570,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### cascade-reverse-gravity
 URL: https://pixi-reels.schmooky.dev/mechanics/cascade/#cascade-reverse-gravity
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -13593,6 +13603,8 @@ export const meta = {
 //     `[...survivors, ...fresh]` instead.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['7', '8', '9', '10', 'J', 'Q'];
   const REELS = 5, CELLS = 4, SIZE = 68;
   const RUN = 3;
@@ -13631,7 +13643,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols((r) => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures });
+          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
         }
       }
     })
@@ -13693,7 +13705,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#cell-bounds
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -13707,6 +13719,8 @@ export const meta = {
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
   const IDS = [A, B, C, SEVEN];
@@ -13716,7 +13730,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
     .symbols(r => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({ [A]: 10, [B]: 10, [C]: 10, [SEVEN]: 3 })
@@ -13794,7 +13808,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#cell-hit-areas
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { ownTap, pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -13808,6 +13822,8 @@ export const meta = {
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
   const IDS = [A, B, C, SEVEN];
@@ -13817,7 +13833,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
     .symbols(r => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({ [A]: 10, [B]: 10, [C]: 10, [SEVEN]: 3 })
@@ -13931,7 +13947,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#cells-horizontal-bounds
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -13956,6 +13972,8 @@ export const meta = {
 // payline on a vertical set. Read the rects, do not assume them.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const PAY = 'A';
 
@@ -13971,7 +13989,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(6, 6)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({ [A]: 10, [B]: 10, [C]: 10, [PAY]: 3 })
@@ -14042,7 +14060,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#cells-horizont
 ```ts
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { ownTap, pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -14067,6 +14085,8 @@ export const meta = {
 // hidden one is not.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 3;
   const CELLS = 5;
   const weights = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 3 };
@@ -14079,7 +14099,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(6, 6)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)
@@ -14171,14 +14191,14 @@ export const meta = {
 // The generic set: flat stickers with the studio motion on them, the
 // closest thing to a shipped symbol that needs no sheet and no skeleton.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
-  // Eleven flat stickers, one texture each; the rig does the motion.
+  // Eleven flat stickers, one texture each, bare on the well; the rig does the motion.
   const { textures } = await createAssets().genericSymbols();
   const weights = GENERIC_WEIGHTS;
   // One spin-texture cache per set: the reels spin a baked motion blur of
   // each sticker, no filter per frame, baked up front so the first spin
   // never pays the capture.
   const cache = new SpinTextureCache({ renderer: app.renderer });
-  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: () => new StickerSymbol({ textures }), width: 90, height: 90 });
+  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: () => new StickerSymbol({ textures, tile: false }), width: 90, height: 90 });
 
   const reelSet = new ReelSetBuilder()
     .reels(5)
@@ -14187,7 +14207,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const id of GENERIC_SYMBOL_IDS) {
-        r.register(id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+        r.register(id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, tile: false }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)
@@ -16378,7 +16398,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### expanding-wild-pin
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#expanding-wild-pin
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -16396,6 +16416,8 @@ export const meta = {
 // engine auto-expires the fill.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const WILD = WILD_CARD.id;
   const COLS = 5, ROWS = 3, SIZE = 90;
@@ -16408,7 +16430,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({
@@ -16953,7 +16975,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### feature-mode-swap
 URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { FrameMiddleware } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -16978,6 +17000,8 @@ export const meta = {
 // counter, making the mode change and its payoff obvious at a glance.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const WILD = WILD_CARD.id;
   const COLS = 5, ROWS = 3, SIZE = 90;
@@ -16989,7 +17013,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({
@@ -17117,12 +17141,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#get-block-bounds
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SharedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -17144,6 +17163,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, square: set.textures.H4, tall: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const TALL   = { id: 'tall',   color: 0xffb86b, label: '1×3', textColor: 0x6b3e0a, w: 1, h: 3 };
   const SHAPES = [SQUARE, TALL];
   const REELS = 5;
@@ -17159,10 +17180,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
       for (const s of SHAPES) {
-        registry.register(s.id, StickerSymbol, { textures, frames, span: { reels: s.w, cells: s.h } });
+        registry.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: s.w, cells: s.h } }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
@@ -24176,7 +24197,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### horizontal-banner
 URL: https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/#static-spin-horizontal
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -24194,6 +24215,8 @@ export const meta = {
 // vertical set. It replaces the old standalone HorizontalReel.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const weights = {
@@ -24211,7 +24234,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(6, 0)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)
@@ -24234,7 +24257,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/infinity-reels/#infinity-reels-bi
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { evaluateWays } from '@pixi-reels/kit/ways';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
@@ -24270,6 +24293,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [BIG.id]: set.textures.W };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const W = { '7': 14, '8': 14, '9': 12, '10': 12, J: 10, Q: 9, K: 8, A: 7, wild: 0, bigwild: 0 };
 
   const reelSet = new ReelSetBuilder()
@@ -24279,7 +24304,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD, BIG]) {
-        r.register(s.id, StickerSymbol, { textures });
+        r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(W)
@@ -24383,7 +24408,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/infinity-reels/#infinity-reels-mu
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { countWays, evaluateWays } from '@pixi-reels/kit/ways';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
@@ -24409,6 +24434,8 @@ export const meta = {
 // dozen segments however many ways it stands for.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const BASE = 6;
   const MIN = 2;
   const MAX = 7;
@@ -24426,7 +24453,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, 0)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, StickerSymbol, { textures });
+        r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries([...IDS.map((id) => [id, 10]), ['wild', 2]]))
@@ -24523,7 +24550,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/infinity-reels/#infinity-reels-ro
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { countWays, evaluateWays } from '@pixi-reels/kit/ways';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
@@ -24551,6 +24578,8 @@ export const meta = {
 // height the board has then, so it cannot cross a row the server unlocks.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const BASE = 5;
   const ROWS = 3;
   const MAX_ROWS = 6;
@@ -24567,7 +24596,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, StickerSymbol, { textures });
+        r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(W)
@@ -24750,7 +24779,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/infinity-reels/#infinity-reels-sk
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import type { DebugPlaqueRow } from 'pixi-reels/debug';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
@@ -24786,6 +24815,8 @@ export const meta = {
 // is the engine's.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const BASE = 5;
   const ROWS = 3;
   const CELL = 76;
@@ -24801,7 +24832,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, StickerSymbol, { textures });
+        r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(W)
@@ -25365,7 +25396,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/infinity-reels/#infinity-reels
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { countWays, evaluateWays } from '@pixi-reels/kit/ways';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
@@ -25396,6 +25427,8 @@ export const meta = {
 // lattice: every winning cell joined to every winning cell on the next reel.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const BASE = 5;
   const ROWS = 3;
   const CELL = 84;
@@ -25414,7 +25447,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, StickerSymbol, { textures });
+        r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(W)
@@ -26165,15 +26198,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/masks/#mask-inset-compose
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import {
-  CARD_DECK,
-  composeMasks,
-  inset,
-  PathMaskStrategy,
-  ReelSetBuilder,
-  RoundedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, composeMasks, inset, PathMaskStrategy, ReelSetBuilder, RoundedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26203,6 +26228,8 @@ export const meta = {
 // promoted into that strip stays visible instead of being clipped away.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
   const BANNER_H = 46, BANNER_GAP = 8;
@@ -26213,7 +26240,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .maskStrategy(composeMasks(
@@ -26289,13 +26316,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/masks/#mask-inset-sides
 ```ts
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  inset,
-  ReelSetBuilder,
-  RoundedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, inset, ReelSetBuilder, RoundedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26319,6 +26340,8 @@ export const meta = {
 // gold outline IS the mask window: nothing peeks past it on any side.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -26332,7 +26355,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(0, 0)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // One rounded window, pulled in by each lip. An omitted side would be 0.
@@ -26400,12 +26423,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/masks/#mask-outer-corners
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  RoundedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, RoundedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26430,6 +26448,8 @@ export const meta = {
 // CORNERS below to `{ topLeft: true }` and only that one corner rounds.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80;
   const RADIUS = 22;
@@ -26444,7 +26464,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(0, 0)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS, scope: 'outer', corners: CORNERS }))
@@ -26503,7 +26523,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### mask-path-custom
 URL: https://pixi-reels.schmooky.dev/mechanics/masks/#mask-path
 ```ts
-import { CARD_DECK, PathMaskStrategy, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, PathMaskStrategy, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26533,6 +26553,8 @@ export const meta = {
 // for hex boards included.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 4, SIZE = 74, GAP = 0;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -26542,7 +26564,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .maskStrategy(new PathMaskStrategy((g, ctx) => {
@@ -26593,12 +26615,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/masks/#mask-rounded-reels
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  RoundedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, RoundedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26625,6 +26642,8 @@ export const meta = {
 // reels together, and there `scope: 'set'` or SilhouetteMaskStrategy is right.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80;
   // Non-zero CROSS gap. This is the precondition for scope 'reel'.
@@ -26639,7 +26658,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, 0)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS, scope: 'reel' }))
@@ -26691,12 +26710,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/masks/
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  RoundedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, RoundedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26723,6 +26737,8 @@ export const meta = {
 // see where the clip actually is.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
   const RADIUS = 28;
@@ -26733,7 +26749,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS }))
@@ -26785,12 +26801,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### mask-silhouette-pyramid
 URL: https://pixi-reels.schmooky.dev/mechanics/masks/#mask-silhouette
 ```ts
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SilhouetteMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SilhouetteMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26823,6 +26834,8 @@ export const meta = {
 // so once and falls back to per-reel rounded rects.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SHAPE = [3, 4, 5, 4, 3];
   const REELS = SHAPE.length, SIZE = 76, GAP = 0;
@@ -26836,7 +26849,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .maskStrategy(new SilhouetteMaskStrategy({ radius: RADIUS, concaveRadius: CONCAVE }))
@@ -26882,7 +26895,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#multiplier-wild-p
 ```ts
 import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -26905,6 +26918,8 @@ export const meta = {
 // the id. Filler cards stay rectangular (they're playing-card themed).
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const COLS = 5, ROWS = 3, SIZE = 90;
   const MULTIPLIERS = [2, 3, 5];
@@ -26933,7 +26948,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
       for (const m of MULTIPLIERS) {
         r.register(wildId(m), GoldCoinSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle', scale: COIN_SCALE, settleSize: SIZE - 10 });
@@ -27017,7 +27032,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### multiways-cascade
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#spine-big-symbols
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -27045,6 +27060,8 @@ export const meta = {
 //      ways wins (capped at MAX_CASCADES per round).
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 6;
   const MIN_ROWS = 2;
   const MAX_ROWS = 5;
@@ -27147,7 +27164,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols((r) => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures });
+          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
         }
       }
     })
@@ -27221,7 +27238,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### multiways
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#spine-big-symbols
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -27247,6 +27264,8 @@ export const meta = {
 // shape off the overlay's hud layer.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 6;
   const MIN_ROWS = 2;
   const MAX_ROWS = 7;
@@ -27263,7 +27282,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
@@ -27299,7 +27318,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#mystery-reveal-pi
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -27324,6 +27343,8 @@ export const meta = {
 // shape alone - the player only learns the value through the reveal.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const MYSTERY = 'mystery';
   const REVEAL_CANDIDATES = FILLER; // mystery can reveal to any filler
@@ -27350,7 +27371,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
       r.register(MYSTERY, SpineReelSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle_counter', scale: MYSTERY_SCALE });
     })
@@ -27504,7 +27525,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### near-miss
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#near-miss
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -27518,6 +27539,8 @@ export const meta = {
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const S = 'scatter'; // scatter. registered as a custom card below
   const IDS = [A, B, C, S];
@@ -27540,7 +27563,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols(r => {
       for (const sym of [...CARD_DECK, WILD_CARD, SCATTER_SYM]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -27567,7 +27590,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-abort
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-abort
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -27594,6 +27617,8 @@ export const meta = {
 // success path should still run.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const FILLER = ['7', '8', '9', '10', 'J'];
   const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
@@ -27606,7 +27631,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -27679,7 +27704,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-big-symbol
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-big-symbol
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -27712,6 +27737,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [MEGA.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5;
   const ROWS = 3;
   const SIZE = 80;
@@ -27724,9 +27751,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(MEGA.id, StickerSymbol, { textures, frames, span: { reels: MEGA.w, cells: MEGA.h } });
+      registry.register(MEGA.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: MEGA.w, cells: MEGA.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({
@@ -27784,7 +27811,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-horizontal
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-horizontal
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -27812,6 +27839,8 @@ export const meta = {
 //      RIGHT edge.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const REELS = 3;  // 3 rows
   const CELLS = 5;  // 5 cells along each row
@@ -27829,7 +27858,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
@@ -27876,7 +27905,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-parallel
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#parallel-one-synchronised-beat
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -27894,6 +27923,8 @@ export const meta = {
 // of how many reels you're nudging).
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const FILLER = ['7', '8', '9', '10', 'J'];
   const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
@@ -27909,7 +27940,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -27979,7 +28010,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-reverse-rollup
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-reverse-rollup
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28004,6 +28035,8 @@ export const meta = {
 // and the wild arrives on the line, which then spotlights.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const REELS = 5, CELLS = 3, SIZE = 84;
   const LINE = 1;          // the middle line
@@ -28022,7 +28055,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .direction('reverse') // roll-up: symbols rise from below
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
@@ -28074,7 +28107,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-sequential
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#sequential-three-separate-beats
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28091,6 +28124,8 @@ export const meta = {
 // follow each reveal individually. Total time = N * duration.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const FILLER = ['7', '8', '9', '10', 'J'];
   const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
@@ -28106,7 +28141,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -28174,7 +28209,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-skip
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-skip
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28196,6 +28231,8 @@ export const meta = {
 // runs unchanged. only the animation got cut short.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const FILLER = ['7', '8', '9', '10', 'J'];
   const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
@@ -28211,7 +28248,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -28256,7 +28293,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-spotlight
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-spotlight
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28276,6 +28313,8 @@ export const meta = {
 // nudge, then celebrate" beat.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const FILLER = ['7', '8', '9', '10', 'J'];
   const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
@@ -28292,7 +28331,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -28345,7 +28384,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-stagger
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-stagger
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28366,6 +28405,8 @@ export const meta = {
 // kick off in sequence so the eye can follow the wave).
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const FILLER = ['7', '8', '9', '10', 'J'];
   const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
@@ -28382,7 +28423,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -28424,7 +28465,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge-tail-reveal
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-big-symbol
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28453,6 +28494,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [MEGA.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5;
   const ROWS = 3;
   const SIZE = 80;
@@ -28465,9 +28508,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(MEGA.id, StickerSymbol, { textures, frames, span: { reels: MEGA.w, cells: MEGA.h } });
+      registry.register(MEGA.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: MEGA.w, cells: MEGA.h } }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
     .symbolData({ [MEGA.id]: { weight: 0, zIndex: 5, size: { reels: MEGA.w, cells: MEGA.h } } })
@@ -28522,7 +28565,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### nudge
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28540,6 +28583,8 @@ export const meta = {
 // One press shows both directions in one beat.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const FILLER = ['7', '8', '9', '10', 'J'];
@@ -28553,7 +28598,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -28629,7 +28674,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/#orientation-axis-readout
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -28660,6 +28705,8 @@ export const meta = {
 // this set's reverse rows.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const weights = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 3 };
 
@@ -28675,7 +28722,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .directionPerReel(['forward', 'reverse', 'forward'])
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)
@@ -28744,7 +28791,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### orientation-horizontal-per-reel
 URL: https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/#orientation-horizontal-per-reel
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -28770,6 +28817,8 @@ export const meta = {
 // symbol that tears in half mid-spin.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const weights = {
@@ -28791,7 +28840,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .directionPerReel(['forward', 'reverse', 'forward', 'reverse'])
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)
@@ -28817,13 +28866,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
 ```ts
 import { gsap } from 'gsap';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SpeedPresets,
-  WILD_CARD,
-  WinPresenter,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, WinPresenter, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { Container } from 'pixi.js';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -28838,6 +28881,8 @@ export const meta = {
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
   const IDS = [A, B, C, SEVEN];
@@ -28857,7 +28902,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
     .symbols(r => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
@@ -28921,13 +28966,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-event
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SpeedPresets,
-  WILD_CARD,
-  WinPresenter,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, WinPresenter, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { ReelSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -28945,6 +28984,8 @@ export const meta = {
 // numbers) yourself by subscribing to `win:group` / `win:symbol`.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
   const IDS = [A, B, C, SEVEN];
@@ -28966,7 +29007,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
     .symbols(r => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
@@ -29041,7 +29082,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### peek-from-above
 URL: https://pixi-reels.schmooky.dev/mechanics/cascade/#peek-from-above
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -29061,6 +29102,8 @@ export const meta = {
 // take over, giving the player a brief glimpse of what's "next".
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const TEASE = 'tease';
   const TEASE_CARD = { id: TEASE, color: 0xff8c42, label: 'PEEK', textColor: 0xffffff };
 
@@ -29088,7 +29131,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD, TEASE_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 })
@@ -29127,7 +29170,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-pools
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -29150,6 +29193,8 @@ export const meta = {
 // stops on screen is whatever `setResult` says, exactly as before.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const WILD = WILD_CARD.id;
   const LOW = ['7', '8'];
   const HIGH = ['J', 'Q', 'K', 'A'];
@@ -29163,7 +29208,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // The base table every reel starts from: low cards common, wild rare.
@@ -29349,7 +29394,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### phase-from-scratch-start
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#phase-from-scratch-start
 ```ts
-import { CARD_DECK, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelPhase, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { StartPhaseConfig } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -29382,6 +29427,8 @@ export const meta = {
 // and call `this._complete()` exactly once, or the reel never advances.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const RAMP_MS = 700;
@@ -29438,7 +29485,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 120, minimumSpinTime: 900 })
@@ -29480,7 +29527,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/reference/api-phases/
 ```ts
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelPhase, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelPhase, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { ReelBounce, SkipContext, SpeedProfile, StopPhaseConfig } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -29523,6 +29570,8 @@ export const meta = {
 // the generic is what types it.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -29584,7 +29633,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // `slideMs` is the phase's own field on the profile.
@@ -29938,7 +29987,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### phase-subclass-anticipation
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#phase-subclass-anticipation
 ```ts
-import { AnticipationPhase, CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { AnticipationPhase, CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { AnticipationPhaseConfig } from 'pixi-reels';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
@@ -29969,6 +30018,8 @@ export const meta = {
 // to be told the timings the rest of the engine is already using.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -30013,9 +30064,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: HOLD })
     .phases((f) => f.register('anticipation', CountdownAnticipationPhase))
@@ -30093,13 +30144,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### phase-subclass-cascade
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#phase-subclass-cascade
 ```ts
-import {
-  CARD_DECK,
-  CascadeDropInPhase,
-  ReelSetBuilder,
-  resolveTumbleConfig,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, CascadeDropInPhase, ReelSetBuilder, resolveTumbleConfig, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { CascadeDropInPhaseConfig, TumbleConfig } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -30131,6 +30176,8 @@ export const meta = {
 // silently discarded any `'cascade:*'` override.)
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 76, GAP = 4;
   const TUMBLE: TumbleConfig = {
@@ -30155,7 +30202,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // Registered BEFORE .tumble() on purpose - it still wins.
@@ -30207,7 +30254,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### phase-subclass-spin
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#phase-subclass-spin
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinPhase } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinPhase, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { SpinPhaseConfig } from 'pixi-reels';
 import type { DebugPlaque } from 'pixi-reels/debug';
@@ -30234,6 +30281,8 @@ export const meta = {
 // the feature currently is. Here it comes from the reel index.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -30256,7 +30305,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, minimumSpinTime: 0 })
@@ -30332,7 +30381,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/skip/#phase-subclass-stop
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, StopPhase } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, StopPhase, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { StopPhaseConfig } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -30358,6 +30407,8 @@ export const meta = {
 // inherited untouched.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -30399,7 +30450,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 220 })
@@ -30458,7 +30509,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#positional-multip
 ```ts
 import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { settleMoneyFace } from '@pixi-reels/kit/spine';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -30490,6 +30541,8 @@ export const meta = {
 // "this cell is ×3" sticker.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const COLS = 5, ROWS = 3, SIZE = 90;
   const CHIP = 40; // multiplier-coin diameter
@@ -30517,7 +30570,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({
@@ -30596,7 +30649,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#protected-anticipat
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -30624,6 +30677,8 @@ export const meta = {
 // one settles slower, response time alone tells the player what is coming.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -30635,9 +30690,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1200 })
     .ticker(app.ticker)
@@ -30743,7 +30798,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### pyramid-shape
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#pyramid-shape
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -30762,6 +30817,8 @@ export const meta = {
 // CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const VISIBLE = [3, 5, 5, 5, 3];
   const SIZE = 80;
   const GAP = 4;
@@ -30774,7 +30831,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
@@ -31194,7 +31251,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/skip/#reel-groups
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -31217,6 +31274,8 @@ export const meta = {
 // while 3-4 are still teasing. The coloured bars are the groups.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
@@ -31230,9 +31289,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1500, stopDelay: 150 })
     .ticker(app.ticker)
@@ -31715,7 +31774,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### roll-up-alternating
 URL: https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/#roll-up-alternating
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -31733,6 +31792,8 @@ export const meta = {
 // server frame because its StopSequencer feeds from its own edge.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const weights = {
@@ -31750,7 +31811,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .directionPerReel(['forward', 'reverse', 'forward', 'reverse', 'forward'])
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)
@@ -31775,7 +31836,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### roll-up
 URL: https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/#roll-up
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { pickWeighted, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -31793,6 +31854,8 @@ export const meta = {
 // the whole spin lifecycle just runs the other way.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
   const weights = {
@@ -31810,7 +31873,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .direction('reverse') // <- roll-up: symbols rise from below and land at the top
     .symbols((r) => {
       for (const sym of SYMBOLS) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)
@@ -31836,12 +31899,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#scatter-anticipation
 ```ts
 import * as PIXI from 'pixi.js';
-import {
-  anticipationForScatters,
-  CARD_DECK,
-  ReelSetBuilder,
-  SpeedPresets,
-} from 'pixi-reels';
+import { anticipationForScatters, CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -31864,6 +31922,8 @@ export const meta = {
 // additive sprite burst), driven off the anticipation:reel / reelEnd events.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -31874,9 +31934,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 500 })
     .ticker(app.ticker)
@@ -31953,7 +32013,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-always-protect
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -31979,6 +32039,8 @@ export const meta = {
 // timeout, a disconnect), it only refuses the PLAYER's press.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -31990,9 +32052,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1400 })
     .ticker(app.ticker)
@@ -32091,7 +32153,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#skip-anticipation
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -32109,6 +32171,8 @@ export const meta = {
 // never trapped by the build-up.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -32120,9 +32184,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // Long anticipation window so there's plenty of tease to cut through.
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1200 })
@@ -32198,7 +32262,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-cascade-protect
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -32231,6 +32295,8 @@ export const meta = {
 // after which the whole cascade fast-forwards.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 76, GAP = 4;
@@ -32257,9 +32323,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .tumble({
       fall: { duration: 300, ease: 'power3.in', cellStagger: 60 },
@@ -32409,7 +32475,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-custom-plan
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -32436,6 +32502,8 @@ export const meta = {
 // Here the three teasing reels come down in two beats instead of three.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -32448,9 +32516,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1600 })
     .ticker(app.ticker)
@@ -32555,7 +32623,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### skip-min-spin-time
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-min-spin-time
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -32582,6 +32650,8 @@ export const meta = {
 // with no anticipation phase and no slam involved.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const FLOORS = [0, 0, 0, 1000, 1000];
@@ -32592,7 +32662,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 0, minimumSpinTime: 0 })
@@ -32671,7 +32741,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### skip-min-spin-uniform
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-min-spin-uniform
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -32696,6 +32766,8 @@ export const meta = {
 // floor and the cleared state so the difference is visible back to back.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const FLOOR = 900;
@@ -32706,7 +32778,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // Profile floor of 200ms, so the override is unmistakable when it applies.
@@ -32763,7 +32835,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### skip-no-tell
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-no-tell
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -32791,6 +32863,8 @@ export const meta = {
 // reel has landed, from how the button felt.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -32803,9 +32877,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // `minimumSpinTime` is raised so NO reel can reach its own stop before the
     // auto-press below. On the stock profile (500ms) reel 0 has already begun
@@ -32903,7 +32977,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### skip-partial-slam
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-partial-slam
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -32928,6 +33002,8 @@ export const meta = {
 // that should land than the ones that should not.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   const KEEP = [3, 4]; // the reels a press must NOT land
@@ -32938,7 +33014,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // A long stop stagger so there is plenty of spin left to cut into.
@@ -32991,7 +33067,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### skip-queued-request
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-queued-request
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -33018,6 +33094,8 @@ export const meta = {
 // engine already knows about.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -33029,9 +33107,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1200 })
     .ticker(app.ticker)
@@ -33091,7 +33169,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-quicken
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import { ownTap, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -33126,6 +33204,8 @@ export const meta = {
 // can be compared on the same spin.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -33137,9 +33217,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // A long hold per reel, so there is room to press through it, and a slow
     // bounce, so a quickened landing is visibly a landing.
@@ -33241,7 +33321,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### skip-reels-complement
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-reels-complement
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -33263,6 +33343,8 @@ export const meta = {
 // reels are never slammed, so neither form needs guarding.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
   // Outside in: a press lands the two edges, the next lands the pair inside
@@ -33275,7 +33357,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // Long stagger and a high floor so nothing lands on its own mid-plan.
@@ -33326,7 +33408,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### skip-stage-button
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-stage-button
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -33351,6 +33433,8 @@ export const meta = {
 // is exactly what a real HUD should do rather than counting presses itself.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -33363,9 +33447,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1500 })
     .ticker(app.ticker)
@@ -33441,7 +33525,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-stepwise-tease
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { roundRectPath } from 'pixi-reels/debug';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -33469,6 +33553,8 @@ export const meta = {
 // 2 instead. `'stepwise'` is the same rule applied per reel.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -33480,9 +33566,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // A long hold per reel, so there is room to press through it.
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1600 })
@@ -33579,7 +33665,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### skip-turbo-inert
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/#skip-turbo-inert
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -33607,6 +33693,8 @@ export const meta = {
 // nothing to protect". Pass `duration` when you want the tease in turbo too.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -33618,9 +33706,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // SuperTurbo timings under the default profile name. only one profile is
     // registered here, and the builder's `initialSpeed` is `'normal'`, so
@@ -33681,7 +33769,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### slam-stop
 URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -33695,6 +33783,8 @@ export const meta = {
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
   const IDS = [A, B, C, SEVEN];
@@ -33714,7 +33804,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols(r => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .speed('normal', SpeedPresets.NORMAL)
@@ -33745,7 +33835,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#staggered-anticipation
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -33765,6 +33855,8 @@ export const meta = {
 // additive sprite burst), driven off the anticipation:reel / reelEnd events.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -33776,9 +33868,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 500 })
     .ticker(app.ticker)
@@ -35025,7 +35117,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/split-symbols/#split-in-place
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { Reel } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
@@ -35051,6 +35143,8 @@ export const meta = {
 // time, so each pop squeezes the reel once more.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 6;
   const MIN_CELLS = 2;
   const MAX_CELLS = 8;
@@ -35068,7 +35162,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolSize(CW, (REEL_H - (MAX_CELLS - 1) * GAP) / MAX_CELLS)
     .symbolGap(GAP, GAP)
     .symbols((r) => {
-      for (const c of CARD_DECK) r.register(c.id, StickerSymbol, { textures });
+      for (const c of CARD_DECK) r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .weights({ ...FILL, A: 1, K: 1, Q: 1 })
     .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -35290,7 +35384,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/split-symbols/#split-modes
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import type { Reel, ReelSet } from 'pixi-reels';
@@ -35317,6 +35411,8 @@ export const meta = {
 // split demo holds the other reels still with its camera.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5;
   const ROWS = 3;
   const SIZE = 56;
@@ -35338,7 +35434,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       .symbolGap(GAP, GAP)
       .reelAnchor('start')
       .symbols((r) => {
-        for (const c of CARD_DECK) r.register(c.id, StickerSymbol, { textures });
+        for (const c of CARD_DECK) r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       })
       .weights(FILL)
       .speed('normal', SpeedPresets.NORMAL)
@@ -35524,7 +35620,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/split-symbols/#split-tap
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { ownTap, pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { Reel } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -35548,6 +35644,8 @@ export const meta = {
 // grows downward and nothing else moves.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5;
   const ROWS = 4;
   const SIZE = 64;
@@ -35568,7 +35666,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .reelAnchor('start')
     .symbols((r) => {
-      for (const c of CARD_DECK) r.register(c.id, StickerSymbol, { textures });
+      for (const c of CARD_DECK) r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .weights(FILL)
     .speed('normal', SpeedPresets.NORMAL)
@@ -35765,7 +35863,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#staggered-anticipation
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -35786,6 +35884,8 @@ export const meta = {
 // the anticipation:reel / anticipation:reelEnd events.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -35797,10 +35897,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
       // Feature / scatter symbol: id SCAT, drawn as a gold "F" card.
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 550 })
     .ticker(app.ticker)
@@ -37266,7 +37366,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### sticky-wild-multiways
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#sticky-wild-multiways
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -37287,6 +37387,8 @@ export const meta = {
 // CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 6;
   const MIN_ROWS = 2;
   const MAX_ROWS = 7;
@@ -37304,9 +37406,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      registry.register(WILD_CARD.id, StickerSymbol, { textures });
+      registry.register(WILD_CARD.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .weights(Object.fromEntries([...CARD_DECK.map((c, i) => [c.id, 12 - i]), [WILD_CARD.id, 2]]))
     .symbolData({ [WILD_CARD.id]: { weight: 2, zIndex: 5 } })
@@ -37363,7 +37465,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### sticky-wild-pin
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#sticky-wild-pin
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -37385,6 +37487,8 @@ export const meta = {
 // No ghost sprites. No external state. No grid re-injection.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const WILD = WILD_CARD.id;
   const COLS = 5, ROWS = 3, SIZE = 90;
@@ -37397,7 +37501,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({
@@ -37458,7 +37562,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#sticky-win-respin-pin
 ```ts
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -37481,6 +37585,8 @@ export const meta = {
 // "any 3 in a cell" counts as a win for this demo.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const COLS = 5, ROWS = 3, SIZE = 90;
   const RESPIN_WINDOW = 2; // symbol stays pinned for 2 additional respins
@@ -37492,7 +37598,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({
@@ -37730,7 +37836,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbols-transposed-pair
 ```ts
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { Container } from 'pixi.js';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -37745,6 +37851,8 @@ export const meta = {
 
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const LOW = ['7', '8', '9'];
   const HIGH = ['10', 'J'];
   const IDS = [...LOW, ...HIGH];
@@ -37764,7 +37872,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols(r => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures });
+          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
         }
       }
     })
@@ -37984,7 +38092,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbols-transposed-pair
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { SymbolRegistry } from 'pixi-reels';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -38012,11 +38120,13 @@ export const meta = {
 // upright in both. Facing is not derived from travel.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const SYMBOLS = [...CARD_DECK, WILD_CARD];
   const weights = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 3 };
   const registerAll = (r: SymbolRegistry) => {
     for (const s of SYMBOLS) {
-      r.register(s.id, StickerSymbol, { textures });
+      r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     }
   };
 
@@ -38091,7 +38201,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#tall-peek
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -38124,6 +38234,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COLS = 5, ROWS = 3, SIZE = 84, GAP = 4;
   const TEASED = 4;
   const FILLER_IDS = CARD_DECK.map((c) => c.id);
@@ -38138,10 +38250,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const card of CARD_DECK) {
-        r.register(card.id, StickerSymbol, { textures });
+        r.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: 1, cells: TALL.cells } });
-      r.register(SCATTER.id, StickerSymbol, { textures });
+      r.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: 1, cells: TALL.cells } }), cache, blurRampMs: 140 });
+      r.register(SCATTER.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .weights({ ...Object.fromEntries(FILLER_IDS.map((id) => [id, 10])), [SCATTER.id]: 0 })
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: 1, cells: TALL.cells } } })
@@ -38207,7 +38319,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#tall-peek
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -38239,6 +38351,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COLS = 5, ROWS = 3, SIZE = 84, GAP = 4;
   const TEASED = 4;
   const FILLER_IDS = CARD_DECK.map((c) => c.id);
@@ -38253,10 +38367,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const card of CARD_DECK) {
-        r.register(card.id, StickerSymbol, { textures });
+        r.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: 1, cells: TALL.cells } });
-      r.register(SCATTER.id, StickerSymbol, { textures });
+      r.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: 1, cells: TALL.cells } }), cache, blurRampMs: 140 });
+      r.register(SCATTER.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     .weights({ ...Object.fromEntries(FILLER_IDS.map((id) => [id, 10])), [SCATTER.id]: 0 })
     .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: 1, cells: TALL.cells } } })
@@ -38320,7 +38434,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/#tall-symbols-in-spin
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -38352,6 +38466,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COLS = 5, ROWS = 3, SIZE = 84, GAP = 4;
   const FILLER_IDS = CARD_DECK.map((c) => c.id);
   const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
@@ -38369,10 +38485,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const card of CARD_DECK) {
-        r.register(card.id, StickerSymbol, { textures });
+        r.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: 1, cells: TALL.cells } });
-      r.register(SCATTER.id, StickerSymbol, { textures });
+      r.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: 1, cells: TALL.cells } }), cache, blurRampMs: 140 });
+      r.register(SCATTER.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // The base table: cards everywhere, neither special symbol anywhere.
     .weights({ ...Object.fromEntries(FILLER_IDS.map((id) => [id, 10])), [SCATTER.id]: 0 })
@@ -39410,7 +39526,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/#turbo-anticipation
 ```ts
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -39428,6 +39544,8 @@ export const meta = {
 // survives turbo. No profile juggling.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -39439,9 +39557,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // Only SuperTurbo is registered - its anticipationDelay is 0.
     .speed('superTurbo', SpeedPresets.SUPER_TURBO)
@@ -39514,7 +39632,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#layering-graded-zindex
 ```ts
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, ReelSymbol, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, ReelSymbol, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -39537,6 +39655,8 @@ export const meta = {
 // Both cases are on screen at once below. Same symbol, one cell apart.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const PLATE = 'plate';
   const FILLER = ['7', '8', '9', '10'];
 
@@ -39605,7 +39725,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
       r.register(PLATE, PlateSymbol, {});
     })
@@ -39784,7 +39904,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#walking-wild-pin
 ```ts
 import { gsap } from 'gsap';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { ReelSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -39806,6 +39926,8 @@ export const meta = {
 // before the animation starts.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const WILD = WILD_CARD.id;
   const COLS = 5, ROWS = 3, SIZE = 90;
@@ -39817,7 +39939,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({ '7': 22, '8': 22, '10': 18, Q: 18 })
@@ -39936,7 +40058,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### wilds-horizontal-expanding
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#wilds-horizontal-expanding
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -39960,6 +40082,8 @@ export const meta = {
 // three more spins, and the engine expires it at zero.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 3;  // 3 rows
   const CELLS = 5;  // 5 cells along each row
   const SIZE = 76;
@@ -39975,7 +40099,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
@@ -40023,7 +40147,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ### wilds-reverse-sticky-respin
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#wilds-reverse-sticky-respin
 ```ts
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -40048,6 +40172,8 @@ export const meta = {
 // released when the round ends.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5, CELLS = 3, SIZE = 84;
   const WILD = WILD_CARD.id;
   const RESPINS = 3;
@@ -40063,7 +40189,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .direction('reverse')
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
@@ -40136,13 +40262,7 @@ URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#win-lines
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SpeedPresets,
-  WILD_CARD,
-  WinPresenter,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, WinPresenter, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { SymbolPosition } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { evaluateWays } from '@pixi-reels/kit/ways';
@@ -40168,6 +40288,8 @@ export const meta = {
 // every winning symbol's lattice at once.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COLS = 5;
   const ROWS = 3;
   const SIZE = 86;
@@ -40187,7 +40309,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, StickerSymbol, { textures });
+        r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(W)

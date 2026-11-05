@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -31,6 +31,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COLS = 5, ROWS = 3, SIZE = 84, GAP = 4;
   const FILLER_IDS = CARD_DECK.map((c) => c.id);
   const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
@@ -48,10 +50,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const card of CARD_DECK) {
-        r.register(card.id, StickerSymbol, { textures });
+        r.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(TALL.id, StickerSymbol, { textures, frames, span: { reels: 1, cells: TALL.cells } });
-      r.register(SCATTER.id, StickerSymbol, { textures });
+      r.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: 1, cells: TALL.cells } }), cache, blurRampMs: 140 });
+      r.register(SCATTER.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // The base table: cards everywhere, neither special symbol anywhere.
     .weights({ ...Object.fromEntries(FILLER_IDS.map((id) => [id, 10])), [SCATTER.id]: 0 })

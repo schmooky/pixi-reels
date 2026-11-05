@@ -1,4 +1,4 @@
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -22,6 +22,8 @@ export const meta = {
 // three more spins, and the engine expires it at zero.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 3;  // 3 rows
   const CELLS = 5;  // 5 cells along each row
   const SIZE = 76;
@@ -37,7 +39,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))

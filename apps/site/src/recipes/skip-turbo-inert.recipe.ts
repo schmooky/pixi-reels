@@ -1,4 +1,4 @@
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26,6 +26,8 @@ export const meta = {
 // nothing to protect". Pass `duration` when you want the tease in turbo too.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const SCAT = 'SCAT';
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
@@ -37,9 +39,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-      r.register(SCAT, StickerSymbol, { textures });
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
     })
     // SuperTurbo timings under the default profile name. only one profile is
     // registered here, and the builder's `initialSpeed` is `'normal'`, so

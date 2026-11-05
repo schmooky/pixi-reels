@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -29,6 +29,8 @@ export const meta = {
 // holds, so you can watch it work.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COIN = 'coin';
   const COIN_CARD = { id: COIN, color: 0xf6c945, label: 'COIN', textColor: 0x3b2f00 };
   const FILLER = ['7', '8', '9', '10'];
@@ -44,7 +46,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .bufferSymbols(1)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, COIN_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // Coin-heavy on purpose: with no pool, nearly every random cell is a COIN,

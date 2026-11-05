@@ -1,10 +1,5 @@
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SharedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -26,6 +21,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The block wears a framed sticker; the deck's ids map onto the set.
   const { frames } = set;
   const textures = { ...set.textures, square: set.textures.H4, tall: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const TALL   = { id: 'tall',   color: 0xffb86b, label: '1×3', textColor: 0x6b3e0a, w: 1, h: 3 };
   const SHAPES = [SQUARE, TALL];
   const REELS = 5;
@@ -41,10 +38,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .maskStrategy(new SharedRectMaskStrategy())
     .symbols((registry) => {
       for (const card of CARD_DECK) {
-        registry.register(card.id, StickerSymbol, { textures });
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
       for (const s of SHAPES) {
-        registry.register(s.id, StickerSymbol, { textures, frames, span: { reels: s.w, cells: s.h } });
+        registry.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: s.w, cells: s.h } }), cache, blurRampMs: 140 });
       }
     })
     .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))

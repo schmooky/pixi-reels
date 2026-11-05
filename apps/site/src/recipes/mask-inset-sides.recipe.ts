@@ -1,12 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
-import {
-  CARD_DECK,
-  inset,
-  ReelSetBuilder,
-  RoundedRectMaskStrategy,
-  SpeedPresets,
-} from 'pixi-reels';
+import { CARD_DECK, inset, ReelSetBuilder, RoundedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -30,6 +24,8 @@ export const meta = {
 // gold outline IS the mask window: nothing peeks past it on any side.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80;
   const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
@@ -43,7 +39,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(0, 0)
     .symbols((r) => {
       for (const c of CARDS) {
-        r.register(c.id, StickerSymbol, { textures });
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     // One rounded window, pulled in by each lip. An omitted side would be 0.

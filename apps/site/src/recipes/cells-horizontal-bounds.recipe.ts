@@ -1,5 +1,5 @@
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { DebugPlaque } from 'pixi-reels/debug';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -24,6 +24,8 @@ export const meta = {
 // payline on a vertical set. Read the rects, do not assume them.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const A = '7', B = '8', C = '9';
   const PAY = 'A';
 
@@ -39,7 +41,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(6, 6)
     .symbols((r) => {
       for (const sym of [...CARD_DECK, WILD_CARD]) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({ [A]: 10, [B]: 10, [C]: 10, [PAY]: 3 })

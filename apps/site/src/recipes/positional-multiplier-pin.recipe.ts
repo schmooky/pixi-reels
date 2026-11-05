@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { settleMoneyFace } from '@pixi-reels/kit/spine';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
@@ -32,6 +32,8 @@ export const meta = {
 // "this cell is ×3" sticker.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const FILLER = ['7', '8', '10', 'Q'];
   const COLS = 5, ROWS = 3, SIZE = 90;
   const CHIP = 40; // multiplier-coin diameter
@@ -59,7 +61,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const sym of CARD_DECK) {
-        r.register(sym.id, StickerSymbol, { textures });
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights({

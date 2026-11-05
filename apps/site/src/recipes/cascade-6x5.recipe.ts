@@ -1,4 +1,4 @@
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
@@ -15,6 +15,8 @@ export const meta = {
 // orchestration; the two callbacks own the game rules.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const IDS = ['7', '8', '9', '10', 'J', 'Q'];
   const REELS = 6, ROWS = 4, SIZE = 72;
   const CLUSTER = '10';
@@ -32,7 +34,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols(r => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures, tile: false });
+          r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, tile: false }), cache, blurRampMs: 140 });
         }
       }
     })

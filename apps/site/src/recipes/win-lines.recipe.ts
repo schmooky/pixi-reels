@@ -1,12 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
-import {
-  CARD_DECK,
-  ReelSetBuilder,
-  SpeedPresets,
-  WILD_CARD,
-  WinPresenter,
-} from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, WinPresenter, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { SymbolPosition } from 'pixi-reels';
 import { WinLines } from 'pixi-reels/debug';
 import { evaluateWays } from '@pixi-reels/kit/ways';
@@ -32,6 +26,8 @@ export const meta = {
 // every winning symbol's lattice at once.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const COLS = 5;
   const ROWS = 3;
   const SIZE = 86;
@@ -51,7 +47,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(GAP, GAP)
     .symbols((r) => {
       for (const s of [...CARD_DECK, WILD_CARD]) {
-        r.register(s.id, StickerSymbol, { textures });
+        r.register(s.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(W)

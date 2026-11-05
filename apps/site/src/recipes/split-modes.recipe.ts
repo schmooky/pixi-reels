@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { SilkGraphics } from 'pixi-silk';
-import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { pickWeighted, readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
 import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import type { Reel, ReelSet } from 'pixi-reels';
@@ -28,6 +28,8 @@ export const meta = {
 // split demo holds the other reels still with its camera.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
   const REELS = 5;
   const ROWS = 3;
   const SIZE = 56;
@@ -49,7 +51,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       .symbolGap(GAP, GAP)
       .reelAnchor('start')
       .symbols((r) => {
-        for (const c of CARD_DECK) r.register(c.id, StickerSymbol, { textures });
+        for (const c of CARD_DECK) r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       })
       .weights(FILL)
       .speed('normal', SpeedPresets.NORMAL)
