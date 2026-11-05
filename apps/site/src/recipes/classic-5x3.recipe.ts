@@ -13,14 +13,14 @@ export const meta = {
 // The generic set: flat stickers with the studio motion on them, the
 // closest thing to a shipped symbol that needs no sheet and no skeleton.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
-  // Eleven flat stickers, one texture each; the rig does the motion.
+  // Eleven flat stickers, one texture each, bare on the well; the rig does the motion.
   const { textures } = await createAssets().genericSymbols();
   const weights = GENERIC_WEIGHTS;
   // One spin-texture cache per set: the reels spin a baked motion blur of
   // each sticker, no filter per frame, baked up front so the first spin
   // never pays the capture.
   const cache = new SpinTextureCache({ renderer: app.renderer });
-  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: () => new StickerSymbol({ textures }), width: 90, height: 90 });
+  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: () => new StickerSymbol({ textures, tile: false }), width: 90, height: 90 });
 
   const reelSet = new ReelSetBuilder()
     .reels(5)
@@ -29,7 +29,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbolGap(4, 4)
     .symbols((r) => {
       for (const id of GENERIC_SYMBOL_IDS) {
-        r.register(id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+        r.register(id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, tile: false }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)

@@ -32,7 +32,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     .symbols(r => {
       for (const sym of CARD_DECK) {
         if (IDS.includes(sym.id)) {
-          r.register(sym.id, StickerSymbol, { textures });
+          r.register(sym.id, StickerSymbol, { textures, tile: false });
         }
       }
     })
