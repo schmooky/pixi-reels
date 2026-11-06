@@ -1,5 +1,15 @@
 # pixi-reels
 
+## 4.4.0
+
+### Minor Changes
+
+- [#294](https://github.com/schmooky/pixi-reels/pull/294) [`4af027f`](https://github.com/schmooky/pixi-reels/commit/4af027f79b4aadf1b27567ab810641aa1e63493e) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: a `host` option on `debugOverlay` from `pixi-reels/debug`. The overlay draws into that container instead of the reel set and copies the set's transform onto itself before every render. Pass a container outside the camera window or frame mask your game puts around the set, so the mask does not clip the panels under the reels.
+
+### Patch Changes
+
+- [#293](https://github.com/schmooky/pixi-reels/pull/293) [`9f0b508`](https://github.com/schmooky/pixi-reels/commit/9f0b508fd8ec9534a1aaa98860065cd7b19b9c24) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: debug labels stay sharp when the reels are scaled up. `DebugPlaque` rows and the `debugOverlay` labels re-rasterise at the scale they are drawn, rounded to half steps and capped at 8x. Before this, a host that fitted the reels to a bigger canvas, or zoomed in, showed the text as a stretched bitmap next to the vector plates.
+
 ## 4.3.1
 
 ### Patch Changes
