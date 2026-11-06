@@ -1,11 +1,32 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Studio from '../../components/Studio.tsx';
+import { SITE, breadcrumbLd } from '../../lib/seo.ts';
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'pixi-reels Studio',
+    url: new URL('/studio/', SITE.url).toString(),
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Any (runs in the browser)',
+    description: 'A browser workbench for pixi-reels: write a recipe module, run it, and debug the reels with the overlay and the event log.',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    isPartOf: { '@type': 'WebSite', name: SITE.name, url: SITE.url },
+  },
+  breadcrumbLd([
+    { name: SITE.name, url: '/' },
+    { name: 'Studio', url: '/studio/' },
+  ]),
+];
 ---
 <Base
   title="Studio · pixi-reels"
-  description="Live workbench for pixi-reels. Write a recipe module and watch the reels rebuild, with the debug overlay and the events panel beside them. Every recipe on the site opens here, the prototype atlas is preloaded, and you can drop in your own sprites, animated sheets, or Spine bundles in the Symbols tab."
+  description="A live workbench for pixi-reels: write a recipe module, watch the reels rebuild, and debug them with the overlay and the event log. Every docs demo opens here."
+  jsonLd={jsonLd}
 >
+  <h1 class="sr-only">pixi-reels Studio</h1>
   <Studio client:only="react">
     {/* Pre-hydration fallback. `client:only` skips SSR, so without this
         the page shows nothing until the React bundle downloads and

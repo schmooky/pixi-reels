@@ -1,15 +1,16 @@
 import type { APIRoute } from 'astro';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { SITE } from '../lib/seo.ts';
 import { TOPICS } from '../content/topics.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
 import { LEARN_NAV, REFERENCE_NAV } from '../content/nav.ts';
 import { FAQ_ANSWERED } from '../content/faq.ts';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const apiPagesRoot = path.resolve(here, '..', 'pages', 'api');
+// The site root, not this module's folder: at build the endpoint runs from
+// a bundled chunk under dist/.prerender, where a path relative to it found
+// nothing and the sitemap silently dropped all 340 API pages.
+const apiPagesRoot = path.resolve(process.cwd(), 'src/pages/api');
 
 function url(p: string): string {
   return new URL(p, SITE.url).toString();
@@ -22,7 +23,9 @@ function url(p: string): string {
  * we strip the `.md` and percent-encode for safety.
  */
 function apiRoutes(): string[] {
-  if (!fs.existsSync(apiPagesRoot)) return [];
+  if (!fs.existsSync(apiPagesRoot)) {
+    throw new Error(`sitemap: ${apiPagesRoot} is missing, so the API pages would drop out of the sitemap. Run \`pnpm api:gen\` first.`);
+  }
   const out: string[] = [];
   const walk = (dir: string, prefix: string): void => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

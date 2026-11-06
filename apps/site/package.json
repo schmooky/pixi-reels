@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sync-assets": "node -e \"const fs=require('fs');fs.mkdirSync('src/generated',{recursive:true});fs.copyFileSync('../../packages/pixi-reels/CHANGELOG.md','src/generated/CHANGELOG.md');\"",
+    "sync-assets": "node -e \"const fs=require('fs');fs.mkdirSync('src/generated',{recursive:true});fs.writeFileSync('src/generated/CHANGELOG.md',fs.readFileSync('../../packages/pixi-reels/CHANGELOG.md','utf8').replace(/^# .*\\n+/,''));\"",
     "llms:gen": "node scripts/build-llms.mjs",
     "api:gen": "typedoc && node scripts/postprocess-api.mjs",
     "api:check-sync": "node scripts/check-api-sync.mjs",

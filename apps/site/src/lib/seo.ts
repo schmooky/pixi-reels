@@ -41,6 +41,7 @@ export function ogUrlForPath(pathname: string | undefined): string {
     (p === '/faq' ? '/og/section/faq.png' : null) ??
     (p === '/reference' ? '/og/section/reference.png' : null) ??
     (p === '/architecture' ? '/og/section/architecture.png' : null) ??
+    (p === '/studio' ? '/og/section/studio.png' : null) ??
     (p.startsWith('/api') ? '/og/section/api.png' : null) ??
     SITE.defaultImage
   );

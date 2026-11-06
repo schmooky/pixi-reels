@@ -13,6 +13,8 @@ interface Props {
   eyebrow?: string;
   frontmatter?: {
     title?: string;
+    /** The browser and search title, when it should say more than the heading. */
+    seoTitle?: string;
     description?: string;
     section?: Section;
     eyebrow?: string;
@@ -62,7 +64,7 @@ const jsonLd = [
 ];
 ---
 <Base
-  title={`${title} · ${SITE.name}`}
+  title={`${fm.seoTitle ?? title} · ${SITE.name}`}
   description={description}
   path={pathname}
   type="article"

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Generate `public/llms.txt` from the Astro page tree.
+ * Generate `public/llms.txt` (the index) and `public/llms-full.txt` from the
+ * Astro page tree.
  *
  * Walks the route tree (`src/pages/{architecture,api}`) plus the Keystatic content
  * collections (`src/content/{recipes,guides,docs}`) and extracts each page's
@@ -17,7 +18,7 @@
  * MDX pages (guides, docs, recipe umbrellas) are inlined in full: the prose
  * body with imports and JSX components stripped, body headings demoted two
  * levels so `##` stays the section marker and `###` the page marker. That
- * grammar (`## Section`, `### Page` + `URL:`, `####` sub-headings with an
+ * grammar in `llms-full.txt` (`## Section`, `### Page` + `URL:`, `####` sub-headings with an
  * optional `URL:` deep link) is what `@pixi-reels/docs-ask` chunks for the
  * Ask box, so keep it stable. `.astro` pages (architecture) have no markdown
  * body and stay title + description only.
@@ -43,7 +44,11 @@ const RECIPES_SRC = resolve(ROOT, 'src/recipes');
 const FAQ_DIR = resolve(CONTENT, 'faq');
 const FAQ_GROUPS_DIR = resolve(CONTENT, 'faq-groups');
 const PKG = resolve(ROOT, '../../packages/pixi-reels/package.json');
+// Two files, the llmstxt.org way: `llms.txt` is the index (one line per page,
+// small enough to read whole), `llms-full.txt` inlines every page, recipe
+// source and FAQ answer for a model that wants all of it in one request.
 const OUT = resolve(ROOT, 'public/llms.txt');
+const OUT_FULL = resolve(ROOT, 'public/llms-full.txt');
 
 const SITE_URL = 'https://pixi-reels.schmooky.dev';
 
@@ -112,15 +117,44 @@ async function main() {
     items: pages.filter((p) => s.match(p.slug)).sort((a, b) => a.slug.localeCompare(b.slug)),
   })).filter((g) => g.items.length > 0);
 
-  const out = render(grouped, recipes, faq, version, demoUrls);
-  await writeFile(OUT, out, 'utf-8');
+  await writeFile(OUT_FULL, render(grouped, recipes, faq, version, demoUrls), 'utf-8');
+  await writeFile(OUT, renderIndex(grouped, faq, version), 'utf-8');
 
   const total = grouped.reduce((n, g) => n + g.items.length, 0);
   const answered = faq.reduce((n, g) => n + g.questions.length, 0);
   console.log(
     `[build-llms] Wrote ${total} pages + ${recipes.length} recipe sources + ` +
-    `${answered} answered FAQ entries (v${version}) to ${OUT}`,
+    `${answered} answered FAQ entries (v${version}) to ${OUT_FULL}, and the index to ${OUT}`,
   );
+}
+
+/**
+ * An `.astro` page has code, not YAML, above its `---`. The architecture tour
+ * keeps every page's title and subtitle in `architectureNav.ts`; any other
+ * page names them in `const title = '...'` / `const description = '...'`.
+ * Without this the index listed those pages by slug, with no description.
+ */
+let archMeta = null;
+async function astroMeta(slug, raw) {
+  if (!archMeta) {
+    const nav = await readFile(resolve(CONTENT, 'architectureNav.ts'), 'utf-8');
+    archMeta = new Map();
+    for (const line of nav.split('\n')) {
+      const s = line.match(/slug: '([^']+)'/);
+      const t = line.match(/title: '((?:[^'\\]|\\.)*)'/);
+      const d = line.match(/subtitle: '((?:[^'\\]|\\.)*)'/);
+      if (s && t) archMeta.set(`architecture/${s[1]}`, { title: t[1].replace(/\\'/g, "'"), description: d ? d[1].replace(/\\'/g, "'") : '' });
+    }
+  }
+  if (archMeta.has(slug)) return archMeta.get(slug);
+  const version = JSON.parse(await readFile(PKG, 'utf-8')).version;
+  const str = (name) => raw.match(new RegExp(`const ${name} = ['\`]([^'\`]+)['\`]`))?.[1]?.replace(/\$\{PIXI_REELS_VERSION\}/g, version);
+  const meta = {};
+  const title = str('title');
+  const description = str('description');
+  if (title) meta.title = title;
+  if (description) meta.description = description;
+  return meta;
 }
 
 async function collectPages(baseDir) {
@@ -136,6 +170,7 @@ async function collectPages(baseDir) {
     const raw = await readFile(file, 'utf-8');
     const fm = parseFrontmatter(raw);
     if (!fm) continue;
+    if (file.endsWith('.astro')) Object.assign(fm, await astroMeta(relToSlug(rel), raw));
 
     const slug = relToSlug(rel);
     const href = hrefFor(slug);
@@ -143,7 +178,7 @@ async function collectPages(baseDir) {
       slug,
       href,
       title: fm.title ?? slug,
-      description: fm.description ?? '',
+      description: fm.description ?? fm.oneLiner ?? '',
       tags: fm.tags ?? [],
       realGameVideo: extractRealGameVideo(raw),
       // TypeDoc pages stay title + signature + URL (see SECTIONS above).
@@ -378,6 +413,12 @@ function parseFrontmatter(raw) {
       currentList.push(line.replace(/^\s*-\s+/, '').trim().replace(/^['"]|['"]$/g, ''));
       continue;
     }
+    // A folded scalar: Keystatic wraps a long description onto indented
+    // lines, and dropping them cut the text mid-sentence.
+    if (/^\s+\S/.test(line) && currentKey && typeof out[currentKey] === 'string') {
+      out[currentKey] = `${out[currentKey]}${out[currentKey] ? ' ' : ''}${line.trim().replace(/['"]$/, '')}`;
+      continue;
+    }
     const kv = line.match(/^([A-Za-z][\w-]*):\s*(.*)$/);
     if (!kv) continue;
     const key = kv[1];
@@ -391,9 +432,10 @@ function parseFrontmatter(raw) {
       currentList = null;
       currentKey = null;
     } else {
-      out[key] = val.replace(/^['"]|['"]$/g, '');
+      // `>-` / `|` block scalars start empty; their indented lines follow.
+      out[key] = /^[>|][+-]?$/.test(val) ? '' : val.replace(/^['"]|['"]$/g, '');
       currentList = null;
-      currentKey = null;
+      currentKey = key;
     }
   }
   void currentKey;
@@ -410,6 +452,7 @@ function render(sections, recipes, faq, version, demoUrls) {
   lines.push(`pixi-reels ${version} is a reel engine for PixiJS v8.`);
   lines.push('It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.');
   lines.push('This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.');
+  lines.push(`The index alone, one line per page, is ${SITE_URL}/llms.txt.`);
   lines.push('');
   lines.push(`Site: ${SITE_URL}`);
   lines.push('Repo: https://github.com/schmooky/pixi-reels');
@@ -501,6 +544,61 @@ function render(sections, recipes, faq, version, demoUrls) {
       lines.push('```');
       lines.push('');
     }
+  }
+  return lines.join('\n');
+}
+
+/** A description cut to one line at a word boundary, for the index. */
+function oneLine(text, max = 160) {
+  const flat = String(text ?? '').replace(/\s+/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max);
+  return `${cut.slice(0, cut.lastIndexOf(' ')).replace(/[,;:.\s]+$/, '')}…`;
+}
+
+/**
+ * The index: what the library is, where to start, and one link per page with
+ * its description. The generated API goes under `## Optional`, the llmstxt.org
+ * section a reader may skip, since a model can fetch the one symbol it needs.
+ */
+function renderIndex(sections, faq, version) {
+  const lines = [];
+  lines.push('# pixi-reels');
+  lines.push('');
+  lines.push(`> pixi-reels ${version} is a slot machine reel engine for PixiJS v8: a fluent builder, typed events, spin phases, speed modes, cascades, Hold & Win, big symbols and win spotlights. It ships reel-only primitives; win math, paytables, RNG and audio stay in the game.`);
+  lines.push('');
+  lines.push('Install with `npm install pixi-reels pixi.js gsap`. Every mechanic page opens on live demos whose source is the recipe module shown beside them, runnable as-is in the Studio.');
+  lines.push(`Everything below, inlined with each recipe's source and every FAQ answer: ${SITE_URL}/llms-full.txt`);
+  lines.push('');
+  lines.push(`- Site: ${SITE_URL}`);
+  lines.push('- Repo: https://github.com/schmooky/pixi-reels');
+  lines.push('- Package: https://www.npmjs.com/package/pixi-reels');
+  lines.push(`- Studio: ${SITE_URL}/studio/`);
+  lines.push('');
+  const api = sections.find((s) => s.id === 'api');
+  for (const section of sections) {
+    if (section === api) continue;
+    lines.push(`## ${section.label}`);
+    lines.push('');
+    for (const item of section.items) {
+      const desc = oneLine(item.description);
+      lines.push(`- [${item.title}](${item.href})${desc ? `: ${desc}` : ''}`);
+    }
+    lines.push('');
+  }
+  if (faq.length) {
+    lines.push('## FAQ');
+    lines.push('');
+    for (const group of faq) {
+      for (const q of group.questions) lines.push(`- [${oneLine(q.question, 200)}](${SITE_URL}/faq/${q.id}/)`);
+    }
+    lines.push('');
+  }
+  if (api) {
+    lines.push('## Optional');
+    lines.push('');
+    for (const item of api.items) lines.push(`- [${item.title}](${item.href})`);
+    lines.push('');
   }
   return lines.join('\n');
 }

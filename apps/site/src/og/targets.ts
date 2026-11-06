@@ -7,11 +7,9 @@
  * so adding a page mints its card automatically.
  */
 import type { OgTarget } from './render.ts';
-import { SITE } from '../lib/seo.ts';
 import { TOPICS, TOPIC_GROUPS } from '../content/topics.ts';
 import { FAQ_ANSWERED, FAQ_GROUP_TITLE } from '../content/faq.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
-import { monogram, hueFor } from '../lib/recipeMedia.ts';
 
 interface Frontmatter {
   title?: string;
@@ -41,9 +39,6 @@ function topicTargets(): OgTarget[] {
       eyebrow: group ? `Mechanics · ${group}` : 'Mechanics',
       title: t.title,
       subtitle: t.oneLiner,
-      monogram: monogram(t.title),
-      hue: hueFor(t.title),
-      footerRight: `/mechanics/${t.slug}`,
     };
   });
 }
@@ -63,7 +58,6 @@ function fmTargets(
         eyebrow: fm.eyebrow ? `${eyebrow} · ${fm.eyebrow}` : eyebrow,
         title: fm.title ?? humanize(slug),
         subtitle: fm.description,
-        footerRight: `/${prefix}/${slug}`,
       };
     });
 }
@@ -73,9 +67,6 @@ function faqTargets(): OgTarget[] {
     id: `faq/${q.id}`,
     eyebrow: `FAQ · ${FAQ_GROUP_TITLE[q.group].en}`,
     title: q.en,
-    monogram: '?',
-    hue: hueFor(q.id),
-    footerRight: `/faq/${q.id}`,
   }));
 }
 
@@ -85,15 +76,14 @@ function archTargets(): OgTarget[] {
     eyebrow: `Architecture · ${p.eyebrow}`,
     title: p.title,
     subtitle: p.subtitle,
-    footerRight: `/architecture/${p.slug}`,
   }));
 }
 
 const HOME: Omit<OgTarget, 'id'> = {
   eyebrow: 'Open-source slot reel engine for PixiJS v8',
   title: 'Slot reels, ready to spin.',
-  subtitle: SITE.description,
-  footerRight: 'npm i pixi-reels',
+  // Shorter than SITE.description, which the card cut mid-word.
+  subtitle: 'A fluent reel engine for PixiJS v8: typed events, spin phases, cascades, Hold & Win, big symbols and a headless test harness.',
 };
 
 const SECTIONS: Array<{ id: string; eyebrow: string; title: string; subtitle: string }> = [
@@ -103,6 +93,7 @@ const SECTIONS: Array<{ id: string; eyebrow: string; title: string; subtitle: st
   { id: 'api', eyebrow: 'Reference', title: 'API reference', subtitle: 'Every class, interface, and function in the pixi-reels public surface.' },
   { id: 'reference', eyebrow: 'Reference', title: 'Reference', subtitle: 'Builder, ReelSet, events, and phases — the pixi-reels API in prose.' },
   { id: 'architecture', eyebrow: 'Internals', title: 'Architecture', subtitle: 'How the engine is wired: spin lifecycle, phases, events, cascade.' },
+  { id: 'studio', eyebrow: 'Workbench', title: 'Studio', subtitle: 'Write a recipe module and watch the reels rebuild, with the debug overlay and the event log beside them.' },
   { id: 'changelog', eyebrow: 'Releases', title: 'Changelog', subtitle: 'What changed in each pixi-reels release.' },
 ];
 
@@ -112,7 +103,6 @@ function sectionTargets(): OgTarget[] {
     eyebrow: s.eyebrow,
     title: s.title,
     subtitle: s.subtitle,
-    footerRight: s.id === 'changelog' ? '/reference/changelog' : `/${s.id}`,
   }));
 }
 

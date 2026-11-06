@@ -10,7 +10,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
-import { OG, badgeColor, tintSoft } from './theme.ts';
+import sharp from 'sharp';
+import { OG } from './theme.ts';
 
 export interface OgTarget {
   /** Path under `/og/`, no leading slash or `.png`. e.g. `recipes/classic-5x3`. */
@@ -19,12 +20,6 @@ export interface OgTarget {
   eyebrow: string;
   title: string;
   subtitle?: string;
-  /** 1-2 letter glyph; when set, the card shows the reel-board icon panel. */
-  monogram?: string;
-  /** Stable hue for the monogram badge (mirrors the on-site recipe card). */
-  hue?: number;
-  /** Right-aligned footer text; defaults to the canonical site URL on the left only. */
-  footerRight?: string;
 }
 
 // ── tiny hyperscript so we avoid a JSX/React build step in a plain .ts module.
@@ -72,78 +67,79 @@ function loadFonts() {
   ];
 }
 
-const SITE_HOST = 'pixi-reels.schmooky.dev';
 
-/** Pick a title size that keeps long titles to ~2 lines without overflow. */
-function titleSize(title: string): number {
+/** The site's one accent, acid lime (`--brand` in the dark theme). */
+const BRAND = 'hsl(76, 100%, 58%)';
+
+// ── art: the generic stickers, read once and handed to Satori as PNG ───────
+// Satori decodes PNG and JPEG, not WebP, so sharp converts each sticker once.
+const STICKERS = ['H1', 'H2', 'H3', 'H4', 'W', 'S', 'L5', 'L4', 'L3', 'L2', 'L1'] as const;
+let _stickers: Map<string, string> | null = null;
+async function stickers(): Promise<Map<string, string>> {
+  if (_stickers) return _stickers;
+  const dir = path.resolve(process.cwd(), 'public/generic-symbols');
+  const out = new Map<string, string>();
+  for (const id of STICKERS) {
+    const png = await sharp(path.join(dir, `${id}.webp`)).png().toBuffer();
+    out.set(id, `data:image/png;base64,${png.toString('base64')}`);
+  }
+  _stickers = out;
+  return out;
+}
+
+/** A stable sticker for a card: the same page always gets the same art. */
+const CARD_ART = ['H1', 'H2', 'H3', 'H4', 'W', 'S'] as const;
+function stickerFor(id: string): (typeof CARD_ART)[number] {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return CARD_ART[h % CARD_ART.length]!;
+}
+
+/**
+ * Fit a title into at most three lines: the size steps down with length,
+ * and a title too long even at the smallest size is cut at a word, with an
+ * ellipsis, never mid-word.
+ */
+function fitTitle(title: string): { size: number; text: string } {
   const n = title.length;
-  if (n <= 22) return 74;
-  if (n <= 36) return 62;
-  if (n <= 54) return 52;
-  return 44;
-}
-function clamp(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
+  const size = n <= 22 ? 76 : n <= 36 ? 64 : n <= 56 ? 54 : n <= 80 ? 46 : 42;
+  return { size, text: clampWords(title, 104) };
 }
 
-/** The reel-board icon panel: the same monogram + hue identity as RecipePlaceholder. */
-function iconPanel(monogram: string, hue: number): Node {
-  const cols = [0, 1, 2, 3];
-  const cells = (c: number) =>
-    [0, 1, 2].map((r) =>
-      h('div', {
-        width: 56,
-        height: 56,
-        borderRadius: 10,
-        background: 'rgba(250,250,250,0.05)',
-        marginTop: r === 0 ? 0 : 14,
-      }),
-    );
+function clampWords(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1);
+  const at = cut.lastIndexOf(' ');
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).replace(/[\s,.;:]+$/, '')}…`;
+}
+
+/** The art panel: one sticker, large, on a dark tile with a lime edge. */
+function artPanel(src: string): Node {
   return h(
     'div',
     {
-      position: 'relative',
       display: 'flex',
-      width: 340,
-      height: 402,
-      borderRadius: 28,
-      border: `1px solid ${OG.border}`,
+      width: 360,
+      height: 360,
+      borderRadius: 4,
+      border: `2px solid ${OG.border}`,
       background: OG.surface,
-      backgroundImage: `linear-gradient(135deg, ${tintSoft(hue)}14, transparent 70%)`,
       alignItems: 'center',
       justifyContent: 'center',
-      overflow: 'hidden',
     },
-    [
-      // faux reel columns behind the badge
-      h(
-        'div',
-        { position: 'absolute', top: 28, left: 26, display: 'flex' },
-        cols.map((c) =>
-          h('div', { display: 'flex', flexDirection: 'column', marginLeft: c === 0 ? 0 : 16 }, cells(c)),
-        ),
-      ),
-      // monogram badge
-      h(
-        'div',
-        {
-          display: 'flex',
-          width: 132,
-          height: 132,
-          borderRadius: 28,
-          background: badgeColor(hue),
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'Inter',
-          fontWeight: 700,
-          fontSize: 56,
-          letterSpacing: -2,
-          color: '#fff',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
-        },
-        monogram,
-      ),
-    ],
+    [{ type: 'img', props: { src, width: 300, height: 300, style: { width: 300, height: 300 } } }],
+  );
+}
+
+/** The home card's art: a 3 x 3 board of stickers, three rows of three. */
+function boardPanel(srcs: string[]): Node {
+  const cell = 104;
+  const img = (src: string) => ({ type: 'img', props: { src, width: cell, height: cell, style: { width: cell, height: cell } } });
+  const row = (i: number) => h('div', { display: 'flex', marginTop: i === 0 ? 0 : 8 }, srcs.slice(i * 3, i * 3 + 3).map((src, k) => h('div', { display: 'flex', marginLeft: k === 0 ? 0 : 8 }, [img(src)])));
+  return h(
+    'div',
+    { display: 'flex', flexDirection: 'column', padding: 14, borderRadius: 4, border: `2px solid ${OG.border}`, background: OG.surface },
+    [row(0), row(1), row(2)],
   );
 }
 
@@ -158,8 +154,8 @@ function brandMark(): Node {
           display: 'flex',
           width: 52,
           height: 52,
-          borderRadius: 14,
-          background: OG.fg,
+          borderRadius: 4,
+          background: BRAND,
           color: OG.bg,
           alignItems: 'center',
           justifyContent: 'center',
@@ -179,26 +175,30 @@ function brandMark(): Node {
   );
 }
 
-function card(t: OgTarget): Node {
-  const hasIcon = !!t.monogram;
-  const tSize = titleSize(t.title);
+function card(t: OgTarget, art: Map<string, string>): Node {
+  const home = t.id === 'home' || t.id === 'default';
+  const { size, text } = fitTitle(t.title);
+  const panel = home
+    ? boardPanel(['H1', 'W', 'H2', 'L5', 'H1', 'H3', 'S', 'H4', 'L4'].map((id) => art.get(id)!))
+    : artPanel(art.get(stickerFor(t.id))!);
 
   const textColumn = h(
     'div',
-    { display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', paddingRight: hasIcon ? 56 : 0 },
+    { display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', paddingRight: 56 },
     [
       h(
         'div',
         {
+          display: 'flex',
           fontFamily: 'JetBrains Mono',
           fontWeight: 700,
           fontSize: 20,
           letterSpacing: 3,
           textTransform: 'uppercase',
-          color: OG.muted,
+          color: BRAND,
           marginBottom: 22,
         },
-        clamp(t.eyebrow, 46),
+        clampWords(t.eyebrow, 46),
       ),
       h(
         'div',
@@ -206,14 +206,12 @@ function card(t: OgTarget): Node {
           display: 'flex',
           fontFamily: 'Inter',
           fontWeight: 700,
-          fontSize: tSize,
-          lineHeight: 1.05,
+          fontSize: size,
+          lineHeight: 1.06,
           letterSpacing: -1.5,
           color: OG.fg,
-          maxHeight: tSize * 2.2,
-          overflow: 'hidden',
         },
-        clamp(t.title, 84),
+        text,
       ),
       ...(t.subtitle
         ? [
@@ -223,14 +221,13 @@ function card(t: OgTarget): Node {
                 display: 'flex',
                 fontFamily: 'Inter',
                 fontWeight: 400,
-                fontSize: 27,
+                fontSize: 28,
                 lineHeight: 1.4,
-                color: OG.muted,
-                marginTop: 24,
-                maxHeight: 27 * 1.4 * 3,
-                overflow: 'hidden',
+                color: OG.soft,
+                marginTop: 22,
               },
-              clamp(t.subtitle, 168),
+              // Fewer words under a long title, so the column never runs past the card.
+              clampWords(t.subtitle, t.title.length > 56 ? 90 : 140),
             ),
           ]
         : []),
@@ -246,43 +243,19 @@ function card(t: OgTarget): Node {
       flexDirection: 'column',
       padding: 64,
       background: OG.bg,
-      backgroundImage: `radial-gradient(900px 420px at 28% 0%, rgba(250,250,250,0.06), transparent 60%)`,
       color: OG.fg,
       fontFamily: 'Inter',
     },
     [
-      // top brand cell
-      h('div', { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }, [
-        brandMark(),
-        h(
-          'div',
-          {
-            fontFamily: 'JetBrains Mono',
-            fontWeight: 400,
-            fontSize: 18,
-            color: OG.faint,
-          },
-          'PixiJS v8 · MIT',
-        ),
-      ]),
-      // body
-      h(
-        'div',
-        { display: 'flex', flex: 1, alignItems: 'center', marginTop: 8 },
-        hasIcon ? [textColumn, iconPanel(t.monogram!, t.hue ?? 220)] : [textColumn],
-      ),
-      // footer
-      h('div', { display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: 19, color: OG.faint }, [
-        h('div', { display: 'flex', color: OG.muted }, SITE_HOST),
-        h('div', { display: 'flex' }, t.footerRight ?? 'github.com/schmooky/pixi-reels'),
-      ]),
+      brandMark(),
+      h('div', { display: 'flex', flex: 1, alignItems: 'center', marginTop: 8 }, [textColumn, panel]),
     ],
   );
 }
 
 export async function renderOg(target: OgTarget): Promise<Uint8Array> {
   if (!_fonts) _fonts = loadFonts();
-  const svg = await satori(card(target) as never, {
+  const svg = await satori(card(target, await stickers()) as never, {
     width: OG.width,
     height: OG.height,
     fonts: _fonts,

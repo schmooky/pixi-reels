@@ -14,6 +14,12 @@ const {
 } = Astro.props as Props;
 
 const url = canonical(path ?? Astro.url.pathname);
+// Results and link cards show about 160 characters and cut a longer
+// description wherever they like; cut it here instead, at a word.
+const metaDescription =
+  description.length <= 160
+    ? description
+    : `${description.slice(0, 158).replace(/\s+\S*$/, '').replace(/[,;:.]$/, '')}…`;
 const imgAbs = imageUrl(image);
 const imgType = imgAbs.endsWith('.png')
   ? 'image/png'
@@ -29,7 +35,7 @@ const imgType = imgAbs.endsWith('.png')
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{title}</title>
-<meta name="description" content={description} />
+<meta name="description" content={metaDescription} />
 <meta name="author" content={SITE.author} />
 <meta name="generator" content="Astro" />
 <link rel="canonical" href={url} />
@@ -44,7 +50,7 @@ const imgType = imgAbs.endsWith('.png')
 <meta property="og:type" content={type} />
 <meta property="og:site_name" content={SITE.name} />
 <meta property="og:title" content={title} />
-<meta property="og:description" content={description} />
+<meta property="og:description" content={metaDescription} />
 <meta property="og:url" content={url} />
 <meta property="og:image" content={imgAbs} />
 <meta property="og:image:type" content={imgType} />
@@ -56,7 +62,7 @@ const imgType = imgAbs.endsWith('.png')
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content={title} />
-<meta name="twitter:description" content={description} />
+<meta name="twitter:description" content={metaDescription} />
 <meta name="twitter:image" content={imgAbs} />
 <meta name="twitter:image:alt" content={`${title}. open-source slot reel engine for PixiJS v8.`} />
 
@@ -73,7 +79,8 @@ const imgType = imgAbs.endsWith('.png')
 <!-- Icons / Theme -->
 <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%230a0a0a'/><text x='16' y='21' text-anchor='middle' font-family='ui-monospace,monospace' font-size='14' font-weight='700' fill='white'>PR</text></svg>" />
 <link rel="sitemap" href="/sitemap.xml" />
-<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site index" />
+<link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM-readable full docs" />
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
 <meta name="color-scheme" content="light dark" />
