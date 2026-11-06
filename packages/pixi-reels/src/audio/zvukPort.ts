@@ -18,6 +18,8 @@ export interface ZvukPlayOptions {
   pitch?: SoundValue;
   loop?: boolean;
   fadeIn?: number;
+  /** Seconds of equal-power crossfade at a loop's seam. */
+  loopCrossfade?: number;
 }
 
 export interface ZvukVoiceLike {
@@ -59,8 +61,11 @@ export function zvukPort(
     loop(name, o) {
       const src = source(name);
       if (!src) return NOOP_LOOP;
+      // A short equal-power crossfade at the seam: an encoded loop rarely
+      // ends on a zero crossing, and AAC pads its tail, so a hard native
+      // loop clicks or gaps.
       const voice = src.play(strip({
-        bus: o.bus, volume: o.volume, pitch: o.pitch, loop: true, fadeIn: o.fadeIn,
+        bus: o.bus, volume: o.volume, pitch: o.pitch, loop: true, fadeIn: o.fadeIn, loopCrossfade: 0.03,
       }));
       let stopped = false;
       return {

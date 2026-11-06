@@ -74,8 +74,12 @@ function gain(x, g) {
 
 
 
-/** Peak-normalize to `peakDb` and fade both ends by `fade` seconds. */
-function finish(x, { peakDb = -1, fade = 0.002 } = {}) {
+/**
+ * Peak-normalize to `peakDb` and fade both ends by `fade` seconds. Every
+ * sound in the set peaks at -3 dBFS, so the engine's limiter only ever
+ * catches several of them landing at once, never one on its own.
+ */
+function finish(x, { peakDb = -3, fade = 0.002 } = {}) {
   let peak = 0;
   for (const v of x) peak = Math.max(peak, Math.abs(v));
   const g = peak > 0 ? Math.pow(10, peakDb / 20) / peak : 1;
@@ -125,8 +129,47 @@ function grow() {
   return finish(mix(sweep, air), { peakDb: -4 });
 }
 
+/**
+ * The tease bed, a seamless two-second loop: a soft double heartbeat, a
+ * low fifth that breathes once per loop, and a ticking high pair on the
+ * eighth notes. Every frequency and every pulse divides the loop, so it
+ * repeats without a seam; the cue raises its pitch reel by reel.
+ */
+function anticipation() {
+  const L = 2.0;
+  const n = samples(L);
+  const out = new Float64Array(n);
+  // Heartbeat: two thumps a beat, a beat a second.
+  for (const beat of [0, 1]) {
+    for (const [at, g] of [[0, 1], [0.18, 0.7]]) {
+      const t0 = beat + at;
+      const k = tone(0.22, (t) => 55 + 70 * Math.exp(-t / 0.03), { tau: 0.07 });
+      const o = samples(t0);
+      for (let i = 0; i < k.length && o + i < n; i++) out[o + i] += k[i] * 0.55 * g;
+    }
+  }
+  // The low fifth (A2 + E3), its level swelling once per loop.
+  for (let i = 0; i < n; i++) {
+    const t = i / RATE;
+    const swell = 0.5 - 0.5 * Math.cos((2 * Math.PI * t) / L);
+    const pad = Math.sin(2 * Math.PI * 110 * t) + 0.6 * Math.sin(2 * Math.PI * 165 * t) + 0.25 * Math.sin(2 * Math.PI * 220 * t);
+    out[i] += pad * (0.06 + 0.1 * swell);
+  }
+  // Ticks on the eighth notes, alternating A5 and E6.
+  for (let k = 0; k < 8; k++) {
+    const f = k % 2 ? 1320 : 880;
+    const tick = tone(0.09, f, { tau: 0.025, shape: 'tri' });
+    const o = samples((k * L) / 8);
+    const g = k % 4 === 0 ? 0.22 : 0.14;
+    for (let i = 0; i < tick.length && o + i < n; i++) out[o + i] += tick[i] * g;
+  }
+  // A loop must not fade at its ends: the seam would dip.
+  return finish(out, { fade: 0 });
+}
+
 const SOUNDS = {
   spin,
+  anticipation,
   'reel-stop.1': () => thud(150, 70),
   'reel-stop.2': () => thud(165, 78),
   'reel-stop.3': () => thud(138, 64),

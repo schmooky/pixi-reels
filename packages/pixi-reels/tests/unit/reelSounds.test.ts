@@ -134,7 +134,7 @@ describe('zvukPort', () => {
     expect(engine.log).toEqual([
       { src: 'variants', name: 'stop', options: { pitch: { jitter: 0.04 } } },
       { src: 'sound', name: 'thud', options: { volume: 0.5, bus: 'reels' } },
-      { src: 'sound', name: 'thud', options: { loop: true, fadeIn: 0.05 } },
+      { src: 'sound', name: 'thud', options: { loop: true, fadeIn: 0.05, loopCrossfade: 0.03 } },
       { src: 'voice', name: '', options: { fade: 0.2 } },
     ]);
     expect(warnings).toHaveLength(1);

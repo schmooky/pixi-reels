@@ -47,14 +47,17 @@ const ladder = (name: string) => [`${baseUrl}${name}.webm`, `${baseUrl}${name}.m
  */
 export function soundEngine(): Engine<SoundBus> {
   if (engine) return engine;
+  // Every file peaks at -3 dBFS. The buses sit a few dB under unity and the
+  // master leaves 6 dB of headroom, so a docs page reads as quiet by
+  // default; the limiter is for the moments several demos land together.
   engine = createEngine<SoundBus>({
     buses: {
-      reels: { level: 0.9, concurrency: { max: 6, steal: 'oldest' } },
-      anticipation: { level: 0.8 },
-      wins: { level: 1 },
-      ui: { level: 0.7 },
+      reels: { level: 0.7, concurrency: { max: 6, steal: 'oldest' } },
+      anticipation: { level: 0.55 },
+      wins: { level: 0.75 },
+      ui: { level: 0.5 },
     },
-    master: { headroom: -3, limiter: { threshold: -1 } },
+    master: { headroom: -6, limiter: { threshold: -3, ratio: 20, attack: 0.002, release: 0.12 } },
   });
   applyMuted();
   // The first press anywhere is the gesture that lets audio start.
@@ -107,7 +110,9 @@ export const DEFAULT_CUES: ReelCues = {
     pitch: { jitter: 0.04 },
     delay: ({ profile, mode }) => (mode === 'cascade' ? 0 : (profile?.bounceDuration ?? 0) / 2000),
   },
-  anticipation: { loop: 'anticipation', fadeIn: 0.12, fadeOut: 0.25, pitch: ({ order }) => 1 + 0.08 * (order ?? 0) },
+  // The bed is a two-second loop at A; each further teasing reel takes it a
+  // whole step up, so a run of teases climbs.
+  anticipation: { loop: 'anticipation', fadeIn: 0.15, fadeOut: 0.3, pitch: ({ order }) => Math.pow(2, (2 * (order ?? 0)) / 12) },
   skip: { play: 'skip' },
   win: { play: 'win', volume: 0.8 },
   cascadeDestroy: { play: 'pop', volume: { base: 0.8, jitter: 0.1 }, pitch: { jitter: 0.08 } },
