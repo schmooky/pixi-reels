@@ -78,7 +78,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Coin values count up as they lock.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -149,7 +149,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await Promise.all(wave.map((coin) => countUp(coin.cell, coin.data.value)));
       }
       const total = coins.reduce((a, c) => a + c.data.value, 0);
-      hud.text = `counted up · total ${fmt(total)} · press spin to re-roll`;
+      hud.text = `Counted up, total ${fmt(total)}. Tap to re-roll.`;
       busy = false;
     },
   });

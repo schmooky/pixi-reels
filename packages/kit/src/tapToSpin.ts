@@ -88,15 +88,26 @@ export function tapToSpin(app: Application, options: TapToSpinOptions): TapToSpi
   let spinning = false;
   let destroyed = false;
   const plaque: DebugPlaque | null = cue ? readout.plaque({ text: 'tap to spin', fillAlpha: 0.55 }) : null;
+  // The cue lives in the strip in screen space. A board host fits the whole
+  // stage (scale and offset) to the canvas, and the cue, a stage child, used
+  // to move and shrink with it onto the HUD it was meant to sit under; undo
+  // the stage transform every frame instead.
   const place = (): void => {
     if (!plaque || plaque.isDestroyed) return;
-    plaque.x = (app.screen.width - plaque.plateWidth) / 2;
-    plaque.y = app.screen.height - (CUE_STRIP + plaque.plateHeight) / 2;
+    const stage = app.stage;
+    const k = stage.scale.x || 1;
+    plaque.scale.set(1 / k);
+    plaque.x = ((app.screen.width - plaque.plateWidth) / 2 - stage.x) / k;
+    plaque.y = (app.screen.height - (CUE_STRIP + plaque.plateHeight) / 2 - stage.y) / k;
   };
   if (plaque) {
+    // Out of the stage bounds a host fits: the strip is reserved for the cue,
+    // so the content is fitted above it rather than around it. `measurable`
+    // is the flag Pixi itself clears on masks for the same reason.
+    plaque.measurable = false;
     app.stage.addChild(plaque);
     place();
-    app.renderer.on('resize', place);
+    plaque.onRender = place;
     // A host that clears the stage for the next run (Studio) takes the cue
     // with it; the control goes too, so no listener outlives its recipe.
     plaque.once('removed', () => handle.destroy());
@@ -109,12 +120,12 @@ export function tapToSpin(app: Application, options: TapToSpinOptions): TapToSpi
       return;
     }
     spinning = true;
-    if (plaque) { plaque.text = 'tap to skip'; plaque.alpha = 0.6; place(); }
+    if (plaque) { plaque.text = 'tap to skip'; plaque.alpha = 0.6; }
     try {
       await spin();
     } finally {
       spinning = false;
-      if (plaque && !plaque.isDestroyed) { plaque.text = 'tap to spin'; plaque.alpha = 1; place(); }
+      if (plaque && !plaque.isDestroyed) { plaque.text = 'tap to spin'; plaque.alpha = 1; }
     }
   };
 
@@ -130,7 +141,6 @@ export function tapToSpin(app: Application, options: TapToSpinOptions): TapToSpi
       if (destroyed) return;
       destroyed = true;
       app.stage.off('pointertap', onTap);
-      app.renderer.off('resize', place);
       if (plaque && !plaque.isDestroyed) plaque.destroy();
     },
   };

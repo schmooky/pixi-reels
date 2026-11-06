@@ -69,7 +69,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(board.container);
 
   const hud = readout.plaque({
-    text: 'press spin',
+    text: 'Coins celebrate once, on the landing.',
     fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW,
   });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
@@ -80,7 +80,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     if (!coin) return;
     landed += 1;
     (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value));
-    hud.text = `coin ${landed} landed · settle only, no win`;
+    hud.text = `Coin ${landed} landed, settle only, no win`;
   });
 
   const SEED = [
@@ -106,10 +106,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       // The one explicit celebration: every locked coin pulses together.
-      hud.text = 'feature over · board.playWin() on every locked coin';
+      hud.text = 'Feature over, board.playWin() on every locked coin';
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });

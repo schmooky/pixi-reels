@@ -54,7 +54,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(board.container);
 
   const hud = readout.plaque({
-    text: 'press spin, then tap again mid-wave to QUICKEN it',
+    text: 'Tap again mid-wave to quicken it',
     fontSize: 12,
     align: 'center',
     anchor: { x: 0.5, y: 0 },
@@ -96,7 +96,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(500);
         if (res.done) break;
       }
-      hud.text = 'feature over: press spin';
+      hud.text = 'Feature over.';
       running = false;
     },
     skip: () => {

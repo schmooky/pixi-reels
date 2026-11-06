@@ -52,7 +52,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const W = REELS * SIZE + (REELS - 1) * GAP;
   // One row per tease reel, three reserved from the start: the canvas is
   // fitted to what is here at setup.
-  const hud = readout.plaque({ text: 'press spin', reserveRows: 3, minWidth: W, maxWidth: W });
+  const hud = readout.plaque({ text: 'Each reel eases its tease with its own curve.', reserveRows: 3, minWidth: W, maxWidth: W });
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);
 

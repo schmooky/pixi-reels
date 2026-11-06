@@ -33,7 +33,7 @@ export const meta = {
 //     whenAnticipated: { bounceDistance, steps: { impact: { ... } } },
 //   }
 //
-// A step reads its own entry as `ctx.step`, in segment order — one object in
+// A step reads its own entry as `ctx.step`, in segment order, one object in
 // the profile arrives as one entry. Nothing here branches on the speed name.
 //
 // `whenAnticipated` is the half no flat field can express: the engine merges

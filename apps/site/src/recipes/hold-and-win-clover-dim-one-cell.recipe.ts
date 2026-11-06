@@ -67,7 +67,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   );
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: CELL.width });
+  const hud = readout.plaque({ text: 'Dimming the art leaves the cell itself untouched.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: CELL.width });
   hud.position.set(app.screen.width / 2, board.container.y + CELL.height + 22);
   app.stage.addChild(hud);
 
@@ -112,7 +112,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await hold('symbols', 0.9, 'dimSymbols({ amount: 0.9 }) on an empty cell - nothing changes, not even the plate');
 
       board.setSymbolAt(C, 'cherry');
-      hud.text = 'released - press spin to compare again';
+      hud.text = 'released - tap to compare again';
       busy = false;
     },
   });

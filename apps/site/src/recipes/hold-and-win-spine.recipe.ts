@@ -228,11 +228,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The HUD plate hugs its text rather than spanning the board: the MAJOR
   // coin lands in the bottom-right cell and its animation reaches below the
   // board, where a board-wide plate would cover it.
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 } });
+  const hud = readout.plaque({ text: 'Spine coins lock in place, then the collector takes them.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 } });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
   const refreshHud = () => {
-    hud.text = `respins ${board.respinsLeft} · held ${board.lockedCoins.length}/${board.capacity}`;
+    hud.text = `respins ${board.respinsLeft}, held ${board.lockedCoins.length} of ${board.capacity}`;
   };
   board.events.on('respins:changed', refreshHud);
 
@@ -370,7 +370,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       await collectAll();
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
     },
   });
   return {

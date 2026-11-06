@@ -67,7 +67,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.visible = false;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · land 3 BONUS to trigger', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Land 3 BONUS to trigger.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, oy + boardH + 12);
   app.stage.addChild(hud);
 
@@ -111,7 +111,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     const seed = triggerCells.map((cell) => ({ cell, id: COIN, data: { value: val() } }));
     board.enter(seed);
     for (const c of seed) paintLabel(c.cell, c.data.value);
-    hud.text = 'HOLD & WIN · each cell spins on its own';
+    hud.text = 'Hold & Win, each cell spins on its own';
     await sleep(500);
     for (const cells of [[{ reel: 2, cell: 0 }], [{ reel: 0, cell: 2 }, { reel: 4, cell: 2 }], [], []]) {
       const res = await board.respin(cells.map((cell) => ({ cell, id: COIN, data: { value: val() } })));
@@ -119,7 +119,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       if (res.done) break;
     }
     const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-    hud.text = `feature over · won ${fmt(total)} · back to base game`;
+    hud.text = `Feature over, won ${fmt(total)}. Back to base game.`;
     await sleep(700);
     // feature:end already fired inside respin - swap the display back. The
     // value labels sit on the stage, not in the board, so they fade and hide
@@ -130,7 +130,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     labels.visible = false;
     labels.alpha = 1;
     base.visible = true;
-    hud.text = 'press spin · land 3 BONUS to trigger';
+    hud.text = 'Land 3 BONUS to trigger.';
   }
 
   let busy = false;
@@ -146,11 +146,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       base.setResult(baseGrid(bonusCells).map((visible) => ({ visible })));
       await p;
       if (bonusCells.length >= 3) {
-        hud.text = '3 BONUS — entering Hold & Win!';
+        hud.text = '3 BONUS, entering Hold & Win!';
         await sleep(500);
         await runFeature(bonusCells);
       } else {
-        hud.text = `${bonusCells.length} BONUS · need 3 · press spin`;
+        hud.text = `${bonusCells.length} BONUS, need 3.`;
       }
       busy = false;
     },

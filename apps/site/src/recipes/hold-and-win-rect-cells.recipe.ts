@@ -67,7 +67,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(board.container);
 
   const hud = readout.plaque({
-    text: `cell ${CELL.width}x${CELL.height} · column gap ${COLUMN_GAP} · row gap ${ROW_GAP} · press spin`,
+    text: `cell ${CELL.width}x${CELL.height}, column gap ${COLUMN_GAP}, row gap ${ROW_GAP}.`,
     fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW,
   });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
@@ -102,7 +102,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });

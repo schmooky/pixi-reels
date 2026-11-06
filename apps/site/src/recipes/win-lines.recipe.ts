@@ -60,7 +60,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const BOARD_H = ROWS * (SIZE + GAP) - GAP;
   const stage = new PIXI.Container();
   stage.addChild(reelSet);
-  const hud = readout.plaque({ rows: ['press spin'], minWidth: BOARD_W, maxWidth: BOARD_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['Paylines and payways are drawn by WinLines.'], minWidth: BOARD_W, maxWidth: BOARD_W, reserveRows: 2 });
   hud.position.set(0, BOARD_H + 12);
   stage.addChild(hud);
 

@@ -83,7 +83,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(counter);
   paint(0);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Lamps count down the respins left.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, counter.y + 24);
   app.stage.addChild(hud);
 
@@ -121,7 +121,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(600);
         if (res.done) break;
       }
-      hud.text = `counter ran out · ${board.lockedCoins.length} held · press spin to replay`;
+      hud.text = `Counter ran out, ${board.lockedCoins.length} held. Tap to replay.`;
       busy = false;
     },
   });

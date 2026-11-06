@@ -63,7 +63,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide. `render()` below fills in the three-row table before the recipe
   // returns, so the canvas is fitted to it; monospace keeps the columns aligned.
   const hud = readout.plaque({
-    text: 'press spin. every spin auto-skips once the board is at speed',
+    text: 'Every spin auto-skips once the board is at speed',
     minWidth: TOTAL_W,
     maxWidth: TOTAL_W,
   });

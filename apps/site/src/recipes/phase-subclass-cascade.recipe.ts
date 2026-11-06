@@ -74,7 +74,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide from the start. The prompt and the result both wrap to two rows
   // at this width, so the plate is already the size the count needs.
   const hud = readout.plaque({
-    text: 'press spin: the drop-in phase is the subclass, one per reel',
+    text: 'The drop-in phase is the subclass, one per reel',
     minWidth: TOTAL_W,
     maxWidth: TOTAL_W,
   });

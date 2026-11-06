@@ -50,7 +50,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   meterText.position.set(meter.x, meter.y);
   app.stage.addChild(meterText);
 
-  const hud = readout.plaque({ text: 'press spin · then tap again to SKIP', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Tap again mid-round to skip.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -63,7 +63,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.events.on('coin:locked', ({ coin }) => paintLabel(coin.cell, coin.data?.value ?? 0));
 
   let skipping = false;
-  board.events.on('feature:skip', () => { hud.text = 'SKIP — fast-forwarding'; });   // board slammed the spins
+  board.events.on('feature:skip', () => { hud.text = 'Skip, fast-forwarding'; });   // board slammed the spins
   board.events.on('feature:end', () => { /* the single "feature over" signal */ });
 
   const gate = (ms: number) => (skipping ? Promise.resolve() : sleep(ms));
@@ -109,7 +109,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       hud.text = skipping ? 'collecting (skipped)…' : 'collecting…';
       await collect();
-      hud.text = `feature:end fired · TOTAL ${fmt(total)}${skipping ? ' (skipped)' : ''} · press spin`;
+      hud.text = `feature:end fired, total ${fmt(total)}${skipping ? ' (skipped)' : ''}.`;
       running = false;
     },
     // RecipeRunner calls onSkip when the button is tapped mid-feature

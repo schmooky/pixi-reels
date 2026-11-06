@@ -59,7 +59,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
   app.stage.addChild(grid, board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'One speed switch changes every cell at once.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
   // Placed by its own height, so the pill sits clear of the frame's 8px margin.
@@ -115,7 +115,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       if (!res.done) for (let i = 0; i < 3; i++) { const r = await board.respin([]); if (r.done) break; }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over on ${board.speed} · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over on ${board.speed}, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });

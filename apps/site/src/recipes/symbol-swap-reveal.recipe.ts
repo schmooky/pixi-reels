@@ -60,7 +60,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const H = ROWS * SIZE + (ROWS - 1) * GAP;
   const W = REELS * SIZE + (REELS - 1) * GAP;
 
-  const hud = readout.plaque({ text: 'press spin - the ? tiles land, then reveal', minWidth: W, maxWidth: W });
+  const hud = readout.plaque({ text: 'The ? tiles land, then reveal', minWidth: W, maxWidth: W });
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);
 

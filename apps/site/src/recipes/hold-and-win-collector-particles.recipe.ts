@@ -58,7 +58,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 4;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The collector pulls values in on particle streams.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -85,7 +85,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 15 } },
   ];
   const COLLECTOR_CELL = { reel: 2, cell: 1 };
-  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = 'press spin · the collector lands and sweeps'; };
+  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = 'The collector lands and sweeps.'; };
   seedBoard();
 
   // a stream of neon particles along the same arc as the flying value
@@ -155,7 +155,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'collecting…';
       await collect();
       phase = 'done';
-      hud.text = `collected ${fmt(total)} · press spin to reset`;
+      hud.text = `Collected ${fmt(total)}. Tap to reset.`;
     },
   });
   return {

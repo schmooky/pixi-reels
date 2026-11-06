@@ -66,7 +66,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const boltLayer = new PIXI.Container();
   app.stage.addChild(boltLayer);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Lightning takes the values and the collector dims.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -131,7 +131,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     coin.data!.value = sum; // the collector now carries what it gathered
     await collector.playWin();
     collector.setDimmed(true); // spent: still held, no longer idling, sum kept
-    hud.text = `collected ${fmt(sum)} · collector spent and dimmed, golds untouched`;
+    hud.text = `Collected ${fmt(sum)}, collector spent and dimmed, golds untouched`;
     await sleep(500);
   }
 
@@ -163,7 +163,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · board total ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, board total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });

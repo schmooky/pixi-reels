@@ -65,7 +65,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // Slim vertical padding, so the plaque sits inside the lip clear of the outline.
   const lipText = readout.plaque({
-    text: `bottom lip ${LIP.bottom}px  ·  top ${LIP.top}px`,
+    text: `bottom lip ${LIP.bottom}px, top ${LIP.top}px`,
     color: 0xf0d98a,
     padding: [8, 3],
     align: 'center',

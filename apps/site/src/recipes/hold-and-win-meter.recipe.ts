@@ -115,7 +115,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   totalText.position.set(meterPos.x, meterPos.y);
   app.stage.addChild(totalText);
 
-  const hud = readout.plaque({ text: 'press spin to collect into the meter', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to collect into the meter', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -154,7 +154,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const seedBoard = () => {
     board.enter(SEED);
     for (const coin of SEED) paintLabel(coin.cell, coin.data.value);
-    hud.text = 'press spin to collect into the meter';
+    hud.text = 'tap to collect into the meter';
   };
   seedBoard();
 
@@ -207,7 +207,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       playCounter('appear');
       await collectToMeter();
       phase = 'done';
-      hud.text = `collected ${fmt(total)} / ${fmt(TARGET)} · press spin to reset`;
+      hud.text = `Collected ${fmt(total)} of ${fmt(TARGET)}. Tap to reset.`;
     },
   });
   return {

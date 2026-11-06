@@ -59,7 +59,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Dim the whole cell, or only the art in it.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -116,7 +116,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await sleep(700);
       await spotlight('symbols');
 
-      hud.text = 'both released - press spin to compare again';
+      hud.text = 'both released - tap to compare again';
       busy = false;
     },
   });

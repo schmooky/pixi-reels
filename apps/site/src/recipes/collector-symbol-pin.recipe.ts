@@ -68,7 +68,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     return t;
   };
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The collector stays pinned and gathers coin values.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -79,7 +79,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     { cell: { reel: 2, cell: 2 }, id: COIN, data: { value: 50 } },
   ];
   const COLLECTOR_CELL = { reel: 2, cell: 1 }; // orthogonally adjacent to all four seeds
-  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintValue(c.cell, c.data.value); hud.text = 'press spin · the collector sweeps its neighbours'; };
+  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintValue(c.cell, c.data.value); hud.text = 'The collector sweeps its neighbours.'; };
   seedBoard();
 
   const flyers = new Set<PIXI.BitmapText>();
@@ -119,7 +119,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 300));
       hud.text = 'absorbing neighbours…';
       const sum = await absorb(COLLECTOR_CELL);
-      hud.text = `collector absorbed ${sum} · press spin to reset`;
+      hud.text = `Collector absorbed ${sum}. Tap to reset.`;
       phase = 'done';
     },
   });

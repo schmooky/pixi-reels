@@ -48,7 +48,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reels.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
   app.stage.addChild(reels);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Winning clovers rise above the mask.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, reels.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -91,7 +91,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await sleep(700);
       await showLine(true);
 
-      hud.text = 'released - press spin to compare again';
+      hud.text = 'released - tap to compare again';
       busy = false;
     },
   });

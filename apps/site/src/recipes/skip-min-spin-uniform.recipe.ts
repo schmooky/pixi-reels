@@ -48,7 +48,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide and two rows tall from the start: the result lines take two, and
   // the canvas is fitted to what is here at setup.
   const hud = readout.plaque({
-    text: 'press spin.\nalternate spins clear the override',
+    text: 'Alternate spins clear the override',
     minWidth: TOTAL_W,
     maxWidth: TOTAL_W,
   });

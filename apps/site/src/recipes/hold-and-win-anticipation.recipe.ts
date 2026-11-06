@@ -85,7 +85,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · fill the board for the jackpot', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Fill the board for the jackpot.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -134,10 +134,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   board.events.on('respin:start', ({ spinning }) => {
     if (board.capacity - board.lockedCoins.length === 1 && spinning.length === 1) {
-      hud.text = '1 TO FILL — anticipation!';
+      hud.text = '1 to fill, anticipation!';
       startPulse(spinning[0]);
     } else {
-      hud.text = `respin · held ${board.lockedCoins.length}/${board.capacity}`;
+      hud.text = `respin, held ${board.lockedCoins.length} of ${board.capacity}`;
     }
   });
   board.events.on('coin:locked', ({ coin }) => { paintLabel(coin.cell, coin.data?.value ?? 0); });
@@ -178,8 +178,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       stopPulse();
       hud.text = board.isFull
-        ? 'BOARD FULL — jackpot! · press spin to replay'
-        : 'feature over · press spin to replay';
+        ? 'Board full, jackpot! Tap to replay.'
+        : 'Feature over. Tap to replay.';
       busy = false;
     },
   });

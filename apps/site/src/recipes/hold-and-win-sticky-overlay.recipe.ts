@@ -57,7 +57,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   meterText.position.set(meter.x, meter.y);
   app.stage.addChild(meterText);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'An overlay stays put through swaps and rides the flights.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + CELL + 14);
   app.stage.addChild(hud);
 
@@ -82,7 +82,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     board.reset();
     board.enter([...SEED, TARGET]);
     attachBadge(TARGET.cell, TARGET.data); // overlay born with the coin
-    hud.text = 'press spin: swap the coin art — the ×100 badge survives';
+    hud.text = 'The coin art swaps; the ×100 badge survives';
   };
   seedBoard();
 
@@ -101,14 +101,14 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         const sym = board.setSymbolAt(TARGET.cell, COIN_B, TARGET.data);
         attachBadge(TARGET.cell, TARGET.data);
         void sym.playWin?.().catch?.(() => {});
-        hud.text = 'art swapped · badge survived · press spin to collect';
+        hud.text = 'Art swapped, badge survived. Tap to collect.';
         phase = 'swapped';
         return;
       }
 
       // collect: fly a clone built from coin.data - coin + badge together
       phase = 'flying';
-      hud.text = 'flying to the meter — the badge rides along';
+      hud.text = 'flying to the meter, the badge rides along';
       const from = abs(TARGET.cell);
       const clone = new PIXI.Container();
       const c = new PIXI.Sprite(coin[0]); c.anchor.set(0.5); c.scale.set((CELL - 8) / c.texture.width);
@@ -122,7 +122,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       total += TARGET.data.value;
       meterText.text = String(total);
       gsap.fromTo(meterText.scale, { x: 1.4, y: 1.4 }, { x: 1, y: 1, duration: 0.25, ease: 'power2.out' });
-      hud.text = 'collected with its badge · press spin to reset';
+      hud.text = 'Collected with its badge. Tap to reset.';
       phase = 'collected';
     },
   });

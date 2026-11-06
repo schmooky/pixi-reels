@@ -90,7 +90,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     gsap.fromTo(plaques[tier].scale, { x: 1.35, y: 1.35 }, { x: 1, y: 1, duration: 0.45, ease: 'back.out(2)' });
   };
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'A capsule opens on one of the jackpots.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -148,7 +148,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });

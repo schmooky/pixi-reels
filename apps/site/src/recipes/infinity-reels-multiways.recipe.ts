@@ -78,7 +78,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // Thin and see-through: a 7 x 7 pair of reels is 49 segments.
   const lines = new WinLines(reelSet, { width: 1.5, dot: 3, glow: 0, alpha: 0.75 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['The reels widen into millions of ways.', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
   hud.position.set(0, EXTENT + 12);
   stage.addChild(hud);
 

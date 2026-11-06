@@ -65,7 +65,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Collect, multiplier and mystery clovers each act on land.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -131,7 +131,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin(golds().map((g) => g.cell));
       const total = golds().reduce((a, g) => a + g.data!.value, 0);
-      hud.text = `feature over · gold total ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, gold total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });

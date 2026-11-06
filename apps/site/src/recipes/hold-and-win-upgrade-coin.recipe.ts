@@ -78,7 +78,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin to upgrade every coin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to upgrade every coin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -121,7 +121,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     SEED.forEach((c) => { c.data.value = 5; });
     board.enter(SEED);
     for (const coin of SEED) paintLabel(coin.cell, coin.data.value);
-    hud.text = `held 3 · total ${fmt(totalOf())} · press spin to upgrade`;
+    hud.text = `Held 3, total ${fmt(totalOf())}. Tap to upgrade.`;
   };
   seedBoard();
 
@@ -163,8 +163,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       for (const coin of ordered) { await upgradeCoin(coin); await sleep(90); }
       const top = board.lockedCoins.every((c) => c.data!.value === LADDER[LADDER.length - 1]);
       hud.text = top
-        ? `maxed · total ${fmt(totalOf())} · press spin to reset`
-        : `upgraded · total ${fmt(totalOf())} · press spin again`;
+        ? `Maxed, total ${fmt(totalOf())}. Tap to reset.`
+        : `Upgraded, total ${fmt(totalOf())}. Tap to spin again.`;
       busy = false;
     },
   });

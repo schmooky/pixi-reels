@@ -63,7 +63,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'A coin locks as it lands, or after the landing.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -79,9 +79,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = 'COLLECT locked while its landing still plays - win waits';
     await symbol.landing;
     const landed = Math.round(performance.now() - t0);
-    hud.text = `landing done +${landed}ms after the lock · win playing`;
+    hud.text = `landing done +${landed}ms after the lock, win playing`;
     await symbol.playWin(); // resolves with the board's own win: same track, same entry
-    hud.text = `landing done +${landed}ms · win done +${Math.round(performance.now() - t0)}ms`;
+    hud.text = `landing done +${landed}ms, win done +${Math.round(performance.now() - t0)}ms`;
   });
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
@@ -102,7 +102,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
-      hud.text = 'gold: landing only · COLLECT: landing, then win';
+      hud.text = 'gold: landing only. COLLECT: landing, then win.';
       await sleep(400);
       for (const hits of ROUNDS) {
         const res = await board.respin(hits);

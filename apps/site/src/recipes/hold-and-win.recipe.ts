@@ -84,16 +84,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   };
 
   // The HUD never tracks state itself. board events are the single source.
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Coins lock where they land; the rest respin.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.x =app.screen.width / 2;
   hud.y = board.container.y + boardH + 12;
   app.stage.addChild(hud);
 
-  const refreshHud = () => { hud.text = `respins ${board.respinsLeft} · held ${board.lockedCoins.length}/${board.capacity}`; };
+  const refreshHud = () => { hud.text = `respins ${board.respinsLeft}, held ${board.lockedCoins.length} of ${board.capacity}`; };
   board.events.on('respins:changed', refreshHud);
   board.events.on('coin:locked', ({ coin }) => { paintLabel(coin.cell, coin.data?.value ?? 0); refreshHud(); });
-  board.events.on('board:full', () => { hud.text = 'GRAND · board full'; });
-  board.events.on('feature:end', ({ full }) => { if (!full) hud.text = `over · ${board.lockedCoins.length} coins held`; });
+  board.events.on('board:full', () => { hud.text = 'Grand, board full'; });
+  board.events.on('feature:end', ({ full }) => { if (!full) hud.text = `Over, ${board.lockedCoins.length} coins held`; });
 
   // Scripted arrivals: 3 coins in round 1, 1 in round 2, 1 in round 3. In a
   // real game the server decides each round's hits and the loop runs until

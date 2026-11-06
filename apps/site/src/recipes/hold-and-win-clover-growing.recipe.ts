@@ -70,7 +70,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: `press spin · rows open at ${OPEN_TOP_AT} and ${OPEN_BOTTOM_AT} clovers`, fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: `Rows open at ${OPEN_TOP_AT} and ${OPEN_BOTTOM_AT} clovers.`, fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -78,7 +78,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     if (coin) (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value));
   });
   board.events.on('cells:activated', ({ cells, capacity }) => {
-    hud.text = `row opened · board is now ${capacity} cells`;
+    hud.text = `Row opened, board is now ${capacity} cells`;
     // the woken cells show the empty tile now; fade them in from the sealed look
     for (const cell of cells) {
       const s = board.symbolAt(cell).view;
@@ -126,7 +126,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · ${board.lockedCoins.length}/${board.capacity} · TOTAL ${fmt(total)}`;
+      hud.text = `Feature over, ${board.lockedCoins.length} of ${board.capacity} held, total ${fmt(total)}`;
       busy = false;
     },
   });

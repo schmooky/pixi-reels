@@ -51,7 +51,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // the runner fits is the size it keeps.
   const W = reelSet.viewport.maskWidth;
   const H = reelSet.viewport.maskHeight;
-  const steps = ['press spin', '', ''];
+  const steps = ['A nudge can be aborted partway.', '', ''];
   const hud = readout.plaque({ text: steps.join('\n'), minWidth: W, maxWidth: W });
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);

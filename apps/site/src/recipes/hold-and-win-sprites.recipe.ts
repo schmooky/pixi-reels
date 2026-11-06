@@ -68,7 +68,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 4;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Coins lock where they land, drawn from plain sprites.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -97,7 +97,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const totalOf = () => board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
   board.events.on('coin:locked', ({ coin }) => {
     paintLabel(coin.cell, coin.data?.value ?? 0);
-    hud.text = `held ${board.lockedCoins.length}/${board.capacity} · total ${fmt(totalOf())} · respins ${board.respinsLeft}`;
+    hud.text = `held ${board.lockedCoins.length} of ${board.capacity}, total ${fmt(totalOf())}, respins ${board.respinsLeft}`;
   });
   board.events.on('coin:released', ({ coin }) => {
     const k = `${coin.cell.reel},${coin.cell.cell}`;
@@ -127,7 +127,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) paintLabel(c.cell, c.data.value);
-      hud.text = `held ${board.lockedCoins.length}/${board.capacity} · respins ${board.respinsLeft}`;
+      hud.text = `held ${board.lockedCoins.length} of ${board.capacity}, respins ${board.respinsLeft}`;
       await sleep(400);
 
       for (const cells of ROUNDS) {
@@ -136,7 +136,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(450);
         if (result.done) break;
       }
-      hud.text = `feature over · TOTAL ${fmt(totalOf())} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(totalOf())}. Tap to replay.`;
       busy = false;
     },
   });

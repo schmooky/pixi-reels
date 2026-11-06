@@ -58,7 +58,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide and two rows tall from the start: the per-reel readout wraps to
   // two, and the canvas is fitted to what is here at setup.
   const hud = readout.plaque({
-    text: `press spin\neach tease runs exactly ${CELLS} symbols`,
+    text: `Each tease runs exactly ${CELLS} symbols`,
     minWidth: W,
     maxWidth: W,
   });

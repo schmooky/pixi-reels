@@ -104,7 +104,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.x = (app.screen.width - (REELS * CELL + (REELS - 1) * GAP)) / 2;
   reelSet.y = (app.screen.height - CELL) / 2 - 14;
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 13, color: 0xfef08a, align: 'center', anchor: { x: 0.5, y: 0 } });
+  const hud = readout.plaque({ text: 'Each coin carries its own value.', fontSize: 13, color: 0xfef08a, align: 'center', anchor: { x: 0.5, y: 0 } });
   hud.position.set(app.screen.width / 2, reelSet.y + CELL + 16);
   app.stage.addChild(hud);
 
@@ -113,7 +113,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('spin:allLanded', () => {
     const values = reelSet.reels.map((_, c) => (reelSet.reels[c].getSymbolAt(0) as ValueCoin).value);
     const total = values.reduce((a, b) => a + b, 0);
-    hud.text = `landed ${values.join(' · ')}  =  ${total}`;
+    hud.text = `landed ${values.join(' + ')}  =  ${total}`;
   });
 
   reelSounds(reelSet);

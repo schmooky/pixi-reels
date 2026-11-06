@@ -81,7 +81,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     new Promise<void>((resolve) => gsap.to(camera, { x: cameraX(width), duration: 0.35, ease: 'power2.out', onComplete: resolve }));
 
   const lines = new WinLines(reelSet, { width: 4 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['A big symbol widens its step on the reel.', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
   hud.position.set(0, BOARD_H + 12);
   stage.addChild(hud);
 

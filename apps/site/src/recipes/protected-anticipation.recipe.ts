@@ -95,7 +95,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // reels the slam lands and whether reels are still running after it.
   // Grid-wide and two rows tall from the start, so the canvas is fitted to its
   // final size.
-  const idle = 'press spin, then keep pressing\npress 1 lands the scatters, press 2 ends the tease';
+  const idle = 'Tap 1 lands the scatters, tap 2 ends the tease';
   const label = readout.plaque({ text: idle, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
   label.position.set(0, TOTAL_H + 10);
   reelSet.addChild(label);

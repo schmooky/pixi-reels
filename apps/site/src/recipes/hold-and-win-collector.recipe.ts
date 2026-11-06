@@ -109,7 +109,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = 64;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The collector gathers values as the coins fly in.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 14);
   app.stage.addChild(hud);
 
@@ -253,11 +253,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       if (phase === 'done') {
         await slickReset();
         phase = 'ready';
-        hud.text = 'press spin';
+        hud.text = 'The collector gathers values as the coins fly in.';
         return;
       }
       phase = 'running';
-      hud.text = 'respin · held cells stay';
+      hud.text = 'Respin, held cells stay';
       await board.respin(HIT_TEN);            // free cells spin, a 10.00 lands
       await Promise.all(pendingFx.splice(0)); // no new spin while coins animate
       await sleep(350);
@@ -270,7 +270,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'collecting';
       await collectIntoOrb();
       phase = 'done';
-      hud.text = 'collected 25.00 · press spin to reset';
+      hud.text = 'Collected 25.00. Tap to reset.';
     },
   });
   return {

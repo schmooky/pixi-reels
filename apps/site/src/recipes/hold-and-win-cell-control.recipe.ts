@@ -41,7 +41,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - CELL) / 2 - 8;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Each cell is driven on its own.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + CELL + 16);
   app.stage.addChild(hud);
 
@@ -72,7 +72,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'starting cell 1…';
       const s1 = spinCell(CELLS[1], LAND[1]);
       await sleep(260);
-      hud.text = 'starting cell 2 — and slam-stopping it';
+      hud.text = 'starting cell 2, then slam-stopping it';
       const s2 = spinCell(CELLS[2], LAND[2]);
 
       // 2) STOP a single cell on command (the others keep spinning)
@@ -81,12 +81,12 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await Promise.all([s0, s1, s2]);
 
       // 3) ACCESS the symbol inside each cell and flash the coins
-      hud.text = 'landed — flashing the coins via symbolAt(cell)';
+      hud.text = 'landed, flashing the coins via symbolAt(cell)';
       for (const cell of CELLS) {
         const sym = board.symbolAt(cell);       // <-- the live symbol instance
         await sym.playWin?.().catch?.(() => {});
       }
-      hud.text = 'each cell: started, stopped and read on its own · press spin';
+      hud.text = 'Each cell is started, stopped and read on its own.';
       busy = false;
     },
   });

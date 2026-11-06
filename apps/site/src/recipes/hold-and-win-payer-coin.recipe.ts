@@ -97,7 +97,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · payer incoming', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Payer incoming.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   // Clear of the payer orb: its art hangs about 20px under its cell and the
   // glow further, so a plate at +12 dimmed it through the whole payout.
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 40);
@@ -128,7 +128,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     return t;
   };
   const totalOf = () => board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-  const refreshHud = (prefix: string) => { hud.text = `${prefix} · total ${fmt(totalOf())}`; };
+  const refreshHud = (prefix: string) => { hud.text = `${prefix}, total ${fmt(totalOf())}`; };
 
   // -- the payout: the orb pays its value into every coin, one arc at a time --
   const flyers = new Set<PIXI.BitmapText>();
@@ -197,7 +197,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         return;
       }
       phase = 'running';
-      hud.text = 'spinning · payer landing';
+      hud.text = 'Spinning, payer landing';
       await board.respin([{ cell: PAYER_CELL, id: PAYER, data: { payer: true, value: PAY_VALUE } }]);
       await Promise.all(pendingFx.splice(0));
       await sleep(250);
@@ -205,7 +205,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'the orb pays every coin…';
       await payout(PAYER_CELL, PAY_VALUE);
       phase = 'done';
-      hud.text = `paid · total ${fmt(totalOf())} · press spin to reset`;
+      hud.text = `Paid, total ${fmt(totalOf())}. Tap to reset.`;
     },
   });
   return {

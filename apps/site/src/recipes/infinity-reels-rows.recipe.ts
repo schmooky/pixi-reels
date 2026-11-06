@@ -109,7 +109,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // --- Readout -----------------------------------------------------------
   const lines = new WinLines(reelSet, { width: 4 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['Reels keep growing, and rows grow too.', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
   hud.position.set(0, VIEW_H + 12);
   stage.addChild(hud);
 

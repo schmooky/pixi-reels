@@ -84,8 +84,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
     const text = readout.plaque({
       text:
-        `r${i} ${axis.orientation} / ${axis.direction}\n` +
-        `main=${axis.mainProp} cross=${axis.crossProp} feed=${axis.feedEdge}`,
+        `Reel ${i} runs ${axis.orientation}, ${axis.direction}\n` +
+        `main axis ${axis.mainProp}, feeds from the ${axis.feedEdge}`,
       accent: 0xff6b35,
       anchor: { x: 0, y: 0.5 },
     });

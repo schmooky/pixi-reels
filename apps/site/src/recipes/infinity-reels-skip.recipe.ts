@@ -106,7 +106,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // --- Press log ---------------------------------------------------------------
   const log: (string | DebugPlaqueRow)[] = [];
-  const plaque = readout.plaque({ rows: ['press spin, then press it again during the round'], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: LOG_ROWS + 1 });
+  const plaque = readout.plaque({ rows: ['Tap again during the round'], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: LOG_ROWS + 1 });
   plaque.position.set(0, BOARD_H + 12);
   stage.addChild(plaque);
   let presses = 0;

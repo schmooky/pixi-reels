@@ -79,19 +79,19 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   }
   const cc = (c: HwCell) => `(${c.reel},${c.cell})`;
 
-  board.events.on('feature:enter', ({ seed, respins }) => push('feature:enter', `${seed.length} seed · respins ${respins}`));
-  board.events.on('respin:start', ({ round, spinning }) => push('respin:start', `round ${round} · ${spinning.length} spinning`));
-  board.events.on('cell:landed', ({ cell, coin }) => push('cell:landed', `${cc(cell)} ${coin ? 'COIN' : '—'}`));
+  board.events.on('feature:enter', ({ seed, respins }) => push('feature:enter', `${seed.length} seed, respins ${respins}`));
+  board.events.on('respin:start', ({ round, spinning }) => push('respin:start', `round ${round}, ${spinning.length} spinning`));
+  board.events.on('cell:landed', ({ cell, coin }) => push('cell:landed', `${cc(cell)} ${coin ? 'COIN' : 'none'}`));
   board.events.on('coin:locked', ({ locked, capacity }) => push('coin:locked', `${locked}/${capacity}`));
   board.events.on('respins:changed', ({ value, reason }) => push('respins:changed', `${value} (${reason})`));
-  board.events.on('respin:end', ({ round, hits, respinsLeft }) => push('respin:end', `round ${round} · +${hits.length} · ${respinsLeft} left`));
+  board.events.on('respin:end', ({ round, hits, respinsLeft }) => push('respin:end', `round ${round}, +${hits.length}, ${respinsLeft} left`));
   board.events.on('board:full', () => push('board:full', 'every cell locked'));
-  board.events.on('feature:end', ({ rounds, full }) => push('feature:end', `${rounds} rounds · ${full ? 'BOARD FULL' : 'no respins left'}`));
+  board.events.on('feature:end', ({ rounds, full }) => push('feature:end', `${rounds} rounds, ${full ? 'BOARD FULL' : 'no respins left'}`));
   board.events.on('coin:released', ({ remaining }) => push('coin:released', `${remaining} left`));
   board.events.on('feature:reset', ({ clearedCoins }) => push('feature:reset', `cleared ${clearedCoins}`));
   board.events.on('feature:skip', ({ inFlight }) => push('feature:skip', `${inFlight} slammed`));
 
-  const hud = readout.plaque({ text: 'press spin to run a feature', fontSize: 12, anchor: { x: 0, y: 1 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to run a feature', fontSize: 12, anchor: { x: 0, y: 1 }, minWidth: boardW });
   hud.position.set(board.container.x, app.screen.height - 6);
   app.stage.addChild(hud);
 
@@ -120,7 +120,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         const res = await board.respin(pickHits()); // the board animates the wave
         if (res.done) break; // full, or out of respins
       }
-      hud.text = 'feature:end reached — press spin to run again';
+      hud.text = 'feature:end reached. Tap to run again.';
       running = false;
     },
   });

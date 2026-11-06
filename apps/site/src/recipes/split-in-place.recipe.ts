@@ -59,7 +59,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const stage = new PIXI.Container();
   stage.addChild(reelSet);
   const lines = new WinLines(reelSet, { width: 4 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: WIDTH, maxWidth: WIDTH, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['Stacked symbols split in place on MultiWays.', ''], minWidth: WIDTH, maxWidth: WIDTH, reserveRows: 2 });
   hud.position.set(0, REEL_H + 12);
   stage.addChild(hud);
 

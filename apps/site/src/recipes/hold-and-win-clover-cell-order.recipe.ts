@@ -61,7 +61,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Cells draw in a set order, so overlaps are predictable.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -69,7 +69,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     if (coin?.id === 'gold') (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value));
   });
   board.events.on('coin:locked', ({ locked, capacity }) => {
-    hud.text = `${locked}/${capacity} held · lower rows in front, capsule on top`;
+    hud.text = `${locked} of ${capacity} held, lower rows in front, capsule on top`;
   });
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
@@ -92,14 +92,14 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
-      hud.text = `${SEED.length}/${board.capacity} held · lower rows in front, capsule on top`;
+      hud.text = `${SEED.length} of ${board.capacity} held, lower rows in front, capsule on top`;
       await sleep(400);
       for (const hits of ROUNDS) {
         const res = await board.respin(hits);
         await sleep(400);
         if (res.done) break;
       }
-      hud.text = 'feature over · press spin to replay';
+      hud.text = 'Feature over. Tap to replay.';
       busy = false;
     },
   });

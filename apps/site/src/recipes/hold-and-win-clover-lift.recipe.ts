@@ -68,7 +68,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'One cell comes to the front for a beat.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -132,7 +132,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await lifted;
 
-      hud.text = `back in the pack after ${refreshes} whole-board refreshes - press spin to replay`;
+      hud.text = `back in the pack after ${refreshes} whole-board refreshes - tap to replay`;
       busy = false;
     },
   });

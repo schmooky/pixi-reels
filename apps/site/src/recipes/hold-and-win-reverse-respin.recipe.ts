@@ -85,7 +85,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.events.on('feature:reset', redrawLocks);
 
   const hud = readout.plaque({
-    text: 'press spin',
+    text: 'Free cells roll upward while coins stay locked.',
     fontSize: 13,
     color: 0xf5d066,
     align: 'center',

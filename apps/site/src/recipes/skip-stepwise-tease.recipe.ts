@@ -93,7 +93,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
 
   let press = 0;
-  const idle = 'press spin, then keep pressing to walk the tease forward';
+  const idle = 'Keep tapping to walk the tease forward';
   // Grid-wide from the start, so the canvas is fitted to its final size.
   const hud = readout.plaque({ text: idle, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
   hud.position.set(0, TOTAL_H + 10);

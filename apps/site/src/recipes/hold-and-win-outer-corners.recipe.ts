@@ -107,7 +107,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The opening line is longer than the board: it wraps at the board's width
   // instead of widening the stage the runner fits.
   const hud = readout.plaque({
-    text: `gap 0 · radius ${RADIUS} · cellMask(({ reel, cell }, { cols, rows }) => strategy for that cell) · press spin`,
+    text: `gap 0, radius ${RADIUS}, cellMask(({ reel, cell }, { cols, rows }) => strategy for that cell).`,
     fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW, maxWidth: boardW,
   });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
@@ -139,7 +139,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });

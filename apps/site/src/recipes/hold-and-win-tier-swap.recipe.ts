@@ -69,7 +69,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin to upgrade the marked coin in place', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to upgrade the marked coin in place', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -118,12 +118,12 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       busy = true;
       tier = (tier + 1) % TIERS.length;
       const t = TIERS[tier];
-      if (tier === 0) { seedBoard(); hud.text = 'reset · press spin to upgrade the marked coin'; busy = false; return; }
+      if (tier === 0) { seedBoard(); hud.text = 'Reset. Tap to upgrade the marked coin.'; busy = false; return; }
       // swap the symbol id in place - neighbours untouched, ledger updated
       const sym = board.setSymbolAt(TARGET.cell, t.id, { value: t.value, kind: t.kind });
       void sym.playWin?.().catch?.(() => {});
       paintLabel(TARGET.cell, t.value, t.kind);
-      hud.text = `swapped to ${t.label} · neighbours unchanged · press spin`;
+      hud.text = `Swapped to ${t.label}, neighbours unchanged.`;
       busy = false;
     },
   });

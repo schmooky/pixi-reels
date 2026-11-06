@@ -86,7 +86,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'A mystery coin reveals its value after landing.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -171,7 +171,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // pendingFx gates the next respin until every reveal has settled
   const pendingFx: Promise<void>[] = [];
   board.events.on('coin:locked', ({ coin }) => {
-    hud.text = `revealing… · held ${board.lockedCoins.length}/${board.capacity}`;
+    hud.text = `revealing, held ${board.lockedCoins.length} of ${board.capacity}`;
     pendingFx.push(revealValue(coin.cell, coin.data!.value));
   });
   board.events.on('coin:released', ({ coin }) => {
@@ -209,11 +209,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         const result = await board.respin(hits);
         await Promise.all(pendingFx.splice(0)); // reveals finish before the next spin
         total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-        hud.text = `held ${board.lockedCoins.length}/${board.capacity} · total ${fmt(total)} · respins ${board.respinsLeft}`;
+        hud.text = `held ${board.lockedCoins.length} of ${board.capacity}, total ${fmt(total)}, respins ${board.respinsLeft}`;
         await sleep(300);
         if (result.done) break;
       }
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
     },
   });
   return {

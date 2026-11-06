@@ -93,7 +93,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   awardText.position.set(plaquePos.x, plaquePos.y + pb.height * pScale * 0.18);
   app.stage.addChild(awardText);
 
-  const hud = readout.plaque({ text: 'press spin · complete a cell for MINI', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Complete a cell for MINI.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -130,7 +130,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   async function rowJackpot(cell: number) {
     awardedRows.add(cell);
-    hud.text = `ROW ${cell + 1} COMPLETE — MINI!`;
+    hud.text = `Row ${cell + 1} complete, MINI!`;
     const rowCoins = lockedInRow(cell).sort((a, b) => a.cell.reel - b.cell.reel);
     if (plaque.skeleton.data.findAnimation('win')) {
       plaque.state.setAnimation(0, 'win', false);
@@ -182,7 +182,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const seedBoard = () => {
     board.enter(SEED);
     for (const coin of SEED) paintLabel(coin.cell, coin.data.value);
-    hud.text = 'press spin · one coin completes cell 2';
+    hud.text = 'One coin completes cell 2.';
   };
   seedBoard();
 
@@ -206,7 +206,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await Promise.all(pendingFx.splice(0));
       await sleep(300);
       phase = 'done';
-      hud.text = `MINI awarded ${fmt(award)} · press spin to reset`;
+      hud.text = `MINI awarded ${fmt(award)}. Tap to reset.`;
     },
   });
   return {

@@ -88,7 +88,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   board.events.on('coin:locked', ({ coin }) => paintValue(coin));
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 13, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The coin value lives in data, not in the art.', fontSize: 13, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -112,7 +112,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await new Promise<void>((r) => setTimeout(r, 650));
       }
       const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-      hud.text = `held ${board.lockedCoins.length} · total ${fmt(total)}`;
+      hud.text = `held ${board.lockedCoins.length}, total ${fmt(total)}`;
     },
   });
   return {

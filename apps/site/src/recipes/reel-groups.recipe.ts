@@ -101,7 +101,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
 
   // Under the bars, grid-wide from the start.
-  const hud = readout.plaque({ text: 'press spin, then keep pressing', minWidth: TOTAL_W, maxWidth: TOTAL_W });
+  const hud = readout.plaque({ text: 'Keep tapping during the round', minWidth: TOTAL_W, maxWidth: TOTAL_W });
   hud.position.set(0, H + 19);
   reelSet.addChild(hud);
 

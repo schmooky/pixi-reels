@@ -62,7 +62,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide and two rows tall from the start: the press on top, the landing
   // order under it. The canvas is fitted to this size once, at setup.
   const hud = readout.plaque({
-    text: 'press spin, then keep pressing:\neach press quickens the next group',
+    text: 'Each tap quickens the next group',
     minWidth: W,
     maxWidth: W,
   });
@@ -74,7 +74,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('spin:start', () => {
     press = 0;
     order = [];
-    hud.text = 'press spin, then keep pressing:\neach press quickens the next group';
+    hud.text = 'Each tap quickens the next group';
   });
   reelSet.events.on('skip:requested', ({ reels, mode }) => {
     press += 1;

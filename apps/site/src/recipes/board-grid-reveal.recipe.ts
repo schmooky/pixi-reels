@@ -63,7 +63,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   grid.container.addChild(ring);
   ring.visible = false;
 
-  const hud = readout.plaque({ text: 'press spin to reveal', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to reveal', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, grid.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -94,7 +94,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       ring.visible = true;
       gsap.fromTo(ring, { alpha: 0 }, { alpha: 1, duration: 0.25 });
 
-      hud.text = `revealed · total ${total} · top ${PRIZE[top.id]} (${top.id})`;
+      hud.text = `Revealed, total ${total}, top ${PRIZE[top.id]} (${top.id})`;
       busy = false;
     },
   });

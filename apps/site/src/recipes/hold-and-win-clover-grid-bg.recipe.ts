@@ -96,7 +96,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.position.set(ox, oy);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The background shows through the gaps between cells.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, oy + boardH + MARGIN + 8);
   app.stage.addChild(hud);
 
@@ -104,7 +104,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.events.on('cell:landed', ({ cell, coin }) => { if (coin) (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value)); });
   board.events.on('coin:locked', ({ coin, locked, capacity }) => {
     total += coin.data!.value;
-    hud.text = `${locked}/${capacity} held · total ${fmt(total)}`;
+    hud.text = `${locked} of ${capacity} held, total ${fmt(total)}`;
   });
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } });
@@ -121,7 +121,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); total += c.data.value; }
-      hud.text = `${SEED.length}/${board.capacity} held · total ${fmt(total)}`;
+      hud.text = `${SEED.length} of ${board.capacity} held, total ${fmt(total)}`;
       await sleep(400);
       for (const cells of ROUNDS) {
         const res = await board.respin(cells.map(gold));
@@ -129,7 +129,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       await board.playWin();
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });

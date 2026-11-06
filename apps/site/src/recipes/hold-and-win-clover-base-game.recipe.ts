@@ -92,7 +92,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.visible = false;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · 3+ clovers trigger the feature', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: '3+ clovers trigger the feature.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, oy + boardH + 24);
   app.stage.addChild(hud);
 
@@ -135,7 +135,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     const seed = clovers.map((c) => ({ cell: { reel: c.reel, cell: c.cell }, id: c.id, data: { value: c.id === 'gold' ? served![c.reel][c.cell] : 0 } }));
     board.enter(seed);
     for (const c of seed) { const sym = board.symbolAt(c.cell) as Clover; if (c.id === 'gold') sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
-    hud.text = 'HOLD & WIN · gold carries money, feature clovers carry none';
+    hud.text = 'Hold & Win, gold carries money, feature clovers carry none';
     await sleep(500);
     for (const cells of [[{ reel: 1, cell: 0 }], [{ reel: 3, cell: 2 }, { reel: 0, cell: 0 }], [], [], []]) {
       const res = await board.respin(cells.map((cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } })));
@@ -144,7 +144,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     }
     await board.playWin();
     const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-    hud.text = `feature over · won ${fmt(total)} · back to the base game`;
+    hud.text = `Feature over, won ${fmt(total)}. Back to the base game.`;
     await sleep(700);
     board.container.visible = false;
     base.visible = true;
@@ -168,7 +168,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(600);
         await runFeature(clovers);
       } else {
-        hud.text = `${clovers.length} clovers · need 3 · press spin`;
+        hud.text = `${clovers.length} clovers, need 3.`;
       }
       busy = false;
     },
