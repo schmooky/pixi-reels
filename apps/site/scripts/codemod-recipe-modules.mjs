@@ -232,6 +232,9 @@ function cleanHeading(h) {
     .replace(/\s*\{#[^}]*\}\s*$/, '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/<[^>]+>/g, '')
+    // A title is plain text: no angle bracket survives, even from a tag the
+    // pattern above left half-cut (`<<b>script>`).
+    .replace(/[<>]/g, '')
     .replace(/`/g, '')
     .replace(/\s+/g, ' ')
     .trim();
