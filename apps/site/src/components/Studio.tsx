@@ -14,6 +14,9 @@ import {
   MessageSquare,
   Bug,
   X,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
 } from 'lucide-react';
 import { SymbolsTab } from './studio/SymbolsTab.tsx';
 import { ShareDialog } from './studio/ShareDialog.tsx';
@@ -31,6 +34,7 @@ import {
 } from 'pixi-reels';
 import { createAssets, setReadouts, CUE_STRIP, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
 import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
+import { attachCamera, type StudioCamera } from '@/lib/studio/camera';
 import { attachRecipeDebug, DEFAULT_GROUPS, LAYER_GROUPS, type LayerGroup, type RecipeDebugHandle } from '@/lib/recipeDebug';
 import { EventsPanel } from './EventsPanel';
 import {
@@ -200,6 +204,8 @@ export default function Studio() {
   // so layout changes (the debug pane opening, a window resize) all
   // refit through a single path.
   const fitRef = useRef<(() => void) | null>(null);
+  const cameraRef = useRef<StudioCamera | null>(null);
+  const [cameraAuto, setCameraAuto] = useState(true);
 
   const [config, setConfig] = useState<StudioConfig | null>(null);
   const [tab, setTab] = useState<TabId>('code');
@@ -365,6 +371,8 @@ export default function Studio() {
     reelSetRef.current = null;
     cleanupRef.current = null;
     fitRef.current = null;
+    cameraRef.current?.destroy();
+    cameraRef.current = null;
     mountedRef.current = false;
     // The stage belongs to the recipe: it added its root and its tap
     // listener there. A new run starts from an empty one.
@@ -440,32 +448,19 @@ export default function Studio() {
     }
     enableDebug(reelSet);
 
-    const PADDING = 24;
-    // Aspect-preserving fit. Upscales freely so the reels look right in a
-    // viewport-sized canvas pane (with the previous Math.min(1, ...) clamp they
-    // looked tiny in the middle). Always re-derives raw dimensions from
-    // post-divide-by-scale so successive refits don't compound.
-    // Fit the composition root when the code returns one (a banner set above
-    // a grid), so every set scales and centres together. Matches RecipeRunner.
-    const fitted = built.stage ?? reelSet;
-    // Local bounds, offset included: the debug overlay draws its hud and the
-    // buffer cells above the mask, so the content does not start at (0, 0).
-    const fit = () => {
-      const b = fitted.getLocalBounds();
-      if (!(b.width > 0) || !(b.height > 0)) return;
-      // The strip under the reels belongs to the recipe's tap cue.
-      const availW = Math.max(40, env.app.screen.width - PADDING * 2);
-      const availH = Math.max(40, env.app.screen.height - CUE_STRIP - PADDING * 2);
-      const scale = Math.min(availW / b.width, availH / b.height);
-      fitted.scale.set(scale);
-      fitted.x = (env.app.screen.width - b.width * scale) / 2 - b.x * scale;
-      fitted.y = PADDING + (availH - b.height * scale) / 2 - b.y * scale;
-    };
-    fit();
-    // The boot useEffect's ResizeObserver calls through this ref on every
-    // host-size change. single fit path for window resize, the debug pane
-    // toggle, and future panel drags.
-    fitRef.current = fit;
+    // The camera fits the composition root when the code returns one (a
+    // banner set above a grid), so every set scales and centres together,
+    // and keeps fitting it as its bounds change until the user zooms or pans.
+    const camera = attachCamera(env.app, built.stage ?? reelSet, {
+      padding: 24,
+      bottomStrip: CUE_STRIP,
+      onAutoChange: setCameraAuto,
+    });
+    cameraRef.current = camera;
+    setCameraAuto(true);
+    // The boot useEffect's ResizeObserver and the debug pane toggle call
+    // through this ref; a user's own zoom or pan is left alone.
+    fitRef.current = () => camera.refit();
 
     reelSetRef.current = reelSet;
     setMounted(true);
@@ -684,6 +679,45 @@ export default function Studio() {
         <div className="relative flex-1">
           <div ref={canvasHostRef} className="h-full w-full bg-stage" />
           {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
+          {mounted && reelSetRef.current && (
+            <div
+              role="group"
+              aria-label="View"
+              className="absolute right-3 top-3 inline-flex items-center gap-0.5 rounded-sm border border-border/70 bg-background/80 p-0.5"
+            >
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.zoomBy(1 / 1.25)}
+                aria-label="Zoom out"
+                title="Zoom out (or scroll on the canvas)"
+                className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ZoomOut size={14} strokeWidth={2.25} />
+              </button>
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.zoomBy(1.25)}
+                aria-label="Zoom in"
+                title="Zoom in (or scroll on the canvas)"
+                className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ZoomIn size={14} strokeWidth={2.25} />
+              </button>
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.fit()}
+                aria-pressed={cameraAuto}
+                aria-label="Fit to view"
+                title={cameraAuto ? 'Fitting the reels to the view. Drag to pan, scroll to zoom.' : 'Fit the reels to the view again'}
+                className={cn(
+                  'rounded-sm p-1.5 transition-colors',
+                  cameraAuto ? 'text-muted-foreground/50' : 'bg-primary text-primary-foreground',
+                )}
+              >
+                <Maximize2 size={14} strokeWidth={2.25} />
+              </button>
+            </div>
+          )}
           {speeds.length > 1 && (
             <div
               role="radiogroup"
