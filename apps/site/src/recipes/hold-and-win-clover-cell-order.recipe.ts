@@ -99,7 +99,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(400);
         if (res.done) break;
       }
-      hud.text = 'Feature over. Tap to replay.';
+      hud.text = 'Feature over.';
       busy = false;
     },
   });

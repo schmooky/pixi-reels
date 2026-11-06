@@ -132,7 +132,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await lifted;
 
-      hud.text = `back in the pack after ${refreshes} whole-board refreshes - tap to replay`;
+      hud.text = `back in the pack after ${refreshes} whole-board refreshes`;
       busy = false;
     },
   });

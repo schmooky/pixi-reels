@@ -121,7 +121,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(600);
         if (res.done) break;
       }
-      hud.text = `Counter ran out, ${board.lockedCoins.length} held. Tap to replay.`;
+      hud.text = `Counter ran out, ${board.lockedCoins.length} held.`;
       busy = false;
     },
   });

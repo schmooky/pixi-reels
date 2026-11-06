@@ -205,7 +205,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'the orb pays every coin…';
       await payout(PAYER_CELL, PAY_VALUE);
       phase = 'done';
-      hud.text = `Paid, total ${fmt(totalOf())}. Tap to reset.`;
+      hud.text = `Paid, total ${fmt(totalOf())}.`;
     },
   });
   return {

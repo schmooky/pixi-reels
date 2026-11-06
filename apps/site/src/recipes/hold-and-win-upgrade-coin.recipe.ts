@@ -163,8 +163,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       for (const coin of ordered) { await upgradeCoin(coin); await sleep(90); }
       const top = board.lockedCoins.every((c) => c.data!.value === LADDER[LADDER.length - 1]);
       hud.text = top
-        ? `Maxed, total ${fmt(totalOf())}. Tap to reset.`
-        : `Upgraded, total ${fmt(totalOf())}. Tap to spin again.`;
+        ? `Maxed, total ${fmt(totalOf())}.`
+        : `Upgraded, total ${fmt(totalOf())}.`;
       busy = false;
     },
   });

@@ -178,8 +178,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       stopPulse();
       hud.text = board.isFull
-        ? 'Board full, jackpot! Tap to replay.'
-        : 'Feature over. Tap to replay.';
+        ? 'Board full, jackpot.'
+        : 'Feature over.';
       busy = false;
     },
   });

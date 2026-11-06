@@ -370,7 +370,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       await collectAll();
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
     },
   });
   return {

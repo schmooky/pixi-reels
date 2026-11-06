@@ -119,7 +119,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 300));
       hud.text = 'absorbing neighbours…';
       const sum = await absorb(COLLECTOR_CELL);
-      hud.text = `Collector absorbed ${sum}. Tap to reset.`;
+      hud.text = `Collector absorbed ${sum}.`;
       phase = 'done';
     },
   });

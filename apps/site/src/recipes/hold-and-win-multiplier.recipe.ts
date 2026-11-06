@@ -122,7 +122,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   ];
   const MULT_CELL = { reel: 3, cell: 0 };
   const MULT = 3;
-  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = `Held 4, total ${fmt(totalOf())}. Tap to spin for the multiplier.`; };
+  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = `Held 4, total ${fmt(totalOf())}. The next spin applies the multiplier.`; };
   const reset = () => { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); SEED.forEach((c, i) => (c.data.value = [5, 10, 5, 20][i])); board.reset(); seedBoard(); };
   seedBoard();
 
@@ -148,7 +148,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(70);
       }
       phase = 'done';
-      hud.text = `×${MULT} applied, total ${fmt(totalOf())}. Tap to reset.`;
+      hud.text = `×${MULT} applied, total ${fmt(totalOf())}.`;
     },
   });
   return {

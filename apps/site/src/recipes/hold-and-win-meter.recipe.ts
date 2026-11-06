@@ -207,7 +207,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       playCounter('appear');
       await collectToMeter();
       phase = 'done';
-      hud.text = `Collected ${fmt(total)} of ${fmt(TARGET)}. Tap to reset.`;
+      hud.text = `Collected ${fmt(total)} of ${fmt(TARGET)}.`;
     },
   });
   return {

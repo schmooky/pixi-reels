@@ -122,7 +122,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       total += TARGET.data.value;
       meterText.text = String(total);
       gsap.fromTo(meterText.scale, { x: 1.4, y: 1.4 }, { x: 1, y: 1, duration: 0.25, ease: 'power2.out' });
-      hud.text = 'Collected with its badge. Tap to reset.';
+      hud.text = 'Collected with its badge.';
       phase = 'collected';
     },
   });

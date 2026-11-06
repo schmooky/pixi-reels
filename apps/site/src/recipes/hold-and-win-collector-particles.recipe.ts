@@ -155,7 +155,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'collecting…';
       await collect();
       phase = 'done';
-      hud.text = `Collected ${fmt(total)}. Tap to reset.`;
+      hud.text = `Collected ${fmt(total)}.`;
     },
   });
   return {

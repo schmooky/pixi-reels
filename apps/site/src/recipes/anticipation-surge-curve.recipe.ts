@@ -151,7 +151,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       await p;
       sampling = false;
-      hud.text = 'landed. tap again';
+      hud.text = 'landed';
     },
   });
   return {

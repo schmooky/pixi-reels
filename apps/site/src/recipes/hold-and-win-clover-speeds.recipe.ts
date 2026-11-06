@@ -115,7 +115,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       if (!res.done) for (let i = 0; i < 3; i++) { const r = await board.respin([]); if (r.done) break; }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `Feature over on ${board.speed}, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over on ${board.speed}, total ${fmt(total)}.`;
       busy = false;
     },
   });

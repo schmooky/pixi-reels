@@ -131,7 +131,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin(golds().map((g) => g.cell));
       const total = golds().reduce((a, g) => a + g.data!.value, 0);
-      hud.text = `Feature over, gold total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, gold total ${fmt(total)}.`;
       busy = false;
     },
   });

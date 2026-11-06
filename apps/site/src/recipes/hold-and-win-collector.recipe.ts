@@ -270,7 +270,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'collecting';
       await collectIntoOrb();
       phase = 'done';
-      hud.text = 'Collected 25.00. Tap to reset.';
+      hud.text = 'Collected 25.00.';
     },
   });
   return {

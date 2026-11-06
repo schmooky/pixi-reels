@@ -142,7 +142,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
       busy = false;
     },
   });

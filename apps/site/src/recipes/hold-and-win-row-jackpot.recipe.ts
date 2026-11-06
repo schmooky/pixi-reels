@@ -206,7 +206,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await Promise.all(pendingFx.splice(0));
       await sleep(300);
       phase = 'done';
-      hud.text = `MINI awarded ${fmt(award)}. Tap to reset.`;
+      hud.text = `MINI awarded ${fmt(award)}.`;
     },
   });
   return {
