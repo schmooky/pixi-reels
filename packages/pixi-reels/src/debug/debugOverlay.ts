@@ -6,6 +6,7 @@ import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { PHASE_CARD_COLORS } from '../symbols/PhaseCardSymbol.js';
 import { DebugPlaque, DEBUG_FONT } from './DebugPlaque.js';
+import { crispText } from './crispText.js';
 import type { DebugPlaqueRow } from './DebugPlaque.js';
 import { SpinMetrics } from './SpinMetrics.js';
 import type { DebugRound } from './SpinMetrics.js';
@@ -533,6 +534,7 @@ class DebugOverlay implements DebugOverlayHandle {
         text: '',
         style: { fontFamily: DEBUG_FONT, fontSize: size, fill: color },
       });
+      crispText(t);
       pool[index] = t;
       parent.addChild(t);
     }
