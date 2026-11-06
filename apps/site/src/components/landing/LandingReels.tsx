@@ -22,11 +22,12 @@ import { StickerSymbol, loadGenericSymbols, presentWithSpotlight } from '@pixi-r
  * Four variants, one component. Every variant is a real `ReelSet` built with
  * the public builder and the generic sticker set, so what the visitor sees
  * spinning is the engine itself, not a video. The loop auto-spins while the
- * canvas is on screen, idles when it scrolls away or the tab hides, and a
- * click (or Space / Enter) spins at once, or slams a running spin.
+ * canvas is on screen and idles when it scrolls away or the tab hides. It
+ * takes no input: the landing shows the engine, the recipes are where a
+ * visitor drives one.
  *
- * Under `prefers-reduced-motion` nothing moves on its own: the set lands on
- * its first grid and waits for a click.
+ * Under `prefers-reduced-motion` nothing moves: the set lands on its first
+ * grid and stays there.
  */
 export type LandingVariant = 'hero' | 'cascade' | 'horizontal' | 'anticipation';
 
@@ -304,8 +305,8 @@ export function LandingReels({ variant, className }: Props) {
 
       let first = true;
       while (alive) {
-        // Wait until on screen (and, under reduced motion, for a click).
-        while (alive && (!shouldRun() || (reduced && !first && !kick.kicked))) {
+        // Wait until on screen; under reduced motion, stop after the first grid.
+        while (alive && (!shouldRun() || (reduced && !first))) {
           await new Promise((r) => setTimeout(r, 200));
         }
         if (!alive) break;
@@ -322,23 +323,10 @@ export function LandingReels({ variant, className }: Props) {
     };
     void run();
 
-    const onClick = () => {
-      if (!mounted) return;
-      if (mounted.reelSet.isSpinning) mounted.reelSet.requestSkip();
-      else kick.kicked = true;
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onClick(); }
-    };
-    host.addEventListener('click', onClick);
-    host.addEventListener('keydown', onKey);
-
     return () => {
       alive = false;
       kick.kicked = true;
       io.disconnect();
-      host.removeEventListener('click', onClick);
-      host.removeEventListener('keydown', onKey);
       mounted?.destroy();
       mounted = null;
     };
@@ -349,11 +337,10 @@ export function LandingReels({ variant, className }: Props) {
   return (
     <div
       ref={hostRef}
-      role="button"
-      tabIndex={0}
-      aria-label={`Live ${variant} reels. Click to spin.`}
+      role="img"
+      aria-label={`Live ${variant} reels`}
       className={[
-        'cursor-pointer select-none outline-none transition-opacity duration-500 focus-visible:ring-2 focus-visible:ring-ring rounded-2xl',
+        'select-none transition-opacity duration-500 rounded-2xl',
         ready ? 'opacity-100' : 'opacity-0',
         className ?? 'absolute inset-0',
       ].join(' ')}

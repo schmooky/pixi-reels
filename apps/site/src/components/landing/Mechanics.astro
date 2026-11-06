@@ -37,11 +37,11 @@ const cards = [
       <div>
         <p class="eyebrow">Mechanics</p>
         <h2 class="display mt-4 text-4xl sm:text-5xl lg:text-6xl">
-          Mechanics you can spin here.
+          Mechanics the engine ships.
         </h2>
       </div>
       <p class="max-w-sm text-lg text-muted-foreground md:justify-self-end md:text-right">
-        Every panel below is live. Click one to spin it.
+        Every panel below is the engine running, not a video.
       </p>
     </div>
 
@@ -49,7 +49,7 @@ const cards = [
       {cards.map((c, i) => (
         <div class="reveal group flex min-w-0 flex-col" style={`--motion-delay: ${i * 50}ms`}>
           <div
-            class="mech-well relative aspect-[4/3] w-full overflow-hidden rounded-lg ring-1 ring-border transition-[box-shadow] duration-[217ms] group-hover:ring-brand"
+            class="mech-well relative aspect-[4/3] w-full overflow-hidden rounded-lg ring-1 ring-border"
             data-mechanic={c.variant}
           >
             <LandingReels variant={c.variant} client:only="react" />
