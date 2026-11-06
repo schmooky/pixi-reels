@@ -448,16 +448,18 @@ export default function Studio() {
     // Fit the composition root when the code returns one (a banner set above
     // a grid), so every set scales and centres together. Matches RecipeRunner.
     const fitted = built.stage ?? reelSet;
+    // Local bounds, offset included: the debug overlay draws its hud and the
+    // buffer cells above the mask, so the content does not start at (0, 0).
     const fit = () => {
-      const rawW = fitted.width / (fitted.scale.x || 1);
-      const rawH = fitted.height / (fitted.scale.y || 1);
+      const b = fitted.getLocalBounds();
+      if (!(b.width > 0) || !(b.height > 0)) return;
       // The strip under the reels belongs to the recipe's tap cue.
       const availW = Math.max(40, env.app.screen.width - PADDING * 2);
       const availH = Math.max(40, env.app.screen.height - CUE_STRIP - PADDING * 2);
-      const scale = Math.min(availW / rawW, availH / rawH);
+      const scale = Math.min(availW / b.width, availH / b.height);
       fitted.scale.set(scale);
-      fitted.x = (env.app.screen.width - rawW * scale) / 2;
-      fitted.y = PADDING + (availH - rawH * scale) / 2;
+      fitted.x = (env.app.screen.width - b.width * scale) / 2 - b.x * scale;
+      fitted.y = PADDING + (availH - b.height * scale) / 2 - b.y * scale;
     };
     fit();
     // The boot useEffect's ResizeObserver calls through this ref on every

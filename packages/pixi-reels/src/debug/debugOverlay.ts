@@ -29,7 +29,7 @@ import { roundRectPath } from './roundRectPath.js';
  *   - `bounds`     Actual `view.getBounds()` per visible symbol (spine overrun).
  *   - `blocks`     `getBlockBounds` outline for big symbols.
  *   - `pins`       Pin cells and pin-overlay positions.
- *   - `hud`        A plaque inside the mask: one row per reel with its
+ *   - `hud`        A plaque above the mask: one row per reel with its
  *                  orientation, direction, feed edge, speed, phase and cells,
  *                  a phase-colored swatch and a speed meter.
  *   - `metrics`    A plaque under the mask: the current round's length, time
@@ -104,8 +104,6 @@ const NUDGE_COLOR = 0xf472b6;
 /** Info-panel metrics. */
 const HUD_FONT_SIZE = 10;
 const LABEL_FONT_SIZE = 9;
-/** Inset of the hud from the mask's top-left corner. */
-const HUD_PAD = 4;
 /** Gap between the mask and the panels under it, and between the panels. */
 const PANEL_GAP = 8;
 /**
@@ -245,8 +243,8 @@ function niceStep(range: number): number {
  * because `ReelSet extends Container`, that renders the overlay above the
  * viewport, including the spotlight container.
  *
- * The geometry and the hud stay inside the mask. The `metrics` and
- * `timeline` panels sit under it, so they add to the reel set's bounds: fit
+ * The geometry stays on the mask. The `hud` sits above it and the `metrics`
+ * and `timeline` panels under it, so they add to the reel set's bounds: fit
  * your camera after enabling them, or leave them out.
  *
  * Dev-only. It reads engine internals through the public accessors, is not
@@ -824,11 +822,10 @@ class DebugOverlay implements DebugOverlayHandle {
    * still ties a row to its reel, and the `cells` layer labels each cell
    * `reel,cell` on the canvas.
    *
-   * Anchored INSIDE the mask's top-left, not outside it: a host that sized
-   * its camera to the reel set before the overlay existed would otherwise
-   * render the whole block off-screen, and an invisible hud is worse than a
-   * cluttered one. A debug layer you opted into may cover art; drop `hud` if
-   * it is in the way.
+   * Above the mask, clear of the geometry drawn over it (the buffer cells
+   * and feed markers reach above the mask), so it never covers the art it
+   * describes. Like the panels under the mask it grows the reel set's
+   * bounds: a host fits its camera after turning it on.
    */
   private _drawHud(): void {
     const rows: DebugPlaqueRow[] = this._reelSet.reels.map((reel: Reel, reelIndex: number) => {
@@ -856,7 +853,20 @@ class DebugOverlay implements DebugOverlayHandle {
     this._hud.visible = true;
     this._hud.update({ rows });
     const vp = this._reelSet.viewport;
-    this._hud.position.set(vp.x + HUD_PAD, vp.y + HUD_PAD);
+    this._hud.position.set(vp.x, this._geometryTop() - PANEL_GAP - this._hud.plateHeight);
+  }
+
+  /** The highest point the overlay draws on the reels: the mask, or the buffer cells and feed markers above it. */
+  private _geometryTop(): number {
+    let top = this._reelSet.viewport.y;
+    // The geometry layers only: their labels sit beside what they label, and
+    // measuring a Text would lay it out for nothing.
+    for (const [layer, g] of this._graphics) {
+      if (!this._active.has(layer)) continue;
+      const b = g.getLocalBounds();
+      if (b.height > 0) top = Math.min(top, b.y);
+    }
+    return top;
   }
 
   private _drawMetrics(): void {
