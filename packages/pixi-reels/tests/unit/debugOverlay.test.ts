@@ -4,7 +4,7 @@
  * HeadlessSymbol: the overlay never measures Text or requires a renderer.
  */
 import { describe, it, expect } from 'vitest';
-import { Text } from 'pixi.js';
+import { Container as PixiContainer, Graphics, Text } from 'pixi.js';
 import type { Container, Ticker } from 'pixi.js';
 import { createTestReelSet } from '../../src/testing/index.js';
 import { debugOverlay } from '../../src/debug/debugOverlay.js';
@@ -15,6 +15,38 @@ import type { ReelSet } from '../../src/core/ReelSet.js';
 const OVERLAY_LABEL = 'pixi-reels:debugOverlay';
 
 describe('debugOverlay', () => {
+  it('draws into `host` and follows the set out of a clipping window', () => {
+    const harness = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    const { reelSet } = harness;
+    // A game's camera: a masked window that moves and scales the set.
+    const scene = new PixiContainer();
+    const camera = new PixiContainer();
+    camera.mask = new Graphics().rect(0, 0, 100, 100).fill(0xffffff);
+    camera.position.set(40, 30);
+    camera.scale.set(0.5);
+    scene.addChild(camera);
+    camera.addChild(reelSet);
+    reelSet.position.set(10, 20);
+    try {
+      const overlay = debugOverlay(reelSet, { layers: ['cells'], host: scene });
+      const root = scene.children.find((c) => c.label === OVERLAY_LABEL) as Container;
+      expect(root).toBeDefined();
+      expect(reelSet.children.some((c) => c.label === OVERLAY_LABEL)).toBe(false);
+
+      root.onRender!(undefined as never);
+      // Reel-set space inside the scene: camera (40, 30) + 0.5 * set (10, 20).
+      expect(root.x).toBeCloseTo(45);
+      expect(root.y).toBeCloseTo(40);
+      expect(root.scale.x).toBeCloseTo(0.5);
+
+      overlay.destroy();
+      expect(scene.children.some((c) => c.label === OVERLAY_LABEL)).toBe(false);
+    } finally {
+      harness.destroy();
+      scene.destroy({ children: true });
+    }
+  });
+
   it('adds a child container to the reel set and removes it on destroy', () => {
     const harness = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     const { reelSet } = harness;

@@ -1,4 +1,4 @@
-import { Container, Rectangle, Text, Ticker } from 'pixi.js';
+import { Container, Matrix, Rectangle, Text, Ticker } from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { Reel } from '../core/Reel.js';
@@ -147,6 +147,14 @@ export interface DebugOverlayOptions {
    * ticker, and destroys it with itself.
    */
   metrics?: SpinMetrics;
+  /**
+   * The container the overlay draws into. Defaults to the reel set. Pass one
+   * outside whatever clips the set (a camera window or frame mask a game puts
+   * around it, which would cut off the panels drawn under the reels): the
+   * overlay copies the set's transform onto itself before every render, so
+   * it still lines up with the reels but is no longer clipped with them.
+   */
+  host?: Container;
 }
 
 /** What the axis-family layers drew for one reel, as plain numbers. */
@@ -326,7 +334,20 @@ class DebugOverlay implements DebugOverlayHandle {
     this._root.eventMode = 'none';
     this._root.label = OVERLAY_LABEL;
     this._root.sortableChildren = true;
-    _reelSet.addChild(this._root);
+    const host = options.host ?? _reelSet;
+    host.addChild(this._root);
+    if (host !== _reelSet) {
+      // Reel-set space inside the host: the host's inverse world transform
+      // times the set's. Walked from the parents, because `onRender` runs
+      // before the renderer refreshes `worldTransform`.
+      const setM = new Matrix();
+      const hostM = new Matrix();
+      this._root.onRender = () => {
+        _reelSet.getGlobalTransform(setM, false);
+        host.getGlobalTransform(hostM, false);
+        this._root.setFromMatrix(hostM.invert().append(setM));
+      };
+    }
 
     _reelSet.reels.forEach((reel: Reel, i: number) => this._trackPhase(reel, i));
 
