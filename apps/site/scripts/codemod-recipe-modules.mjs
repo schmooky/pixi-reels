@@ -226,15 +226,23 @@ async function mdxFiles(dir, prefix = '') {
   return out;
 }
 
+/** Remove tags until none is left: one pass can rejoin a half-cut tag (`<<b>script>`). */
+function stripTags(s) {
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(/<[^>]*>/g, '');
+  } while (s !== prev);
+  return s;
+}
+
 function cleanHeading(h) {
-  return h
-    .replace(/^#+\s*/, '')
-    .replace(/\s*\{#[^}]*\}\s*$/, '')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/<[^>]+>/g, '')
-    // A title is plain text: no angle bracket survives, even from a tag the
-    // pattern above left half-cut (`<<b>script>`).
-    .replace(/[<>]/g, '')
+  return stripTags(
+    h
+      .replace(/^#+\s*/, '')
+      .replace(/\s*\{#[^}]*\}\s*$/, '')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1'),
+  )
     .replace(/`/g, '')
     .replace(/\s+/g, ' ')
     .trim();
