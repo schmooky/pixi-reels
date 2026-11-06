@@ -1,5 +1,6 @@
 import { Container, Rectangle, Text, type DestroyOptions } from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
+import { crispText } from './crispText.js';
 import type { Disposable } from '../utils/Disposable.js';
 
 /** One line of a {@link DebugPlaque}. */
@@ -357,6 +358,7 @@ export class DebugPlaque extends Container implements Disposable {
         fill: this._opts.color ?? DEFAULT_COLOR,
       },
     });
+    crispText(t);
     this.addChild(t);
     return t;
   }
