@@ -26,8 +26,10 @@ import { StickerSymbol, loadGenericSymbols, presentWithSpotlight } from '@pixi-r
  * takes no input: the landing shows the engine, the recipes are where a
  * visitor drives one.
  *
- * Under `prefers-reduced-motion` nothing moves: the set lands on its first
- * grid and stays there.
+ * It spins under `prefers-reduced-motion` too. Windows reports that preference
+ * whenever "Animation effects" is off, which many machines ship or are set to,
+ * and a hero that never moves reads as broken. The motion stays inside its
+ * box: no parallax, no full-screen movement.
  */
 export type LandingVariant = 'hero' | 'cascade' | 'horizontal' | 'anticipation';
 
@@ -273,7 +275,6 @@ export function LandingReels({ variant, className }: Props) {
     let mounted: Mounted | null = null;
     let visible = false;
     const kick = { kicked: false };
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const io = new IntersectionObserver(
       (entries) => { visible = entries[0]?.isIntersecting ?? false; },
@@ -303,21 +304,19 @@ export function LandingReels({ variant, className }: Props) {
         if (!on && mounted.app.ticker.started && !reelSet.isSpinning) mounted.app.ticker.stop();
       }, 250);
 
-      let first = true;
       while (alive) {
-        // Wait until on screen; under reduced motion, stop after the first grid.
-        while (alive && (!shouldRun() || (reduced && !first))) {
+        // Wait until on screen.
+        while (alive && !shouldRun()) {
           await new Promise((r) => setTimeout(r, 200));
         }
         if (!alive) break;
         kick.kicked = false;
         try {
-          await round(reelSet, cfg, kick, first && reduced);
+          await round(reelSet, cfg, kick);
         } catch (err) {
           if (alive) console.warn('LandingReels: round failed', err);
         }
-        first = false;
-        if (!reduced) await sleep(variant === 'hero' ? 700 : 600, kick);
+        await sleep(variant === 'hero' ? 700 : 600, kick);
       }
       clearInterval(gate);
     };
@@ -351,20 +350,19 @@ export function LandingReels({ variant, className }: Props) {
   );
 }
 
-/** One round of the loop for a variant. `still` lands instantly (reduced motion, first paint). */
-async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boolean }, still: boolean): Promise<void> {
-  if (cfg.tumble) return cascadeRound(reelSet, cfg, kick, still);
+/** One round of the loop for a variant. */
+async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boolean }): Promise<void> {
+  if (cfg.tumble) return cascadeRound(reelSet, cfg, kick);
 
   // Every round shows the mechanic: a line win on the plain sets.
-  const win = !still;
   const row = Math.floor(Math.random() * cfg.cells);
   const id = pick(cfg.ids.filter((s) => s !== cfg.scatter && !s.startsWith('wild/')));
   // A fourth reel only where the set has one (the horizontal variant has three).
-  const reelsHit = win ? [0, 1, 2].concat(cfg.reels > 3 && Math.random() < 0.4 ? [3] : []) : [];
-  const grid = randomGrid(cfg, win ? { id, row, reels: reelsHit } : undefined);
+  const reelsHit = [0, 1, 2].concat(cfg.reels > 3 && Math.random() < 0.4 ? [3] : []);
+  const grid = randomGrid(cfg, { id, row, reels: reelsHit });
 
   let tease: number[] = [];
-  if (cfg.scatter && !still) {
+  if (cfg.scatter) {
     // Two scatters on the first two reels, so the rest of the row teases.
     grid[0].visible[1] = cfg.scatter;
     grid[1].visible[1] = cfg.scatter;
@@ -373,18 +371,12 @@ async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boole
   }
 
   const spin = reelSet.spin();
-  if (still) {
-    reelSet.setResult(grid);
-    reelSet.slamStop();
-    await spin;
-    return;
-  }
   await sleep(cfg.scatter ? 300 : 350, { kicked: false });
   reelSet.setResult(grid);
   if (tease.length) reelSet.setAnticipation(tease, { stagger: 'sequential', slowdown: { from: 0.45, to: 0.12 } });
   await spin;
 
-  if (win && !kick.kicked) {
+  if (!kick.kicked) {
     const positions: SymbolPosition[] = reelsHit.map((r) => ({ reelIndex: r, cellIndex: row }));
     // Losers fade to 30 %; the winners play their wow left to right, 4 f
     // apart, and the line is held for a beat before the next round.
@@ -403,7 +395,7 @@ async function round(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boole
   }
 }
 
-async function cascadeRound(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boolean }, still: boolean): Promise<void> {
+async function cascadeRound(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked: boolean }): Promise<void> {
   const hitRow = 1 + Math.floor(Math.random() * (cfg.cells - 1));
   const hitCols = [0, 1, 2].concat(Math.random() < 0.5 ? [3] : []);
   const cluster = pick(cfg.ids);
@@ -419,12 +411,6 @@ async function cascadeRound(reelSet: ReelSet, cfg: VariantConfig, kick: { kicked
 
   reelSet.setDropOrder('ltr');
   const spin = reelSet.spin();
-  if (still) {
-    reelSet.setResult(grid);
-    reelSet.slamStop();
-    await spin;
-    return;
-  }
   await sleep(150, { kicked: false });
   reelSet.setResult(grid);
   await spin;
