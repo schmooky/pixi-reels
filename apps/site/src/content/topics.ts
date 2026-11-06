@@ -1,4 +1,4 @@
-export type TopicGroup = 'starters' | 'features' | 'after-land' | 'board' | 'timing' | 'drawing';
+export type TopicGroup = 'lines' | 'cascade' | 'hold-and-win' | 'ways' | 'any';
 
 /**
  * One mechanic, one page: `/mechanics/<slug>/`. Read from the frontmatter of
@@ -25,12 +25,11 @@ export interface TopicMeta {
 
 /** Display order + label for each group on the /mechanics/ index page. */
 export const TOPIC_GROUPS: Array<{ id: TopicGroup; label: string; description: string }> = [
-  { id: 'starters', label: 'Start here', description: 'Whole slots to copy.' },
-  { id: 'features', label: 'Features', description: 'The bonus rounds and wins players know by name.' },
-  { id: 'after-land', label: 'After the land', description: 'Moves that change the board once the reels have stopped.' },
-  { id: 'board', label: 'Board shape', description: 'How big the board is, which way it runs and what frames it.' },
-  { id: 'timing', label: 'Timing and control', description: 'How a spin builds up, slows down and answers a tap.' },
-  { id: 'drawing', label: 'Drawing', description: 'How symbols are drawn, and how to draw over the board.' },
+  { id: 'lines', label: 'Line slots', description: 'Reels that spin, tease and stop, and what lands on them.' },
+  { id: 'cascade', label: 'Cascade games', description: 'Winning symbols fall away and the board refills.' },
+  { id: 'hold-and-win', label: 'Hold & Win games', description: 'Coins lock and the free cells respin.' },
+  { id: 'ways', label: 'Ways and MultiWays', description: 'Boards that change size from spin to spin.' },
+  { id: 'any', label: 'Any game', description: 'Drawing and layout that work with every kind of slot.' },
 ];
 
 import { parse } from 'yaml';

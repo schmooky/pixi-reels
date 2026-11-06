@@ -4,12 +4,11 @@ import { block, wrapper } from '@keystatic/core/content-components';
 // ── Topic groups: kept in sync with TOPIC_GROUPS in src/content/topics.ts.
 // These are the section buckets the /mechanics/ index renders cards under.
 const TOPIC_GROUP_OPTIONS = [
-  { label: 'Start here', value: 'starters' },
-  { label: 'Features', value: 'features' },
-  { label: 'After the land', value: 'after-land' },
-  { label: 'Board shape', value: 'board' },
-  { label: 'Timing and control', value: 'timing' },
-  { label: 'Drawing', value: 'drawing' },
+  { label: 'Line slots', value: 'lines' },
+  { label: 'Cascade games', value: 'cascade' },
+  { label: 'Hold & Win games', value: 'hold-and-win' },
+  { label: 'Ways and MultiWays', value: 'ways' },
+  { label: 'Any game', value: 'any' },
 ] as const;
 
 // ── Rich-text body shared by topics, demos, guides and docs. The embeds below
