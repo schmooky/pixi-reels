@@ -60,6 +60,23 @@ export interface RecipeDebugTarget {
   board?: RecipeEventBus | null;
 }
 
+/**
+ * Where a set's overlay should draw so the recipe cannot clip it. A recipe
+ * that puts its board in a camera window or a frame (a mask on an ancestor)
+ * would cut off the panels under the reels; the overlay then draws into the
+ * recipe's root, the top of the set's branch under the stage, and follows the
+ * set from there. Without such a mask it stays on the set.
+ */
+function unclippedHost(stage: PIXI.Container, rs: ReelSet): PIXI.Container | undefined {
+  let clipped = false;
+  let top: PIXI.Container = rs;
+  for (let c = rs.parent; c && c !== stage; c = c.parent) {
+    if (c.mask) clipped = true;
+    top = c;
+  }
+  return clipped ? top : undefined;
+}
+
 export interface RecipeDebugHandle {
   /** The recorded events, oldest first, capped at the panel's row limit. */
   readonly entries: readonly EventEntry[];
@@ -165,7 +182,13 @@ export function attachRecipeDebug(target: RecipeDebugTarget, onChange: () => voi
       // recipe's own app.ticker, so they track a spin instead of freezing on
       // the frame the overlay happened to be built in.
       overlays = sets.map((rs) =>
-        debugOverlay(rs, { layers: layersFor(groups), live: true, ticker: app.ticker, metrics: metrics.get(rs) }),
+        debugOverlay(rs, {
+          layers: layersFor(groups),
+          live: true,
+          ticker: app.ticker,
+          metrics: metrics.get(rs),
+          host: unclippedHost(app.stage, rs),
+        }),
       );
     },
     hideOverlay,
