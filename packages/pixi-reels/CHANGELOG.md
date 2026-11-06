@@ -1,5 +1,11 @@
 # pixi-reels
 
+## 4.3.1
+
+### Patch Changes
+
+- [#287](https://github.com/schmooky/pixi-reels/pull/287) [`05bed07`](https://github.com/schmooky/pixi-reels/commit/05bed07592da0113e3ca2e94ae2fcb06955ecbe1) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: 4.3.1 is 4.3.0 published as `latest`. 4.3.0 reached npm under a branch dist-tag instead of `latest`, so `npm install pixi-reels` kept resolving to 4.2.0. The code is the same as 4.3.0; see its notes for the changes.
+
 ## 4.3.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @pixi-reels/cheats
 
+## 0.0.12
+
+### Patch Changes
+
+- Updated dependencies [[`05bed07`](https://github.com/schmooky/pixi-reels/commit/05bed07592da0113e3ca2e94ae2fcb06955ecbe1)]:
+  - pixi-reels@4.3.1
+  - @pixi-reels/kit@0.1.1
+
 ## 0.0.11
 
 ### Patch Changes

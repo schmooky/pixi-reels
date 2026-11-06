@@ -1,6 +1,6 @@
 {
   "name": "@pixi-reels/kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "The patterns the pixi-reels docs recipes run on: example symbols, bundled asset kits, the tap-to-spin control, the sound set and the recipe contract. Not engine API: import what fits, copy the rest into your game.",
   "license": "MIT",
