@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 4.3.1 is a reel engine for PixiJS v8.
+pixi-reels 4.4.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 The index alone, one line per page, is https://pixi-reels.schmooky.dev/llms.txt.
@@ -7878,7 +7878,7 @@ Or set `stopDelay` on each profile, which is what the wave reads now.
 
 ### Changelog
 URL: https://pixi-reels.schmooky.dev/reference/changelog/
-Per-release notes for the pixi-reels engine. Latest published version: v4.3.1.
+Per-release notes for the pixi-reels engine. Latest published version: v4.4.0.
 
 ## Generated API (TypeDoc)
 

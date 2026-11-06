@@ -1,6 +1,6 @@
 # pixi-reels
 
-> pixi-reels 4.3.1 is a slot machine reel engine for PixiJS v8: a fluent builder, typed events, spin phases, speed modes, cascades, Hold & Win, big symbols and win spotlights. It ships reel-only primitives; win math, paytables, RNG and audio stay in the game.
+> pixi-reels 4.4.0 is a slot machine reel engine for PixiJS v8: a fluent builder, typed events, spin phases, speed modes, cascades, Hold & Win, big symbols and win spotlights. It ships reel-only primitives; win math, paytables, RNG and audio stay in the game.
 
 Install with `npm install pixi-reels pixi.js gsap`. Every mechanic page opens on live demos whose source is the recipe module shown beside them, runnable as-is in the Studio.
 Everything below, inlined with each recipe's source and every FAQ answer: https://pixi-reels.schmooky.dev/llms-full.txt
@@ -51,7 +51,7 @@ Everything below, inlined with each recipe's source and every FAQ answer: https:
 - [Migrating to 2.0.0](https://pixi-reels.schmooky.dev/reference/migrating-to-2-0/): Every breaking change in 2.0.0, with a before and after. Rows became cells, above/below became start/end, and one codemod does most of it.
 - [Migrating to 3.0.0](https://pixi-reels.schmooky.dev/reference/migrating-to-3-0/): Every breaking change in 3.0.0, with a before and after. Skip presses take a mode, phases take a skip context, the built-in beats are moves, and the…
 - [Migrating to 4.0.0](https://pixi-reels.schmooky.dev/reference/migrating-to-4-0/): The visual debug tools moved to the pixi-reels/debug subpath and draw with pixi-silk; two imports change and two console helpers are gone. A Hold & Win board's…
-- [Changelog](https://pixi-reels.schmooky.dev/reference/changelog/): Per-release notes for the pixi-reels engine. Latest published version: v4.3.1.
+- [Changelog](https://pixi-reels.schmooky.dev/reference/changelog/): Per-release notes for the pixi-reels engine. Latest published version: v4.4.0.
 
 ## Architecture deep-dives
 
