@@ -9,52 +9,57 @@ title: Sideways and upward reels
 
 ## Horizontal banner
 
-A one-reel sideways strip, the "paying symbols this round" banner. It is `.orientation('horizontal')` on the normal builder, with the same spin lifecycle, events, and speed profiles as a vertical set.
+A one-reel strip that scrolls sideways, such as a banner showing which symbols pay this round. It is `.orientation('horizontal')` on the normal builder, with the same spin lifecycle, events and speed profiles as a vertical set.
 
 <RecipeDemo code="horizontal-banner" height={200} />
 
-<a id="banner-ways"></a>
-
-## Banner that joins a ways win
-
-A horizontal banner above a 5x3 ways set. The banner is a sixth reel: a wild in the cell above a reel makes that reel count, extending the way. Two ReelSets in one container; the engine spins and lands both, the game scripts the ways math and spotlights the cells.
-
-pixi-reels never computes wins. The recipe owns the ways evaluation and spotlight; the library only spins and lands.
-
-<RecipeDemo code="banner-ways" height={420} />
+## Upward reels
 
 <a id="roll-up"></a>
+<a id="roll-up-reverse-direction"></a>
 
-## Roll-up (reverse direction)
+### Every reel
 
-Every reel spins upward: one `.direction('reverse')` call. The same engine, events and landing bounce just run the other way.
+`.direction('reverse')` makes every reel spin upward. The spin, the events and the landing bounce are the same, run the other way.
 
 <RecipeDemo code="roll-up" />
 
 <a id="roll-up-alternating"></a>
+<a id="mixed-direction-per-reel"></a>
 
-## Mixed direction per reel
+### Direction per reel
 
-`.directionPerReel([...])` gives each reel its own travel direction for a woven, alternating look. Every reel still lands the exact server frame.
+`.directionPerReel([...])` sets each reel's direction on its own. Here odd reels spin up and even reels spin down. Each reel still lands the exact result, because it feeds new symbols from its own edge.
 
 <RecipeDemo code="roll-up-alternating" />
 
 <a id="orientation-horizontal-per-reel"></a>
+<a id="both-knobs-at-once"></a>
 
-## Both knobs at once
+## Sideways with mixed direction
 
-Orientation is set-level and fixed at `build()`; direction is per reel. They compose, so a horizontal set can still alternate: here the strips run sideways and rows 0 and 2 scroll right while rows 1 and 3 scroll left.
+Orientation is set for the whole set at `build()`, and direction is set per reel, so the two combine. Here the strips run sideways, rows 0 and 2 scroll right, and rows 1 and 3 scroll left.
 
-A big symbol spanning more than one reel (`size.reels > 1`) cannot mix with mixed per-reel directions. The block coordinator assumes every reel a block covers feeds from the same edge, so `build()` throws rather than shipping a symbol that tears in half mid-spin. A uniform `directionPerReel` array is fine.
+A big symbol wider than one reel (`size.reels > 1`) cannot be combined with mixed per-reel directions. A block assumes every reel it covers feeds from the same edge and would split mid-spin, so `build()` throws. A `directionPerReel` array with the same value throughout is fine.
 
 <RecipeDemo code="orientation-horizontal-per-reel" height={340} />
 
+<a id="banner-ways"></a>
+<a id="banner-that-joins-a-ways-win"></a>
+
+## Banner in a ways win
+
+A horizontal banner above a 5x3 ways set. The banner acts as a sixth reel: a wild in the banner cell above a reel makes that reel count toward the way. These are two `ReelSet`s in one container. The engine spins and lands both. The recipe evaluates the ways and spotlights the cells, because pixi-reels never computes wins.
+
+<RecipeDemo code="banner-ways" height={420} />
+
 <a id="orientation-axis-readout"></a>
+<a id="read-the-axis-instead-of-remembering-it"></a>
 
-## Read the axis instead of remembering it
+## Reading the axis
 
-Every reel exposes `reel.axis`: `orientation`, `direction`, `polarity`, `mainProp`, `crossProp`, and `feedEdge`. Projecting one step of travel back to screen space with `axis.toScreen(0, axis.polarity)` draws the arrows below with no orientation branch anywhere; the same three lines point down on a vertical forward reel and left on a horizontal reverse one.
+Each reel has `reel.axis`, with `orientation`, `direction`, `polarity`, `mainProp`, `crossProp` and `feedEdge`. `axis.toScreen(0, axis.polarity)` turns one step of travel into a screen vector, so the arrows in the demo are drawn with no orientation check. The same code points down on a vertical forward reel and left on a horizontal reverse one.
 
-`feedEdge` is derived from `polarity` and is never set twice. Read it (`'start'` forward, `'end'` reverse) when you need to know which side new symbols arrive from; do not track it yourself alongside `direction`.
+`feedEdge` is the side new symbols arrive from. It is derived from `polarity`: `'start'` for forward, `'end'` for reverse. Read it when you need it instead of tracking it next to `direction`.
 
 <RecipeDemo code="orientation-axis-readout" />

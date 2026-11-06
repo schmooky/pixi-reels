@@ -18,7 +18,7 @@ guides:
   - hold-and-win
 ---
 
-<ConceptPart title="Hold & Win" lede="How a Hold & Win round runs: the state machine, its events, and how to wire the board to your game client.">
+<ConceptPart title="Hold & Win" lede="How a Hold & Win round runs, and how to drive the board from your game client.">
 
 Hold & Win, also sold as Lock & Respin or Hold & Spin, is a feature where
 coins land, stick, and refill a respin counter until the board fills or the
@@ -28,41 +28,41 @@ respins run out. pixi-reels ships it as a built-in board:
 import { HoldAndWinBuilder } from 'pixi-reels';
 ```
 
-The demos further down show individual tricks. This part shows how the whole
-thing fits together and how you drive it from a real game client.
+The demos above each show one technique. This part explains how the board
+works as a whole and how a game client drives it.
 
 <a id="the-mental-model"></a>
 
-## The mental model
+## How the board is built
 
-A Hold & Win board is a grid of cells that spin independently. The engine's
-unit of spinning is the column, a `ReelSet`. The mechanic's unit is the cell.
-So each cell is its own 1x1 reel set, and `HoldAndWinBuilder` wires the grid
-and the round choreography around them.
+A Hold & Win board is a grid of cells that spin independently. The engine
+spins in columns, each a `ReelSet`, but the mechanic works in cells. So each
+cell is its own 1x1 reel set, and `HoldAndWinBuilder` lays out the grid and
+runs the round across them.
 
-The board is value-blind. A coin is an opaque record:
+The board does not know what a coin is worth. A coin is an opaque record:
 
 ```ts
 { cell: { reel, cell }, id: 'coin', data: /* anything you want */ }
 ```
 
-The `id` picks the registered symbol art. The `data` is yours: values,
-jackpot tiers, multipliers, collector flags. The board never reads it.
-Adders, doublers, collectors and flights to a meter are not board features.
-They are game logic you run on top of three openings:
+The `id` picks the registered symbol art. The `data` belongs to you and can
+hold values, jackpot tiers, multipliers or collector flags. The board never
+reads it. Adders, doublers, collectors and flights to a meter are game logic
+you write on top of the board, using these:
 
-| Opening | What it gives you |
+| API | What it gives you |
 |---|---|
-| `board.events` | every beat of the round, with the coin payload |
+| `board.events` | each step of the round, with the coin payload |
 | `board.symbolAt(cell)` | the live symbol instance, so you can call your own symbol's methods |
 | `board.cellCenter(cell)` / `board.cellBounds(cell)` | exact pixel geometry for flights and trails |
 
-Keep that split and any Hold & Win variant is a small amount of game code.
-The board never changes.
+With that split, a new Hold & Win variant is mostly game code and the board
+stays the same.
 
 <a id="the-lifecycle"></a>
 
-## The lifecycle
+## The round
 
 The board is a three-state machine. `board.phase` reports where it is:
 `'idle'`, `'active'` or `'spinning'`.
@@ -85,19 +85,19 @@ The board is a three-state machine. `board.phase` reports where it is:
 1. `enter(seed)` seeds the board with the trigger coins. They lock at once,
    without a spin, and the respin counter arms. The board goes from idle to
    active.
-2. `respin(hits)` spins every free cell. The cells named in `hits` land their
-   coins. Everything else lands blank. The board goes active, spinning,
-   active. If a coin landed this wave the counter resets to full. If nothing
-   landed it goes down by one.
+2. `respin(hits)` spins each free cell. The cells named in `hits` land their
+   coins and the others land blank. The board goes from active to spinning
+   and back. If a coin landed in this wave the counter resets to full. If
+   nothing landed it goes down by one.
 3. The feature ends when the board fills or the counter reaches zero, and
    the board returns to idle. Then you collect.
 
 <a id="what-one-respin-fires"></a>
 
-### What one `respin()` fires
+### Events in one respin
 
 Events come in a fixed order. Cells land in stagger order, so the landing
-and lock events arrive one by one rather than all at once:
+and lock events arrive one at a time:
 
 <Tree
   root="respin(hits)"
@@ -118,11 +118,11 @@ and lock events arrive one by one rather than all at once:
 
 <a id="wiring-it-to-your-game-client"></a>
 
-## Wiring it to your game client
+## Driving it from your game client
 
-The board owns the choreography. You own the loop and the result source. A
-respin's results come from wherever your real results come from: an RGS, a
-mock server, an RNG. The driver is short:
+The board runs the animation of each round. You own the loop and the source
+of results, which can be an RGS, a mock server or an RNG. The driver is
+short:
 
 ```ts
 const board = new HoldAndWinBuilder<{ value: number }>()
@@ -161,19 +161,20 @@ board.release(board.lockedCoins.map((c) => c.cell));
 `respin()` resolves only after the whole wave has landed and the counter has
 been updated, so the loop reads top to bottom.
 
-For a [single skip button](/mechanics/hold-and-win/#hold-and-win-skip), call
-`board.skip()`. It slams every in-flight cell. The landing, lock and
-feature-end flow still resolves. You stop waiting for it. The quicken form,
-`board.skip({ mode: 'quicken' })`, lands instead of cutting: every in-flight
-cell drops its spin floor, so the wave lands together, and still spins its
-symbol in and bounces. Add `speed: 'turbo'` to land it on turbo, or make
-quicken the board's default with `skipMode('quicken')` on the builder.
+For a [skip button](/mechanics/hold-and-win/#hold-and-win-skip), call
+`board.skip()`. It slams each cell that is still spinning. The landing, lock
+and feature-end events still fire, so the rest of your code does not change.
+The quicken form, `board.skip({ mode: 'quicken' })`, lands the cells instead
+of cutting them. Each spinning cell drops its minimum spin time, so the wave
+lands together, and each cell still spins its symbol in and bounces. Add
+`speed: 'turbo'` to land it on turbo, or make quicken the board's default
+with `skipMode('quicken')` on the builder.
 
 <a id="events-reference"></a>
 
-## Events reference
+## Events
 
-Every event carries your `TData` on its coins.
+Each event carries your `TData` on its coins.
 
 | Event | Payload | Fires when |
 |---|---|---|
@@ -191,20 +192,23 @@ Every event carries your `TData` on its coins.
 | `feature:reset` | `{ clearedCoins }` | `reset()` hard-cleared the board |
 | `feature:skip` | `{ inFlight, mode, speed?, payload? }` | `skip()` freed the in-flight cells, placed (`'slam'`) or landing through their stop (`'quicken'`). `speed` and `payload` are the press's options as given |
 
-Two distinctions are deliberate. `release()` means "collect this coin" and
-fires `coin:released` per coin, while `reset()` is a hard clear back to idle
-and fires a single `feature:reset`, so a HUD that decrements on collect does
-not tick on a reset. And `setSymbolAt(cell, id, data)` rewrites a locked coin
-in place (a coin becoming MINI, then MAJOR) while keeping the ledger correct.
-It throws on a free cell. Placing a new tracked coin is the job of `enter`
-and `respin`.
+`release()` means "collect this coin" and fires `coin:released` once per
+coin. `reset()` is a hard clear back to idle and fires a single
+`feature:reset`, so a HUD that counts down on collect does not tick on a
+reset.
+
+`setSymbolAt(cell, id, data)` rewrites a locked coin in place, for example
+a coin becoming MINI and then MAJOR, and keeps the board's ledger correct.
+It throws on a free cell. New tracked coins are placed only by `enter` and
+`respin`.
 
 <a id="rectangular-cells-the-lock-animation-dormant-cells"></a>
 
-## Rectangular cells, the lock animation, dormant cells
+## Other builder options
 
-Three builder options cover what a production board usually needs beyond the
-square default:
+Production boards often need more than the square default. These builder
+options cover cell shape, the lock animation and cells that start outside
+the feature:
 
 ```ts
 const board = new HoldAndWinBuilder()
@@ -219,14 +223,17 @@ const board = new HoldAndWinBuilder()
   ...
 ```
 
-With `'landing'` or `'none'` the celebration is yours. `await board.playWin()`
-pulses every locked coin, or `board.playWin(cells)` a subset, whenever the
-game decides, typically on `board:full` or after `feature:end`. A coin that
-starts its own landing beat on land (a Spine coin with `autoPlayLanding`, a
-sprite that reports its settle through `trackLanding`) keeps it: `'win'`
-waits for that beat before the celebration and `'landing'` does not replay
-it. The mode can also be a function of the coin that locked, so a collector
-celebrates while plain coins only settle:
+With `'landing'` or `'none'` the celebration is up to you.
+`await board.playWin()` pulses each locked coin, and
+`board.playWin(cells)` pulses a subset. Call it when the game decides, usually on `board:full` or after
+`feature:end`.
+
+Some coins start their own landing beat when they land, such as a Spine coin
+with `autoPlayLanding` or a sprite that reports its settle through
+`trackLanding`. They keep it. `'win'` waits for that beat before the
+celebration, and `'landing'` does not play it a second time. The mode can
+also be a function of the coin that locked, so a collector celebrates while
+plain coins only settle:
 
 ```ts
 .lockAnimation((coin) => coin.id === 'collector' ? 'win' : 'landing')
@@ -234,36 +241,36 @@ celebrates while plain coins only settle:
 
 `board.activate(cells)` wakes dormant cells between waves. They show the
 empty symbol, join the next respin and count toward `isFull` from then on.
-`reset()` seals them again. The rectangular cells, landing-only and growing
-clover board demos further down show each of these running.
+`reset()` seals them again. The rectangular cells, landing only and growing
+board demos above show each of these.
 
 <a id="draw-order-between-cells"></a>
 
 ## Draw order between cells
 
-Every cell is its own reel set, so a coin's `zIndex` only sorts it against its
-own buffers. Art the engine lifts above a cell's mask at rest (`unmask: true`)
-renders in one layer above all cells, in attach order, which is column-major.
-So a lower coin's overflow is covered by the next column's. `cellZIndex`
-makes that layer sortable and asks for each cell's order on every place and
-landing:
+Each cell is its own reel set, so a coin's `zIndex` only sorts it against
+its own cell's buffers. Art that the engine lifts above a cell's mask at rest
+(`unmask: true`) renders in one layer above all cells, in attach order,
+which is column by column. As a result the next column covers the overflow
+of a lower coin. `cellZIndex` makes that layer sortable, and the board asks
+it for each cell's order on each place and landing:
 
 ```ts
 .cellZIndex(({ cell, symbolId, cols }) =>
   (symbolId === 'grand' ? 1000 : 0) + cell.cell * cols + cell.reel)
 ```
 
-`board.liftedLayer` is the layer itself, for an effect that has to sit
-between the cells and their lifted art. `symbolZIndex(resolver)` is the
-per-symbol form from `ReelSetBuilder`, applied inside every cell. See
+`board.liftedLayer` is that layer, for an effect that has to sit between the
+cells and their lifted art. `symbolZIndex(resolver)` is the per-symbol form
+from `ReelSetBuilder`, applied inside each cell. See
 [big symbols](/mechanics/big-symbols/#zindex-layering).
 
 <a id="speeds-board-wide"></a>
 
-## Speeds, board-wide
+## Speeds
 
-Every cell is its own reel set with its own `SpeedManager`. The board
-registers speeds into all of them and switches all of them:
+Each cell is its own reel set with its own `SpeedManager`. The board
+registers speeds in all of them and switches all of them together:
 
 ```ts
 const board = new HoldAndWinBuilder()
@@ -273,65 +280,68 @@ board.setSpeed('turbo');            // every cell, at once; fires speed:changed
 board.addSpeed('cinematic', slow);  // one more, after build
 ```
 
-Cells land in a diagonal wave, and its step is the active profile's
-`stopDelay`. The time between reels stopping on a reel set is the time
-between wave steps on a board. Each cell spins `(reel + cell) * stopDelay`
-ms on top of the profile's `minimumSpinTime`, so NORMAL's 140 ms steps the
-wave and TURBO's 0 lands every cell together. `.stagger(fn)` replaces the
-shape. It gets the speed's name and profile:
+Cells land in a diagonal wave, and the wave's step is the active profile's
+`stopDelay`. On a reel set that value is the time between reels stopping. On
+a board it is the time between steps of the wave. Each cell spins
+`(reel + cell) * stopDelay` ms on top of the profile's `minimumSpinTime`, so
+NORMAL's 140 ms steps the wave and TURBO's 0 lands all cells together.
+`.stagger(fn)` replaces the shape of the wave. It receives the speed's name
+and profile:
 
 ```ts
 .stagger((reel, cell, speed, profile) => reel * profile.stopDelay) // column by column
 .stagger((reel) => reel * 120)                                     // fixed, whatever the speed
 ```
 
-The same rule as `reelSet.setSpeed()` applies: a cell already in flight
+The rule is the same as for `reelSet.setSpeed()`. A cell already in flight
 finishes on the profile it started with, and the next wave runs on the new
-one. `board.skip()` is how a turbo press cuts the wave in progress, and
-`board.skip({ mode: 'quicken', speed: 'turbo' })` lands it on turbo instead
-of cutting it. Each name also gets a `name:tension` variant the board uses
-for an anticipating wave.
+one. To cut a wave in progress on a turbo press, call `board.skip()`. To
+land it on turbo instead, call `board.skip({ mode: 'quicken', speed: 'turbo' })`.
+Each speed name also gets a `name:tension` variant that the board uses for
+an anticipating wave.
 
 <a id="own-the-board"></a>
 
-## Own the board
+## When the board does not fit
 
-pixi-reels ships boards as two layers:
+pixi-reels ships boards in two layers:
 
-- `BoardGrid` is the primitive. A grid of cells that each spin
+- `BoardGrid` is the primitive. It is a grid of cells that each spin
   independently. It knows geometry, instances and spinning, and nothing about
   coins, locks, respins or value.
-- `HoldAndWinBoard` is one opinionated board built entirely on the
-  primitive's public API. It adds the lock, respin and collect rules.
+- `HoldAndWinBoard` is one board built entirely on the primitive's public
+  API. It adds the rules for locking, respins and collecting.
 
-When the built-in board does not fit, you have three options, in order of
-effort:
+If the built-in board does not do what your game needs, these are the
+options, from least to most work:
 
 1. Configure it. Stagger, respins, weights, anticipation and cell chrome are
-   all builder options. Most games never go past here.
-2. Build on the primitive. If your feature is not lock-and-respin at all
-   (pick-and-reveal, cluster-collect, scratch card), skip `HoldAndWinBuilder`
-   and use `BoardGrid` directly. The [board grid reveal demo](/mechanics/layers/#board-grid-reveal)
-   is a non-Hold & Win board on the primitive.
-3. Fork the board. For lock-and-respin with different rules, copy
-   `HoldAndWinBoard` and `HoldAndWinState` into your project and repoint their
+   all builder options. Most games stop here.
+2. Build on the primitive. If your feature is not lock and respin at all,
+   for example pick and reveal, cluster collect or a scratch card, skip
+   `HoldAndWinBuilder` and use `BoardGrid` directly. The
+   [board grid reveal demo](/mechanics/layers/#board-grid-reveal) is a board
+   on the primitive that is not Hold & Win.
+3. Fork the board. For lock and respin with different rules, copy
+   `HoldAndWinBoard` and `HoldAndWinState` into your project and point their
    imports at `pixi-reels`. Everything they use (`BoardGrid`, `EventEmitter`,
-   the `Hw*` types, `cellKey`, `HwEffect`) is public API, so the copy stays on
-   supported ground. Then rewrite the reducer. The respin-reset-on-hit rule
-   and the board-full-ends-the-feature rule live in `HoldAndWinState`.
+   the `Hw*` types, `cellKey`, `HwEffect`) is public API, so the copy stays
+   on supported ground. Then rewrite the reducer. The rule that a hit resets
+   the respins and the rule that a full board ends the feature both live in
+   `HoldAndWinState`.
 
-The board never reads your `data` and never encodes a paytable. Meaning stays
-on your side. The board only moves reels.
+The board never reads your `data` and has no paytable. What a coin means is
+decided in your code, and the board only moves the reels.
 
 <a id="where-to-go-next"></a>
 
 ## Where to go next
 
-- The [event trace board](/mechanics/hold-and-win/#hold-and-win-trace) prints every event as it fires.
-- The [Hold & Win respin](/mechanics/hold-and-win/) starter is the smallest board.
-- Carrying a value: [on the coin's data](/mechanics/hold-and-win/#coin-value-data), or [baked into a symbol class](/mechanics/hold-and-win/#coin-value-symbol).
-- Flights and collecting: [collector with bezier flights](/mechanics/hold-and-win/#hold-and-win-collector), [fly to a meter](/mechanics/hold-and-win/#hold-and-win-meter).
-- Tension: [per-board anticipation](/mechanics/hold-and-win/#hold-and-win-anticipation).
-- Base game into the feature: [the transition in one chain](/mechanics/hold-and-win/#hold-and-win-base-to-feature).
+- The [event trace](/mechanics/hold-and-win/#hold-and-win-trace) prints each event as it fires.
+- The [respin round](/mechanics/hold-and-win/#hold-and-win) is the smallest board.
+- A coin's value can live [in the coin's data](/mechanics/hold-and-win/#coin-value-data) or [in a symbol class](/mechanics/hold-and-win/#coin-value-symbol).
+- For collecting, see the [collector with flights](/mechanics/hold-and-win/#hold-and-win-collector) and [fly to a meter](/mechanics/hold-and-win/#hold-and-win-meter).
+- For tension on the last cell, see [anticipation](/mechanics/hold-and-win/#hold-and-win-anticipation).
+- To go from the base game into the feature and back, see [from the base game](/mechanics/hold-and-win/#hold-and-win-base-to-feature).
 
 </ConceptPart>

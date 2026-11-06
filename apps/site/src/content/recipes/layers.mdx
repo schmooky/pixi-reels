@@ -2,48 +2,66 @@
 title: Layers
 ---
 
-From the smallest change to the largest: a `zIndex` inside one reel, unmasking above every reel, and promoting one symbol while a win shows.
+The demos go from the smallest change to the largest: a `zIndex` inside one reel, unmasking above every reel, and raising one symbol while a win shows. The last demo builds a board out of cells with no reels.
 
 <a id="symbol-layering"></a>
+<a id="symbol-layering-zindex-unmask-promote"></a>
 
-## Symbol layering: zIndex, unmask, promote
+## Within one reel
 
-Three tiers of "draw my symbol on top": within one reel, above every reel and the mask, and per-instance via the spotlight layer.
-
-Within a reel (symbolData zIndex):
+A `zIndex` in `symbolData` draws the scatter above the other symbols in its reel, so its art is never covered by the cell below. The mystery bush keeps the default layer, and the cell below it draws over its leaves. This orders symbols within the reel only. Art that reaches over the next reel or past the frame needs `unmask`.
 
 <RecipeDemo code="layering-scatter-zindex" height={420} />
 
-Cross-reel and out-of-mask (unmask, at rest):
+## Above every reel
+
+### Unmasked symbols
+
+`unmask: true` in `symbolData` moves a landed symbol into the viewport's `unmaskedContainer`, above every reel and outside the mask. The scatter's art now spills past the grid edge and over the reel to its right, with no code in the demo. It works on jagged boards with centred reels too.
 
 <RecipeDemo code="layering-unmask" height={420} />
 
-Your own order (symbolZIndex): the engine's formula is type-dominant; a grading spec is row-dominant. Hand the engine a resolver and it keeps applying it after every wrap, swap and landing. Here every mid and high is unmasked, so at rest the lower row fronts the one above whatever the symbol, and only a higher grade wins over that.
+### Buffer cells stay masked
 
-<a id="layering-graded-zindex"></a>
-
-<RecipeDemo code="layering-graded-zindex" height={420} />
-
-Unmask lifts visible cells only. The same id in a buffer cell stays under the mask, so oversized art cannot hang outside the grid from a slot the player was never meant to see. The demo below lands both at once, and holds through a skip, which is the moment that used to leak.
+Only visible cells are unmasked. The same id in a buffer cell stays under the mask, so oversized art never hangs into the window from a cell the player should not see. The demo lands both at once and holds through a skip.
 
 <RecipeDemo code="unmask-stays-in-the-grid" height={400} />
 
-Per-instance (promote the landed view into spotlightContainer):
+<a id="layering-graded-zindex"></a>
+
+### Your own draw order
+
+The engine orders symbols by type first: `symbolData.zIndex * 100` plus the cell's stacking index. Some art specs order by row first: within a grade the lower row is in front, then the reel to the right, and only then a higher grade. Pass that rule to `symbolZIndex(resolver)` and the engine applies it after every wrap, swap and landing.
+
+Every mid and high symbol here is unmasked, so at rest they share one container and the resolver orders them against each other. While the reels move the resolver returns `ctx.defaultZIndex`, so the spin looks as it did before.
+
+<RecipeDemo code="layering-graded-zindex" height={420} />
+
+## One symbol at a time
+
+<a id="clover-promote-win-line"></a>
+
+### With promote
+
+`reelSet.promote(positions)` raises the symbols at those positions above the mask and above their neighbours, and returns a function that drops them again. It attaches the views to a render layer instead of reparenting them, so nothing moves and nothing has to be put back. Unlike `spotlight.show()` it does not dim, does not call `playWin()` and has nothing to await, so the game's own animation stays in control.
+
+The same tween runs twice in the demo, once clipped and once promoted. Watch the top row swell past the grid edge.
+
+<RecipeDemo code="clover-promote-win-line" height={400} />
+
+### By hand
+
+The older way to do the same thing. Each landed scatter's view is moved into `viewport.spotlightContainer`, the layer the win spotlight uses, and handed back to its reel on the next `spin:start`. The recipe stores each view's parent and position and restores them before the strip moves. Like `promote`, it raises one landed cell without making its id unmasked everywhere.
 
 <RecipeDemo code="layering-promote-jagged" height={420} />
 
 <AssetCredit studio="Thunderkick" />
 
-<a id="clover-promote-win-line"></a>
-
-The same job in one call (`reelSet.promote`): the demo above hand-rolls it, capturing each view's parent and position, reparenting into `spotlightContainer`, and putting every one back before the strip moves. `promote(positions)` is that, as a value: it attaches the views to a render layer instead of reparenting, so nothing moves, nothing has to be put back, and the returned release drops them. Unlike `spotlight.show()` there is no dim, no `playWin()` and nothing to await, so the game's own timeline stays in charge. Below, the same tween runs twice, once clipped, once promoted.
-
-<RecipeDemo code="clover-promote-win-line" height={400} />
-
 <a id="board-grid-reveal"></a>
+<a id="board-primitive-build-your-own-board"></a>
 
-## Board primitive: build your own board
+## Your own board
 
-A reveal-and-collect prize grid built straight on the generic BoardGrid primitive; the rule is yours, with no locking and no respins.
+`BoardGrid` is a grid of cells that each spin on their own. Hold & Win is built on it. This demo uses it directly for a reveal and collect prize grid: every cell spins to a prize, the values add up and the top cell is highlighted. There is no locking and no respin, because those are Hold & Win's rules and this board has its own.
 
 <RecipeDemo code="board-grid-reveal" height={400} />

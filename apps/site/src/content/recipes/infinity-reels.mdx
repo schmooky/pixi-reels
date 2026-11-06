@@ -2,78 +2,84 @@
 title: Infinity reels
 ---
 
-The base spin lands, then the board grows: `reelSet.expand({ columns })` adds the reels the server's result has beyond the base board, a step at a time, spinning only the new ones while everything before them holds. `addReels()` and `removeReels()` are the primitives under it; the next round shrinks back with `removeReels()`. The [infinity reels guide](/mechanics/infinity-reels/#concept) is the short version: what the server sends, the calls, and the events.
+The base spin lands, and then the board grows. `reelSet.expand({ columns })` adds the reels the server's result has beyond the base board, a step at a time, and spins only the new reels while the earlier ones hold. `addReels()` and `removeReels()` are the calls underneath it, and the next round shrinks the board back with `removeReels()`. The [infinity reels guide](/mechanics/infinity-reels/#concept) has the short version: what the server sends, the calls, and the events.
+
+The first demo is the plain mechanic. The next ones change the board's shape during the expansion, and the last covers skipping.
 
 <a id="infinity-reels"></a>
 
-## One reel at a time
+## Add one reel per step
 
-While the win still runs into the last reel, the server adds another reel to its result. Each step pans the camera to the new reel (`onStepAdded`), spins and lands it, then counts the ways and draws them with `WinLines` (`onStepLanded`).
+While the win still reaches the last reel, the server adds another reel to its result. Each step pans the camera to the new reel in `onStepAdded`, spins and lands it, then counts the ways and draws them with `WinLines` in `onStepLanded`.
 
-Skip: the steps are one round. The first press slams the step in flight and turbos the rest, the same boost `skipSpin()` gives the rest of any round (a cascade-mode expansion lands its later steps at once instead, the way one press ends a cascade); the second aborts the expansion's `signal`, which lands every reel still to come in one step.
+The steps count as one round for skipping. The first press slams the step in flight and switches the rest to turbo, the same boost `skipSpin()` gives the rest of any round. In cascade mode the later steps land at once instead, the way one press ends a cascade. The second press aborts the expansion's `signal`, which lands every reel still to come in one step.
 
 <RecipeDemo code="infinity-reels" height={420} />
 
+## Board shape
+
 <a id="infinity-reels-rows"></a>
 
-## Rows grow too
+### Add rows
 
-A wild on a new reel unlocks a row: `addRows(1, { cells })` in `onStepLanded` makes every reel one cell taller with the server's cells for the new row, and the reels after it arrive at the new height. The camera zooms out to fit, reading the board's size off `viewport.maskWidth` and `maskHeight`. The next round goes back with `removeReels()` and `removeRows()`.
+A wild on a new reel unlocks a row. `addRows(1, { cells })` in `onStepLanded` makes every reel one cell taller, with the server's cells for the new row, and the reels after it arrive at the new height. The camera zooms out to fit, reading the board's size from `viewport.maskWidth` and `maskHeight`. The next round goes back with `removeReels()` and `removeRows()`.
 
-Rows change only between steps. Inside `onStepAdded` the step's reels are about to spin on columns sized for the board's old height, so `addRows()` throws there. A fast-forward (an aborted `signal`) lands every reel still to come in one step at the height the board has then, so this demo's skip slams a step at a time instead.
+Rows change only between steps. Inside `onStepAdded` the step's reels are about to spin on columns sized for the board's old height, so `addRows()` throws there. A fast-forward, which aborts the `signal`, lands every remaining reel in one step at the board's height at that moment. That is why this demo's skip slams one step at a time instead.
 
 <RecipeDemo code="infinity-reels-rows" height={440} />
 
-<a id="infinity-reels-split"></a>
-
-## Stacked symbols that split
-
-Q lands one cell tall or stacked two to four cells. When Q wins on every reel, each stack splits into more single Qs than it had cells, and its reel grows past the frame both ways. `reelSet.splitSymbol(reel, cell, ids)` places the server's split: the stack covering `(reel, cell)` becomes `ids`, one per cell, the cells above and below keep their symbols, and the board re-centres around the taller reel. While the win reaches the last reel, `expand()` adds another and the multiplier goes up by one. The next round goes back with `removeReels()` and `resetColumns()`. A reel that keeps its height instead, splits on MultiWays and a tap-to-split playground are on [Split symbols](/mechanics/split-symbols/).
-
-A split changes one reel's height, so the board re-centres around it. Hold the other reels still on screen (this demo moves its camera by their shift) and let the camera ease out, or they jump.
-
-<RecipeDemo code="infinity-reels-split" height={480} />
-
 <a id="infinity-reels-multiways"></a>
 
-## MultiWays: millions of ways
+### MultiWays
 
-Each column's `visible.length` is that reel's shape, applied with `setShape()` for its step, so every reel the expansion adds multiplies the ways: eight reels of seven cells is 5,764,801 ways, ten is 282,475,249. Steps add two reels (`step: 2`).
+The length of each column's `visible` array is that reel's cell count, applied with `setShape()` for its step, so every reel the expansion adds multiplies the ways. Eight reels of seven cells give 5,764,801 ways, and ten give 282,475,249. Each step here adds two reels (`step: 2`).
 
 <RecipeDemo code="infinity-reels-multiways" height={460} />
 
 <a id="infinity-reels-big-symbol"></a>
 
-## A big symbol widens its step
+### Big symbols
 
-The steps add one reel each, but a 2x2 wild arrives in one of the columns. A one-reel step cannot land half a block, so that step adds two reels and the block lands whole. The plan is read from `symbolData` sizes and every block is validated before the first reel is added.
+The steps add one reel each, but a 2x2 wild arrives in one of the columns. A step of one reel cannot land half a block, so that step adds two reels and the block lands whole. The step plan is read from the `symbolData` sizes, and every block is validated before the first reel is added.
 
-A block has to end on a reel the expansion adds. One that would run past the last of them, or past the bottom of a strip, throws before a reel is added.
+A block has to end on a reel the expansion adds. A block that would run past the last of them, or past the bottom of a strip, throws before any reel is added.
 
 <RecipeDemo code="infinity-reels-big-symbol" height={420} />
 
+<a id="infinity-reels-split"></a>
+
+### Split stacked symbols
+
+Q lands either one cell tall or stacked two to four cells tall. When Q wins on every reel, each stack splits into more single Qs than it had cells, and its reel grows past the frame in both directions. `reelSet.splitSymbol(reel, cell, ids)` places the server's split: the stack covering `(reel, cell)` becomes `ids`, one per cell, the cells above and below keep their symbols, and the board re-centres around the taller reel. While the win reaches the last reel, `expand()` adds another reel and the multiplier goes up by one. The next round goes back with `removeReels()` and `resetColumns()`. The [Split symbols](/mechanics/split-symbols/) page has a reel that keeps its height, splits on MultiWays and a playground where you tap to split.
+
+Because the board re-centres around the taller reel, hold the other reels still on screen and let the camera ease out, or they jump. This demo moves its camera by the amount they shift.
+
+<RecipeDemo code="infinity-reels-split" height={480} />
+
 <a id="infinity-reels-skip"></a>
 
-## Skip, reel groups and a protected tease
+## Skipping steps
 
-Press as often as you like and read the log. The base board is grouped (dashed boxes), so a press lands one group; each step's reel teases "will the win continue?" with `anticipation: { protect: 'once' }`, so the first press during a tease is spent and the next lands the reel; a press while the camera pans queues for the next step. The button calls `skipSpin()` and nothing else.
+Press as often as you like and read the log. The base board is grouped, shown by the dashed boxes, so a press lands one group. Each step's reel teases "will the win continue?" with `anticipation: { protect: 'once' }`, so the first press during a tease is spent and the next one lands the reel. A press while the camera pans is queued for the next step. The button calls `skipSpin()` and nothing else.
 
 <RecipeDemo code="infinity-reels-skip" height={460} />
 
-### Picking a skip policy
+<a id="picking-a-skip-policy"></a>
 
-- Turbo the rest (the default): the first `skipSpin()` frees the step in flight and boosts every later step to the fastest profile; the next round starts at normal speed again.
-- Slam each step: every press frees the step in flight. Presses during `onStepAdded` / `onStepLanded` (a camera pan, a win readout) are not lost: they free the next step as soon as it has its result.
-- Fast-forward: abort the expansion's `signal` and every reel still to come lands in one step. A quick-spin or autoplay mode can pass an aborted signal from the start: the whole expansion lands at once, with the same events and hooks.
-- Quicken instead of slam: with `.skipMode('quicken')` (or `requestSkip({ mode: 'quicken', speed: 'turbo' })`) a press shortens the step's spin but keeps its spin-out and bounce, so a long chain never looks cut.
-- Wide steps, one reel per press: a step's reels arrive as one group. Call `setReelGroups()` in `onStepAdded` to split them, and each press frees one; or `slamStop({ reels: [...] })` lands part of a step and lets the rest play.
-- Keep the deciding tease: `anticipation: (step) => stillWinning ? { protect: 'once', duration: 900 } : false` keeps the "will it continue?" tease through the first press, only on the steps where it matters.
+### Skip policies
 
-`slamStop()` between steps has nothing to land, and a press after the last step has no step left: both are no-ops. A named `setDropOrder('ltr' | 'rtl' | 'all')` follows the reels that spin, so it covers the added reels and orders a step by place; a sticky `setStopDelays()` array covers only the reels it was given, and reels past its end stop with no delay.
+- Turbo for the rest, the default. The first `skipSpin()` frees the step in flight and moves every later step to the fastest profile. The next round starts at normal speed again.
+- Slam each step. Every press frees the step in flight. Presses made during `onStepAdded` or `onStepLanded`, for example while the camera pans or a win readout shows, are kept and free the next step as soon as it has its result.
+- Fast-forward. Abort the expansion's `signal` and every reel still to come lands in one step. A quick-spin or autoplay mode can pass a signal that is already aborted, so the whole expansion lands at once, with the same events and hooks.
+- Quicken. With `.skipMode('quicken')`, or `requestSkip({ mode: 'quicken', speed: 'turbo' })`, a press shortens the step's spin but keeps its spin-out and bounce, so a long chain never looks cut.
+- One reel per press on wide steps. A step's reels arrive as one group. Call `setReelGroups()` in `onStepAdded` to split them so each press frees one, or use `slamStop({ reels: [...] })` to land part of a step and let the rest play.
+- Keep the deciding tease. `anticipation: (step) => stillWinning ? { protect: 'once', duration: 900 } : false` keeps the "will it continue?" tease through the first press, only on the steps where it matters.
+
+`slamStop()` between steps has nothing to land, and a press after the last step has no step left, so both do nothing. A named `setDropOrder('ltr' | 'rtl' | 'all')` follows the reels that spin, so it covers the added reels and orders a step by position. A sticky `setStopDelays()` array covers only the reels it was given, and reels past its end stop with no delay.
 
 ## What carries across steps
 
-- Events: each step fires the usual `spin:*` events for its own reels, plus `reels:added`, `expand:stepAdded` and `expand:stepLanded`, and `rows:added` when a hook grows the rows; the chain opens with `expand:start` and closes with `expand:complete` and then `expand:end` (`'complete'`, or `'failed'` when it threw). `reelSet.isExpanding` is `true` in between, so a `spin:start` listener can tell a step from a new round.
-- Stagger: start and stop delays count a reel's place in its step, not its index, so reel 40 does not wait forty delays.
-- Pins: a sticky pin's turns and an `'eval'` pin belong to the round, so they are not spent per step.
-- Memory: reels are real reels while they are on the board; `removeReels()` destroys them and shrinks the viewport, mask and symbol pool back.
+- Events. Each step fires the usual `spin:*` events for its own reels, plus `reels:added`, `expand:stepAdded` and `expand:stepLanded`, and `rows:added` when a hook adds rows. The chain opens with `expand:start` and closes with `expand:complete` and then `expand:end`, which carries `'complete'`, or `'failed'` when the chain threw. `reelSet.isExpanding` is `true` in between, so a `spin:start` listener can tell a step from a new round.
+- Stagger. Start and stop delays count a reel's position in its step, not its index, so reel 40 does not wait forty delays.
+- Pins. A sticky pin's turns and an `'eval'` pin belong to the round, so a step does not use them up.
+- Memory. Added reels are real reels while they are on the board. `removeReels()` destroys them and shrinks the viewport, mask and symbol pool back.

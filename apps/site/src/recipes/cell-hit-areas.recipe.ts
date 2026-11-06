@@ -7,7 +7,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
-  title: 'Cell hit areas. click to pick, hover to preview',
+  title: 'Tappable cells',
   topic: 'cells-and-banners',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   needs: ['generic-symbols'],

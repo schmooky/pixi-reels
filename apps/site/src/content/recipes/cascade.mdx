@@ -2,34 +2,55 @@
 title: Cascades
 ---
 
-Each demo below runs the cascade loop with one thing changed, such as the refill order, the delay before the fall, or the direction of gravity.
+A cascade round removes the winning symbols, lets the survivors fall into the holes and drops new symbols in, then checks for wins again. The first demo is that loop with nothing changed. The ones after it each change one part of it.
 
 <a id="cascade-6x5"></a>
+<a id="cascade-6x4-tumble"></a>
 
-## Cascade 6x4 tumble
+## Basic cascade
 
-Modern tumble mechanic where `runCascade` owns the detect, destroy, refill loop; the second canvas is the identical recipe on real Thunderkick Spine art.
+A 6x4 board where `runCascade` runs the loop. You pass `detectWinners` and `nextGrid`, and it destroys, refills and asks again until `detectWinners` returns no cells. The second canvas is the same recipe with Thunderkick Spine symbols; only the symbol registration differs.
 
 <RecipeDemo code="cascade-6x5" height={300} />
 <RecipeDemo code="cascade-6x5-spine" height={300} />
 
 <a id="cascade-destroy-and-present"></a>
+<a id="cascade-wins-present-destroy-refill"></a>
 
-## Cascade wins: present, destroy, refill
+## Removing winners
 
-The fixed round order (present the win, destroy the winners, refill the holes), then the destroy stage two ways: the engine implode versus an authored Spine explosion.
+Each cascade step runs in a fixed order: present the win, destroy the winning symbols, refill the holes. Work out the winners from your match logic. Diffing the grid before and after does not work, because survivors slide past the cleared cells and a diff reads them as changed.
 
-Compute winners from your match logic, not by diffing two grids. Survivors slide past the cleared cells and a diff misreads them.
+### Present the win first
+
+Two winning combinations share reel 2. `runCascade` hands them to a `WinPresenter` through its `presentWinners` hook, which shows each one in turn before the winners explode and the refill drops.
 
 <RecipeDemo code="destroy-winpresenter" height={300} />
+
+### Default destroy
+
+No `out` animation is registered, so `destroySymbols` plays the engine's scale and fade implode. Use this when you have no destruction art.
+
 <RecipeDemo code="destroy-fade" height={300} />
+
+### Spine explosion
+
+The same board with `outAnimation: 'explode'` set at registration. `destroySymbols` plays the skeleton's explosion instead of the implode.
+
 <RecipeDemo code="destroy-explode" height={300} />
 
+<a id="cascade-timing"></a>
+
+## Timing and motion
+
+These demos run the same spin and the same win. Only the timing or the motion of the fall and the refill changes.
+
 <a id="fall-delays"></a>
+<a id="lead-in-delay-before-the-fall"></a>
 
-## Lead-in delay before the fall
+### Delay before the fall
 
-Same spin, only the gap between the spin press and the first frame of fall-out changes: 0, 150, 350, and 700 ms.
+The pause between the spin press and the first frame of the fall: 0, 150, 350 and 700 ms. A longer pause adds suspense before the board clears.
 
 <RecipeDemo code="fall-delay-instant" height={300} />
 <RecipeDemo code="fall-delay-subtle" height={300} />
@@ -37,20 +58,22 @@ Same spin, only the gap between the spin press and the first frame of fall-out c
 <RecipeDemo code="fall-delay-suspense" height={300} />
 
 <a id="refill-orders"></a>
+<a id="cascade-refill-orders"></a>
 
-## Cascade refill orders
+### Refill order
 
-Same destruction, only the post-win refill ordering changes: simultaneous, left-to-right wave, and bottom-up.
+The order the new symbols arrive in after a win. All reels at once with `setDropOrder('all')`, a left-to-right wave, and bottom-up, where the bottom cell lands first (`cellOrder: 'endFirst'`).
 
 <RecipeDemo code="refill-simultaneous" height={300} />
 <RecipeDemo code="refill-ltr-wave" height={300} />
 <RecipeDemo code="refill-bottom-up" height={300} />
 
 <a id="tumble-feels"></a>
+<a id="tumble-feels-every-preset"></a>
 
-## Tumble feels: every preset
+### Tumble motion
 
-Same spin and cascade refill, only `.tumble({ fall, dropIn })` changes: classic, slow drop, slam, rain column, and wave.
+Five `.tumble({ fall, dropIn })` configs on the same round: classic, slow drop, slam, rain column and wave. They differ in durations, eases and per-cell stagger.
 
 <RecipeDemo code="tumble-classic" height={300} />
 <RecipeDemo code="tumble-cartoon-bounce" height={300} />
@@ -59,59 +82,67 @@ Same spin and cascade refill, only `.tumble({ fall, dropIn })` changes: classic,
 <RecipeDemo code="tumble-wave" height={300} />
 
 <a id="tumble-anticipation"></a>
+<a id="cascade-anticipation-refill"></a>
 
-## Cascade anticipation refill
+### Two-stage refill
 
-Two-stage refill: survivors slide down first, a held anticipation beat for multipliers and mascots, then new symbols drop in reel by reel.
+`refill({ mode: 'gravity-then-drop' })` splits the refill in two. Survivors slide down first, the engine holds for `gravityHoldMs`, then the new symbols drop in. Put a multiplier or a mascot beat in the hold. The second canvas drops the reels one after another instead of in a wave, with a longer hold.
 
 <RecipeDemo code="tumble-anticipation" height={300} />
 <RecipeDemo code="tumble-anticipation-stagger" height={300} />
 
 <a id="spin-then-cascade"></a>
+<a id="spin-first-cascade-after"></a>
 
-## Spin first, cascade after
+## Opening the round with a spin
 
-Open every play with a classic strip-spin, then cascade the respins; the per-spin `mode` override flips between strip-spin and pure drop.
+Many cascade games open each round with an ordinary strip spin and only cascade the follow-ups. The first canvas does that with `spin({ mode: 'standard' })`. The second opens with a cascade drop instead, so the old board falls out and the new one drops in. The third is the spin opener tuned for turbo: the strip spins on cached textures and the cascade uses a shorter drop-in and a faster explode.
 
 <RecipeDemo code="spin-then-cascade" height={300} />
 <RecipeDemo code="cascade-open-drop" height={300} />
 <RecipeDemo code="spin-then-cascade-turbo" height={300} />
 
+<a id="cascade-gravity"></a>
+
+## Gravity and orientation
+
+By default a reel drains toward the edge it travels toward and refills from the other one. Gravity also decides the server contract. Survivors must be packed against the edge they drain through, and the engine animates the grid you send as it is. It never reorders it.
+
 <a id="cascade-horizontal-tumble"></a>
+<a id="cascade-sideways"></a>
 
-## Cascade sideways
+### Sideways
 
-The same tumble on `.orientation('horizontal')`: reels are screen rows, the strip travels along X, and `tumble({ gravity })` stays on its default `'auto'`, so each reel drains toward the edge it travels toward and refills from the other one.
-
-Gravity decides the server contract. Survivors must be packed against the edge gravity exits by (`[...fresh, ...survivors]` under forward gravity). The engine animates the grid you send; it never reorders it.
+The same tumble on `.orientation('horizontal')`. Reels are screen rows, the strip travels along X, and `tumble({ gravity })` stays on its default `'auto'`. Under forward gravity, `nextGrid` returns `[...fresh, ...survivors]`.
 
 <RecipeDemo code="cascade-horizontal-tumble" height={300} />
 
-<a id="cascade-reverse-gravity"></a>
-
-## Spin up, drop down (explicit gravity)
-
-Reels built `.direction('reverse')` roll upward, but `tumble({ gravity: 'forward' })` makes the tumble settle downward anyway. `gravity` is only worth setting when you want travel and settling to disagree; leave it at `'auto'` and a reverse reel drains upward with no further config.
-
-That includes the cell stagger. `cellOrder` defaults to `'auto'`, which starts at the gravity-exit end, the edge symbols are leaving by. Under the explicit forward gravity here the bottom cell still goes first; drop the override and the top cell leads instead, because that is the edge the column now drains through. Pass `'endFirst'` or `'startFirst'` to pin a geometric end regardless of gravity.
-
-<RecipeDemo code="cascade-reverse-gravity" height={300} />
-
 <a id="cascade-drain-upward"></a>
+<a id="drain-upward-gravity-follows-travel"></a>
 
-## Drain upward (gravity follows travel)
+### Upward
 
-The default case, for comparison: `.direction('reverse')` with no `gravity` key at all. Everything flips together: the top cell falls first and lands first, and the column peels upward behind it.
-
-The server contract flips with it. Survivors pack against the edge gravity exits by, which is now the top, so `nextGrid` returns `[...survivors, ...fresh]`. Flipping the reel without flipping the grid is what makes an upward board look scrambled.
+A `.direction('reverse')` set with no `gravity` key. Gravity follows travel, so the top cell falls and lands first and the column empties upward. The survivors now pack against the top, so `nextGrid` returns `[...survivors, ...fresh]`. If you reverse the reels and keep the old grid order, the board looks scrambled.
 
 <RecipeDemo code="cascade-drain-upward" height={300} />
 
+<a id="cascade-reverse-gravity"></a>
+<a id="spin-up-drop-down-explicit-gravity"></a>
+
+### Spin up, settle down
+
+Reels built `.direction('reverse')` roll upward, and `tumble({ gravity: 'forward' })` makes the tumble settle downward anyway. Set `gravity` only when you want travel and settling to disagree.
+
+The cell stagger follows gravity too. `cellOrder` defaults to `'auto'`, which starts at the end symbols leave through. Here the bottom cell still goes first; without the `gravity` override the top cell would lead. Pass `'endFirst'` or `'startFirst'` to fix the starting end whatever the gravity.
+
+<RecipeDemo code="cascade-reverse-gravity" height={300} />
+
 <a id="peek-from-above"></a>
+<a id="peek-symbol-from-buffer-start"></a>
 
-## Peek symbol from buffer-start
+## Teaser in the buffer
 
-Pre-fill the `bufferStart` slot so a teaser symbol sits just out of frame, visible during the next spin's scroll-in.
+A strip spin with no cascade. A symbol placed in the `bufferStart` slot sits above the window and scrolls through it at the start of the next spin, so the player sees it briefly before the random symbols take over.
 
 <RecipeDemo code="peek-from-above" height={300} />
 

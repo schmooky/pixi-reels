@@ -16,8 +16,8 @@ guides:
 
 <ConceptPart title="Win animations" lede="Highlight the winning symbols, cycle through the lines, and dim the losers.">
 
-`SymbolSpotlight` dims the losing symbols, lifts the winners above the mask,
-and cycles through lines for you.
+`reelSet.spotlight` dims the losing symbols, lifts the winners above the
+mask, and can step through several lines in turn.
 
 <a id="one-win-one-line"></a>
 
@@ -38,7 +38,7 @@ reelSet.events.on('spin:complete', async (result) => {
 
 <a id="multiple-lines-cycled"></a>
 
-## Multiple lines, cycled
+## Several lines in turn
 
 ```ts
 await reelSet.spotlight.cycle(
@@ -54,7 +54,7 @@ await reelSet.spotlight.cycle(
 
 <a id="play-per-symbol-animations"></a>
 
-## Play per-symbol animations
+## Symbol animations
 
 With `playWinAnimation: true` the spotlight calls `playWin()` on each
 highlighted symbol. The three built-in symbol classes all implement it.
@@ -64,7 +64,7 @@ await reelSet.spotlight.show(wins[0].positions, { playWinAnimation: true });
 ```
 
 `show()` resolves when the animation is done, so you can await it before
-whatever comes next.
+the next step.
 
 <a id="events"></a>
 

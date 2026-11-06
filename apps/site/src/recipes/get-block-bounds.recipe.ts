@@ -5,7 +5,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
-  title: 'getBlockBounds. outline a big symbol',
+  title: 'Outline a block',
   topic: 'big-symbols',
   tags: ['big-symbols', 'multiways', 'pyramid', 'spine', 'geometry', 'sticky-wild', 'horizontal', 'reverse', 'orientation'],
   height: 300,

@@ -2,142 +2,152 @@
 title: Big symbols and MultiWays
 ---
 
-Live demos of block symbols that span several cells, and of reels with different cell counts.
+The first half of this page covers big symbols, one symbol that covers a block of cells. It starts with blocks that land in full view and moves on to blocks that land partly hidden in a buffer or scroll past during the spin. The second half covers boards whose reels show different numbers of cells: a fixed pyramid and MultiWays.
+
+## Big symbols
 
 <a id="big-symbols-mxn"></a>
 
-## MxN big symbols: every shape
+### Block shapes
 
-Square 2x2, tall 1x3, giant 3x3, wide 2x4, one focused demo per shape.
+Four shapes, one demo each: a 2x2 square, a 1x3 tall block, a 3x3 giant and a 2x4 wide block. The server places the anchor cell and the engine fills the rest of the block.
 
 <RecipeDemo code="big-symbols-mxn-square" height={300} />
 <RecipeDemo code="big-symbols-mxn-tall" height={300} />
 <RecipeDemo code="big-symbols-mxn-giant" height={300} />
 <RecipeDemo code="big-symbols-mxn-wide" height={300} />
 
-<a id="tall-symbols-in-spin"></a>
-
-## Tall blocks that stream past during the spin
-
-A 1x3 block with a weight scrolls on reel 0 while it spins, and a scatter only ever scrolls on reel 4. Both weights live in per-reel pools: `0` in the base `weights()` table, raised on the one reel that may show the symbol. Only blocks one reel wide can carry a weight; wider ones still land only, since the random fill feeds one reel at a time.
-
-A pool `exclude` cannot be lifted again by a narrower layer; a weight of `0` can. Use weights, not `exclude`, for "this symbol on this reel only". A weighted block also needs `bufferSymbols({ start: size.cells })`, which the builder checks: the block enters a forward reel bottom first and leaves a reverse reel anchor first, and those buffer slots are where its covered cells sit while the anchor that draws them is off the strip.
-
-<RecipeDemo code="tall-symbols-in-spin" height={340} />
-
-<a id="tall-peek"></a>
-
-## Tall block in an anticipation tease, landing peeking, then up
-
-Two scatters put reel 4 into a crawl, and the weighted 1x3 keeps sliding past while it crawls. The result lands the block with its head on the last visible cell and its body in `bufferEnd` (so `bufferSymbols({ start: 3, end: 2 })`: `start` for the weight, `end` for the peek). Then the game brings it up, two ways:
-
-- Nudge up: `nudge(reel, { distance: 2, direction: 'reverse' })` moves the whole column; the two cards above scroll out through the top.
-- Expand up: the landed anchor is already one sprite three cells tall with its body under the mask. Tween its view up two cells and it grows over the cards, then `setColumn(reel, { visible: ['tall', ...] })` commits the block at the top of the column while the rest of the board stays put. An expanding wild, in engine terms.
-
-`getBlockBounds` reports the whole block even while part of it hangs in a buffer; the mask does the clipping.
-
-<RecipeDemo code="tall-peek-nudge-up" height={320} />
-<RecipeDemo code="tall-peek-expand-up" height={320} />
-
-<a id="big-symbol-cascade-fall"></a>
-
-## Big symbol falls into view through a cascade
-
-A tall wild lands with its anchor in bufferStart and only its tail showing, wins the cells below, and falls into full view as they clear; the 2x2 canvas runs the same beat across two reels.
-
-The anchor's fall distance must equal the number of winner cells cleared below it, or the block snaps instead of falling.
-
-<RecipeDemo code="big-symbol-cascade-fall" height={300} />
-<RecipeDemo code="big-symbol-cascade-fall-2x2" height={300} />
-
-<a id="big-symbol-partial-land"></a>
-
-## Land a big symbol partially in buffer
-
-A tall 1xH block lands with its anchor in bufferStart, so only the bottom tail shows at cell 0; nudge down to drag the rest into view.
-
-<RecipeDemo code="big-symbol-partial-land" height={300} />
-
-<a id="big-symbol-held-respin"></a>
-
-## Nudge a big symbol in, then hold it across a respin
-
-Nudge the tail-visible wild fully into view, then respin the other reels with `holdReels` so the revealed block stays put.
-
-<RecipeDemo code="big-symbol-held-respin" height={300} />
-
-<a id="big-symbols-horizontal-block"></a>
-
-## Big symbol on a horizontal set
-
-A 2x3 block on `.orientation('horizontal')`, outlined on land with `getBlockBounds`. `size: { reels, cells }` is index space and does not rotate: `reels` always spans the reel-marching axis, `cells` always spans the strip.
-
-The screen mapping inverts. `{ reels: 2, cells: 3 }` is 2 wide and 3 tall on a vertical set, 2 tall and 3 wide here, and `getBlockBounds` (screen space) inverts with it.
-
-<RecipeDemo code="big-symbols-horizontal-block" height={300} />
-
-<a id="big-symbols-reverse-tail"></a>
-
-## Tail-visible block on a roll-up reel
-
-The partial-land tease on a `.direction('reverse')` reel: the block is anchored at the last visible cell with its body hanging into `bufferEnd`, then a `'forward'` nudge (upward, on this reel) drags it into full view.
-
-Buffers are geometric, not travel-relative. `bufferStart` is above and `bufferEnd` below in both directions, so a reel that feeds from the bottom teases out of `bufferEnd`.
-
-<RecipeDemo code="big-symbols-reverse-tail" height={300} />
-
 <a id="get-block-bounds"></a>
 
-## getBlockBounds: outline a big symbol
+### Outline a block
 
-One rectangle that hugs an entire block whichever cell you pass; a 1x1 returns the same rect as `getCellBounds`.
+`getBlockBounds` returns one rectangle around the whole block, whichever of its cells you pass. For a 1x1 cell it returns the same rect as `getCellBounds`.
 
 <RecipeDemo code="get-block-bounds" height={300} />
 
 <a id="spine-big-symbols"></a>
 
-## Big symbols with Spine
+### Spine art
 
-Same 2x2 anchor mechanic, every cell a Spine skeleton; the bigWild reuses the wild rig scaled to the larger block.
+The same 2x2 anchor mechanic with a Spine skeleton in every cell. The big wild reuses the wild rig, scaled to the size of the block.
 
 <RecipeDemo code="spine-big-symbols" height={300} />
 
-## MultiWays
+<a id="big-symbols-horizontal-block"></a>
 
-Per-spin cell variation: each reel lands on a different cell count and the total ways is the product of the per-reel cells.
+### Horizontal reels
 
-Call `setShape(cellsPerReel)` before `setResult()` on every spin.
+A 2x3 block on a set built with `.orientation('horizontal')`, outlined on landing with `getBlockBounds`. `size: { reels, cells }` is in index space and does not rotate. `reels` always counts across reels, and `cells` always counts along the strip.
 
-<RecipeDemo code="multiways" height={300} />
+The screen shape flips with the orientation. `{ reels: 2, cells: 3 }` is 2 wide and 3 tall on a vertical set, and 2 tall and 3 wide here. `getBlockBounds` works in screen space, so its rect flips too.
 
-## MultiWays cascade
+<RecipeDemo code="big-symbols-horizontal-block" height={300} />
 
-Per-spin shape on a strip-spin landing, then cascade tumbling that pops ways winners and drops new symbols in from above.
+## Blocks in the buffer
 
-Call `setShape` before `setResult`, and open with `spin({ mode: 'standard' })` so AdjustPhase reshapes between SPIN and STOP.
+A block's anchor can sit outside the visible window, so only part of the block shows when the reel lands. The game then brings the rest into view.
 
-<RecipeDemo code="multiways-cascade" height={300} />
+<a id="big-symbol-partial-land"></a>
+
+### Land partly in the buffer
+
+A 1x3 block lands with its anchor in `bufferStart`, so only its bottom cell shows, at cell 0. A downward nudge drags the rest into view.
+
+<RecipeDemo code="big-symbol-partial-land" height={300} />
+
+<a id="big-symbol-held-respin"></a>
+
+### Nudge in, then hold for a respin
+
+The partly hidden wild is nudged into full view. Then the other reels respin with `holdReels`, so the block stays where it is.
+
+<RecipeDemo code="big-symbol-held-respin" height={300} />
+
+<a id="big-symbols-reverse-tail"></a>
+
+### Reverse reels
+
+The same partial landing on a reel built with `.direction('reverse')`, which rolls up. The block is anchored at the last visible cell with its body in `bufferEnd`, and a `'forward'` nudge, which moves up on this reel, drags it into full view.
+
+Buffers are positional and do not follow the travel direction. `bufferStart` is above and `bufferEnd` is below in both directions, so a reel that feeds from the bottom shows its partial block out of `bufferEnd`.
+
+<RecipeDemo code="big-symbols-reverse-tail" height={300} />
+
+<a id="big-symbol-cascade-fall"></a>
+
+### Fall into view in a cascade
+
+A tall wild lands with its anchor in `bufferStart` and only its tail showing. The cells below it win, and the wild falls into full view as they clear. The second demo does the same with a 2x2 block across two reels.
+
+The anchor's fall distance must equal the number of winning cells cleared below it, or the block snaps instead of falling.
+
+<RecipeDemo code="big-symbol-cascade-fall" height={300} />
+<RecipeDemo code="big-symbol-cascade-fall-2x2" height={300} />
+
+## Blocks during the spin
+
+<a id="tall-symbols-in-spin"></a>
+
+### Tall blocks in the spin
+
+A 1x3 block with a weight scrolls past on reel 0 while it spins, and a scatter only ever scrolls past on reel 4. Both weights are set in per-reel pools: `0` in the base `weights()` table, and raised on the one reel that may show the symbol. Only blocks one reel wide can have a weight. Wider blocks still appear only on landing, because the random fill feeds one reel at a time.
+
+A narrower pool cannot lift an `exclude` set by a wider one, but it can raise a weight of `0`. To allow a symbol on one reel only, use weights, not `exclude`. A weighted block also needs `bufferSymbols({ start: size.cells })`, and the builder checks for it. The block enters a forward reel bottom first and leaves a reverse reel anchor first, and the buffer slots hold its covered cells while the anchor that draws them is off the strip.
+
+<RecipeDemo code="tall-symbols-in-spin" height={340} />
+
+<a id="tall-peek"></a>
+
+### Peek, then bring it up
+
+Two scatters slow reel 4 into an anticipation crawl, and the weighted 1x3 keeps sliding past during it. The result lands the block with its head on the last visible cell and its body in `bufferEnd`, so the set uses `bufferSymbols({ start: 3, end: 2 })`: `start` for the weight and `end` for the peek. The two demos then bring the block up in different ways.
+
+- Nudge up: `nudge(reel, { distance: 2, direction: 'reverse' })` moves the whole column, and the two cards above scroll out through the top.
+- Expand up: the landed anchor is already one sprite three cells tall, with its body under the mask. Tween its view up two cells so it grows over the cards, then call `setColumn(reel, { visible: ['tall', ...] })` to commit the block at the top of the column. The rest of the board stays put. In engine terms this is an expanding wild.
+
+`getBlockBounds` reports the whole block even while part of it is in a buffer. The mask does the clipping.
+
+<RecipeDemo code="tall-peek-nudge-up" height={320} />
+<RecipeDemo code="tall-peek-expand-up" height={320} />
+
+## Reel shapes
 
 <a id="pyramid-shape"></a>
 
-## Per-reel shape (pyramid)
+### Pyramid
 
-A non-uniform reel set (3-5-5-5-3), static shape declared at build via `visibleCellsPerReel`.
+A set whose reels show 3, 5, 5, 5 and 3 cells. The shape is fixed at build time with `visibleCellsPerReel`.
 
 <RecipeDemo code="pyramid-shape" height={300} />
 
 <a id="spine-pyramid-shape"></a>
 
-## Pyramid shape with Spine
+### Pyramid with Spine
 
-The same 3-5-5-5-3 pyramid with every cell a Spine skeleton, crisp at every per-reel cell size.
+The same pyramid with a Spine skeleton in every cell. The rigs stay sharp at each reel's cell size.
 
 <RecipeDemo code="spine-pyramid-shape" height={300} />
 
+### MultiWays
+
+Each reel lands on a different cell count every spin, and the number of ways is the product of the cell counts.
+
+Call `setShape(cellsPerReel)` before `setResult()` on every spin.
+
+<RecipeDemo code="multiways" height={300} />
+
+### MultiWays cascade
+
+A MultiWays shape on a normal strip landing, followed by a cascade that removes the ways winners and drops new symbols in from above.
+
+Call `setShape` before `setResult`, and start the round with `spin({ mode: 'standard' })` so `AdjustPhase` reshapes the reels between the spin and stop phases.
+
+<RecipeDemo code="multiways-cascade" height={300} />
+
 <a id="sticky-wild-multiways"></a>
 
-## Sticky wild on MultiWays
+### Sticky wild on MultiWays
 
-A pin survives every reshape via its remembered `originCell` (the default `migration: 'origin'`): it clamps when the shape shrinks and restores when it grows back. `'frozen'` is the opposite: each clamp rewrites the origin, so it never climbs back.
+A pin keeps its place across reshapes through its remembered `originCell`, with the default `migration: 'origin'`. It moves in when the reel shrinks and returns when the reel grows back. With `'frozen'`, each clamp rewrites the origin, so the pin never moves back.
 
 <RecipeDemo code="sticky-wild-multiways" height={300} />

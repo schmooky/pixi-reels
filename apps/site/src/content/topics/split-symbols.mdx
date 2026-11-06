@@ -14,25 +14,26 @@ tags:
 ---
 
 When a symbol splits, the cell it stands on becomes two or more cells. The
-server says what the symbol splits into. You hand that list to `splitSymbol`
-with the reel and cell of the symbol, and it becomes one symbol per cell. The
-cells above and below keep what they had. Any symbol one reel wide can split,
-a plain 1x1 or a stacked big symbol in full view. The call returns the new
-cells, so the game can animate them.
+server says what the symbol splits into. Pass that list to `splitSymbol` with
+the symbol's reel and cell, and each id gets its own cell. The cells above and
+below keep their symbols. Any symbol one reel wide can split, either a 1x1 or
+a stacked big symbol in full view. The call returns the new cells, so the
+game can animate them.
 
 ```ts
 const { reelIndex, from, count } = reelSet.splitSymbol(reel, cell, ids, { height: 'grow' });
 ```
 
-The `height` option says what gives when a reel gains cells:
+The `height` option sets what happens to the reel when it gains cells:
 
-- `'grow'`, the default. The cells keep their size and the reel grows. The
-  board re-anchors around it the way the builder's `reelAnchor` says.
-- `'keep'`. The reel keeps its height and every cell on it shrinks to share
-  it, as cells on a MultiWays reel do. Nothing else moves. This is the default
-  on MultiWays, where a reel's height is fixed.
+- `'grow'` is the default. The cells keep their size and the reel gets
+  taller. The board re-anchors around it as the builder's `reelAnchor` says.
+- `'keep'` keeps the reel's height, and every cell on it shrinks to share
+  that height, as cells on a MultiWays reel do. Nothing else moves. This is
+  the default on MultiWays, where a reel's height is fixed.
 
 `resetColumns()` puts every reel back to the cells it was built with, at
-their original size. Both calls sit on `setColumn`, which shows a column of
-any length on one reel. The [infinity reels page](/mechanics/infinity-reels/#stacked-symbols-that-split)
-has the short version of the same mechanic.
+their original size. Both calls are built on `setColumn`, which shows a
+column of any length on one reel. The
+[infinity reels page](/mechanics/infinity-reels/#stacked-symbols-that-split)
+covers splits of stacked symbols on a board that grows.

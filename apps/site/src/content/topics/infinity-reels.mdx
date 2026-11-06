@@ -21,16 +21,14 @@ guides:
 
 In an infinity reels slot the base spin lands, and while the win keeps going
 the board grows sideways, a reel at a time, for as long as the server's
-result says. In pixi-reels that is one call per round, `expand()`. The
-demos are further down this page.
+result says. In pixi-reels that is one call per round, `expand()`.
 
 <a id="1-the-servers-result"></a>
 
 ## The server's result
 
-The server decides everything: the base board and every reel the board
-grows by, in order. Each reel is one `ColumnTarget`, the same shape
-`setResult()` takes.
+The server decides the base board and every reel the board grows by, in
+order. Each reel is one `ColumnTarget`, the same shape `setResult()` takes.
 
 ```ts
 interface InfinityResult {
@@ -57,24 +55,23 @@ await reelSet.expand({
 });
 ```
 
-Each step adds its reels, spins only those with every earlier reel held, and
-lands them on their columns. The call awaits your hooks, so a camera pan or a
-win readout plays before the next step. It validates every column before the
-first reel is added, so a bad result throws on an untouched board.
+Each step adds its reels, spins only those while every earlier reel is held,
+and lands them on their columns. The call awaits your hooks, so a camera pan
+or a win readout finishes before the next step. It validates every column
+before the first reel is added, so a bad result throws before the board
+changes.
 
 <a id="3-next-round-shrink-back"></a>
 
-## Next round: shrink back
+## Shrink back next round
 
 ```ts
 reelSet.removeReels(); // back to the reels the builder made; a no-op when the board did not grow
 ```
 
-That is the whole mechanic. The rest of this page is choices.
-
 <a id="rows-can-grow-too"></a>
 
-## Rows can grow too
+## Growing rows
 
 `addRows(count, { cells })` makes every reel `count` rows taller at its own
 cell size, and the viewport and mask grow with it. The `cells` option is what
@@ -104,8 +101,8 @@ On MultiWays the rows are each reel's shape. The length of a column's
 
 Some infinity slots land a symbol stacked two to four cells tall. When it
 wins, the stack splits into more single symbols than it had cells, and its
-reel grows past the frame. A stack is a big symbol one reel wide. The server
-says what it splits into.
+reel grows past the frame. A stack is a big symbol one reel wide, and the
+server says what it splits into.
 
 ```ts
 // .symbolData({ Q3: { weight: 0, size: { reels: 1, cells: 3 } } })
@@ -122,15 +119,15 @@ Any symbol one reel wide can split, a 1x1 too. To keep the reel's height
 instead, with its cells shrinking to share it, pass `{ height: 'keep' }`.
 That is the default on MultiWays, where a reel's height is fixed. For any
 other change to one reel, `setColumn` shows a column of any length. The
-[splitting symbols page](/mechanics/split-symbols/) shows both modes side
-by side, a tap-to-split playground and splits on MultiWays.
+[split symbols page](/mechanics/split-symbols/) compares the two modes and
+has a demo where you tap to split and a demo of splits on MultiWays.
 
 <a id="ways-count-them-and-draw-them"></a>
 
-## Ways: count them and draw them
+## Counting and drawing ways
 
-The library computes no wins (ADR 007). The server does. Two things help you
-show them.
+The library computes no wins (ADR 007). The server does. The library helps
+you show them in two ways.
 
 The board's ways is the product of the reels' row counts:
 
@@ -143,7 +140,7 @@ Eight reels of three rows is 6,561 ways. Eight MultiWays reels of seven is
 
 `WinLines` in `pixi-reels/debug` draws a payway as a lattice: every winning
 cell joined to every winning cell on the next reel. A win of millions of ways
-is still a few dozen segments. It draws the cells you hand it.
+is still a few dozen segments. It draws the cells you pass it.
 
 ```ts
 import { WinLines } from 'pixi-reels/debug';
@@ -153,19 +150,19 @@ lines.ways(win.perReel); // winning cell indices per reel, from your server: [[0
 reelSet.events.on('spin:start', () => lines.clear());
 ```
 
-The demos on this site stand in for the server with `evaluateWays()` and
-`countWays()` from `@pixi-reels/kit/ways`. Copy them if you want the same
+The demos on this site use `evaluateWays()` and `countWays()` from
+`@pixi-reels/kit/ways` in place of a server. Copy them if you want the same
 left-to-right ways math in a prototype.
 
 <a id="skip"></a>
 
 ## Skip
 
-The steps are one round. The first `skipSpin()` lands the step in flight and
-speeds up the rest: the fastest profile in standard mode, and in cascade mode
-every later step lands at once. A press between steps, while a hook runs,
-carries to the next step. To land everything still to come in one go, abort
-the expansion's `signal`.
+The steps count as one round. The first `skipSpin()` lands the step in flight
+and speeds up the rest. In standard mode they run on the fastest profile, and
+in cascade mode every later step lands at once. A press between steps, while
+a hook runs, carries over to the next step. To land everything still to come
+at once, abort the expansion's `signal`.
 
 An aborted expansion lands the remaining reels in one step, at the height the
 board has at that moment. If your rows grow during the expansion, slam each

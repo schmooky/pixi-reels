@@ -2,23 +2,41 @@
 title: Nudge
 ---
 
-Each demo nudges a landed reel by N positions to bring in symbols you supply, and changes the pacing or how a press stops it.
+Each demo shifts a reel that has already landed by a few positions and brings in symbols you choose. The first one is a single nudge. The rest cover nudging several reels, presenting the win, big symbols, other reel directions and cutting a nudge short.
 
 <a id="nudge"></a>
+<a id="nudge-a-reel"></a>
 
-## Nudge a reel
+## Single nudge
 
-Shift one reel after it lands; `incoming` is the final visible order, top-down. Below: the base nudge, then the same row of wilds dropped sequentially (three beats) vs in parallel (one beat).
+After the reels land, reel 1 nudges `'forward'` by one and a wild enters at the top, then reel 3 nudges `'reverse'` by one and a wild enters at the bottom. `incoming` lists the symbols in their final order on the strip, top to bottom on a vertical set.
 
 <RecipeDemo code="nudge" height={300} />
+
+<a id="nudge-several-reels"></a>
+
+## Several reels
+
+The same row of wilds nudged into reels 1 to 3 in three ways. The engine output is the same each time; only the pacing changes.
+
+### One after another
+
+Each `await` waits for the previous reel to land, so the player sees three separate reveals. The total time is the number of reels times the duration.
+
 <RecipeDemo code="nudge-sequential" height={300} />
+
+### All at once
+
+`Promise.all` starts every tween on the same frame and the wilds arrive together. The total time is one duration.
+
 <RecipeDemo code="nudge-parallel" height={300} />
 
 <a id="nudge-stagger"></a>
+<a id="staggered-nudge-wave-reveal"></a>
 
-## Staggered nudge: wave reveal
+### Staggered
 
-`Promise.all` with a per-reel `startDelay` fires every reel's tween concurrently for a wave reveal. Validation still throws synchronously.
+`Promise.all` with a per-reel `startDelay`. The tweens run at the same time but start one after another, so the wilds arrive in a wave. Bad arguments still throw at the call; only the movement waits.
 
 <RecipeDemo code="nudge-stagger" height={300} />
 
@@ -26,53 +44,66 @@ Shift one reel after it lands; `incoming` is the final visible order, top-down. 
 
 ## Spotlight after a nudge
 
-Land a near-miss, parallel-nudge three reels to complete a wild line, then run `SymbolSpotlight` on the new winners.
+The reels land one wild short of a line. Three reels nudge in parallel to complete it, then `SymbolSpotlight` presents the new winning cells.
 
 <RecipeDemo code="nudge-spotlight" height={300} />
 
 <a id="nudge-big-symbol"></a>
+<a id="nudge-through-a-big-symbol"></a>
 
-## Nudge through a big symbol
+## Big symbols
 
-A 1xH block on the target reel is nudged through as a unit; the second demo drags a tail-visible block fully into view.
+A 1xH block on the target reel moves as one piece. In the first demo a 1x2 wild nudges down by two, so its lower half moves into the buffer below the window, then up by one into full view. In the second the block nudges up so only its lower half shows, then back down into full view.
 
-Only single-reel (`size.reels === 1`) blocks can be nudged; cross-reel blocks throw.
+Only blocks one reel wide (`size.reels === 1`) can be nudged. A block that spans reels throws.
 
 <RecipeDemo code="nudge-big-symbol" height={300} />
 <RecipeDemo code="nudge-tail-reveal" height={300} />
 
+<a id="nudge-other-directions"></a>
+
+## Other reel directions
+
+`direction` is relative to the reel's own axis, so the nudge code is the same on any set. What changes is where on screen the new symbol enters.
+
 <a id="nudge-horizontal"></a>
+<a id="nudge-a-horizontal-set"></a>
 
-## Nudge a horizontal set
+### Horizontal set
 
-On `.orientation('horizontal')` a reel is a screen row, so a nudge shifts it sideways. One press nudges row 0 `'forward'` (a wild enters at the left edge) and row 2 `'reverse'` (a wild enters at the right).
-
-`incoming` is start-to-end order, which reads left-to-right here, not top-down.
+On `.orientation('horizontal')` a reel is a screen row, so a nudge shifts it sideways. One press nudges row 0 `'forward'`, where a wild enters at the left edge, and row 2 `'reverse'`, where a wild enters at the right. `incoming` reads left to right here.
 
 <RecipeDemo code="nudge-horizontal" height={300} />
 
 <a id="nudge-reverse-rollup"></a>
+<a id="nudge-on-a-roll-up-set"></a>
 
-## Nudge on a roll-up set
+### Reels that spin up
 
-Two wilds land on the middle line and the third stops one cell below it; a `'forward'` nudge on a `.direction('reverse')` reel travels upward and rolls it onto the line, which then spotlights.
-
-`direction` is relative to the reel's own axis, so `'forward'` is up here and the incoming symbol arrives at the bottom cell.
+Two wilds land on the middle line and the third stops one cell below it. On a `.direction('reverse')` reel a `'forward'` nudge travels upward, so the incoming symbol enters at the bottom cell and the wild rolls onto the line, which then lights up.
 
 <RecipeDemo code="nudge-reverse-rollup" height={300} />
 
-<a id="nudge-abort"></a>
+<a id="nudge-stopping"></a>
 
-## Abort a nudge
+## Cutting a nudge short
 
-Cancel a running nudge via `NudgeOptions.signal`. The strip still snaps to landed, but `nudge()` rejects with `AbortError` and `nudge:cancelled` fires.
-
-<RecipeDemo code="nudge-abort" height={300} />
+Both ways end with the strip where the nudge was going. They differ in what the promise does.
 
 <a id="nudge-skip"></a>
+<a id="skip-an-in-flight-nudge"></a>
 
-## Skip an in-flight nudge
+### Skip
 
-`reelSet.skipNudge(reel)` fast-forwards a running nudge to its landed state; `nudge()` resolves normally, so the success path still runs.
+`reelSet.skipNudge(reel)` jumps a running nudge to its end. `nudge()` resolves as usual, so the success path still runs. Use it when the win plays next.
 
 <RecipeDemo code="nudge-skip" height={300} />
+
+<a id="nudge-abort"></a>
+<a id="abort-a-nudge"></a>
+
+### Abort
+
+Abort through `NudgeOptions.signal`. The strip still snaps to its landed position, but `nudge()` rejects with `AbortError` and `nudge:cancelled` fires. Use it when you are tearing the feature down.
+
+<RecipeDemo code="nudge-abort" height={300} />

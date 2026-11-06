@@ -1,75 +1,113 @@
 ---
 title: Anticipation
 ---
-## Anticipate a reel
 
-Slow the closing reels (3 and 4) to build tension before they land.
+<a id="anticipate-a-reel"></a>
+
+## Slow the last reels
+
+Two scatters land on reels 0 and 2, and `setAnticipation([3, 4])` slows the last two reels so they land late.
 
 <RecipeDemo code="anticipate-a-reel" />
 
-## Anticipation teaser
-
-Pair setAnticipation with a `bufferStart` prefill so a chosen symbol sits at the top edge, approaching but never landing, while the slow reels decelerate.
-
-<RecipeDemo code="anticipation-teaser" />
-
-<a id="anticipation-reverse-teaser"></a>
-
-## Teaser on a reel that spins up
-
-The same teaser on a `direction('reverse')` set. Buffers are geometric, so `bufferStart` is still the slot above the window, and on a reverse reel that is the side symbols have already left.
-
-Park the teaser on the feed edge, not on `bufferStart` out of habit. `reel.axis.feedEdge` reports `'start'` on a forward reel and `'end'` on a reverse one, so one branch covers both.
-
-<RecipeDemo code="anticipation-reverse-teaser" />
-
 <a id="scatter-anticipation"></a>
+<a id="scatter-driven-anticipation"></a>
 
-## Scatter-driven anticipation
+## Choose the reels from scatters
 
-Pick the tease reels straight from the result grid with anticipationForScatters.
+`anticipationForScatters` reads the result grid and returns the reels to tease. The demo alternates its two modes. `'all-remaining'` teases every reel after the one where the scatter count reaches `trigger`, empty reels included. `'scatter-only'` teases only the reels that hold a scatter, and the others stop as usual.
 
 <RecipeDemo code="scatter-anticipation" />
 
-<a id="anticipation-horizontal-scatter"></a>
+<a id="anticipation-pacing"></a>
 
-## Tension on a horizontal set
-
-Scatter-driven anticipation with the strips running sideways. `anticipationForScatters` scans reels 0, 1, 2, 3 and `setAnticipation` holds the trailing ones, exactly as on a vertical set. Reel index is orientation-neutral, so no tension code branches.
-
-What changes is where those reels sit. On a horizontal set reels march down the screen, so "the last two reels tease" plays as the bottom two rows crawling sideways, not as the rightmost columns.
-
-<RecipeDemo code="anticipation-horizontal-scatter" height={340} />
+## Pacing several reels
 
 <a id="staggered-anticipation"></a>
+<a id="staggered--sequential-anticipation"></a>
 
-## Staggered / sequential anticipation
+### One after another
 
-Tease reels one after another instead of all slowing at once.
+`setAnticipation(reels, 'sequential')` holds each teasing reel until the one before it has landed, instead of slowing them all at once.
 
 <RecipeDemo code="staggered-anticipation" />
 
-## Slowing anticipation
+<a id="slowing-anticipation"></a>
 
-Each teasing reel crawls slower than the last, then stops exactly there.
+### Slower on each reel
+
+Each teasing reel slows further than the last, from 0.5x to 0.1x of spin speed, holds longer, and lands at that slow speed without returning to full speed first.
 
 <RecipeDemo code="slowing-anticipation" />
 
+<a id="anticipation-teaser"></a>
+
+## Teaser symbol
+
+`setAnticipation` plus a `bufferStart` prefill. A chosen symbol sits in the slot above the window while the slow reels decelerate, so the player sees it approach, but it never lands.
+
+<RecipeDemo code="anticipation-teaser" />
+
 <a id="turbo-anticipation"></a>
+<a id="anticipation-in-turbo"></a>
 
-## Anticipation in turbo
+## Turbo
 
-Keep the tease playing in Turbo / SuperTurbo with a duration override (the SuperTurbo profile sets anticipationDelay to 0, so a plain call skips the tease).
+The SuperTurbo profile sets `anticipationDelay` to 0, so a plain `setAnticipation` call skips the tease. Pass a `duration` override and the tease plays in every speed mode.
 
 <RecipeDemo code="turbo-anticipation" />
 
+<a id="anticipation-skipping"></a>
+
+## Skipping the tease
+
+<a id="skip-anticipation"></a>
+<a id="skip-the-tease"></a>
+
+### Skip at any point
+
+A long sequential tease. A press mid-tease slams the reels onto the result.
+
+<RecipeDemo code="skip-anticipation" />
+
+<a id="protected-anticipation"></a>
+<a id="skip-that-cannot-hide-the-tease"></a>
+
+### Protected tease
+
+The same long tease, but the first press only lands the reels around it. `protect: 'once'` makes sure both scatters are on screen and the slowdown has visibly started before a second press can end it.
+
+Call `setAnticipation` before `setResult`. A press before the result arrives is queued by `requestSkip()` and fires the moment the result comes in, so the tease has to be registered by then or there is nothing to protect.
+
+<RecipeDemo code="protected-anticipation" />
+
+`protect: 'stepwise'` moves the tease on by one reel per press instead of ending it in one go. Partial slams, per-reel spin floors and the case for protecting a tease over slowing the skip are on [Skip and slam](/mechanics/skip/).
+
+<a id="spine-scatter-jaw-anticipation"></a>
+<a id="scatter-jaw-anticipation"></a>
+
+## Spine scatter animation
+
+The scatter skeleton's own near-win clips. The leftmost scatter snaps its jaw, the loop holds while the tease runs, and the rightmost plays the result as it lands. Spins alternate between a hit and a miss.
+
+<RecipeDemo code="spine-scatter-jaw-anticipation" height={460} />
+
+<AssetCredit studio="Thunderkick" />
+
+<a id="anticipation-shaping"></a>
+
+## Shaping the slowdown
+
+The default tease only slows down. These demos replace that shape with explicit speed segments, anchor the tease to a number of symbols, or limit acceleration for the whole spin.
+
 <a id="anticipation-surge-curve"></a>
+<a id="shape-the-tease-surge-then-crawl"></a>
 
-## Shape the tease: surge, then crawl
+### Surge, then crawl
 
-The stock tease only decelerates, and an ease applied to a speed is a step in acceleration. `power2.out` puts peak deceleration on the first frame, so the reel reads as being set to a lower speed rather than slowing down.
+An ease applied to a speed changes the acceleration in one step. With `power2.out` the hardest deceleration is on the first frame, so the reel looks like it was switched to a lower speed instead of slowing down.
 
-`curve` replaces the fixed shape with explicit legs. Speeds are multiples of `spinSpeed`, so `2` is a real surge and `0.08` a crawl; segment eases default to `power2.inOut`, which ramps the acceleration in and out.
+`curve` replaces the fixed shape with explicit segments. Speeds are multiples of `spinSpeed`, so `2` is a real surge and `0.08` a crawl. Segment eases default to `power2.inOut`, which ramps the acceleration in and out.
 
 ```ts
 reelSet.setAnticipation([2, 3, 4], {
@@ -81,88 +119,89 @@ reelSet.setAnticipation([2, 3, 4], {
 });
 ```
 
-`curve` and `slowdown` together throw, because `slowdown` is shorthand for a two-leg curve. The profile's `anticipationDelay` still gates whether the tease runs at all, so Turbo needs a `duration` override; the curve's own durations set the length.
+Passing `curve` and `slowdown` together throws, because `slowdown` is shorthand for a two-segment curve. The profile's `anticipationDelay` still decides whether the tease runs at all, so Turbo needs a `duration` override. The curve's own durations set the length.
 
 <RecipeDemo code="anticipation-surge-curve" height={400} />
 
 <a id="anticipation-curve-per-reel"></a>
+<a id="a-different-curve-per-reel"></a>
 
-## A different curve per reel
+### A curve per reel
 
-Two curves of different lengths have no meaningful midpoint, so `curve` takes a function, `(order, total) => AnticipationSegment[]`, instead of interpolating.
+Two curves of different lengths have no sensible midpoint, so instead of interpolating, `curve` takes a function, `(order, total) => AnticipationSegment[]`.
 
-`order` is the reel's place in the anticipation set, not its index. `setAnticipation([4, 2, 3], ...)` hands `order: 0` to reel 4, matching `slowdown` and `protect: 'stepwise'`.
+`order` is the reel's position in the anticipation set, not its index. `setAnticipation([4, 2, 3], ...)` passes `order: 0` to reel 4, the same as `slowdown` and `protect: 'stepwise'` do.
 
 <RecipeDemo code="anticipation-curve-per-reel" />
 
 <a id="anticipation-cells"></a>
+<a id="tease-for-n-symbols-not-n-milliseconds"></a>
 
-## Tease for N symbols, not N milliseconds
+### Tease for a number of symbols
 
-`duration` is a time budget, so how far a reel moves depends on its speed. When the tease is choreographed around symbols passing the window ("three more and it lands"), anchor to travel instead: `cells: n` ends it after n symbol pitches, read off a monotonic odometer (`reel.travelledCells`) that survives the snap at the end of every spin. `cells` takes the same function-of-order form as `curve`.
+`duration` is a time budget, so how far a reel moves depends on its speed. When the tease is timed to symbols passing the window, as in "three more and it lands", use `cells: n`. It ends the tease after n symbol pitches, measured on `reel.travelledCells`, a counter that only goes up and is not reset by the snap at the end of each spin. `cells` also accepts a function of order, like `curve`.
 
-The anchor applies to the final leg. Earlier legs always play in full, or a fast opening segment would silently delete the ones after it. `duration` is the backstop on that leg, since a reel at rest can never reach a travel target.
+The count applies to the last segment. Earlier segments always play in full, otherwise a fast opening segment could use up the count and skip the ones after it. `duration` is the backstop on that segment, since a reel at rest never reaches a travel target.
 
 <RecipeDemo code="anticipation-cells" />
 
 <a id="anticipation-drive"></a>
+<a id="the-gas-pedal-bounded-acceleration"></a>
 
-## The gas pedal: bounded acceleration
+### Limit acceleration
 
-An ease shapes only the transition it was written for. `motionModel('drive', ...)` bounds acceleration instead: phases assign `reel.targetSpeed` and `Reel.update` walks the speed toward it, so every transition inherits the same feel, interruption is a single reassignment, and `jerkFrames` ramps the acceleration itself.
+An ease shapes only the transition it is written for. `motionModel('drive', ...)` limits acceleration instead. Phases set `reel.targetSpeed`, and `Reel.update` moves the speed toward it, so every transition gets the same feel, an interruption is a single new target, and `jerkFrames` ramps the acceleration itself.
 
 ```ts
 builder.motionModel('drive', { accelFrames: 20, decelFrames: 34, jerkFrames: 260 })
 ```
 
-Bounds are profile-relative, frames to the active profile's full speed, because the presets run `spinSpeed` 30 / 50 / 80 and one absolute px/frame^2 bound would make SuperTurbo start slower than Normal. The absolute `{ accel, decel, jerk }` form still works for a single-profile game; mixing the two throws.
+The limits are relative to the profile, in frames to reach the active profile's full speed. The presets run `spinSpeed` 30, 50 and 80, so one absolute px/frame^2 limit would make SuperTurbo start slower than Normal. The absolute `{ accel, decel, jerk }` form still works for a game with one profile; mixing the two throws.
 
-This is build-time only and opt-in; the default `'tween'` model is byte-for-byte unchanged. Landing and a skip press stay instantaneous, exactly as they are under `'tween'`. A segment the drive cannot reach in time says so on the notice channel.
+It is set at build time and off by default. The default `'tween'` model is unchanged. Landing and a skip press are instant, as they are under `'tween'`. If the drive cannot reach a segment's speed in time, it reports that on the notice channel.
 
 <RecipeDemo code="anticipation-drive" height={440} />
 
 <a id="anticipation-audio"></a>
+<a id="driving-tease-audio"></a>
 
-## Driving tease audio
+## Tease audio
 
-`anticipation:reel` and `anticipation:reelEnd` bracket a tension loop. `anticipation:segment` (`{ reelIndex, index, total, speed, targetSpeed }`) fires once per curve leg, so a surge can sound different from the crawl after it without polling for the boundary. For a pitch ramp that tracks the actual slow-down, sample `reelSet.reels[i].speedNormalized` from your own ticker: `1` at full blur, `0` at rest, above `1` during a surge.
+`anticipation:reel` and `anticipation:reelEnd` mark the start and end of a reel's tease, which is where a tension loop starts and stops. `anticipation:segment` (`{ reelIndex, index, total, speed, targetSpeed }`) fires once per curve segment, so a surge can sound different from the crawl after it. For a pitch ramp that follows the actual slowdown, read `reelSet.reels[i].speedNormalized` from your own ticker. It is `1` at full spin speed, `0` at rest and above `1` during a surge.
 
-<a id="skip-anticipation"></a>
+<a id="anticipation-other-directions"></a>
 
-## Skip the tease
+## Other reel directions
 
-Let the player slam through a long anticipation at any point.
+Reel indexes do not depend on orientation, so the anticipation code is the same. Only where the teasing reels sit on screen changes.
 
-<RecipeDemo code="skip-anticipation" />
+<a id="anticipation-horizontal-scatter"></a>
+<a id="tension-on-a-horizontal-set"></a>
 
-<a id="protected-anticipation"></a>
+### Horizontal set
 
-## Skip that cannot hide the tease
+Scatter-driven anticipation with the reels running sideways. `anticipationForScatters` and `setAnticipation` work as on a vertical set. Reels are stacked down the screen here, so the last two reels are the bottom two rows, and they slow while moving sideways.
 
-The same long tease, but the first press only lands the reels around it. `protect: 'once'` guarantees the two scatters are on screen and the build-up is visibly under way before a second press can end it.
+<RecipeDemo code="anticipation-horizontal-scatter" height={340} />
 
-Call `setAnticipation` before `setResult`. A press in the pre-result window is queued by `requestSkip()` and fires the instant the result arrives, so the tease has to be registered by then or there is nothing to protect.
+<a id="anticipation-reverse-teaser"></a>
+<a id="teaser-on-a-reel-that-spins-up"></a>
 
-<RecipeDemo code="protected-anticipation" />
+### Teaser on reels that spin up
 
-`protect: 'stepwise'` walks it forward one reel per press instead of ending it in one go. That, partial slams, per-reel spin floors, and why a protected tease beats a slower skip are all on [Skip and slam](/mechanics/skip/).
+The teaser on a `direction('reverse')` set. Buffers are geometric, so `bufferStart` is still the slot above the window, and on a reverse reel symbols have already left through that side.
 
-<a id="spine-scatter-jaw-anticipation"></a>
+Put the teaser on the feed edge instead. `reel.axis.feedEdge` is `'start'` on a forward reel and `'end'` on a reverse one, so one branch covers both.
 
-## Scatter jaw anticipation
-
-The rig's own near-win clips: the leftmost scatter snaps its jaw, holds the loop, and the rightmost lands the verdict.
-
-<RecipeDemo code="spine-scatter-jaw-anticipation" height={460} />
-
-<AssetCredit studio="Thunderkick" />
+<RecipeDemo code="anticipation-reverse-teaser" />
 
 <a id="near-miss"></a>
+<a id="fake-a-near-miss"></a>
 
-## Fake a near-miss
+## Faking a near-miss
 
-Place N-1 scatters plus anticipation on the reel that "almost" landed one.
+Place one scatter fewer than the trigger needs and tease the reel that would have held the last one. The result is always a loss.
 
-The grid always resolves to a loss. Engineered near-misses are restricted in some jurisdictions, so confirm with compliance before shipping.
+Some jurisdictions restrict engineered near-misses. Check with compliance before you ship one.
 
 <RecipeDemo code="near-miss" />

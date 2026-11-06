@@ -5,7 +5,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
-  title: 'Cell bounds. overlays, paylines & hit areas',
+  title: 'Cell rects',
   topic: 'cells-and-banners',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   needs: ['generic-symbols'],

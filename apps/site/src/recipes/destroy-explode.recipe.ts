@@ -6,7 +6,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
-  title: 'Cascade wins. present, destroy, refill',
+  title: 'Spine explosion',
   topic: 'cascade',
   tags: ['cascade', 'tumble', 'refill', 'anticipation', 'spine', 'thunderkick', 'horizontal', 'reverse', 'orientation', 'gravity'],
   height: 300,

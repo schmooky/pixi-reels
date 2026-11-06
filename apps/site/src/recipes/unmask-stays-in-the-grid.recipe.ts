@@ -6,7 +6,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
-  title: 'Symbol layering - zIndex, unmask, promote',
+  title: 'Buffer cells stay masked',
   topic: 'layers',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 400,

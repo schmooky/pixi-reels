@@ -2,86 +2,97 @@
 title: Symbol classes
 ---
 
-The symbol classes in the package, how to write your own, and how to animate one on a win. Art that overflows its cell is on [Layers](/mechanics/layers/), the blurred copies a reel spins on are on [Spinning art](/mechanics/spinning-art/).
+Production art comes first, then what you can do to a symbol after it lands. Placeholder classes and symbols for sideways sets are at the end. Art that overflows its cell is on [Layers](/mechanics/layers/). The blurred copies a reel shows while it spins are on [Spinning art](/mechanics/spinning-art/).
 
-<a id="card-symbol-debug"></a>
+## Production art
 
-## CardSymbol: debug / prototyping helper
+<a id="texture-atlas-symbols"></a>
 
-No-asset PIXI.Graphics symbol for recipes, mechanic tests, and prototypes; crisp at any cell size.
-Exported from the package, so a prototype needs no art at all:
-`import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels'`.
+### Sprites from an atlas
 
-This is debug scaffolding, not production art; ship SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol instead.
-
-<RecipeDemo code="card-symbol-debug" />
-
-<a id="phase-colors"></a>
-
-## PhaseCardSymbol: read the phase off the board
-
-A `CardSymbol` that is grey at rest and takes the colour of the phase its reel is running: sky for `start`, blue for `spin`, amber for `anticipation`, violet for `stop`, a green beat on landing. Register it like any symbol, then point one watcher at the reels: `PhaseCardSymbol.watch(reelSet.reels)` paints every card from the reels' own `phase:enter`, `landed` and `symbol:created` events, custom phases included, and returns the release.
-
-The card does not know its reel, so without the watcher it stays grey. `setPhase()` is public for anything else that knows the phase. `colors` overrides or extends `PHASE_CARD_COLORS`; a phase with no entry draws `other`.
-
-<RecipeDemo code="phase-colors" />
-
-<a id="empty-symbol"></a>
-
-## EmptySymbol: render nothing for a registered id
-
-Register EmptySymbol against an id to reserve a grid slot that occupies a strip slot but draws zero pixels: the canonical blank field for hold-and-win boards.
-
-<RecipeDemo code="empty-symbol" />
-
-## Texture atlas symbols
-
-Load sprite symbols from a TexturePacker atlas: one atlas file, 80+ frames, one GPU upload.
+Sprite symbols loaded from one TexturePacker atlas, so every frame comes from one file and one texture upload. Each id is registered with `BlurSpriteSymbol` from `@pixi-reels/kit`, which shows the atlas's blur frame while the reel spins.
 
 <RecipeDemo code="texture-atlas-symbols" />
 
-<a id="symbols-horizontal-resize"></a>
-
-## Authoring a symbol for a sideways set
-
-A hand-written `ReelSymbol` on a horizontal set, with wide non-square cells. Nothing in the class knows about the axis: `resize(width, height)` hands it screen pixels across and screen pixels down whichever way the strip travels, and the plate's upright marker and glyph stay upright while the strip scrolls along X.
-
-Travel changes motion; facing changes art; they never change each other. The engine never rotates a symbol container to fake an axis, so third-party symbol classes need no changes at all.
-
-The one orientation fact a symbol gets is `this.mainAxis` (`'y'` vertical, `'x'` horizontal), and it is there for effects that follow travel, motion blur being the one in the box. Do not lay out with it.
-
-<RecipeDemo code="symbols-horizontal-resize" />
-
-<a id="symbols-transposed-pair"></a>
-
-## The same symbols on both axes
-
-Four reels of three cells, built twice and landed with the identical grid. One symbol registration serves both sets; the only difference between the two builds is that `symbolSize` swaps its two numbers, because a horizontal board is the vertical one transposed.
-
-<RecipeDemo code="symbols-transposed-pair" height={380} />
-
-## Symbol transform
-
-A symbol morphs into a different (usually higher) one mid-round via setSymbolAt.
-
-Transform only after landing (spin:complete / spin:reelLanded); setSymbolAt throws mid-spin and on big-symbol anchors.
-
-<RecipeDemo code="symbol-transform" />
-
 <a id="spine-skins-3-4-4-4-4-3"></a>
+<a id="multi-skin-spine-tiers-on-a-compact-grid"></a>
 
-## Multi-skin Spine tiers on a compact grid
+### Spine skins
 
-One skeleton per symbol tier (a skin per id) with static-spin blur, on a gapless 3-4-4-4-4-3 grid.
+Each symbol tier is one Spine skeleton, and each id in the tier is a skin of it. The board is a gapless 3-4-4-4-4-3 grid. The skeletons are wrapped in `StaticSpinSymbol`, so the reels spin on blurred snapshots and no skeleton runs mid-spin.
 
 <RecipeDemo code="spine-skins-3-4-4-4-4-3" height={460} />
 
 <AssetCredit studio="Thunderkick" />
 
+## After the reels land
+
 <a id="paylines-custom-animation"></a>
+<a id="custom-per-symbol-animation"></a>
 
-## Custom per-symbol animation
+### Your own win animation
 
-Replace playWin() with your own GSAP timeline, styled per win.id.
+`WinPresenter` takes a `symbolAnim` callback that runs instead of `playWin()`. It gets the symbol, its cell and the win, so the animation can differ per `win.id`. Here the top line bounces harder than the other two.
 
 <RecipeDemo code="paylines-custom-animation" />
+
+<a id="symbol-transform"></a>
+
+### Transform a symbol
+
+A low symbol turns into a higher one after the reels stop. `reelSet.setSymbolAt(reel, cell, id)` swaps the one cell and leaves the rest of the reel alone. Call it after `spin:complete` or `spin:reelLanded`: it throws while the reel is spinning and on a big symbol's anchor.
+
+<RecipeDemo code="symbol-transform" />
+
+<a id="empty-symbol"></a>
+<a id="emptysymbol-render-nothing-for-a-registered-id"></a>
+
+## Blank cells
+
+`EmptySymbol` takes a slot on the strip and draws nothing. Register it under an id such as `'empty'` and weight it heavily, and most cells land blank. Hold & Win boards use it for the empty cells between coins.
+
+<RecipeDemo code="empty-symbol" />
+
+## Prototype symbols
+
+<a id="card-symbol-debug"></a>
+<a id="cardsymbol-debug--prototyping-helper"></a>
+
+### Cards without art
+
+`CardSymbol` draws a coloured card with a label using `Graphics`, so it needs no assets and stays sharp at any cell size. The package exports it with a ready deck: `import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels'`. Use it for prototypes and tests, and ship `SpriteSymbol`, `AnimatedSpriteSymbol` or `SpineSymbol` in the game.
+
+<RecipeDemo code="card-symbol-debug" />
+
+<a id="phase-colors"></a>
+<a id="phasecardsymbol-read-the-phase-off-the-board"></a>
+
+### Phase colours
+
+`PhaseCardSymbol` is a `CardSymbol` that is grey at rest and takes the colour of the phase its reel is in: sky for `start`, blue for `spin`, amber for `anticipation`, violet for `stop`, and green for a moment after landing. Use it to check phase timing by eye.
+
+Register it like any symbol, then call `PhaseCardSymbol.watch(reelSet.reels)`. The watcher colours every card from the reels' `phase:enter`, `landed` and `symbol:created` events, custom phases included, and returns a function that stops it. A card does not know its reel, so without the watcher it stays grey. `setPhase()` is public if something else knows the phase. `colors` overrides or extends `PHASE_CARD_COLORS`, and a phase with no entry uses `other`.
+
+<RecipeDemo code="phase-colors" />
+
+## Sideways sets
+
+<a id="symbols-horizontal-resize"></a>
+<a id="authoring-a-symbol-for-a-sideways-set"></a>
+
+### Writing a symbol class
+
+A hand-written `ReelSymbol` on a horizontal set with wide cells. The class has no orientation code. `resize(width, height)` is in screen pixels whichever way the strip travels, so the plate's marker and glyph stay upright while the strip scrolls along x. The engine never rotates a symbol container, so third-party symbol classes work unchanged.
+
+A symbol can read `this.mainAxis` (`'y'` vertical, `'x'` horizontal) for effects that follow travel, such as motion blur. Do not use it for layout.
+
+<RecipeDemo code="symbols-horizontal-resize" />
+
+<a id="symbols-transposed-pair"></a>
+<a id="the-same-symbols-on-both-axes"></a>
+
+### One registration for both axes
+
+Four reels of three cells, built once vertical and once horizontal, landing the same grid. Both sets use the same symbol registration. The builds differ only in `symbolSize`, whose two numbers swap, because a horizontal board is the vertical one transposed.
+
+<RecipeDemo code="symbols-transposed-pair" height={380} />

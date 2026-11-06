@@ -13,8 +13,8 @@ tags:
 ---
 
 The viewport clips the reels through a `MaskStrategy`, so buffer cells never
-show past the grid. Everything on this page is additive. The default
-`RectMaskStrategy` is unchanged.
+show past the grid. The default is `RectMaskStrategy`, and the strategies
+below are options you add on top.
 
 | Board | Strategy |
 |---|---|
@@ -27,4 +27,16 @@ show past the grid. Everything on this page is additive. The default
 | Hexes, holes, cut-outs | `PathMaskStrategy` |
 
 `inset(strategy, px)` shrinks any of them by a margin, and
-`composeMasks(a, b, ...)` unions several, your own strategies included.
+`composeMasks(a, b, ...)` joins several, your own strategies included.
+
+## Writing your own
+
+Implement `build(ctx)` and `update(g, ctx)`, set
+`version = MASK_STRATEGY_VERSION`, and pass it to `.maskStrategy(...)`. Try
+`PathMaskStrategy` first. A class is only worth it when it keeps state
+between draws.
+
+Two things to respect. `ctx.axis` matters because `rects` are in screen
+space in every orientation (`axis.toLocal(w, h)` gives `{ cross, main }`).
+`ctx.bleed` inflates the cross axis only. Add the optional `draw(g, ctx)`
+and your strategy composes like the built-in ones.

@@ -5,7 +5,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
-  title: 'Staggered / sequential anticipation',
+  title: 'One reel after another',
   topic: 'anticipation',
   tags: ['anticipation', 'tension', 'scatter', 'near-miss', 'spine', 'horizontal', 'reverse', 'curve', 'acceleration'],
   needs: ['hw-sprites', 'generic-symbols'],

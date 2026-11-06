@@ -10,7 +10,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 import { boardSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
-  title: 'Hold & Win: payer / doubler coin',
+  title: 'Payer coin',
   topic: 'hold-and-win',
   tags: ['hold-and-win', 'coins', 'collector', 'respin', 'spine', 'horizontal', 'reverse', 'orientation', 'rectangular', 'clovers'],
   height: 420,

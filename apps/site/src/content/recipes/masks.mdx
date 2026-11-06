@@ -1,80 +1,89 @@
 ---
 title: Reel windows
 ---
-## A rounded window
 
-`scope: 'set'` rounds the union bounding box. Safe at any cross gap, so it is the default.
+Each demo passes a mask strategy to `.maskStrategy(...)`. Rounded windows come first, then the helpers that trim or combine a mask, then a mask drawn from your own path.
+
+## Rounded corners
+
+<a id="a-rounded-window"></a>
+
+### The whole window
+
+`RoundedRectMaskStrategy` with `scope: 'set'` rounds the corners of the box around all the reels. It works at any cross gap, which is why it is the default scope.
 
 <RecipeDemo code="mask-rounded-set" />
 
 <a id="mask-rounded-reels"></a>
+<a id="each-reel-as-its-own-card"></a>
 
-## Each reel as its own card
+### Each reel as a card
 
-`scope: 'reel'` rounds every reel box instead.
+`scope: 'reel'` rounds every reel's box instead, so the reels read as separate cards.
 
-This needs a non-zero cross gap. At gap `0` neighbours share an edge and rounding both sides of it notches every seam. The strategy warns once.
+It needs a cross gap above `0`. At gap `0` neighbouring reels share an edge, and rounding both sides of it cuts a notch into every seam. The strategy warns once when it sees touching reels.
 
 <RecipeDemo code="mask-rounded-reels" />
 
 <a id="mask-outer-corners"></a>
+<a id="one-rect-per-reel-the-windows-corners-only"></a>
 
-## One rect per reel, the window's corners only
+### Outer corners only
 
-`scope: 'outer'` keeps one rect per reel, so buffer cells past a short reel stay hidden as with the default, and rounds a corner only where it sits on a corner of the union box: the first reel's outer pair, the last reel's outer pair, nothing in between. Inner edges stay square, so it is fine at cross gap `0`, where `scope: 'reel'` notches. `corners: { topLeft: true, ... }` narrows any scope to named screen corners.
+`scope: 'outer'` keeps one rect per reel, as the default mask does, so buffer cells past a short reel stay hidden. It rounds a corner only where it is also a corner of the box around all the reels: the outer pair on the first reel and on the last. The inner edges stay square, so it works at cross gap `0`, where `scope: 'reel'` notches. `corners: { topLeft: true, ... }` limits any scope to the named screen corners.
 
-On a jagged set the box corners may touch no reel, and then nothing rounds. Use `SilhouetteMaskStrategy` there.
+On a jagged set the corners of the box may not touch any reel, and then nothing is rounded. Use `SilhouetteMaskStrategy` there.
 
 <RecipeDemo code="mask-outer-corners" />
 
-<a id="mask-hold-and-win-cells"></a>
-
-## A mask per Hold & Win cell, from its row and column
-
-Every Hold & Win cell is its own 1x1 reel set with its own mask, and `cellMask` takes a function called once per cell with `{ reel, cell }` (column, row) and `{ cols, rows, corners }`. Return any strategy per cell: here a plain rect everywhere and one rounded corner on each of the four corner cells, so a gapless board clips as one rounded window built from fifteen masks. `corners` is that per-cell corner set precomputed, for the short form `(_, { corners }) => new RoundedRectMaskStrategy({ radius, corners })`.
-
-<RecipeDemo code="hold-and-win-outer-corners" height={360} />
-
 <a id="mask-silhouette"></a>
+<a id="rounding-a-jagged-board"></a>
 
-## Rounding a jagged board
+### Jagged boards
 
-A pyramid has no single rectangle to round: per-reel rounding notches the seams, bounding-box rounding hides the staircase. `SilhouetteMaskStrategy` walks the union outline and rounds every vertex, concave steps included via `concaveRadius`. A uniform set degrades to a rounded rect.
+A pyramid has no single rectangle to round. Rounding each reel notches the seams, and rounding the bounding box hides the staircase and shows buffer cells past the short reels. `SilhouetteMaskStrategy` follows the outline of all the reels together and rounds every corner of it. The inward corners, where a short reel meets a taller one, use `concaveRadius`. On a board with no steps it gives a plain rounded rect.
 
-Reels must butt together (cross gap `0`). With a gap they are disjoint; the strategy says so and falls back to per-reel rounded rects.
+The reels must touch, at cross gap `0`. With a gap the strategy warns and falls back to a rounded rect per reel.
 
 <RecipeDemo code="mask-silhouette-pyramid" />
 
-<a id="mask-path"></a>
+<a id="mask-hold-and-win-cells"></a>
+<a id="a-mask-per-hold--win-cell-from-its-row-and-column"></a>
 
-## Any shape, without a class
+### Hold & Win cells
 
-`PathMaskStrategy` takes a `(graphics, context) => void`. The context carries `rects`, `width`, `height`, `axis` and `bleed`. Do not call `g.clear()`; the strategy already did.
+Every Hold & Win cell is its own 1x1 reel set with its own mask. `cellMask` on the Hold & Win builder takes a function that is called once per cell with `{ reel, cell }` (column and row) and `{ cols, rows, corners }`, and returns that cell's strategy. Here every cell gets a plain rect except the four corner cells, which each round their one outer corner, so the gapless board clips as one rounded window made of fifteen masks. `corners` is the cell's corner set already worked out, for the short form `(_, { corners }) => new RoundedRectMaskStrategy({ radius, corners })`.
 
-`cut()` subtracts from the last shape already filled, so fill first. Draw the hole before filling and you get an empty mask and an invisible board, with no error.
+<RecipeDemo code="hold-and-win-outer-corners" height={360} />
 
-<RecipeDemo code="mask-path-custom" />
+## Trimming and combining
 
 <a id="mask-inset-compose"></a>
+<a id="insetting-and-composing"></a>
 
-## Insetting and composing
+### Inset and compose
 
-`inset(strategy, px)` shrinks any strategy's output (negative grows), the fix for art bleeding a pixel past the frame. Pass `{ top, right, bottom, left }` instead of one number when the frame's lips differ: `inset(new RoundedRectMaskStrategy({ radius: 43 }), { top: 4, bottom: 12 })`. Sides are screen sides in every orientation and an omitted side is untouched. `composeMasks(...)` unions several into the viewport's one mask, for a board plus a banner.
+`inset(strategy, px)` shrinks what any strategy draws by `px` on every side, and a negative value grows it. Use it when the art shows a pixel past the frame. `composeMasks(a, b, ...)` joins several strategies into the viewport's one mask. Here a rounded window inset by 4px is joined with a banner strip above the reels.
 
-Union only. A Graphics mask is the union of its filled shapes; there is no way to intersect or subtract two strategies. Use `.cut()` inside a `PathMaskStrategy` instead.
+`composeMasks` can only form a union, because a `Graphics` mask is the union of its filled shapes. To subtract, use `.cut()` inside a `PathMaskStrategy`.
 
 <RecipeDemo code="mask-inset-compose" />
 
 <a id="mask-inset-sides"></a>
 
-## A different trim per side
+### A different trim per side
 
-Frame art rarely has four equal lips. `inset(strategy, { top, right, bottom, left })` names the sides the way the artist measured them (screen sides in every orientation, an omitted side untouched), so a rounded window with a thick bottom lip is one wrapped strategy, not a hand-drawn path.
+Frame art rarely has four equal lips. `inset(strategy, { top, right, bottom, left })` trims each side by its own amount, for example `inset(new RoundedRectMaskStrategy({ radius: 43 }), { top: 4, bottom: 12 })`. Sides are screen sides in every orientation, and a side you leave out is not trimmed. Here the bottom lip is four times thicker than the top one.
 
 <RecipeDemo code="mask-inset-sides" />
 
-## Writing your own
+<a id="mask-path"></a>
+<a id="any-shape-without-a-class"></a>
 
-Implement `build(ctx)` and `update(g, ctx)`, set `version = MASK_STRATEGY_VERSION`, pass it to `.maskStrategy(...)`. Reach for `PathMaskStrategy` first; a class only earns its keep when it holds state across draws.
+## Any shape
 
-Respect two things: `ctx.axis`, because `rects` are screen-space in every orientation (`axis.toLocal(w, h)` gives `{ cross, main }`), and `ctx.bleed`, which inflates the cross axis only. Add the optional `draw(g, ctx)` and your strategy composes like the built-ins.
+`PathMaskStrategy` takes a `(graphics, context) => void` callback. The context carries `rects`, `width`, `height`, `axis` and `bleed`. Do not call `g.clear()`, because the strategy already has. The demo fills the board and cuts a hole in the middle, so only the outer ring of symbols shows.
+
+`cut()` subtracts from the last shape filled, so fill first. If you draw the hole before filling, the mask is empty and the board disappears, with no error.
+
+<RecipeDemo code="mask-path-custom" />

@@ -13,15 +13,15 @@ guides: []
 ---
 
 Every symbol lives inside its reel, and every reel sits under the viewport
-mask. That keeps the board tidy until a symbol's art is bigger than its cell:
-a scatter with a glow, a wild with a crown, a winning symbol that should rise
-above the rest.
+mask. That works until a symbol's art is bigger than its cell, such as a
+scatter with a glow, a wild with a crown, or a winning symbol that should
+rise above the rest.
 
 There are three ways out, from smallest to largest. A `zIndex` in the
 symbol's data draws it above the other symbols in the same reel. Unmasking
 moves it to the layer above every reel and above the mask, so it can spill
-past the frame. Promoting it through the spotlight lifts one instance for as
-long as a win shows, then puts it back.
+past the frame. Promoting raises one instance for as long as a win shows,
+then puts it back.
 
-The board primitive at the end of the page is the same cell layout without
-the reels: a grid you fill and animate yourself.
+`BoardGrid`, in the last demo, is the same cell layout without the reels: a
+grid you fill and animate yourself.

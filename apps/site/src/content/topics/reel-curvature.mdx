@@ -13,3 +13,69 @@ tags:
   - 3d
 ---
 
+Curvature is presentation only. It never changes what lands where,
+`getVisibleGrid()`, or any event payload.
+
+<a id="two-ways-to-draw-it"></a>
+
+## Two drawing modes
+
+```ts
+builder.curve(0.45).curveMode('warp').renderer(app.renderer);
+```
+
+| | `'symbol'` (default) | `'warp'` |
+|---|---|---|
+| Spine and composites bend | no | yes |
+| Atlas art keystones | no | yes |
+| Motion follows the curve | no | yes |
+| Cost | free | 1 render pass per reel per frame |
+| Sharpness | native | one resample |
+| Needs `renderer()` | no | yes, `build()` throws |
+
+`'warp'` renders each reel to a texture and moves the vertices of a mesh, so
+everything inside the reel bends without any help from the symbols.
+`'symbol'` projects each cell on its own. It is sharper, but a `Container`
+transform is affine, so it can only bend content that is a single texture.
+
+<a id="what-bites"></a>
+
+## Lifted symbols stay flat
+
+Under `'warp'`, anything drawn outside the reel's texture is not bent:
+`unmask: true` symbols, the win spotlight, pin flights and overlays all draw
+flat over a curved board. The builder logs a warning when it sees `unmask`
+with the warp. `'symbol'` mode has no such split. For art that overflows its
+cell under the warp, use `curveBleed` instead of `unmask`.
+
+<a id="tuning-it-live"></a>
+
+## Changing the curve at run time
+
+```ts
+reelSet.setCurve(0.4);
+reelSet.setCurve([0.2, 0.35, 0.5, 0.35, 0.2]);
+reelSet.setCurve(0); // flat
+```
+
+## Extending `'symbol'` mode
+
+This only matters if you do not use the warp. The engine hands each symbol a
+projected quad through `ReelSymbol.applyCellQuad()`.
+
+`SpriteSymbol` and `AnimatedSpriteSymbol` map it onto a `PerspectiveMesh`,
+which keystones the art with no extra render pass, when the texture owns its
+whole source. `canProjectTexture()` refuses atlas sub-frames: the mesh
+addresses its source with 0..1 UVs, and remapping them onto the frame has not
+produced a correct draw yet. Every other symbol gets a uniform scale that
+fits inside the quad, so no cell overlaps its neighbour and a `7` is never
+squashed.
+
+In this fallback the engine owns `view.scale`. A win animation that tweens
+`symbol.view.scale` overwrites the projection while it runs, so animate a
+child of `view` instead. The warp has no such conflict.
+
+For your own single-texture symbol, `PerspectiveCell` is exported and does
+the mesh work. Art that does not fill its cell reports its real rect through
+`ReelSymbol.cellInset`, which the sprite symbols derive from the texture's
+trim.

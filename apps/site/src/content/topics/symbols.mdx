@@ -15,10 +15,10 @@ guides:
   - symbols
 ---
 
-<ConceptPart title="Symbols" lede="Register and implement reel symbols: sprites, animations, Spine, or your own class.">
+<ConceptPart title="Symbols" lede="How to register a symbol class, write your own, and weight the random fill.">
 
-A symbol is what fills one cell. Three classes ship with the library. The
-fourth is the base class for everything else.
+A symbol is what fills one cell. Three classes ship with the library, and
+the abstract base class is there for your own.
 
 | Class | Use it for |
 |---|---|
@@ -32,8 +32,8 @@ fourth is the base class for everything else.
 ## Register
 
 The builder's `symbols()` call hands you a registry. You register a class
-with its options, not an instance. The engine constructs the symbols itself
-and pools them.
+with its options, not an instance. The engine constructs the symbols and
+pools them.
 
 ```ts
 builder.symbols((r) => {
@@ -46,12 +46,12 @@ builder.symbols((r) => {
 
 ## Custom symbol
 
-Extend `ReelSymbol`. The lifecycle is activate, then possibly `playWin` or
-`stopAnimation`, then deactivate.
+Extend `ReelSymbol`. A symbol is activated with an id, may then get
+`playWin` or `stopAnimation`, and is deactivated when the pool takes it back.
 
 `resize(width, height)` runs on every swap, so positioning belongs there and
-not in the constructor. Symbols that position themselves in the constructor
-scatter after the first swap.
+not in the constructor. A symbol that positions itself in the constructor
+ends up in the wrong place after the first swap.
 
 ```ts
 import { ReelSymbol } from 'pixi-reels';
@@ -93,12 +93,39 @@ builder.symbols((r) => {
 });
 ```
 
+<a id="weights"></a>
+
+## Weights
+
+A symbol with no weight gets 10. Change it with `weights()` on the builder.
+
+```ts
+builder.weights({ cherry: 40, bar: 20, seven: 4 });
+```
+
+A bigger number comes up more often. Weights only affect the random fill,
+which is the strip while it spins and the buffer cells. A grid from
+`setResult()` ignores weights, because the server decides what lands.
+
+`weights()` is one table for the whole set. To keep a symbol out of the
+buffer cells, or to make one reel draw differently, add a pool on top:
+
+```ts
+builder.randomSymbols({ exclude: ['EMPTY'] });                     // every reel
+builder.randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' }); // buffers only
+builder.randomSymbols({ weights: { WILD: 40 } }, { reel: 2 });     // reel 2 only
+```
+
+The same pools are available at run time through `reelSet.randomSymbols`,
+which is where a game-mode switch belongs. [Buffer indexing](/mechanics/big-symbols/#concept-buffer-indexing)
+has the layering rules.
+
 <a id="headless-testing"></a>
 
 ## Headless testing
 
-`HeadlessSymbol` draws nothing. It needs no textures and no canvas, which
-makes it the symbol for tests.
+`HeadlessSymbol` draws nothing and needs no textures or canvas. Use it in
+tests.
 
 ```ts
 import { HeadlessSymbol } from 'pixi-reels/testing';
@@ -110,34 +137,5 @@ builder.symbols((r) => {
 ```
 
 [Cheats & testing](/learn/cheats-and-testing/) has the full setup.
-
-<a id="weights"></a>
-
-## Weights
-
-A symbol with no weight gets 10. Change it with `weights()` on the builder.
-
-```ts
-builder.weights({ cherry: 40, bar: 20, seven: 4 });
-```
-
-A bigger number comes up more often. Weights only affect the random fill:
-the strip while it spins, and the buffer cells. A grid from `setResult()`
-ignores weights, because the server decides what lands. Weights decide what
-scrolls past on the way there.
-
-`weights()` is one table for the whole set. To vary it, for example to keep
-a symbol out of the buffer cells or to make one reel draw differently, add a
-pool on top:
-
-```ts
-builder.randomSymbols({ exclude: ['EMPTY'] });                     // every reel
-builder.randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' }); // buffers only
-builder.randomSymbols({ weights: { WILD: 40 } }, { reel: 2 });     // reel 2 only
-```
-
-The same pools are available at run time through `reelSet.randomSymbols`,
-which is where a game-mode switch belongs. [Buffer indexing](/mechanics/big-symbols/#concept-buffer-indexing)
-has the layering rules.
 
 </ConceptPart>

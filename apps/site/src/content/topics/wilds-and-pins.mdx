@@ -17,13 +17,11 @@ guides:
   - pins
 ---
 
-<ConceptPart title="Pins" lede="A pin keeps one cell on one symbol across spins. It survives reshapes, it moves with an animated tween, and it works with any symbol class. This part covers the lifecycle, the events, movePin and the Spine animation hooks.">
+<ConceptPart title="Pins" lede="How a pin holds a cell across spins, the events it fires, how movePin animates it, and how to drive Spine tracks from it.">
 
-A pin keeps one cell on one symbol id, and keeps it there across spins.
-
-Sticky wilds, expanding wilds, walking wilds, multiplier overlays, mystery
-reveals and value coins are all pins underneath. The pin does not care which
-symbol class draws the cell.
+A pin keeps one cell on one symbol id across spins. Sticky, expanding and
+walking wilds are all pins, and so are multiplier overlays and mystery
+reveals. A pin works with any symbol class.
 
 ```ts
 // Pin a cell. The id resolves through the SymbolFactory, like normal placement.
@@ -46,14 +44,14 @@ reelSet.unpin(reel, cell);
 - On a MultiWays reshape the pin moves by its `migration` policy. With
   `'origin'` it returns to the cell it started on when the reel grows back.
   With `'frozen'` it clamps and forgets where it started.
-- Pins do not know about nudges. `spin`, `setResult`, `pin` and `setShape`
+- Pins and nudges do not mix. `spin`, `setResult`, `pin` and `setShape`
   all throw while a `nudge()` is in flight.
 
 The [CellPin reference](/api/interfaces/index.CellPin/) has the full type.
 
 <a id="the-three-symbol-instances-involved"></a>
 
-## The three symbol instances involved
+## Three symbol instances
 
 One pin can be three different symbol instances at three different moments.
 All three come from the pool and all three go through `onActivate(symbolId)`.
@@ -64,13 +62,13 @@ All three come from the pool and all three go through `onActivate(symbolId)`.
 | Overlay symbol | During a spin, one per active pin | `viewport.unmaskedContainer`, zIndex 10000 |
 | Flight symbol | During a `movePin` tween | `viewport.unmaskedContainer` |
 
-For a plain sticky cell this does not matter. It matters as soon as you
-animate the pinned symbol while the reel moves, because the three are
-separate objects and animation state does not travel between them.
+For a plain sticky cell this does not matter. It matters once you animate
+the pinned symbol while the reel moves, because the three are separate
+objects and animation state does not carry from one to the next.
 
 <a id="lifecycle-in-full"></a>
 
-## Lifecycle in full
+## Lifecycle
 
 ```
 pin(reel, cell, 'wild', { turns: 'permanent' })
@@ -104,7 +102,7 @@ unpin(reel, cell)  (or the pin expires after `turns: N`)
 
 <a id="a-minimal-sprite-symbol-example"></a>
 
-## A minimal sprite-symbol example
+## Sprite symbol example
 
 ```ts
 import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
@@ -128,16 +126,16 @@ reelSet.pin(2, 1, 'wild', { turns: 'permanent' });
 await reelSet.spin();
 ```
 
-Sprite symbols need no extra wiring. The pin creates the overlay, migrates
-the cell on a reshape, and tears everything down on unpin.
+Sprite symbols need no extra wiring. The pin creates the overlay, moves the
+cell on a reshape, and cleans up on unpin.
 
 <a id="spine-animation-hooks"></a>
 
 ## Spine animation hooks
 
-Spine symbols add one concern: each of the three instances above runs its
-own animation track. If you want an `idle-sticky` track on the overlay and a
-`run` track on the flight, you set them from the pin lifecycle events.
+With Spine symbols, each of the three instances above runs its own
+animation track. To show an `idle-sticky` track on the overlay and a `run`
+track on the flight, set them from the pin lifecycle events.
 
 The built-in `SpineSymbol` sets its `idle` and `win` tracks internally. A
 walking wild needs a small subclass that exposes track control:
@@ -207,23 +205,23 @@ reelSet.events.on('pin:placed', (pin) => {
 
 An error thrown inside `onFlightCreated` or `onFlightCompleted` does not
 stop the move. The engine catches it and reports it on the notice channel as
-`pin-hook-threw`. The tween runs, the pin moves and the flight symbol is
-released, so a bug in animation code cannot leave the engine in a bad state.
+`pin-hook-threw`. The tween still runs, the pin moves and the flight symbol
+is released, so a bug in animation code does not leave the pin half moved.
 
 Every pooled symbol gets `resize(cellWidth, cellHeight)` when it is acquired.
 For a Spine symbol that computes a scale from the skeleton's bounds. If the
 skeleton data has not loaded yet, the first frame can show a zero-sized
-symbol. By the time the pool is warm the skeleton is normally ready, so look
-here if you ever see a size pop on a pin.
+symbol. Once the pool is warm the skeleton is normally ready. If a pinned
+symbol pops in size, check this first.
 
 <a id="related"></a>
 
 ## Related
 
-- [Walking wild recipe](/mechanics/wilds-and-pins/#walking-wild-pin): the pattern above, running
-- [Sticky wild recipe](/mechanics/wilds-and-pins/#sticky-wild-pin): the smallest pin
-- [Expanding wild recipe](/mechanics/wilds-and-pins/#expanding-wild-pin): a pin per cell of a reel
-- [Symbols](/mechanics/symbols/#concept): writing your own symbol class
-- [Spin lifecycle](/mechanics/skip/#concept): the events around a spin
+- [Walking wild](/mechanics/wilds-and-pins/#walking-wild-pin), the movePin pattern above as a demo
+- [Sticky wild](/mechanics/wilds-and-pins/#sticky-wild-pin), the smallest pin
+- [Expanding wild](/mechanics/wilds-and-pins/#expanding-wild-pin), one pin per cell of a reel
+- [Symbols](/mechanics/symbols/#concept), writing your own symbol class
+- [Spin lifecycle](/mechanics/skip/#concept), the events around a spin
 
 </ConceptPart>

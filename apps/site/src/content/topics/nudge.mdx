@@ -17,7 +17,7 @@ guides:
   - nudge
 ---
 
-<ConceptPart title="Nudge" lede="Push a reel forward or back by one or more positions after it has stopped, revealing symbols you supply.">
+<ConceptPart title="Nudge" lede="Shift a reel forward or back by one or more positions after it has stopped, bringing in symbols you supply.">
 
 A nudge moves one reel a few cells after it has landed, and brings in symbols
 you choose. The classic use is a near-miss: the reels land one symbol short,
@@ -109,14 +109,14 @@ rotation would silently overwrite a pre-placed buffer entry.
 
 <a id="sequential-vs-parallel"></a>
 
-## Sequential vs parallel
+## Sequential or parallel
 
-One nudge moves one reel. A multi-reel beat is yours to arrange, and the
-engine's output is the same either way. Only the pacing differs.
+One nudge moves one reel. When several reels nudge, you choose how to start
+them. The engine output is the same either way; only the pacing differs.
 
 <a id="sequential-three-separate-beats"></a>
 
-### Sequential: three separate beats
+### Sequential
 
 <RecipeDemo code="nudge-sequential" />
 
@@ -126,13 +126,13 @@ for (const reel of [1, 2, 3]) {
 }
 ```
 
-Each `await` waits for that reel to land, so the player reads reel 1's wild
+Each `await` waits for that reel to land, so the player sees reel 1's wild
 before reel 2 starts. The total time is the number of reels times the
 duration.
 
 <a id="parallel-one-synchronised-beat"></a>
 
-### Parallel: one synchronised beat
+### Parallel
 
 <RecipeDemo code="nudge-parallel" />
 
@@ -148,8 +148,9 @@ All the tweens start on the same frame and the whole line arrives together.
 The total time is one duration, however many reels.
 
 <a id="stagger-sugar-in-between"></a>
+<a id="stagger-in-between"></a>
 
-### Stagger: in between
+### Stagger
 
 The `startDelay` option gives you a wave without a loop:
 
@@ -182,8 +183,8 @@ cell, so the index of visible cell 0 equals the buffer start count.
 
 A block may sit partly in a buffer and still render correctly. The engine
 sizes the anchor to span the whole block wherever it lives, and the mask clips
-the rest. That is the tail-reveal trick: land a tall wild with its anchor in
-the buffer, nudge, and the rest of it walks into view.
+the rest. This is how a tail reveal works: land a tall wild with its anchor in the
+buffer, nudge, and the rest of it moves into view.
 
 A block wider than one reel always throws. Nudging one reel would tear the
 block off its cells on the next one.
@@ -195,8 +196,9 @@ await reelSet.nudge(2, { distance: 1, direction: 'reverse', incoming: ['filler']
 ```
 
 <a id="aborting--skipping"></a>
+<a id="aborting-and-skipping"></a>
 
-## Aborting and skipping
+## Skip and abort
 
 There are two ways to cut a nudge short.
 
@@ -218,8 +220,8 @@ catch (e) { if (e.name !== 'AbortError') throw e; }
 
 The difference is what happens to the promise. `skipNudge` resolves it, so
 your success path runs. An abort rejects it and fires `nudge:cancelled`, so
-your error path runs. Pick by what comes next: skip when you are about to
-play the win, abort when you are tearing the feature down.
+your error path runs. Skip when the win plays next, and abort when you are
+tearing the feature down.
 
 Either way the strip lands where it was going to land. A nudge never stops
 half-tweened.
@@ -269,17 +271,17 @@ It rejects with an `AbortError` when:
 - The signal aborts before or during the tween.
 - `reelSet.destroy()` is called mid-tween.
 
-A nudge touches one reel. Spotlights, pins on other reels and every other
-reel carry on untouched.
+A nudge touches one reel. The other reels, their pins and any spotlight are
+left alone.
 
 <a id="recipes"></a>
 
 ## Recipes
 
-- [Nudge a reel](/mechanics/nudge/): the smallest runnable demo.
-- [Spotlight after a nudge](/mechanics/nudge/#nudge-spotlight): nudge into a win line, then present the new cells.
-- [Nudge through a big symbol](/mechanics/nudge/#nudge-big-symbol): the block survival rule and the tail reveal.
-- [Land a big symbol partially in buffer](/mechanics/big-symbols/#big-symbol-partial-land): land with the tail showing, then nudge to reveal.
-- [Nudge a big symbol in, then hold it across a respin](/mechanics/big-symbols/#big-symbol-held-respin): reveal a buffer-anchored wild, then hold the reel while the others respin.
+- [Single nudge](/mechanics/nudge/), the smallest demo.
+- [Spotlight after a nudge](/mechanics/nudge/#nudge-spotlight), a nudge that completes a line, then the win.
+- [Big symbols](/mechanics/nudge/#nudge-big-symbol), the block survival rule and the tail reveal.
+- [Land a big symbol partially in buffer](/mechanics/big-symbols/#big-symbol-partial-land), land with the tail showing, then nudge to reveal it.
+- [Nudge a big symbol in, then hold it across a respin](/mechanics/big-symbols/#big-symbol-held-respin), reveal a buffer-anchored wild, then hold the reel while the others respin.
 
 </ConceptPart>
