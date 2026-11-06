@@ -14,7 +14,7 @@ replacement in the typings.
 
 2.8 had one thing a skip press could do to a reel: slam it. A press placed the
 frame and landed it in the same tick, so it always read as a cut, and a tease
-was hidden rather than shortened. 3.0 gives the press a **mode**: `'slam'` is
+was hidden rather than shortened. 3.0 gives the press a mode: `'slam'` is
 the cut, `'quicken'` asks each freed reel for its landing sooner without
 changing what the landing looks like. To carry that through a phase, the
 phase's skip hook grew a context, and while the hooks were open the animated
@@ -77,11 +77,10 @@ reelSet.events.on('skip:requested', ({ reels, partial, mode }) => {
 });
 ```
 
-Both events carry the whole press, not only its mode: the `info` is a
-`SkipInfo`, `{ reels, partial, mode, speed?, payload? }`, the same
-`SkipContext` every phase's `onSkip(ctx)` saw plus the reels. So code that
-hangs off the event gets what the game attached to the press, without a side
-channel:
+Both events carry the whole press. The `info` is a `SkipInfo`,
+`{ reels, partial, mode, speed?, payload? }`: the `SkipContext` every phase's
+`onSkip(ctx)` sees, plus the reels. Code that hangs off the event gets what
+the game attached to the press, without a side channel:
 
 ```ts
 reelSet.requestSkip({ mode: 'quicken', speed: 'turbo', payload: { button: 'skip' } });
@@ -193,8 +192,7 @@ beside `reel`; `this._speed` still works. `land()` and `bounce()` are public,
 so a step written outside the class can reach them.
 
 The rule from the phases page stands: the protected surface can change in a
-minor release, so a subclass may need to follow. What changed here is that
-the surface exists.
+minor release, so a subclass may need to follow.
 
 ## Removed: the unpublished hurry API
 

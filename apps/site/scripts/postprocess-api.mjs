@@ -40,13 +40,33 @@ function relativeLayoutPath(mdFile) {
   return rel.split(path.sep).join('/');
 }
 
+/**
+ * The symbol's name and kind from TypeDoc's first heading, e.g.
+ * `# Class: AdjustPhase\<TProfile *extends* [\`SpeedProfile\`](...)\>` gives
+ * `{ name: 'AdjustPhase', kind: 'class' }`. The generics and the markdown
+ * stay in the page body; a title is the name a reader searches for.
+ */
 function pickTitle(content, fallback) {
-  // Look for the first `# ...` heading.
   const m = content.match(/^#\s+(.+?)\s*$/m);
-  if (!m) return fallback;
-  // Strip TypeDoc's "Class: " / "Interface: " etc. prefix so the title in
-  // the site nav reads as the symbol name, not the kind.
-  return m[1].replace(/^(Class|Interface|Type Alias|Function|Variable|Enumeration|Module):\s*/, '');
+  if (!m) return { name: fallback, kind: null };
+  const kindMatch = m[1].match(/^(Class|Interface|Type Alias|Function|Variable|Enumeration|Module):\s*/);
+  const kind = kindMatch ? kindMatch[1].toLowerCase() : null;
+  const name = m[1]
+    .replace(/^(Class|Interface|Type Alias|Function|Variable|Enumeration|Module):\s*/, '')
+    .replace(/\\?<.*$/, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[`*\\]/g, '')
+    .replace(/\(\)$/, '')
+    .trim();
+  return { name: name || fallback, kind };
+}
+
+/** At most `max` characters, cut at a word. */
+function clampWords(text, max) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  const at = cut.lastIndexOf(' ');
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).replace(/[\s,.;:]+$/, '')}…`;
 }
 
 function deriveDescription(content) {
@@ -59,12 +79,20 @@ function deriveDescription(content) {
   let inParagraph = false;
   const para = [];
   const metadataLeader = /^(Defined in:|Extends:|Implements:|Type Parameters?:|Returns?:|Inherited from:|Overrides:)/i;
+  let inFence = false;
   for (const raw of lines) {
     const line = raw.trim();
     if (!foundTitle) {
       if (line.startsWith('# ')) foundTitle = true;
       continue;
     }
+    // A signature block is not a description: skip fenced code whole.
+    if (line.startsWith('```')) {
+      if (inParagraph) break;
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
     if (line.startsWith('#')) break; // next heading
     if (line === '') {
       if (inParagraph) break; // end of current paragraph
@@ -75,8 +103,13 @@ function deriveDescription(content) {
     para.push(line);
     inParagraph = true;
   }
-  const text = para.join(' ').replace(/\s+/g, ' ').slice(0, 200).trim();
-  return text.length > 0 ? text : null;
+  const text = para
+    .join(' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[`*]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > 0 ? clampWords(text, 160) : null;
 }
 
 /**
@@ -148,13 +181,19 @@ function processFile(file) {
   // vs. the source file's two-level path).
   content = rewriteMdLinks(content, file);
 
-  const title = pickTitle(content, cleanBase);
-  const description = deriveDescription(content);
+  const { name, kind } = pickTitle(content, cleanBase);
+  const description = deriveDescription(content) ?? (kind ? `The ${name} ${kind} in the pixi-reels API.` : null);
   const layout = relativeLayoutPath(file);
+  // The page's own heading is the layout's h1; TypeDoc's `# Class: ...`
+  // would make it two.
+  content = content.replace(/^#\s+.+\n/m, '');
 
   const fm = ['---'];
   fm.push(`layout: '${layout}'`);
-  fm.push(`title: '${title.replace(/'/g, "''")}'`);
+  fm.push(`title: '${name.replace(/'/g, "''")}'`);
+  // The browser and search title says what the page is, so `ReelSet class`
+  // here never reads the same as the hand-written ReelSet guide.
+  if (kind) fm.push(`seoTitle: '${`${name} ${kind}`.replace(/'/g, "''")}'`);
   if (description) fm.push(`description: '${description.replace(/'/g, "''")}'`);
   fm.push(`section: 'api'`);
   fm.push('---');

@@ -1,8 +1,9 @@
 id: coins-009
 group: coins
+topic: hold-and-win
 question: How do I sum every coin value at the end and count it up?
 answer: On `feature:end`, sum the `board.lockedCoins` data values and roll the
   total up in your counter.
 links:
-  - label: "Recipe: Hold & Win — collector"
-    href: /recipes/hold-and-win-collector/
+  - label: "Recipe: Hold & Win: collector"
+    href: /mechanics/hold-and-win/#hold-and-win-collector

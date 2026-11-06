@@ -1,99 +1,67 @@
 ---
-title: "Cells, bounds, paylines & overlays"
-group: rendering
-oneLiner: "Cell geometry, self-drawn paylines and overlays, hit areas, and runtime feature-mode swaps."
-order: 80
-tags:
-  - paylines
-  - hit-areas
-  - overlays
-  - wins
-  - horizontal
-  - orientation
+title: Paylines and overlays
 ---
 
-Address individual cells, render your own paylines and overlays, and swap feature modes at runtime, each shown live below. For banner reels above the grid, see [orientation and direction](/recipes/orientation-and-direction/#horizontal-banner).
+`reelSet.getCellBounds(reel, cell)` returns the screen rect of a visible cell. Paylines, win outlines and hit areas are all drawn from it, so they line up with the symbols. The engine itself draws no paylines. For a banner reel above the grid, see [Sideways and upward reels](/mechanics/orientation-and-direction/#horizontal-banner).
 
 <a id="cell-bounds"></a>
+<a id="cell-bounds-overlays-paylines--hit-areas"></a>
 
-## Cell bounds. overlays, paylines & hit areas
+## Cell rects
 
-getCellBounds(reel, cell) hands you the pixel rect of any visible cell, for paylines, win outlines, or hit areas that align exactly with symbols.
+The rect of any visible cell, used here to outline cells and draw a line through them.
 
 <RecipeDemo code="cell-bounds" />
 
-<a id="cell-hit-areas"></a>
-
-## Cell hit areas. click to pick, hover to preview
-
-Attach pointer events to individual cells with getCellBounds; hover previews, click toggles a pick, picks survive spins.
-
-**Gotcha:** fill the hit rect with alpha 0, not `visible = false`. an invisible-but-filled rect is still hit-testable; a hidden one is not.
-
-<RecipeDemo code="cell-hit-areas" />
-
-<a id="cells-horizontal-bounds"></a>
-
-## Cell bounds on a horizontal set
-
-`getCellBounds(reel, cell)` takes the same arguments on either axis, and (0, 0) is still the first cell of the first reel. The rect it returns transposes: on a horizontal set the reel index walks down the screen and the cell index walks across it, so the same cell index on every reel stacks vertically.
-
-**Gotcha:** the payline drawn through those centres therefore runs vertically, where identical code draws a horizontal line on a vertical set. Read the rects; do not infer them from the indices.
-
-<RecipeDemo code="cells-horizontal-bounds" />
-
-<a id="cells-horizontal-hit-areas"></a>
-
-## Hit areas on a horizontal set
-
-The same `for reel, for cell` loop, with no orientation branch: the bounds are already screen-space, so the hit boxes land on the symbols either way. Hover previews, click toggles a pick, picks survive spins.
-
-<RecipeDemo code="cells-horizontal-hit-areas" />
-
-<a id="board-grid-reveal"></a>
-
-## Board primitive: build your own board
-
-A reveal-and-collect prize grid built straight on the generic BoardGrid primitive; the rule is yours, with no locking and no respins.
-
-<RecipeDemo code="board-grid-reveal" height={400} />
+## Paylines
 
 <a id="paylines-events-only"></a>
+<a id="draw-paylines-yourself-from-wingroup"></a>
 
-## Draw paylines yourself from win:group
+### From win events
 
-Core never draws lines. subscribe to win:group and plot your own overlay from getCellBounds.
+`WinPresenter` animates the winning symbols and draws nothing else. Subscribe to `win:group` and draw each line from `getCellBounds`. `win:symbol` fires per winning symbol, for anything drawn per cell.
 
 <RecipeDemo code="paylines-events-only" />
 
 <a id="win-lines"></a>
+<a id="paylines-and-payways-with-winlines"></a>
 
-## Paylines and payways with WinLines
+### With WinLines
 
-`WinLines` from `pixi-reels/debug` draws a payline as one stroke through one cell per reel, and a payway as every winning cell joined to every winning cell on the next reel. Spins alternate between ten paylines, drawn as the presenter reaches each, and ways, every winning lattice at once.
+`WinLines` from `pixi-reels/debug` draws the cells it is given. A payline is one stroke through one cell per reel. A payway joins every winning cell to every winning cell on the next reel. The demo alternates: one spin pays ten fixed lines and draws each as the presenter reaches it, the next pays ways and draws all of them at once.
 
 <RecipeDemo code="win-lines" height={400} />
 
-<a id="paylines-custom-animation"></a>
+<a id="cell-hit-areas"></a>
+<a id="cell-hit-areas-click-to-pick-hover-to-preview"></a>
 
-## Custom per-symbol animation
+## Tappable cells
 
-Replace playWin() with your own GSAP timeline, styled per win.id.
+One pointer target per cell, built from `getCellBounds`. Hover previews a cell, a click toggles a pick, and picks stay through spins.
 
-<RecipeDemo code="paylines-custom-animation" />
+Fill the hit rect with alpha 0 rather than setting `visible = false`. A transparent filled rect still receives pointer events; a hidden one does not.
 
-## Slam-stop
+<RecipeDemo code="cell-hit-areas" />
 
-Let the player smash the button to land the reels now.
+## Horizontal sets
 
-**Gotcha:** for player-facing slam use requestSkip(). skipSpin() THROWS if the result has not arrived yet; requestSkip() queues until it does.
+<a id="cells-horizontal-bounds"></a>
+<a id="cell-bounds-on-a-horizontal-set"></a>
 
-<RecipeDemo code="slam-stop" />
+### Rects
 
-## Feature mode swap
+`getCellBounds(reel, cell)` takes the same arguments on either axis, and (0, 0) is still the first cell of the first reel. The rect it returns is transposed: on a horizontal set the reel index goes down the screen and the cell index goes across it.
 
-Enter and exit a bonus mode at runtime by adding or removing a frame middleware, with no ReelSet rebuild.
+So a line through the same cell index on every reel runs vertically here, where the same code draws a horizontal line on a vertical set. Read the rects instead of working them out from the indices.
 
-**Gotcha:** run custom middleware after target-placement (priority > 10; target-placement is 10, and the recipe uses 20) so it reacts to the grid the server chose.
+<RecipeDemo code="cells-horizontal-bounds" />
 
-<RecipeDemo code="feature-mode-swap" />
+<a id="cells-horizontal-hit-areas"></a>
+<a id="hit-areas-on-a-horizontal-set"></a>
+
+### Hit areas
+
+The same loop over reels and cells as the vertical demo, with no orientation check. The rects are already in screen space, so the hit areas sit on the symbols either way.
+
+<RecipeDemo code="cells-horizontal-hit-areas" />

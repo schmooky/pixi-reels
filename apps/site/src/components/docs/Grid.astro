@@ -1,0 +1,42 @@
+---
+/**
+ * The visible window as a grid of symbol names, one column per reel, as
+ * `debugGrid()` prints it. A CSS grid, so five reels fit a phone.
+ */
+interface Props {
+  rows: string[][];
+  /** Accessible name for the figure. */
+  title?: string;
+}
+const { rows, title } = Astro.props as Props;
+const cols = Math.max(...rows.map((r) => r.length));
+---
+<div class="docs-grid not-prose my-5 font-mono" aria-label={title} style={`--cols: ${cols}`}>
+  {rows.map((row) =>
+    row.map((cell, i) => <span class:list={['grid-cell', { last: i === row.length - 1 }]}>{cell}</span>),
+  )}
+</div>
+
+<style>
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    max-width: 28rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 2px;
+    background: hsl(var(--card));
+    font-size: 12px;
+    line-height: 1.25;
+    color: hsl(var(--foreground));
+  }
+  .grid-cell {
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    overflow-wrap: anywhere;
+    border-right: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .grid-cell.last {
+    border-right: 0;
+  }
+</style>

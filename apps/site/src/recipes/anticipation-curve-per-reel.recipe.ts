@@ -1,7 +1,15 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, anticipationForScatters,
-//                   CardSymbol, CARD_DECK, app, DebugPlaque
-//
+import { anticipationForScatters, CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'A different curve per reel',
+  topic: 'anticipation',
+  tags: ['anticipation', 'tension', 'scatter', 'near-miss', 'spine', 'horizontal', 'reverse', 'curve', 'acceleration'],
+  needs: ['generic-symbols'],
+} as const satisfies RecipeMeta;
+
 // A DIFFERENT CURVE PER REEL, BY TEASE ORDER.
 //
 // `slowdown` escalates by interpolating two numbers across the tease sequence.
@@ -18,73 +26,82 @@
 // Here each successive reel surges a little harder, crawls a little slower and
 // holds a little longer - the escalating build-up, but with the whole shape
 // under control rather than two endpoints.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const SCAT = 'SCAT';
+  const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const SCAT = 'SCAT';
-const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+    })
+    .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 110 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 110 })
-  .ticker(app.ticker)
-  .build();
+  const H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const W = REELS * SIZE + (REELS - 1) * GAP;
+  // One row per tease reel, three reserved from the start: the canvas is
+  // fitted to what is here at setup.
+  const hud = readout.plaque({ text: 'Each reel eases its tease with its own curve.', reserveRows: 3, minWidth: W, maxWidth: W });
+  hud.position.set(0, H + 10);
+  reelSet.addChild(hud);
 
-const H = ROWS * SIZE + (ROWS - 1) * GAP;
-const W = REELS * SIZE + (REELS - 1) * GAP;
-// One row per tease reel, three reserved from the start: the canvas is
-// fitted to what is here at setup.
-const hud = new DebugPlaque({ text: 'press spin', reserveRows: 3, minWidth: W, maxWidth: W });
-hud.position.set(0, H + 10);
-reelSet.addChild(hud);
+  const lines: string[] = [];
+  reelSet.events.on('anticipation:reel', ({ reelIndex, order, total }) => {
+    lines.push(`reel ${reelIndex} = tease order ${order}/${total - 1}`);
+    hud.text = lines.join('\n');
+  });
 
-const lines = [];
-reelSet.events.on('anticipation:reel', ({ reelIndex, order, total }) => {
-  lines.push(`reel ${reelIndex} = tease order ${order}/${total - 1}`);
-  hud.text = lines.join('\n');
-});
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      grid[0].visible[1] = SCAT;
+      grid[1].visible[0] = SCAT;
 
-return {
-  reelSet,
-  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    grid[0].visible[1] = SCAT;
-    grid[1].visible[0] = SCAT;
+      lines.length = 0;
+      hud.text = 'teasing...';
 
-    lines.length = 0;
-    hud.text = 'teasing...';
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 400));
+      reelSet.setResult(grid);
 
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 400));
-    reelSet.setResult(grid);
-
-    // Which reels tease comes straight off the result grid.
-    const reels = anticipationForScatters(grid, { symbol: SCAT, trigger: 2 });
-    reelSet.setAnticipation(reels, {
-      stagger: 'sequential',
-      curve: (order, total) => {
-        // 0 for the first tease reel, 1 for the last.
-        const f = total > 1 ? order / (total - 1) : 0;
-        return [
-          { speed: 1.4 + 0.8 * f, duration: 200, ease: 'power2.in' },
-          {
-            speed: 0.3 - 0.24 * f,
-            duration: 420 + 260 * f,
-            ease: 'power3.inOut',
-            hold: 160 + 420 * f,
-          },
-        ];
-      },
-    });
-    await p;
-    hud.text = `${lines.join('\n')}  -  landed`;
-  },
-};
+      // Which reels tease comes straight off the result grid.
+      const reels = anticipationForScatters(grid, { symbol: SCAT, trigger: 2 });
+      reelSet.setAnticipation(reels, {
+        stagger: 'sequential',
+        curve: (order, total) => {
+          // 0 for the first tease reel, 1 for the last.
+          const f = total > 1 ? order / (total - 1) : 0;
+          return [
+            { speed: 1.4 + 0.8 * f, duration: 200, ease: 'power2.in' },
+            {
+              speed: 0.3 - 0.24 * f,
+              duration: 420 + 260 * f,
+              ease: 'power3.inOut',
+              hold: 160 + 420 * f,
+            },
+          ];
+        },
+      });
+      await p;
+      hud.text = `${lines.join('\n')}  -  landed`;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
+  };
+}

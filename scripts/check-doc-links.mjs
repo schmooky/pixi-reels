@@ -66,6 +66,19 @@ async function idsOf(builtPath) {
 }
 
 /**
+ * The page a content file is served at. The collections kept their names
+ * when the site moved to one page per mechanic: `topics/x` and `recipes/x`
+ * both render at `/mechanics/x/`, `guides/` at `/learn/`, `docs/` at
+ * `/reference/`. Same table as `apps/site/scripts/build-llms.mjs`.
+ */
+const URL_PREFIX = { topics: 'mechanics', recipes: 'mechanics', guides: 'learn', docs: 'reference' };
+function pageOf(where) {
+  const slug = where.replace(/^apps\/site\/src\/content\//, '').replace(/\.mdx?$/, '');
+  const [head, ...rest] = slug.split('/');
+  return `/${URL_PREFIX[head] ?? head}/${rest.join('/')}/`;
+}
+
+/**
  * Astro emits a stub page for each configured redirect. Checking the anchor
  * against the STUB always passes -- it has no headings, and no ids at all --
  * so a redirect aimed at a fragment that does not exist on the destination
@@ -108,7 +121,7 @@ for (const file of files) {
     checked++;
 
     // A bare `#anchor` points at the page it is written on.
-    const target = path ?? `/${where.replace(/^apps\/site\/src\/content\//, '').replace(/\.mdx?$/, '')}/`;
+    const target = path ?? pageOf(where);
     const built = await resolves(target);
     if (!built) {
       broken.push(`${where}  ->  ${path ?? target}`);

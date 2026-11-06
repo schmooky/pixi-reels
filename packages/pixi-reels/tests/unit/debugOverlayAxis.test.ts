@@ -281,16 +281,33 @@ describe('hud layer', () => {
         expect(texts[i].y).toBeGreaterThan(texts[i - 1].y);
       }
 
-      // Inside the mask box, so a host that framed its camera on the reel set
-      // still has the whole column on screen. Off-camera is worse than busy.
+      // Above the mask, so the column never covers the art it describes; the
+      // host fits its camera to the grown bounds.
       const vp = harness.reelSet.viewport;
       expect(texts[0].x).toBeGreaterThanOrEqual(vp.x);
-      expect(texts[0].y).toBeGreaterThanOrEqual(vp.y);
       // Line height read off the lines themselves rather than imported: the
       // metric is internal, and the property under test is the layout.
       const lineHeight = texts[1].y - texts[0].y;
       const lastBottom = texts[texts.length - 1].y + lineHeight;
-      expect(lastBottom).toBeLessThanOrEqual(vp.y + vp.maskHeight);
+      expect(lastBottom).toBeLessThanOrEqual(vp.y);
+    } finally {
+      harness.destroy();
+    }
+  });
+
+  it('clears the buffer cells drawn above the mask', () => {
+    // The buffers layer outlines the slots above the visible window, so a hud
+    // placed only on the mask edge would sit on top of them.
+    const harness = build('vertical', 'forward');
+    try {
+      debugOverlay(harness.reelSet, { layers: ['hud', 'buffers'] });
+      const vp = harness.reelSet.viewport;
+      const buffersTop = layerGraphics(harness.reelSet, 'buffers').getLocalBounds().y;
+      expect(buffersTop).toBeLessThan(vp.y);
+      const hud = overlayRoot(harness.reelSet).children.find((c) => c.label === `${OVERLAY_LABEL}:hud`);
+      if (!hud) throw new Error('hud drew nothing');
+      const hudBottom = hud.y + hud.getLocalBounds().y + hud.getLocalBounds().height;
+      expect(hudBottom).toBeLessThanOrEqual(buffersTop);
     } finally {
       harness.destroy();
     }

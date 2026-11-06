@@ -1,8 +1,9 @@
 id: hw-008
 group: hw
+topic: hold-and-win
 question: How do I show the held count and respins left in a HUD?
 answer: Read `board.lockedCoins.length` / `board.respinsLeft` (or the
   `coin:locked` / `respins:changed` events) into your HUD.
 links:
   - label: "Recipe: Hold & Win respin"
-    href: /recipes/hold-and-win/
+    href: /mechanics/hold-and-win/

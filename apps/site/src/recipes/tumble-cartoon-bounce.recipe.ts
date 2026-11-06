@@ -1,99 +1,114 @@
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
-//           PIXI, gsap, app, pickWeighted
+import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
+import { createAssets, tapToSpin } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Cartoon bounce',
+  topic: 'cascade',
+  tags: ['cascade', 'tumble', 'refill', 'anticipation', 'spine', 'thunderkick', 'horizontal', 'reverse', 'orientation', 'gravity'],
+  height: 300,
+  needs: ['spine:cascade'],
+} as const satisfies RecipeMeta;
 
 // SLOW DROP: a long power2.in fall with a heavy stagger. each cell
 // hangs, then accelerates into its slot. The slow, dramatic variant;
 // the pacing lives in duration + stagger, never in a settle.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
+  const cascade = await assets.spineSet("cascade");
 
-const cascade = await loadSpineSet("cascade");
+  const IDS = [...cascade.symbolIds];
+  const REELS = 6, ROWS = 4;
+  // Cells match the authored 88x101.6 symbol plate.
+  const SCALE = 0.62;
+  const CELL_W = cascade.set.cellSize.width * SCALE;
+  const CELL_H = cascade.set.cellSize.height * SCALE;
+  const CLUSTER = 'low1';
+  const HIT_ROW = 2;
+  const HIT_COLS = [0, 1, 2];
 
-const IDS = [...cascade.symbolIds];
-const REELS = 6, ROWS = 4;
-// Cells match the authored 88x101.6 symbol plate.
-const SCALE = 0.62;
-const CELL_W = cascade.set.cellSize.width * SCALE;
-const CELL_H = cascade.set.cellSize.height * SCALE;
-const CLUSTER = 'low1';
-const HIT_ROW = 2;
-const HIT_COLS = [0, 1, 2];
+  // Longer pause to match the slow settle before new symbols arrive.
+  const PAUSE_AFTER_REMOVAL_MS = 333;
 
-// Longer pause to match the slow settle before new symbols arrive.
-const PAUSE_AFTER_REMOVAL_MS = 333;
-
-function randSymbol(exclude) {
-  let s;
-  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
-  return s;
-}
-
-// The authored `explode` clip runs 1.27 s, too long for this demo's
-// cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.0; // 1.27 s clip -> ~38 frames
-
-class TimedExplodeSymbol extends SpineReelSymbol {
-  async playOut() {
-    const entry = this.playOnTrack(0, 'explode', false);
-    if (!entry) return;
-    entry.timeScale = EXPLODE_TIME_SCALE;
-    await new Promise((resolve) => { entry.listener = { complete: () => resolve() }; });
+  function randSymbol(exclude: string) {
+    let s;
+    do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+    return s;
   }
-}
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
-  // Pure tumble: no strip scrolling, so no below-window buffer at all.
-  // nothing can ever peek out under the grid.
-  .bufferSymbols({ start: 1, end: 0 })
-  .symbols((r) => {
-    // outAnimation: 'explode' makes destroySymbols play the skeleton's
-    // explode clip instead of the default implode.
-    const spineMap = cascade.spineMap;
-    for (const id of cascade.symbolIds) {
-      r.register(id, TimedExplodeSymbol, {
-        spineMap,
-        scale: SCALE,
-        outAnimation: 'explode',
-      });
+  // The authored `explode` clip runs 1.27 s, too long for this demo's
+  // cascade timing. Play it faster via TrackEntry.timeScale.
+  const EXPLODE_TIME_SCALE = 2.0; // 1.27 s clip -> ~38 frames
+
+  class TimedExplodeSymbol extends SpineReelSymbol {
+    async playOut() {
+      const entry = this.playOnTrack(0, 'explode', false);
+      if (!entry) return;
+      entry.timeScale = EXPLODE_TIME_SCALE;
+      await new Promise<void>((resolve) => { entry.listener = { complete: () => resolve() }; });
     }
-  })
-  // The high symbol's head overflows its cell (the plate itself is
-  // tile-sized). unmask renders it above the reel mask instead of
-  // clipping it.
-  .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
-  .tumble({
-    fall:   { duration: 333, ease: 'power2.in', cellStagger: 67 },  // 20f, 4f stagger
-    dropIn: { duration: 700, ease: 'power2.in', cellStagger: 67, distance: 'perHole' },  // 42f, 4f stagger
-  })
-  .ticker(app.ticker).build();
+  }
 
-return {
-  reelSet,
-  onSpin: async () => {
-    const stage0 = Array.from({ length: REELS }, (_, c) =>
-      Array.from({ length: ROWS }, (_, r) =>
-        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
-      ),
-    );
-    const stage1 = stage0.map((reel, c) => {
-      if (!HIT_COLS.includes(c)) return [...reel];
-      const next = [...reel];
-      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
-      next[0] = randSymbol(CLUSTER);
-      return next;
-    });
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+    // Pure tumble: no strip scrolling, so no below-window buffer at all.
+    // nothing can ever peek out under the grid.
+    .bufferSymbols({ start: 1, end: 0 })
+    .symbols((r) => {
+      // outAnimation: 'explode' makes destroySymbols play the skeleton's
+      // explode clip instead of the default implode.
+      const spineMap = cascade.spineMap;
+      for (const id of cascade.symbolIds) {
+        r.register(id, TimedExplodeSymbol, {
+          spineMap,
+          scale: SCALE,
+          outAnimation: 'explode',
+        });
+      }
+    })
+    // The high symbol's head overflows its cell (the plate itself is
+    // tile-sized). unmask renders it above the reel mask instead of
+    // clipping it.
+    .symbolData({ high: { zIndex: 10, unmask: true } })
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
+    .tumble({
+      fall:   { duration: 333, ease: 'power2.in', cellStagger: 67 },  // 20f, 4f stagger
+      dropIn: { duration: 700, ease: 'power2.in', cellStagger: 67, distance: 'perHole' },  // 42f, 4f stagger
+    })
+    .ticker(app.ticker).build();
 
-    const spinDone = reelSet.spin();
-    reelSet.setDropOrder('ltr');
-    await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0.map((visible) => ({ visible })));
-    await spinDone;
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const stage0 = Array.from({ length: REELS }, (_, c) =>
+        Array.from({ length: ROWS }, (_, r) =>
+          r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+        ),
+      );
+      const stage1 = stage0.map((reel, c) => {
+        if (!HIT_COLS.includes(c)) return [...reel];
+        const next = [...reel];
+        for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+        next[0] = randSymbol(CLUSTER);
+        return next;
+      });
 
-    await new Promise((r) => setTimeout(r, 220));
-    const winners = HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
-    await reelSet.destroySymbols(winners);
-    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
-  },
-};
+      const spinDone = reelSet.spin();
+      reelSet.setDropOrder('ltr');
+      await new Promise((r) => setTimeout(r, 220));
+      reelSet.setResult(stage0.map((visible) => ({ visible })));
+      await spinDone;
+
+      await new Promise((r) => setTimeout(r, 220));
+      const winners = HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
+      await reelSet.destroySymbols(winners);
+      await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+      await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
+    },
+  });
+  return { reelSet };
+}

@@ -1,8 +1,9 @@
 id: fs-010
 group: fs
+topic: cells-and-banners
 question: How do I return to base game and restore the pre-feature state?
 answer: Hide the feature display, re-show the base ReelSet, and restore your
   saved pre-feature state.
 links:
   - label: "Recipe: Feature mode swap"
-    href: /recipes/feature-mode-swap/
+    href: /mechanics/hold-and-win/#feature-mode-swap

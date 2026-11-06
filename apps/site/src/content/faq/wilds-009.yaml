@@ -1,8 +1,9 @@
 id: wilds-009
 group: wilds
+topic: wilds-and-pins
 question: How do I spawn a wild from a winning combo (chain-reaction wild)?
 answer: On `win:group`, pin a new wild at the cleared cell before the next
   cascade step.
 links:
   - label: "Recipe: Sticky-win respin"
-    href: /recipes/sticky-win-respin-pin/
+    href: /mechanics/wilds-and-pins/#sticky-win-respin-pin

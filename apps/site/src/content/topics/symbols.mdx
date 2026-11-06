@@ -1,0 +1,141 @@
+---
+title: Symbol classes
+group: symbols
+oneLiner: Pick or write the class that draws a symbol, from sprites to Spine, and animate it when it wins.
+order: 50
+tags:
+  - symbols
+  - pools
+  - buffers
+  - weights
+  - spine
+  - horizontal
+  - orientation
+guides:
+  - symbols
+---
+
+<ConceptPart title="Symbols" lede="How to register a symbol class, write your own, and weight the random fill.">
+
+A symbol is what fills one cell. Three classes ship with the library, and
+the abstract base class is there for your own.
+
+| Class | Use it for |
+|---|---|
+| `SpriteSymbol` | Static images. One texture per id. |
+| `AnimatedSpriteSymbol` | Sprite-sheet animation loops. |
+| `SpineSymbol` | Skeletal animation via `@esotericsoftware/spine-pixi-v8`. |
+| `ReelSymbol` (abstract) | Your own drawing. |
+
+<a id="register"></a>
+
+## Register
+
+The builder's `symbols()` call hands you a registry. You register a class
+with its options, not an instance. The engine constructs the symbols and
+pools them.
+
+```ts
+builder.symbols((r) => {
+  r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
+  r.register('bar',    AnimatedSpriteSymbol, { frames: barFrames, animationSpeed: 1.5 });
+});
+```
+
+<a id="custom-symbol"></a>
+
+## Custom symbol
+
+Extend `ReelSymbol`. A symbol is activated with an id, may then get
+`playWin` or `stopAnimation`, and is deactivated when the pool takes it back.
+
+`resize(width, height)` runs on every swap, so positioning belongs there and
+not in the constructor. A symbol that positions itself in the constructor
+ends up in the wrong place after the first swap.
+
+```ts
+import { ReelSymbol } from 'pixi-reels';
+import { Graphics } from 'pixi.js';
+
+export class BlockSymbol extends ReelSymbol {
+  private _g = new Graphics();
+
+  constructor(opts: { colors: Record<string, number> }) {
+    super();
+    this.view.addChild(this._g);
+    (this as any)._opts = opts;
+  }
+
+  protected onActivate(symbolId: string): void {
+    const color = (this as any)._opts.colors[symbolId] ?? 0x888888;
+    this._g.clear().roundRect(0, 0, 140, 140, 10).fill(color);
+  }
+
+  protected onDeactivate(): void {
+    this._g.clear();
+  }
+
+  async playWin(): Promise<void> {
+    // pulse for 400ms
+    this.view.scale.set(1.1);
+    await new Promise((r) => setTimeout(r, 400));
+    this.view.scale.set(1);
+  }
+
+  stopAnimation(): void { this.view.scale.set(1); }
+  resize(w: number, h: number): void { this._g.clear().roundRect(0, 0, w, h, 10).fill(0x333333); }
+}
+
+// Register:
+builder.symbols((r) => {
+  r.register('red',   BlockSymbol, { colors: { red: 0xff6d70 } });
+  r.register('blue',  BlockSymbol, { colors: { blue: 0x4cc2ff } });
+});
+```
+
+<a id="weights"></a>
+
+## Weights
+
+A symbol with no weight gets 10. Change it with `weights()` on the builder.
+
+```ts
+builder.weights({ cherry: 40, bar: 20, seven: 4 });
+```
+
+A bigger number comes up more often. Weights only affect the random fill,
+which is the strip while it spins and the buffer cells. A grid from
+`setResult()` ignores weights, because the server decides what lands.
+
+`weights()` is one table for the whole set. To keep a symbol out of the
+buffer cells, or to make one reel draw differently, add a pool on top:
+
+```ts
+builder.randomSymbols({ exclude: ['EMPTY'] });                     // every reel
+builder.randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' }); // buffers only
+builder.randomSymbols({ weights: { WILD: 40 } }, { reel: 2 });     // reel 2 only
+```
+
+The same pools are available at run time through `reelSet.randomSymbols`,
+which is where a game-mode switch belongs. [Buffer indexing](/mechanics/big-symbols/#concept-buffer-indexing)
+has the layering rules.
+
+<a id="headless-testing"></a>
+
+## Headless testing
+
+`HeadlessSymbol` draws nothing and needs no textures or canvas. Use it in
+tests.
+
+```ts
+import { HeadlessSymbol } from 'pixi-reels/testing';
+
+builder.symbols((r) => {
+  r.register('a', HeadlessSymbol, {});
+  r.register('b', HeadlessSymbol, {});
+});
+```
+
+[Cheats & testing](/learn/cheats-and-testing/) has the full setup.
+
+</ConceptPart>

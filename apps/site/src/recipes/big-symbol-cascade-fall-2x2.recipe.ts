@@ -1,6 +1,14 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, app
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets, presentWithSpotlight } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Big symbol falls into view through a cascade',
+  topic: 'big-symbols',
+  tags: ['big-symbols', 'multiways', 'pyramid', 'spine', 'geometry', 'sticky-wild', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // CASCADE-FALL, 2x2 geometry.
 //
@@ -14,95 +22,101 @@
 //     ones: reposition the ANCHOR, the coordinator re-paints the rest.
 //   - The two covered reels animate their refill in the same phase, so
 //     the block visually falls as one rigid piece.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const BIG = { id: 'big', color: 0x9a6cff, label: 'BIG', textColor: 0x2a0a4a, w: 2, h: 2 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [BIG.id]: set.textures.H2 };
+  const REELS = 4;
+  const ROWS = 4;
+  const SIZE = 76;
+  const GAP = 4;
 
-const BIG = { id: 'big', color: 0x9a6cff, label: 'BIG', textColor: 0x2a0a4a, w: 2, h: 2 };
-const REELS = 4;
-const ROWS = 4;
-const SIZE = 76;
-const GAP = 4;
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCells(ROWS)
+    // Anchor starts at bufferStart[0] (cell -1) so half the block peeks in.
+    .bufferSymbols(2)
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(GAP, GAP)
+    .symbols((registry) => {
+      for (const card of CARD_DECK) {
+        registry.register(card.id, StickerSymbol, { textures });
+      }
+      registry.register(BIG.id, StickerSymbol, { textures, frames, span: { reels: BIG.w, cells: BIG.h } });
+    })
+    .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+    .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { reels: BIG.w, cells: BIG.h } } })
+    .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+    .tumble({
+      fall:   { duration: 320, ease: 'power3.in',  cellStagger: 60 },
+      dropIn: { duration: 480, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
+    })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(ROWS)
-  // Anchor starts at bufferStart[0] (cell -1) so half the block peeks in.
-  .bufferSymbols(2)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(GAP, GAP)
-  .symbols((registry) => {
-    for (const card of CARD_DECK) {
-      registry.register(card.id, CardSymbol, {
-        color: card.color, label: card.label, textColor: card.textColor,
-      });
-    }
-    registry.register(BIG.id, CardSymbol, {
-      color: BIG.color, label: BIG.label, textColor: BIG.textColor,
-    });
-  })
-  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { reels: BIG.w, cells: BIG.h } } })
-  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
-  .tumble({
-    fall:   { duration: 320, ease: 'power3.in',  cellStagger: 60 },
-    dropIn: { duration: 480, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
-  })
-  .ticker(app.ticker)
-  .build();
+  const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+  const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
 
-const FILLER_IDS = ['7', '8', '9', '10', 'J'];
-const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
-
-return {
-  reelSet,
-  onSpin: async () => {
-    // ── 1. Initial spin: 2x2 block anchored on reel 1 at bufferStart[0]
-    //      (cell -1). it spans cells -1..0 on reels 1-2, so only its
-    //      bottom half peeks into the visible board. Plant a MATCH-cell
-    //      cluster at cell 1 across all four reels.
-    const MATCH = 'Q';
-    const initialGrid = [
-      { visible: [filler(), MATCH, filler(), filler()] },
-      // Anchor at bufferStart[0] = cell -1. Footprint: reels 1-2,
-      // cells -1..0. The coordinator paints the other three cells.
-      {
-        visible: [filler(), MATCH, filler(), filler()],
-        bufferStart: [BIG.id],
-      },
-      { visible: [filler(), MATCH, filler(), filler()] },
-      { visible: [filler(), MATCH, filler(), filler()] },
-    ];
-    const spinDone = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 240));
-    reelSet.setResult(initialGrid);
-    await spinDone;
-    await new Promise((r) => setTimeout(r, 900));
-
-    // ── 2. Cascade: the MATCH cell clears, the block falls one cell and
-    //      lands fully visible at cells 0-1 of reels 1-2.
-    let chained = false;
-    reelSet.setDropOrder('all');
-    await reelSet.runCascade({
-      detectWinners: () => {
-        if (chained) return [];
-        chained = true;
-        return [0, 1, 2, 3].map((reel) => ({ reel, cell: 1 }));
-      },
-      // Survivors keep their identities: one fresh symbol on top, old
-      // cells 0/2/3 slide-or-stay with the same faces (cells 2-3 never
-      // animate. a fresh identity there would pop in place).
-      nextGrid: (prev) => [
-        { visible: [filler(), prev[0][0], prev[0][2], prev[0][3]] },
-        // Anchor now at visible[0]. block occupies cells 0-1 on reels
-        // 1-2, fully visible. The coordinator paints OCCUPIED stubs at
-        // the other three footprint cells (cell 1 was the block's old
-        // tail, so its "survivor" slot stays covered. consistent).
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      // ── 1. Initial spin: 2x2 block anchored on reel 1 at bufferStart[0]
+      //      (cell -1). it spans cells -1..0 on reels 1-2, so only its
+      //      bottom half peeks into the visible board. Plant a MATCH-cell
+      //      cluster at cell 1 across all four reels.
+      const MATCH = 'Q';
+      const initialGrid = [
+        { visible: [filler(), MATCH, filler(), filler()] },
+        // Anchor at bufferStart[0] = cell -1. Footprint: reels 1-2,
+        // cells -1..0. The coordinator paints the other three cells.
         {
-          visible: [BIG.id, filler(), prev[1][2], prev[1][3]],
-          bufferStart: [filler()],
+          visible: [filler(), MATCH, filler(), filler()],
+          bufferStart: [BIG.id],
         },
-        { visible: [filler(), filler(), prev[2][2], prev[2][3]] },
-        { visible: [filler(), prev[3][0], prev[3][2], prev[3][3]] },
-      ],
-      pauseAfterDestroyMs: 280,
-    });
-  },
-};
+        { visible: [filler(), MATCH, filler(), filler()] },
+        { visible: [filler(), MATCH, filler(), filler()] },
+      ];
+      const spinDone = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 240));
+      reelSet.setResult(initialGrid);
+      await spinDone;
+      await new Promise((r) => setTimeout(r, 900));
+
+      // ── 2. Cascade: the MATCH cell clears, the block falls one cell and
+      //      lands fully visible at cells 0-1 of reels 1-2.
+      let chained = false;
+      reelSet.setDropOrder('all');
+      await reelSet.runCascade({
+        // The winners get their beat before they go: losers dim, winners wow, a short hold.
+        presentWinners: presentWithSpotlight(reelSet),
+        detectWinners: () => {
+          if (chained) return [];
+          chained = true;
+          return [0, 1, 2, 3].map((reel) => ({ reel, cell: 1 }));
+        },
+        // Survivors keep their identities: one fresh symbol on top, old
+        // cells 0/2/3 slide-or-stay with the same faces (cells 2-3 never
+        // animate. a fresh identity there would pop in place).
+        nextGrid: (prev) => [
+          { visible: [filler(), prev[0][0], prev[0][2], prev[0][3]] },
+          // Anchor now at visible[0]. block occupies cells 0-1 on reels
+          // 1-2, fully visible. The coordinator paints OCCUPIED stubs at
+          // the other three footprint cells (cell 1 was the block's old
+          // tail, so its "survivor" slot stays covered. consistent).
+          {
+            visible: [BIG.id, filler(), prev[1][2], prev[1][3]],
+            bufferStart: [filler()],
+          },
+          { visible: [filler(), filler(), prev[2][2], prev[2][3]] },
+          { visible: [filler(), prev[3][0], prev[3][2], prev[3][3]] },
+        ],
+        pauseAfterDestroyMs: 280,
+      });
+    },
+  });
+  return { reelSet };
+}

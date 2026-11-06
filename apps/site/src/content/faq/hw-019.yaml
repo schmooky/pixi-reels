@@ -1,8 +1,9 @@
 id: hw-019
 group: hw
+topic: hold-and-win
 question: How do I run several Hold & Win boards at different bet tiers from one builder?
-answer: One `HoldAndWinBuilder` builds a board per tier — call `.build()` with
+answer: One `HoldAndWinBuilder` builds a board per tier. Call `.build()` with
   different `.respins` / weights, or rebuild per bet.
 links:
   - label: "Recipe: Hold & Win respin"
-    href: /recipes/hold-and-win/
+    href: /mechanics/hold-and-win/

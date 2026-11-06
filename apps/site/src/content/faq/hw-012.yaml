@@ -1,9 +1,10 @@
 id: hw-012
 group: hw
+topic: hold-and-win
 question: How do I switch from base game into the Hold & Win board cleanly?
-answer: Hide the base ReelSet and show the `HoldAndWinBoard.container` — same
+answer: Hide the base ReelSet and show the `HoldAndWinBoard.container`. Same
   screen, two display objects; `enter(triggerCoins)` carries the trigger into
   the feature, and `feature:end` is when you swap back.
 links:
-  - label: "Recipe: Hold & Win — enter from the base game"
-    href: /recipes/hold-and-win-base-to-feature/
+  - label: "Recipe: Hold & Win: enter from the base game"
+    href: /mechanics/hold-and-win/#hold-and-win-base-to-feature

@@ -1,6 +1,7 @@
 id: fs-012
 group: fs
+topic: starters
 question: How do I gamble/upgrade the number of free spins before they start?
-answer: Run the gamble in your UI and set the final spin count before entering —
+answer: Run the gamble in your UI and set the final spin count before entering,
   outside the engine.
 links: []

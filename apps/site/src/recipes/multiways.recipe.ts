@@ -1,7 +1,15 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   gsap, app, pickWeighted
-//
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'MultiWays',
+  topic: 'big-symbols',
+  tags: ['big-symbols', 'multiways', 'pyramid', 'spine', 'geometry', 'sticky-wild', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
+
 // MultiWays. per-spin cell variation. Each reel lands on a different
 // cell count in [minCells, maxCells]. The reel pixel height is fixed;
 // cell height per reel is derived live as
@@ -14,44 +22,51 @@
 // "ways" count for any individual spin is the product of visibleCells
 // across reels. Turn on the canvas Debug toggle to read the per-reel
 // shape off the overlay's hud layer.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const REELS = 6;
+  const MIN_ROWS = 2;
+  const MAX_ROWS = 7;
+  const REEL_PIXEL_HEIGHT = 360;
+  const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
+  const GAP = 0;
 
-const REELS = 6;
-const MIN_ROWS = 2;
-const MAX_ROWS = 7;
-const REEL_PIXEL_HEIGHT = 360;
-const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
-const GAP = 0;
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
+    .pinMigrationDuration(300)
+    .pinMigrationEase('power2.inOut')
+    .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
+    .symbolGap(GAP, GAP)
+    .symbols((registry) => {
+      for (const card of CARD_DECK) {
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+    })
+    .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+    // Big symbols overshoot at landing on this layout. set
+    // bounceDistance: 0 so each cell snaps flush regardless of which
+    // shape was rolled this spin.
+    .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+    .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
-  .pinMigrationDuration(300)
-  .pinMigrationEase('power2.inOut')
-  .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
-  .symbolGap(GAP, GAP)
-  .symbols((registry) => {
-    for (const card of CARD_DECK) {
-      registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
-    }
-  })
-  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  // Big symbols overshoot at landing on this layout. set
-  // bounceDistance: 0 so each cell snaps flush regardless of which
-  // shape was rolled this spin.
-  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
-  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
-  .ticker(app.ticker)
-  .build();
-
-return {
-  reelSet,
-  nextResult: () => {
-    const shape = Array.from({ length: REELS }, () =>
-      MIN_ROWS + Math.floor(Math.random() * (MAX_ROWS - MIN_ROWS + 1)),
-    );
-    reelSet.setShape(shape);
-    return shape.map((cells) =>
-      Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
-    );
-  },
-};
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () => {
+      const shape = Array.from({ length: REELS }, () =>
+        MIN_ROWS + Math.floor(Math.random() * (MAX_ROWS - MIN_ROWS + 1)),
+      );
+      reelSet.setShape(shape);
+      return shape.map((cells) =>
+        Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
+      );
+    },
+  });
+  return { reelSet };
+}

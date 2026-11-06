@@ -1,10 +1,11 @@
 id: layout-011
 group: layout
+topic: orientation-and-direction
 question: How do I build the horizontal reel above the reels that shows which
   symbols pay this round?
 answer: >-
   It is a normal `ReelSetBuilder` with `.orientation('horizontal')`. There is
-  no separate builder in v2 — `HorizontalReelBuilder` and `HorizontalReel`
+  no separate builder in v2. `HorizontalReelBuilder` and `HorizontalReel`
   were removed, because a sideways banner is just a reel set whose strip
   travels along X. Use `.reels(1)` with `.visibleCells(n)` for the n symbols
   in the banner, register symbols and pass a ticker exactly as usual. The
@@ -15,7 +16,7 @@ answer: >-
   main one.
 links:
   - label: "Recipe: Horizontal reel (paying-symbol banner)"
-    href: /recipes/horizontal-reel/
+    href: /mechanics/orientation-and-direction/#horizontal-reel
   - label: "Guide: Orientation and direction"
-    href: /guides/orientation-and-direction/
-recipe: horizontal-reel
+    href: /mechanics/orientation-and-direction/#concept
+recipe: horizontal-banner

@@ -2,37 +2,36 @@
 title: Glossary
 order: 5
 eyebrow: Reference
-description: Plain-English definitions for every term you will see in pixi-reels
-  docs, code, and slot-game conversations.
+description: Definitions of slot vocabulary and of the names pixi-reels gives its parts.
 ---
 
-Two groups of terms are mixed here: **slot vocabulary** (concepts every slot uses, regardless of library) and **library-specific names** (what pixi-reels calls its pieces). If a word feels jargon-y, it is probably defined here. search the page.
+Two groups of terms are mixed here: slot vocabulary, which every slot uses whatever the library, and library-specific names, which are what pixi-reels calls its pieces. If a word reads as jargon, it is probably defined here; search the page.
 
 ## Slot vocabulary
 
-**Anticipation**. A deliberate slow-down on a specific reel to build tension. Classic pattern: two scatters are already on screen, so the last couple of reels decelerate dramatically to make the player hope for a third.
+**Anticipation**. A slow-down on one reel to build tension. The classic pattern: two scatters are already on screen, so the last reel or two decelerate slowly to make the player hope for a third.
 
-**Base game**. The normal spin mode (as opposed to a bonus round like free spins or Hold & Win).
+**Base game**. The normal spin mode, as opposed to a bonus round like free spins or Hold & Win.
 
-**Bet**. Amount staked per spin. Not modeled by pixi-reels. it is a number in your game code.
+**Bet**. The amount staked per spin. Not modeled by pixi-reels; it is a number in your game code.
 
 **Bonus**. Any secondary game mode triggered off the base game (free spins, Hold & Win, pick-a-prize, etc.).
 
-**Cascade (tumble)**. A chain mechanic: winning symbols disappear, remaining ones fall, gaps fill from above, re-check for wins, repeat. Candy Crush with a paytable.
+**Cascade (tumble)**. A chain mechanic: winning symbols disappear, the remaining ones fall, gaps fill from above, wins are checked again, repeat. Candy Crush with a paytable.
 
-**Cluster win**. Win shape where N+ adjacent matching symbols (orthogonally connected) pay, regardless of row or column. Compare with "line win".
+**Cluster win**. A win shape where N or more adjacent matching symbols (orthogonally connected) pay, regardless of row or column. Compare with "line win".
 
-**Free spins (FS)**. Bonus round where the player gets a fixed number of spins at no cost. Often includes sticky wilds, multipliers, or expanding wilds.
+**Free spins (FS)**. A bonus round where the player gets a fixed number of spins at no cost. Often includes sticky wilds, multipliers or expanding wilds.
 
 **Grid**. The two-dimensional snapshot of visible symbols, indexed `grid[reelIndex][cellIndex]`. A 5x3 slot has a 5x3 grid.
 
-**Hold & Win (Link & Win, Respin)**. Bonus round where special "coin" symbols lock in place when they land, and you keep respinning until no new ones land. or the whole grid fills and pays a jackpot.
+**Hold & Win (Link & Win, Respin)**. A bonus round where special "coin" symbols lock in place when they land, and the respins continue until no new coin lands, or the whole grid fills and pays a jackpot.
 
-**Line win**. Win paid for N+ matching symbols on a payline (usually left-to-right on a fixed row).
+**Line win**. A win paid for N or more matching symbols on a payline (usually left to right on a fixed row).
 
 **Multiplier**. A number applied to a win. Often grows with consecutive cascades.
 
-**Near-miss**. Result that almost triggered a big win (two scatters on screen, the third just off the visible window). A retention trick.
+**Near-miss**. A result that almost triggered a big win (two scatters on screen, the third just off the visible window). A retention trick.
 
 **Paytable**. The map from winning combinations to payouts. Lives on the server, not in this library.
 
@@ -40,47 +39,47 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **Reel**. One vertical column of symbols.
 
-**Reel strip**. The (long, invisible) list of symbols a reel draws from. pixi-reels does not expose this directly. it asks for a next symbol from a frame middleware chain.
+**Reel strip**. The long, invisible list of symbols a reel draws from. Not exposed by pixi-reels directly; the engine asks a frame middleware chain for the next symbol.
 
 **Respin**. A spin where some reels are held in place and only the others move. A single-reel respin holds every reel except one; a Hold & Win respin holds every "coin" cell.
 
-**RTP (Return To Player)**. Expected long-run payout percentage (e.g. 96%). Determined by the paytable and reel strips on the server.
+**RTP (Return To Player)**. The expected long-run payout percentage (e.g. 96%). Determined by the paytable and reel strips on the server.
 
-**Scatter**. Symbol that pays regardless of position and usually triggers the bonus. Unlike line wins, scatters count no matter where they land.
+**Scatter**. A symbol that pays regardless of position and usually triggers the bonus. Unlike line wins, scatters count wherever they land.
 
 **Slam-stop (skip)**. The player presses the spin button a second time and the reels land immediately. In pixi-reels this is `reelSet.skipSpin()`.
 
-**Spin**. One turn of the reels. In this library, the lifecycle is `START → SPIN → (ANTICIPATION) → STOP → IDLE`.
+**Spin**. One turn of the reels. In this library the lifecycle runs `START`, `SPIN`, optionally `ANTICIPATION`, `STOP`, then `IDLE`.
 
 **Stacked symbol**. A symbol that fills several rows of the same reel in a single column. Often wilds.
 
 **Sticky wild**. A wild that, once it lands, stays in place for the remaining spins of a round.
 
-**Symbol**. One cell on a reel. A graphic (sprite, animated sprite, Spine skeleton, or a custom drawing).
+**Symbol**. One cell on a reel. A graphic: a sprite, an animated sprite, a Spine skeleton, or a custom drawing.
 
 **Turbo / Super-turbo**. Faster spin profiles. Same outcome, less wait.
 
 **Walking wild**. A wild that moves one column per respin and typically triggers free respins along the way.
 
-**Wild**. Substitutes for other symbols to complete wins. Usually cannot substitute scatters.
+**Wild**. Substitutes for other symbols to complete wins. Usually cannot substitute for scatters.
 
-**Win spotlight**. Visual highlight on winning cells. pixi-reels ships `SymbolSpotlight.show()` / `.cycle()` for this.
+**Win spotlight**. The visual highlight on winning cells, which pixi-reels ships as `SymbolSpotlight.show()` / `.cycle()`.
 
 ## Library-specific names
 
-**`ReelSet`**. The top-level object, "the whole slot board": a PixiJS container that holds the reels, the spin controller, the speed manager, and the spotlight. You build one with `new ReelSetBuilder()...build()` and `addChild` it to your stage.
+**`ReelSet`**. The top-level object, the whole slot board: a PixiJS container that holds the reels, the spin controller, the speed manager and the spotlight. You build one with `new ReelSetBuilder()...build()` and `addChild` it to your stage.
 
-**`ReelSetBuilder`**. A fluent builder (chainable methods) that turns a pile of config into a `ReelSet`. Use it so you cannot forget to wire a required piece. every mandatory call is enforced at `.build()` time.
+**`ReelSetBuilder`**. A fluent builder (chainable methods) that turns a pile of config into a `ReelSet`. It checks every required call at `.build()` time, so you cannot forget to wire a piece.
 
 **`Reel`**. One column. Owns the symbols currently on screen, their vertical motion, and the "land on this frame" logic.
 
-**`ReelSymbol`**. Abstract base class for a single cell. Subclass it to draw whatever you like: `SpriteSymbol` for plain sprites, `AnimatedSpriteSymbol` for sprite sheets, `SpineSymbol` for Spine skeletons, or your own.
+**`ReelSymbol`**. The abstract base class for a single cell. Subclass it to draw whatever you like: `SpriteSymbol` for plain sprites, `AnimatedSpriteSymbol` for sprite sheets, `SpineSymbol` for Spine skeletons, or your own.
 
-**`ReelViewport`**. The clipping and layering container. Holds the mask (so symbols that scroll above/below the visible area don't leak) plus a "promoted" layer where winning symbols get lifted above the mask for a celebration animation.
+**`ReelViewport`**. The clipping and layering container. Holds the mask (so symbols that scroll above or below the visible area do not leak) plus a "promoted" layer where winning symbols are lifted above the mask for a celebration animation.
 
-**Spin controller (internal)**. The brain of a spin. Drives every reel through its lifecycle phases, coordinates `setResult()`, and emits events. Wired by `ReelSet`. consumers never construct one. In 1.0 it is no longer exported from the package entry.
+**Spin controller (internal)**. Drives every reel through its lifecycle phases, coordinates `setResult()`, and emits events. `ReelSet` wires it; you never construct one. Since 1.0 it is not exported from the package entry.
 
-**`ReelPhase`**. A single stage in a reel's life during a spin. pixi-reels ships built-in phases for wind-up, constant-speed blur, optional anticipation slow-down, and the decelerate-snap-bounce stop. Add your own by extending `ReelPhase` and registering via the `PhaseFactory` callback in `builder.phases(f => f.register('name', MyPhase))`. The built-in phase classes are internal; only the Config TYPES (`StartPhaseConfig`, `SpinPhaseConfig`, etc.) are exported as stable shape descriptions.
+**`ReelPhase`**. A single stage in a reel's life during a spin. The built-in phases cover the wind-up, the constant-speed blur, the optional anticipation slow-down, and the decelerate, snap and bounce stop. Add your own by extending `ReelPhase` and registering it through the `PhaseFactory` callback in `builder.phases(f => f.register('name', MyPhase))`. The built-in phase classes are exported too, so you can subclass or replace one. Their config types (`StartPhaseConfig`, `SpinPhaseConfig`, etc.) are the stable part of that surface.
 
 **`SpinningMode`**. The per-frame motion strategy: one method, `computeDelta(slotPitch, speed, deltaMs)`, returning how far the strip travels this frame. `StandardMode` is the default. `CascadeMode` multiplies by a gravity factor (1.5) and caps the step at one slot pitch. `ImmediateMode` returns 0, so the phase places symbols directly. Not the same thing as `spin({ mode: 'standard' | 'cascade' })`, which picks the phase chain.
 
@@ -88,30 +87,30 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`SymbolSpotlight`**. The win-animation primitive. Dims non-winners, promotes winners above the mask, runs `playWin()` on each, and can cycle through multiple lines.
 
-**`FrameBuilder` / middleware**. A tiny middleware pipeline that fills a reel's whole frame -- buffer-start + visible cells + buffer-end -- with symbol identities each time the engine builds one. Intercept it to implement "no three-in-a-row", "inject a mystery symbol every 7 frames", etc.
+**`FrameBuilder` / middleware**. A small middleware pipeline that fills a reel's whole frame (buffer start, visible cells, buffer end) with symbol ids each time the engine builds one. Intercept it for rules like no three in a row, or a mystery symbol every seventh frame.
 
-**`ObjectPool<T>`**. The reuse bucket behind every symbol. Scrolling a 5x3 reel for 5 seconds allocates zero new `ReelSymbol` objects. they come from and return to the pool.
+**`ObjectPool<T>`**. The reuse bucket behind every symbol. Scrolling a 5x3 board for 5 seconds allocates no new `ReelSymbol` objects; they come from the pool and go back to it.
 
-**`EventEmitter`**. Typed pub/sub. Events are namespaced with colons (`spin:start`, `spin:reelLanded`, `speed:changed`). Every exit path from a spin fires an event. wire audio / HUD / analytics to events, not to method calls.
+**`EventEmitter`**. Typed pub/sub. Events are namespaced with colons (`spin:start`, `spin:reelLanded`, `speed:changed`). Every exit path from a spin fires an event, so wire audio, HUD and analytics to events rather than to method calls.
 
-**`TickerRef`**. Safe wrapper around `PIXI.Ticker`. Tracks every callback it adds and removes them all on destroy. Never call `ticker.add()` directly in this codebase.
+**`TickerRef`**. A safe wrapper around `PIXI.Ticker`. Tracks every callback it adds and removes them all on destroy. Never call `ticker.add()` directly in this codebase.
 
-**`Disposable`**. Interface every resource-holding class implements. `destroy()` cascades through the composition tree so one `reelSet.destroy()` cleans the whole scene up.
+**`Disposable`**. The interface every resource-holding class implements. `destroy()` cascades through the composition tree, so one `reelSet.destroy()` cleans up the whole scene.
 
-**`enableDebug(reelSet)`**. Attaches `window.__PIXI_REELS_DEBUG` with `.log()`, `.snapshot()`, `.grid()`, `.trace()`, `.metrics()`. the only way to inspect reel state through a `canvas` (including from an AI agent).
+**`enableDebug(reelSet)`**. Attaches `window.__PIXI_REELS_DEBUG` with `.log()`, `.snapshot()`, `.grid()`, `.trace()`, `.metrics()`. It is the only way to inspect reel state through a `canvas`, including from an AI agent.
 
 **`debugOverlay(reelSet)`**. The same state drawn on the canvas: cells, mask, travel axis, a per-reel hud, a metrics plaque and a phase timeline per spin. Ships at `pixi-reels/debug` and draws with `pixi-silk`, an optional peer, so only a debug build pays for it. `SpinMetrics` is the per-round recorder behind it, `DebugPlaque` the readout plate it and the recipes are built from.
 
-**`CellPin`**. The cell-persistence primitive. Lock a symbol id to a cell with `reelSet.pin(reel, cell, id)`; the engine acquires an overlay during spin, migrates the cell on reshape, and supports an animated `movePin(from, to)` tween. Works with any `ReelSymbol` subclass. The pin primitive is general, not Spine-specific.
+**`CellPin`**. The cell-persistence primitive. Lock a symbol id to a cell with `reelSet.pin(reel, cell, id)`; the engine acquires an overlay during the spin, migrates the cell on a reshape, and supports an animated `movePin(from, to)` tween. Works with any `ReelSymbol` subclass; it is not Spine-specific.
 
-**`RefillOptions` / `RefillResult`**. The typed pair around `reelSet.refill(opts)`. Pass `{ winners, grid, mode?, signal? }`; receive `{ winnersRefilled, finalGrid, wasSkipped, duration }`. Mirrors the shape of `RunCascadeOptions` / `RunCascadeResult` so the cascade-loop primitives compose cleanly.
+**`RefillOptions` / `RefillResult`**. The typed pair around `reelSet.refill(opts)`. Pass `{ winners, grid, mode?, signal? }`; receive `{ winnersRefilled, finalGrid, wasSkipped, duration }`. Mirrors the shape of `RunCascadeOptions` / `RunCascadeResult`.
 
-**`RunCascadeOptions` / `RunCascadeResult`**. The pair around `reelSet.runCascade(opts)`. The two required callbacks (`detectWinners`, `nextGrid`) encode game rules; the result reports `chainLength`, `totalWinners`, `finalGrid`, and `wasSkipped`. `signal: AbortSignal` lets the caller slam mid-chain.
+**`RunCascadeOptions` / `RunCascadeResult`**. The pair around `reelSet.runCascade(opts)`. The two required callbacks (`detectWinners`, `nextGrid`) encode the game rules; the result reports `chainLength`, `totalWinners`, `finalGrid` and `wasSkipped`. `signal: AbortSignal` lets the caller slam mid-chain.
 
-**`createTestReelSet`**. The headless harness. Builds a `ReelSet` with a `FakeTicker` + `HeadlessSymbol` so you can run a full spin lifecycle in Node, with no DOM or canvas, and assert on the final grid. In 1.0 it ships at the `pixi-reels/testing` subpath so the harness drops out of production bundles.
+**`createTestReelSet`**. The headless harness. Builds a `ReelSet` with a `FakeTicker` and a `HeadlessSymbol`, so you can run a full spin lifecycle in Node, with no DOM or canvas, and assert on the final grid. Since 1.0 it ships at the `pixi-reels/testing` subpath, so the harness stays out of production bundles.
 
-**`CheatEngine` (outside the library)**. Deterministic outcome generator used by the recipes and by the library's own integration tests. Lives in the private `@pixi-reels/cheats` workspace package, not in the library. ADR 009 covers why.
+**`CheatEngine` (outside the library)**. A deterministic outcome generator used by the recipes and by the library's own integration tests. Lives in the private `@pixi-reels/cheats` workspace package, not in the library. ADR 009 covers why.
 
 **Changeset**. A small markdown file under `.changeset/` describing a release-worthy change and which package(s) to bump. Generated by `pnpm changeset`; consumed by the release workflow to version and publish.
 
-**Snapshot release**. An ephemeral npm publish stamped `<base>-<tag>-<timestamp>` under a per-branch dist-tag. Every push to a non-main branch creates one, so reviewers can `pnpm add pixi-reels@<branch-tag>` and test.
+**Snapshot release**. A short-lived npm publish stamped `<base>-<tag>-<timestamp>` under a per-branch dist-tag. Every push to a non-main branch creates one, so reviewers can `pnpm add pixi-reels@<branch-tag>` and test.

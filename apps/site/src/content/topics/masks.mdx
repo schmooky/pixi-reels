@@ -1,0 +1,42 @@
+---
+title: Reel windows
+group: layout
+oneLiner: Show the reels through a rounded window, a card per reel or any shape you draw.
+order: 74
+tags:
+  - mask
+  - rounded
+  - silhouette
+  - pyramid
+  - jagged
+  - frame
+---
+
+The viewport clips the reels through a `MaskStrategy`, so buffer cells never
+show past the grid. The default is `RectMaskStrategy`, and the strategies
+below are options you add on top.
+
+| Board | Strategy |
+|---|---|
+| Square frame art | `RectMaskStrategy` (default) |
+| Rounded frame, reels flush | `RoundedRectMaskStrategy` (`scope: 'set'`) |
+| Reels as separate cards, with a cross gap | `RoundedRectMaskStrategy` (`scope: 'reel'`) |
+| Rounded frame, one rect per reel, any gap | `RoundedRectMaskStrategy` (`scope: 'outer'`) |
+| Hold & Win board, a mask per cell | `cellMask((cell, { corners }) => ...)` |
+| Pyramid or MultiWays, rounded, reels flush | `SilhouetteMaskStrategy` |
+| Hexes, holes, cut-outs | `PathMaskStrategy` |
+
+`inset(strategy, px)` shrinks any of them by a margin, and
+`composeMasks(a, b, ...)` joins several, your own strategies included.
+
+## Writing your own
+
+Implement `build(ctx)` and `update(g, ctx)`, set
+`version = MASK_STRATEGY_VERSION`, and pass it to `.maskStrategy(...)`. Try
+`PathMaskStrategy` first. A class is only worth it when it keeps state
+between draws.
+
+Two things to respect. `ctx.axis` matters because `rects` are in screen
+space in every orientation (`axis.toLocal(w, h)` gives `{ cross, main }`).
+`ctx.bleed` inflates the cross axis only. Add the optional `draw(g, ctx)`
+and your strategy composes like the built-in ones.

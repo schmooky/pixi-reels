@@ -1,7 +1,8 @@
 id: pins-002
 group: pins
+topic: wilds-and-pins
 question: How do I unlock a pinned cell again?
 answer: "`reelSet.unpin(col, row)` removes it."
 links:
   - label: "Guide: Pins"
-    href: /guides/pins/
+    href: /mechanics/wilds-and-pins/#concept

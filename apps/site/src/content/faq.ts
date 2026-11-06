@@ -31,6 +31,8 @@ export interface FaqQuestion {
   links?: FaqLink[];
   /** Optional slug of the recipe that best demonstrates this. */
   recipe?: string;
+  /** The mechanic this answer belongs to: a `/mechanics/<slug>/` page. Unset = General. */
+  topic?: string;
 }
 
 export interface FaqGroup {
@@ -63,6 +65,7 @@ interface GroupFile {
 }
 interface QuestionFile {
   group: string;
+  topic?: string | null;
   question: string;
   answer?: string;
   recipe?: string;
@@ -83,6 +86,7 @@ for (const [path, raw] of Object.entries(questionFiles).sort((a, b) => a[0].loca
   if (q.answer) resolved.answer = { en: q.answer };
   if (q.links?.length) resolved.links = q.links;
   if (q.recipe) resolved.recipe = q.recipe;
+  if (q.topic) resolved.topic = q.topic;
   if (!questionsByGroup.has(q.group)) questionsByGroup.set(q.group, []);
   questionsByGroup.get(q.group)!.push(resolved);
 }
@@ -113,6 +117,13 @@ export const FAQ_ANSWERED: FaqQuestionResolved[] = FAQ_QUESTIONS.filter((q) => q
 export const FAQ_GROUP_TITLE: Record<string, FaqGroup['title']> = Object.fromEntries(
   FAQ.map((g) => [g.id, g.title]),
 );
+
+/** Questions by topic slug; `general` holds the ones no mechanic claims. */
+export const FAQ_BY_TOPIC: Record<string, FaqQuestionResolved[]> = {};
+for (const q of FAQ_QUESTIONS) {
+  const key = q.topic ?? 'general';
+  (FAQ_BY_TOPIC[key] ??= []).push(q);
+}
 
 /** Total question count — handy for a page header ("300+ questions"). */
 export const FAQ_COUNT = FAQ_QUESTIONS.length;

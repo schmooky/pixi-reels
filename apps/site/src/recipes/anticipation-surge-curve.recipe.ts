@@ -1,7 +1,18 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app,
-//                   SilkGraphics, DebugPlaque, DEBUG_FONT
-//
+import * as PIXI from 'pixi.js';
+import { SilkGraphics } from 'pixi-silk';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { DEBUG_FONT } from 'pixi-reels/debug';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Shape the tease: surge, then crawl',
+  topic: 'anticipation',
+  tags: ['anticipation', 'tension', 'scatter', 'near-miss', 'spine', 'horizontal', 'reverse', 'curve', 'acceleration'],
+  height: 400,
+} as const satisfies RecipeMeta;
+
 // SURGE, THEN CRAWL.
 //
 // The stock tease can only decelerate: it eases `reel.speed` down to a
@@ -20,128 +31,137 @@
 //
 // Watch the readout: the top row is live speed as a fraction of spin speed.
 // It goes ABOVE 1 before it goes below it.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const SCAT = 'SCAT';
+  const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+  const TEASE = [2, 3, 4];
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const SCAT = 'SCAT';
-const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
-const TEASE = [2, 3, 4];
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+    })
+    // The profile hold still gates whether the tease runs at all; the CURVE sets
+    // how long it actually lasts.
+    .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 120 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
-  })
-  // The profile hold still gates whether the tease runs at all; the CURVE sets
-  // how long it actually lasts.
-  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 120 })
-  .ticker(app.ticker)
-  .build();
+  const H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const H = ROWS * SIZE + (ROWS - 1) * GAP;
-const W = REELS * SIZE + (REELS - 1) * GAP;
+  const hud = readout.plaque({ text: 'The tease surges first, then crawls.', fontSize: 12, minWidth: W, maxWidth: W });
+  hud.position.set(0, H + 10);
+  reelSet.addChild(hud);
 
-const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, minWidth: W, maxWidth: W });
-hud.position.set(0, H + 10);
-reelSet.addChild(hud);
+  // A speed trace for the last tease reel. `speedNormalized` is live speed over
+  // the profile's spinSpeed - the value you would drive a pitch ramp from.
+  //
+  // The panel below is drawn ONCE, at setup. That matters: the recipe runner
+  // scales and centres the reel set to fit the frame, and it measures bounds at
+  // setup time. A Graphics that is still empty then contributes nothing to those
+  // bounds, so the fit gets solved for the reels alone and everything the chart
+  // draws later spills outside the frame. Reserving the box up front makes the
+  // runner scale the reels AND the chart together.
+  const TRACE_H = 62;
+  const TRACE_TOP = hud.y + hud.plateHeight + 8;
+  const SPAN = 240;
+  // Top of the plot = 2.2x spin speed, so a 2x surge has headroom.
+  const V_MAX = 2.2;
 
-// A speed trace for the last tease reel. `speedNormalized` is live speed over
-// the profile's spinSpeed - the value you would drive a pitch ramp from.
-//
-// The panel below is drawn ONCE, at setup. That matters: the recipe runner
-// scales and centres the reel set to fit the frame, and it measures bounds at
-// setup time. A Graphics that is still empty then contributes nothing to those
-// bounds, so the fit gets solved for the reels alone and everything the chart
-// draws later spills outside the frame. Reserving the box up front makes the
-// runner scale the reels AND the chart together.
-const TRACE_H = 62;
-const TRACE_TOP = hud.y + hud.plateHeight + 8;
-const SPAN = 240;
-// Top of the plot = 2.2x spin speed, so a 2x surge has headroom.
-const V_MAX = 2.2;
+  // Same plate as the plaques. SilkGraphics keeps the rounded panel, the dotted
+  // 1x guide and the trace exact at whatever scale the runner fits them to.
+  const panel = new SilkGraphics();
+  panel.roundRect(0, TRACE_TOP, W, TRACE_H, 8, 0.6)
+    .fill({ color: 0x0b0e14, alpha: 0.84 })
+    .stroke({ width: 1, color: 0xffffff, alpha: 0.1, alignment: 'inside' });
+  // The 1x line: "normal spin speed". Everything above it is a surge.
+  const oneY = TRACE_TOP + TRACE_H - (1 / V_MAX) * TRACE_H;
+  panel.line(6, oneY, W - 6, oneY).stroke({ width: 1, color: 0xffffff, alpha: 0.3, dash: [2, 3] });
+  reelSet.addChild(panel);
 
-// Same plate as the plaques. SilkGraphics keeps the rounded panel, the dotted
-// 1x guide and the trace exact at whatever scale the runner fits them to.
-const panel = new SilkGraphics();
-panel.roundRect(0, TRACE_TOP, W, TRACE_H, 8, 0.6)
-  .fill({ color: 0x0b0e14, alpha: 0.84 })
-  .stroke({ width: 1, color: 0xffffff, alpha: 0.1, alignment: 'inside' });
-// The 1x line: "normal spin speed". Everything above it is a surge.
-const oneY = TRACE_TOP + TRACE_H - (1 / V_MAX) * TRACE_H;
-panel.line(6, oneY, W - 6, oneY).stroke({ width: 1, color: 0xffffff, alpha: 0.3, dash: [2, 3] });
-reelSet.addChild(panel);
+  const oneLabel = new PIXI.Text({
+    text: '1x',
+    style: { fontFamily: DEBUG_FONT, fontSize: 9, fill: 0x9ca3af },
+  });
+  // INSIDE the panel. Outside it the label widens the composition past the reels,
+  // and the runner's fit centres on total bounds - so the board would sit visibly
+  // off-centre in the frame.
+  oneLabel.position.set(W - 20, oneY - 12);
+  reelSet.addChild(oneLabel);
 
-const oneLabel = new PIXI.Text({
-  text: '1x',
-  style: { fontFamily: DEBUG_FONT, fontSize: 9, fill: 0x9ca3af },
-});
-// INSIDE the panel. Outside it the label widens the composition past the reels,
-// and the runner's fit centres on total bounds - so the board would sit visibly
-// off-centre in the frame.
-oneLabel.position.set(W - 20, oneY - 12);
-reelSet.addChild(oneLabel);
+  const trace = new SilkGraphics();
+  reelSet.addChild(trace);
 
-const trace = new SilkGraphics();
-reelSet.addChild(trace);
+  let samples: number[] = [];
+  let sampling = false;
 
-let samples = [];
-let sampling = false;
+  const yFor = (v: number) => {
+    // Clamped so a stray value can never grow the bounds the fit was solved for.
+    const t = Math.max(0, Math.min(1, v / V_MAX));
+    return TRACE_TOP + TRACE_H - t * TRACE_H;
+  };
 
-const yFor = (v) => {
-  // Clamped so a stray value can never grow the bounds the fit was solved for.
-  const t = Math.max(0, Math.min(1, v / V_MAX));
-  return TRACE_TOP + TRACE_H - t * TRACE_H;
-};
+  const tick = () => {
+    if (!sampling) return;
+    samples.push(reelSet.reels[4].speedNormalized);
+    if (samples.length > SPAN) samples.shift();
+    trace.clear();
+    if (samples.length < 2) return;
+    const pts = [];
+    for (let i = 0; i < samples.length; i++) pts.push((i / SPAN) * W, yFor(samples[i]));
+    trace.polyline(pts).stroke({ width: 2, color: 0x6ad0ff, cap: 'round' });
+  };
+  app.ticker.add(tick);
 
-const tick = () => {
-  if (!sampling) return;
-  samples.push(reelSet.reels[4].speedNormalized);
-  if (samples.length > SPAN) samples.shift();
-  trace.clear();
-  if (samples.length < 2) return;
-  const pts = [];
-  for (let i = 0; i < samples.length; i++) pts.push((i / SPAN) * W, yFor(samples[i]));
-  trace.polyline(pts).stroke({ width: 2, color: 0x6ad0ff, cap: 'round' });
-};
-app.ticker.add(tick);
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      grid[0].visible[1] = SCAT;
+      grid[1].visible[1] = SCAT;
 
-return {
-  reelSet,
-  cleanup: () => {
-    app.ticker.remove(tick);
-    try { trace.destroy(); } catch {}
-    try { panel.destroy(); } catch {}
-    try { oneLabel.destroy(); } catch {}
-    try { hud.destroy({ children: true }); } catch {}
-  },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    grid[0].visible[1] = SCAT;
-    grid[1].visible[1] = SCAT;
+      samples = [];
+      sampling = true;
+      hud.text = 'surge 2x, then crawl 0.08x. dotted line = 1x';
 
-    samples = [];
-    sampling = true;
-    hud.text = 'surge 2x, then crawl 0.08x. dotted line = 1x';
-
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 420));
-    reelSet.setResult(grid);
-    reelSet.setAnticipation(TEASE, {
-      stagger: 260,
-      curve: [
-        // Leg 1: kick UP. `power2.in` so the surge builds rather than snapping.
-        { speed: 2, duration: 240, ease: 'power2.in' },
-        // Leg 2: fall away to a crawl and sit there. `power3.inOut` ramps the
-        // deceleration in and back out - this is the leg that carries the feel.
-        { speed: 0.08, duration: 620, ease: 'power3.inOut', hold: 300 },
-      ],
-    });
-    await p;
-    sampling = false;
-    hud.text = 'landed. press spin again';
-  },
-};
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 420));
+      reelSet.setResult(grid);
+      reelSet.setAnticipation(TEASE, {
+        stagger: 260,
+        curve: [
+          // Leg 1: kick UP. `power2.in` so the surge builds rather than snapping.
+          { speed: 2, duration: 240, ease: 'power2.in' },
+          // Leg 2: fall away to a crawl and sit there. `power3.inOut` ramps the
+          // deceleration in and back out - this is the leg that carries the feel.
+          { speed: 0.08, duration: 620, ease: 'power3.inOut', hold: 300 },
+        ],
+      });
+      await p;
+      sampling = false;
+      hud.text = 'landed';
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      app.ticker.remove(tick);
+      try { trace.destroy(); } catch {}
+      try { panel.destroy(); } catch {}
+      try { oneLabel.destroy(); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
+    },
+  };
+}

@@ -6,15 +6,13 @@ import {
   RotateCcw,
   AlertCircle,
   CheckCircle2,
-  Square,
-  RefreshCw,
   Code2,
   Boxes,
-  Maximize2,
-  Minimize2,
   Share2,
   Eye,
   Gauge,
+  MessageSquare,
+  Bug,
   X,
 } from 'lucide-react';
 import { SymbolsTab } from './studio/SymbolsTab.tsx';
@@ -24,42 +22,17 @@ import { useMinDisplay } from './useMinDisplay.ts';
 import { cn } from '@/lib/utils';
 import { Kbd, KbdChord } from '@/components/ui/kbd';
 import { Application, type Texture } from 'pixi.js';
-import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
-  SpeedPresets,
-  SpriteSymbol,
-  AnimatedSpriteSymbol,
   enableDebug,
-  WinPresenter,
-  RectMaskStrategy,
-  SharedRectMaskStrategy,
   type ReelSet,
   type SymbolData,
-  ReelSymbol,
-  EmptySymbol,
 } from 'pixi-reels';
-import { SpineReelSymbol } from 'pixi-reels/spine';
-import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
-import {
-  CoinSymbol,
-  COIN_TIER,
-  COIN_FEATURE,
-  COIN_MYSTERY,
-  COIN_TRIGGER,
-  coinValue,
-  coinMultiplier,
-  drawCoin,
-} from '../runtime/CoinSymbol.ts';
-import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
-import {
-  loadGeneratedSpines,
-  buildSpineMap,
-} from '../runtime/generatedSpineLoader.ts';
-import { transform as sucraseTransform } from 'sucrase';
-import { runRecipeSource } from '@/lib/recipeGlobals';
+import { createAssets, setReadouts, CUE_STRIP, type RecipeAssets, type RecipeResult } from '@pixi-reels/kit';
+import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
+import { attachRecipeDebug, DEFAULT_GROUPS, LAYER_GROUPS, type LayerGroup, type RecipeDebugHandle } from '@/lib/recipeDebug';
+import { EventsPanel } from './EventsPanel';
 import {
   loadConfig,
   saveConfig,
@@ -73,37 +46,38 @@ import {
 import type { StudioConfig } from '@/lib/studio/types.js';
 
 
-const DEFAULT_CODE = `// @ts-nocheck
-// ─── pixi-reels studio ─────────────────────────────────────────────────
-// Edit this code and press Run (Cmd/Ctrl+Enter). Recipes from /recipes/*
-// open here too. anything that runs in a recipe runs here.
+const DEFAULT_CODE = `// pixi-reels studio
+// Edit this module and press Run (Cmd/Ctrl+Enter). Every recipe on the site
+// opens here too: a recipe is a module, and what you read is what runs.
 //
-// Built-in globals (ready out of the box):
-//   - ReelSetBuilder, SpeedPresets, WinPresenter
-//   - SpriteSymbol, AnimatedSpriteSymbol, BlurSpriteSymbol
-//   - CardSymbol, CARD_DECK, WILD_CARD  (graphics-only debug cards)
-//   - CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
-//     coinValue, coinMultiplier, drawCoin  (graphics-only debug coins)
-//   - SpineReelSymbol, loadGeneratedSpines, buildSpineMap
-//   - RectMaskStrategy, SharedRectMaskStrategy
-//   - EmptySymbol, ReelSymbol
-//   - app         . PixiJS Application (.ticker, .screen)
-//   - textures, blurTextures, SYMBOL_IDS . prototype atlas, preloaded
-//   - pickWeighted, gsap, PIXI
+// Import what you need. The runtime resolves:
+//   pixi-reels, pixi-reels/spine, pixi-reels/debug, pixi.js, gsap, pixi-silk,
+//   @esotericsoftware/spine-pixi-v8, @pixi-reels/kit, @pixi-reels/kit/spine,
+//   @pixi-reels/kit/sound, @pixi-reels/kit/ways
 //
-// Bring-your-own assets (Symbols tab):
-//   - userSymbols    . Record<id, { Class, options }> from your uploads
-//   - userSymbolData . Record<id, { unmask?: boolean }>, auto-applied
+// The host hands the recipe a RecipeContext:
+//   app             PixiJS Application (.ticker, .screen, .stage)
+//   userSymbols     Studio only: Record<id, { Class, options }> from the Symbols tab
+//   userSymbolData  Studio only: Record<id, { unmask?: boolean }>, applied by the builder
 //
-// Return { reelSet, nextResult? } from buildReels(). Or return { onSpin }
-// for a fully custom spin handler.
-// ───────────────────────────────────────────────────────────────────────
+// The recipe adds its set to app.stage, wires its control (tapToSpin: a tap
+// starts a round, a tap mid-round skips it) and its sounds, and returns
+// { reelSet } so the host can draw the debug overlay on it. Copy the module
+// into a game as it is: npm i pixi-reels @pixi-reels/kit.
+import { prewarmSpinTextures, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { createAssets, GENERIC_SYMBOL_IDS, GENERIC_WEIGHTS, pickWeighted, StickerSymbol, tapToSpin } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+import type { RecipeContext, RecipeResult } from '@pixi-reels/kit';
 
-function buildReels() {
-  const SYMBOLS = [...CARD_DECK, WILD_CARD];
-  const weights = {
-    '7': 20, '8': 20, '9': 20, '10': 14, J: 14, Q: 10, K: 6, A: 5, wild: 3,
-  };
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  // Eleven flat stickers, one texture each; the rig does the motion.
+  const { textures } = await createAssets().genericSymbols();
+  const weights = GENERIC_WEIGHTS;
+  // One spin-texture cache per set: the reels spin a baked motion blur of
+  // each sticker, no filter per frame, baked up front so the first spin
+  // never pays the capture.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  prewarmSpinTextures({ cache, ids: [...GENERIC_SYMBOL_IDS], createSymbol: () => new StickerSymbol({ textures }), width: 90, height: 90 });
 
   const reelSet = new ReelSetBuilder()
     .reels(5)
@@ -111,12 +85,8 @@ function buildReels() {
     .symbolSize(90, 90)
     .symbolGap(4, 4)
     .symbols((r) => {
-      for (const sym of SYMBOLS) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color,
-          label: sym.label,
-          textColor: sym.textColor,
-        });
+      for (const id of GENERIC_SYMBOL_IDS) {
+        r.register(id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
     })
     .weights(weights)
@@ -125,21 +95,21 @@ function buildReels() {
     .ticker(app.ticker)
     .build();
 
-  return {
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
     reelSet,
-    nextResult: () =>
+    next: () =>
       Array.from({ length: 5 }, () =>
         Array.from({ length: 3 }, () => pickWeighted(weights)),
       ),
-  };
+  });
+  return { reelSet };
 }
 `;
 
 interface StudioEnv {
   app: Application;
-  textures: Record<string, Texture>;
-  blurTextures: Record<string, Texture>;
-  SYMBOL_IDS: string[];
 }
 
 /**
@@ -148,41 +118,33 @@ interface StudioEnv {
  * doesn't re-trigger the recipe-open prompt. Mirrors the encoder in
  * RecipeRunner's `openInStudio()`.
  */
-function consumeHashCode(): string | null {
+function consumeHashCode(): { code: string; debug: boolean } | null {
   if (typeof location === 'undefined') return null;
-  if (!location.hash.startsWith('#code=')) return null;
+  // The code is raw base64 (its `+` and `=` would not survive
+  // URLSearchParams), so split it off by hand; only the flags after it are
+  // a query string.
+  const m = location.hash.match(/^#code=([^&]*)(?:&(.*))?$/);
+  if (!m) return null;
+  const params = new URLSearchParams(m[2] ?? '');
   let decoded: string;
   try {
-    decoded = decodeURIComponent(escape(atob(location.hash.slice(6))));
+    decoded = decodeURIComponent(escape(atob(m[1])));
   } catch {
     return null;
   }
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch { /* ignore */ }
-  return decoded;
+  // `&debug=1`: the docs page's Debug button, which wants the overlay and
+  // the events panel open as soon as the recipe mounts.
+  return { code: decoded, debug: params.get('debug') === '1' };
 }
 
-interface BuildResult {
-  reelSet?: ReelSet;
-  nextResult?: () => string[][];
-  onSpin?: () => Promise<void>;
-  cleanup?: () => void;
-}
-
-function pickWeighted(weights: Record<string, number>): string {
-  const total = Object.values(weights).reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (const [id, w] of Object.entries(weights)) {
-    r -= w;
-    if (r <= 0) return id;
-  }
-  return Object.keys(weights)[0];
-}
+type BuildResult = RecipeResult;
 
 /**
- * Subclass of ReelSetBuilder injected into the studio's user code in
- * place of the engine's. Auto-applies the per-symbol overrides from the
+ * Subclass of ReelSetBuilder the studio resolves `import { ReelSetBuilder }
+ * from 'pixi-reels'` to in place of the engine's. Auto-applies the per-symbol overrides from the
  * Symbols tab (currently: `unmask`) in `.build()`, so the user doesn't
  * have to remember `.symbolData(userSymbolData)` themselves. The
  * Symbols-tab UI is the source of truth for these flags. if the user
@@ -207,19 +169,35 @@ function makeStudioReelSetBuilder(
   } as typeof ReelSetBuilder;
 }
 
+/**
+ * The site's asset kits, with the Symbols-tab uploads folded into the
+ * prototype atlas so `assets.prototypeAtlas()` in a recipe sees them.
+ */
+function studioAssets(uploads: Record<string, Texture>): RecipeAssets {
+  const base = createAssets();
+  if (Object.keys(uploads).length === 0) return base;
+  return {
+    ...base,
+    prototypeAtlas: async () => {
+      const set = await base.prototypeAtlas();
+      return { ...set, textures: { ...set.textures, ...uploads } };
+    },
+  };
+}
+
 type TabId = 'code' | 'symbols';
 
 export default function Studio() {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const envRef = useRef<StudioEnv | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
-  const nextResultRef = useRef<(() => string[][]) | null>(null);
-  const onSpinRef = useRef<(() => Promise<void>) | null>(null);
+  // True between a successful run and the next teardown.
+  const mountedRef = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
   const lastInjectablesRef = useRef<StudioInjectables | null>(null);
   // Set by `run()` to a closure that recentres + scales the current reelSet
   // inside the (possibly-resized) canvas pane. Called from the ResizeObserver
-  // so layout changes (fullscreen toggle, panel resize, window resize) all
+  // so layout changes (the debug pane opening, a window resize) all
   // refit through a single path.
   const fitRef = useRef<(() => void) | null>(null);
 
@@ -229,15 +207,24 @@ export default function Studio() {
     { kind: 'idle', msg: 'Loading studio…' },
   );
   const [isBooting, setIsBooting] = useState(true);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // The debug side: the overlay on every set and the events panel beside the
+  // canvas. Recording starts at mount so the panel shows the round that made
+  // you reach for it; the overlay is drawn only while the toggle is on.
+  const debugRef = useRef<RecipeDebugHandle | null>(null);
+  const [debugOn, setDebugOn] = useState(false);
+  const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
+  const [eventsTick, setEventsTick] = useState(0);
+  const [mounted, setMounted] = useState(false);
   // Speed selector. Populated from `reelSet.speed.profileNames` on every
   // Run so the segmented control reflects whatever the user's builder
   // registered. `.speed('mySpeed', ...)` in user code shows up
   // automatically. Empty until the first successful Run.
   const [speeds, setSpeeds] = useState<string[]>([]);
   const [speedName, setSpeedName] = useState<string>('normal');
+  // The explanation layer (plaques, outlines drawn through `readout`). Off
+  // here by default: Studio is for the mechanic, the docs are for the notes.
+  const [readouts, setReadoutsOn] = useState(false);
 
   // Latched boot flag. keep the skeleton on screen for at least 250 ms
   // after first paint so very fast IDB+atlas loads don't flash a 1-frame
@@ -259,15 +246,16 @@ export default function Studio() {
   // debounced save effect so the user's saved Studio code in IDB is preserved.
   const [isEphemeral, setIsEphemeral] = useState(false);
 
-  // ESC exits fullscreen.
+  // The overlay follows the toggle and the layer groups; the panel follows
+  // the toggle through the layout below. A refit after either: the overlay's
+  // panels sit under the mask and grow the set's bounds.
   useEffect(() => {
-    if (!fullscreen) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullscreen(false);
-    };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [fullscreen]);
+    const d = debugRef.current;
+    if (!d) return;
+    if (debugOn) d.showOverlay(groups);
+    else d.hideOverlay();
+    fitRef.current?.();
+  }, [debugOn, groups, mounted]);
 
   // ── Load persisted config + boot Pixi ──────────────────────────────
   useEffect(() => {
@@ -278,7 +266,9 @@ export default function Studio() {
       if (!host) return;
 
       const persisted = await loadConfig().catch(() => null);
-      const hashCode = consumeHashCode();
+      const hash = consumeHashCode();
+      const hashCode = hash?.code ?? null;
+      if (hash?.debug) setDebugOn(true);
       const hasPriorWork = !!(persisted && (persisted.code || persisted.symbols.length > 0));
 
       // Three landing states:
@@ -318,23 +308,13 @@ export default function Studio() {
       host.innerHTML = '';
       host.appendChild(app.canvas);
 
-      // Preload the prototype atlas so recipe-style code (BlurSpriteSymbol +
-      // `textures` lookups) works without any explicit loader call.
-      const { textures, blurTextures } = await loadPrototypeSymbols();
-      if (cancelled) return;
-
-      envRef.current = {
-        app,
-        textures,
-        blurTextures,
-        SYMBOL_IDS: Object.keys(textures),
-      };
+      envRef.current = { app };
       setIsBooting(false);
       setStatus({ kind: 'idle', msg: 'Press Run to mount the reels.' });
     })();
 
     // Refit whenever the canvas pane changes size. PixiJS's `resizeTo: host`
-    // only listens on window resize; CSS layout swaps (the fullscreen
+    // only listens on window resize; CSS layout swaps (the debug pane
     // toggle, future panel drags) leave the renderer with stale dimensions.
     // ResizeObserver fires for all of those.
     const host = canvasHostRef.current;
@@ -379,11 +359,20 @@ export default function Studio() {
   function teardownRun(): void {
     try { cleanupRef.current?.(); } catch { /* ignore */ }
     try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
+    debugRef.current?.detach();
+    debugRef.current = null;
+    setMounted(false);
     reelSetRef.current = null;
-    nextResultRef.current = null;
-    onSpinRef.current = null;
     cleanupRef.current = null;
     fitRef.current = null;
+    mountedRef.current = false;
+    // The stage belongs to the recipe: it added its root and its tap
+    // listener there. A new run starts from an empty one.
+    const stage = envRef.current?.app.stage;
+    if (stage) {
+      stage.removeAllListeners('pointertap');
+      stage.removeChildren();
+    }
     if (lastInjectablesRef.current) {
       revokeBlobUrls(lastInjectablesRef.current.blobUrls);
       lastInjectablesRef.current = null;
@@ -406,82 +395,80 @@ export default function Studio() {
     }
     lastInjectablesRef.current = injectables;
 
-    let js: string;
-    try {
-      js = sucraseTransform(config.code, { transforms: ['typescript'] }).code;
-    } catch (e) {
-      setStatus({ kind: 'err', msg: `Compile error: ${(e as Error).message}` });
-      return;
-    }
-
     let built: BuildResult;
     try {
-      // User uploads merge into `textures` so recipe-style `textures[id]`
-      // lookups also pick them up; ids collide -> studio uploads win.
-      const mergedTextures = { ...env.textures, ...injectables.textures };
-      // The global surface is shared with RecipeRunner and ShareViewer, so a
-      // recipe opened in Studio sees exactly the variables it saw in the
-      // docs. Hand-maintained parameter lists drifted by 26 names before
-      // this; see lib/recipeGlobals.ts.
-      built = await runRecipeSource<BuildResult>(js, {
+      setReadouts(readouts);
+      // The module loader is shared with RecipeRunner and ShareViewer, so a
+      // recipe opened in Studio resolves exactly the imports it resolved in
+      // the docs. Studio only swaps two things in: `createAssets` hands out
+      // an atlas with the Symbols-tab uploads folded in (ids collide ->
+      // uploads win), and `ReelSetBuilder` becomes the subclass that applies
+      // the tab's per-symbol flags.
+      built = await runRecipeModule(config.code, {
         app: env.app,
-        textures: mergedTextures,
-        blurTextures: env.blurTextures,
-        SYMBOL_IDS: env.SYMBOL_IDS,
-        pickWeighted,
-        ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData),
         userSymbols: injectables.userSymbols,
         userSymbolData: injectables.userSymbolData,
-      }, ' ; return buildReels();');
+      }, {
+        overrides: {
+          'pixi-reels': { ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData) },
+          '@pixi-reels/kit': { createAssets: () => studioAssets(injectables.textures) },
+        },
+      });
     } catch (e) {
-      setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });
+      setStatus({ kind: 'err', msg: `${e instanceof SyntaxError ? 'Compile' : 'Runtime'} error: ${(e as Error).message}` });
       return;
     }
 
-    if (!built || (!built.reelSet && !built.onSpin)) {
-      setStatus({ kind: 'err', msg: 'buildReels() must return { reelSet } or { onSpin }.' });
-      return;
-    }
-
-    onSpinRef.current = built.onSpin ?? null;
+    built ??= {};
     cleanupRef.current = built.cleanup ?? null;
+    mountedRef.current = true;
+    debugRef.current = attachRecipeDebug(
+      { app: env.app, reelSet: built.reelSet ?? null, board: built.board?.events ?? null },
+      () => setEventsTick((n) => n + 1),
+    );
 
     if (!built.reelSet) {
-      setStatus({ kind: 'ok', msg: 'Mounted. Custom spin handler active.' });
+      setMounted(true);
+      setStatus({ kind: 'ok', msg: 'Mounted. Tap the canvas to play it.' });
       return;
     }
 
     const reelSet = built.reelSet;
+    if (!(built.stage ?? reelSet).parent) {
+      setStatus({ kind: 'err', msg: OFF_STAGE });
+      return;
+    }
     enableDebug(reelSet);
 
     const PADDING = 24;
     // Aspect-preserving fit. Upscales freely so the reels look right in a
-    // fullscreen canvas pane (with the previous Math.min(1, ...) clamp they
+    // viewport-sized canvas pane (with the previous Math.min(1, ...) clamp they
     // looked tiny in the middle). Always re-derives raw dimensions from
     // post-divide-by-scale so successive refits don't compound.
     // Fit the composition root when the code returns one (a banner set above
     // a grid), so every set scales and centres together. Matches RecipeRunner.
     const fitted = built.stage ?? reelSet;
+    // Local bounds, offset included: the debug overlay draws its hud and the
+    // buffer cells above the mask, so the content does not start at (0, 0).
     const fit = () => {
-      const rawW = fitted.width / (fitted.scale.x || 1);
-      const rawH = fitted.height / (fitted.scale.y || 1);
+      const b = fitted.getLocalBounds();
+      if (!(b.width > 0) || !(b.height > 0)) return;
+      // The strip under the reels belongs to the recipe's tap cue.
       const availW = Math.max(40, env.app.screen.width - PADDING * 2);
-      const availH = Math.max(40, env.app.screen.height - PADDING * 2);
-      const scale = Math.min(availW / rawW, availH / rawH);
+      const availH = Math.max(40, env.app.screen.height - CUE_STRIP - PADDING * 2);
+      const scale = Math.min(availW / b.width, availH / b.height);
       fitted.scale.set(scale);
-      fitted.x = (env.app.screen.width - rawW * scale) / 2;
-      fitted.y = (env.app.screen.height - rawH * scale) / 2;
+      fitted.x = (env.app.screen.width - b.width * scale) / 2 - b.x * scale;
+      fitted.y = PADDING + (availH - b.height * scale) / 2 - b.y * scale;
     };
-    env.app.stage.removeChildren();
-    env.app.stage.addChild(fitted);
     fit();
     // The boot useEffect's ResizeObserver calls through this ref on every
-    // host-size change. single fit path for window resize, fullscreen
+    // host-size change. single fit path for window resize, the debug pane
     // toggle, and future panel drags.
     fitRef.current = fit;
 
     reelSetRef.current = reelSet;
-    nextResultRef.current = built.nextResult ?? null;
+    setMounted(true);
 
     // Sync the speed selector with whatever the user's builder registered.
     // If the previously-selected name still exists we keep it (so toggling
@@ -506,34 +493,6 @@ export default function Studio() {
     try { reelSetRef.current?.setSpeed(name); } catch { /* ignore. profile missing */ }
   }
 
-  async function handleSpin(): Promise<void> {
-    if (isSpinning) {
-      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
-      // in the catch so a player tap during the server-wait window still
-      // queues the slam and fires it the moment the result is in.
-      try { reelSetRef.current?.skipSpin(); }
-      catch { reelSetRef.current?.requestSkip(); }
-      return;
-    }
-    if (!reelSetRef.current && !onSpinRef.current) return;
-    setIsSpinning(true);
-    try {
-      if (onSpinRef.current) {
-        await onSpinRef.current();
-      } else if (reelSetRef.current) {
-        const p = reelSetRef.current.spin();
-        const result = nextResultRef.current?.();
-        await new Promise((r) => setTimeout(r, 150));
-        if (result) reelSetRef.current.setResult(result.map((visible) => ({ visible })));
-        await p;
-      }
-    } catch (e) {
-      setStatus({ kind: 'err', msg: `Spin error: ${(e as Error).message}` });
-    } finally {
-      setIsSpinning(false);
-    }
-  }
-
   // Cmd/Ctrl+Enter triggers Run from the Code tab.
   useEffect(() => {
     if (tab !== 'code') return;
@@ -556,7 +515,7 @@ export default function Studio() {
     setPendingAutoRun(false);
     void run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingAutoRun, isBooting, config]);
+  }, [pendingAutoRun, isBooting, config, readouts]);
 
   // ── Recipe-prompt actions ──────────────────────────────────────────
   function applyHashCode(code: string, ephemeral: boolean): void {
@@ -586,22 +545,26 @@ export default function Studio() {
   }
 
   return (
-    <div className={cn('flex flex-col gap-3', fullscreen && 'fixed inset-x-0 top-14 bottom-0 z-40 bg-background p-4')}>
+    // The workbench takes the viewport under the nav: the code on the left,
+    // the reels in the middle at whatever size the window gives them, and
+    // the events panel on the right while debug is on. Below `lg` the three
+    // stack and the page scrolls.
+    <div className="fixed inset-x-0 top-14 bottom-0 z-40 flex flex-col gap-3 overflow-y-auto bg-background p-3 lg:overflow-hidden">
       {isEphemeral && (
-        <div className="flex items-center gap-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          <Eye size={13} className="flex-shrink-0" />
+        <div className="flex items-center gap-2 rounded-sm border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+          <Eye size={13} className="flex-shrink-0 text-brand-text" />
           <span>Previewing a recipe. changes won't be saved to your Studio.</span>
           <button
             type="button"
             onClick={savePreviewAsStudio}
-            className="ml-auto rounded-md bg-amber-500/20 px-2 py-0.5 font-semibold text-amber-100 hover:bg-amber-500/30"
+            className="ml-auto rounded-sm border border-foreground/60 px-2 py-0.5 font-semibold text-foreground transition-colors hover:bg-secondary/60"
           >
             Save to my Studio
           </button>
           <button
             type="button"
             onClick={() => void discardPreview()}
-            className="rounded-md border border-amber-400/40 px-2 py-0.5 text-amber-100 hover:bg-amber-500/10"
+            className="rounded-sm border border-border px-2 py-0.5 text-muted-foreground transition-colors hover:text-foreground"
           >
             Discard
           </button>
@@ -610,84 +573,14 @@ export default function Studio() {
 
       <div
         className={cn(
-          fullscreen
-            ? 'grid flex-1 grid-cols-2 gap-4 min-h-0'
-            : 'grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]',
+          'grid flex-1 grid-cols-1 gap-3 lg:min-h-0',
+          debugOn
+            ? 'lg:grid-cols-[minmax(320px,2fr)_minmax(0,3fr)_minmax(300px,1fr)]'
+            : 'lg:grid-cols-[minmax(340px,2fr)_minmax(0,3fr)]',
         )}
       >
-      {/* ── Canvas pane ─── */}
-      <div className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
-        fullscreen && 'min-h-0',
-      )}>
-        <div className={cn('relative flex-1', !fullscreen && 'min-h-[480px]')}>
-          <div ref={canvasHostRef} className="h-full w-full bg-background" />
-          {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
-          {speeds.length > 1 && (
-            <div
-              role="radiogroup"
-              aria-label="Spin speed"
-              className={cn(
-                'absolute bottom-3 left-3 inline-flex items-center gap-0.5 rounded-full',
-                'border border-border/70 bg-background/80 p-0.5 pl-2 shadow-sm backdrop-blur',
-              )}
-            >
-              <Gauge size={12} strokeWidth={2.25} className="mr-1 flex-shrink-0 text-muted-foreground" />
-              {speeds.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  role="radio"
-                  aria-checked={speedName === name}
-                  onClick={() => handleSpeedChange(name)}
-                  className={cn(
-                    'rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors',
-                    speedName === name
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => void handleSpin()}
-            disabled={isBooting || (!reelSetRef.current && !onSpinRef.current)}
-            title={isSpinning ? 'Stop' : 'Spin'}
-            aria-label={isSpinning ? 'Stop' : 'Spin'}
-            className={cn(
-              'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
-              'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
-              'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
-              isSpinning && 'bg-primary text-primary-foreground border-primary',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
-            {isSpinning ? <Square size={14} strokeWidth={2.5} /> : <RefreshCw size={16} strokeWidth={2.25} />}
-          </button>
-        </div>
-        <div className="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs">
-          {status.kind === 'err' ? (
-            <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-destructive" />
-          ) : status.kind === 'ok' ? (
-            <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0 text-emerald-500" />
-          ) : (
-            <div className="mt-0.5 h-[13px] w-[13px] flex-shrink-0 rounded-full border border-muted-foreground/40" />
-          )}
-          <span className={status.kind === 'err' ? 'text-destructive' : 'text-muted-foreground'}>
-            {isBooting ? 'Loading studio…' : status.msg}
-          </span>
-        </div>
-      </div>
-
       {/* ── Editor pane ─── */}
-      <div className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
-        fullscreen && 'min-h-0',
-      )}>
+      <div className="flex min-h-[420px] flex-col overflow-hidden rounded-sm border border-border bg-card lg:order-1 lg:min-h-0">
         {/* Tab strip */}
         <div className="flex items-center gap-1 border-b border-border/60 bg-background/40 px-2 pt-2">
           <TabButton active={tab === 'code'} onClick={() => setTab('code')} icon={<Code2 size={12} />}>
@@ -696,7 +589,7 @@ export default function Studio() {
           <TabButton active={tab === 'symbols'} onClick={() => setTab('symbols')} icon={<Boxes size={12} />}>
             Symbols
             {config && config.symbols.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              <span className="ml-1.5 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
                 {config.symbols.length}
               </span>
             )}
@@ -707,7 +600,7 @@ export default function Studio() {
               type="button"
               onClick={() => void run()}
               disabled={isBooting || !config}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-sm bg-brand px-3 py-1.5 text-xs font-semibold text-brand-foreground transition-[transform,background-color] duration-[133ms] hover:bg-brand/90 active:scale-[0.97] disabled:opacity-50"
             >
               <Play size={12} strokeWidth={2.5} /> Run
               <KbdChord className="ml-1">
@@ -720,25 +613,16 @@ export default function Studio() {
             <button
               type="button"
               onClick={() => setCode(DEFAULT_CODE)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
               title="Reset code to the default template"
             >
               <RotateCcw size={12} strokeWidth={2.5} />
             </button>
             <button
               type="button"
-              onClick={() => setFullscreen((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-              title={fullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen. Monaco and reels fill the viewport 50/50'}
-              aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            >
-              {fullscreen ? <Minimize2 size={12} strokeWidth={2.5} /> : <Maximize2 size={12} strokeWidth={2.5} />}
-            </button>
-            <button
-              type="button"
               onClick={() => setShareOpen(true)}
               disabled={!config || config.symbols.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
               title="Share this studio. uploads encrypted to the share-api, gives you a link"
               aria-label="Share"
             >
@@ -749,7 +633,7 @@ export default function Studio() {
 
         {/* Tab body */}
         {tab === 'code' && (
-          <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
+          <div className="min-h-0 flex-1">
             {config ? (
               <Editor
                 defaultLanguage="typescript"
@@ -766,9 +650,10 @@ export default function Studio() {
                   padding: { top: 10, bottom: 10 },
                 }}
                 onMount={(_editor, monaco) => {
-                  // Injected globals (ReelSetBuilder, userSymbols, app, ...)
-                  // aren't declared anywhere Monaco can resolve, so semantic
-                  // diagnostics produce a sea of red squiggles. The code is
+                  // The imports (pixi-reels, @pixi-reels/kit, ...) resolve at
+                  // Run through the module loader, not through anything
+                  // Monaco can see, so semantic diagnostics would produce a
+                  // sea of red squiggles on every import. The code is
                   // transpiled at Run via sucrase (types stripped, no
                   // type-checking), so these errors aren't real. silence
                   // them here. Syntax errors still surface.
@@ -785,12 +670,128 @@ export default function Studio() {
         )}
 
         {tab === 'symbols' && (
-          <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
+          <div className="min-h-0 flex-1">
             {config ? <SymbolsTab config={config} onChange={setConfig} /> : <EditorSkeleton />}
           </div>
         )}
       </div>
 
+      {/* ── Canvas pane ─── */}
+      <div
+        data-state={isBooting ? 'loading' : status.kind === 'err' ? 'error' : mounted ? 'ready' : 'idle'}
+        className="flex min-h-[480px] flex-col overflow-hidden rounded-sm border border-border bg-card lg:order-2 lg:min-h-0"
+      >
+        <div className="theme-ink relative flex-1">
+          <div ref={canvasHostRef} className="h-full w-full bg-[#111114]" />
+          {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
+          {speeds.length > 1 && (
+            <div
+              role="radiogroup"
+              aria-label="Spin speed"
+              className={cn(
+                'absolute bottom-3 left-3 inline-flex items-center gap-0.5 rounded-sm',
+                'border border-border/70 bg-background/80 p-0.5 pl-2',
+              )}
+            >
+              <Gauge size={12} strokeWidth={2.25} className="mr-1 flex-shrink-0 text-muted-foreground" />
+              {speeds.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  role="radio"
+                  aria-checked={speedName === name}
+                  onClick={() => handleSpeedChange(name)}
+                  className={cn(
+                    'rounded-sm px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors',
+                    speedName === name
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+          {debugOn && (
+            <div className="inline-flex h-10 items-center gap-0.5 rounded-sm border border-border/70 bg-background/80 p-0.5" role="group" aria-label="Overlay layers">
+              {(Object.keys(LAYER_GROUPS) as LayerGroup[]).map((group) => (
+                <button
+                  key={group}
+                  type="button"
+                  onClick={() => setGroups((g) => (g.includes(group) ? g.filter((x) => x !== group) : [...g, group]))}
+                  aria-pressed={groups.includes(group)}
+                  className={cn(
+                    'rounded-sm px-2 py-1 font-mono text-[10px] uppercase tracking-wide transition-colors',
+                    groups.includes(group) ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {group}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setDebugOn((v) => !v)}
+            disabled={!mounted}
+            aria-pressed={debugOn}
+            aria-label={debugOn ? 'Hide debug' : 'Show debug'}
+            title={debugOn ? 'Hide the overlay and the events panel' : 'Draw the overlay on every set and open the events panel'}
+            className={cn(
+              'inline-flex h-10 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[10px] uppercase tracking-wide',
+              'transition-[transform,background-color,color] duration-[133ms] active:scale-[0.97] disabled:opacity-50',
+              debugOn
+                ? 'border-foreground bg-foreground text-background'
+                : 'border-border/70 bg-background/80 text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Bug size={12} strokeWidth={2.25} />
+            Debug
+          </button>
+          <button
+            type="button"
+            onClick={() => { setReadoutsOn((v) => !v); if (mountedRef.current) setPendingAutoRun(true); }}
+            aria-pressed={readouts}
+            title={readouts ? 'Hide the recipe\'s plaques and outlines (re-runs)' : 'Show the recipe\'s plaques and outlines (re-runs)'}
+            className={cn(
+              'inline-flex h-10 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[10px] uppercase tracking-wide',
+              'transition-[transform,background-color,color] duration-[133ms] active:scale-[0.97]',
+              readouts
+                ? 'border-foreground bg-foreground text-background'
+                : 'border-border/70 bg-background/80 text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <MessageSquare size={12} strokeWidth={2.25} />
+            Readouts
+          </button>
+          </div>
+        </div>
+        <div className="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs">
+          {status.kind === 'err' ? (
+            <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-destructive" />
+          ) : status.kind === 'ok' ? (
+            <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0 text-brand-text" />
+          ) : (
+            <div className="mt-0.5 h-[13px] w-[13px] flex-shrink-0 rounded-full border border-muted-foreground/40" />
+          )}
+          <span className={status.kind === 'err' ? 'text-destructive' : 'text-muted-foreground'}>
+            {isBooting ? 'Loading studio…' : status.msg}
+          </span>
+        </div>
+      </div>
+
+
+      {/* ── Events pane ─── */}
+      {debugOn && (
+        <EventsPanel
+          entries={debugRef.current?.entries ?? []}
+          tick={eventsTick}
+          onClear={() => debugRef.current?.clearEvents()}
+          className="h-[320px] rounded-sm border border-border lg:order-3 lg:h-auto lg:min-h-0"
+        />
+      )}
       </div>
 
       {shareOpen && config && (
@@ -823,9 +824,9 @@ function TabButton({ active, onClick, icon, children }: TabButtonProps): JSX.Ele
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-t-md border-b-2 px-3 py-2 text-xs transition-colors',
+        'inline-flex items-center gap-1.5 border-b-2 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors',
         active
-          ? 'border-primary font-semibold text-foreground'
+          ? 'border-brand font-medium text-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground',
       )}
     >
@@ -881,13 +882,13 @@ interface RecipePromptProps {
 function RecipePrompt({ onCancel, onReplace, onPreview }: RecipePromptProps): JSX.Element {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog">
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+      <div className="w-full max-w-md overflow-hidden rounded-sm border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
           <div className="text-sm font-semibold">Open recipe in Studio?</div>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded p-1 text-muted-foreground hover:text-foreground"
+            className="rounded-sm p-1 text-muted-foreground hover:text-foreground"
             aria-label="Cancel"
           >
             <X size={14} />
@@ -902,21 +903,21 @@ function RecipePrompt({ onCancel, onReplace, onPreview }: RecipePromptProps): JS
             <button
               type="button"
               onClick={onReplace}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-[transform,background-color] duration-[133ms] hover:bg-primary/90 active:scale-[0.97]"
             >
               Replace saved code
             </button>
             <button
               type="button"
               onClick={onPreview}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-transparent px-3 py-2 text-xs text-foreground hover:bg-secondary/50"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm border border-border bg-transparent px-3 py-2 text-xs text-foreground hover:bg-secondary/50"
             >
               <Eye size={12} /> Preview only. don't save
             </button>
             <button
               type="button"
               onClick={onCancel}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border/60 bg-transparent px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm border border-border/60 bg-transparent px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
             >
               Cancel
             </button>

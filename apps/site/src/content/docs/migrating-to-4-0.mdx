@@ -12,13 +12,13 @@ has no Hold & Win board with its own speed profiles has nothing to do.
 
 ## Why
 
-The debug overlay drew with PixiJS `Graphics`, which tessellates: thin outlines
-crawled and rounded corners faceted as soon as a reel set was fitted to a
-canvas at anything but 1x, which is always. It now draws with
+The debug overlay drew with PixiJS `Graphics`, which tessellates. Thin outlines
+crawled and rounded corners faceted whenever a reel set was fitted to a canvas
+at anything but 1x, which is always. It now draws with
 [pixi-silk](https://pixi-silk.schmooky.dev), which renders every shape as an
-exact signed distance field. That is a dependency a production build should
-never pay for, so the drawing half of debugging moved behind its own subpath,
-the same way Spine support lives behind `pixi-reels/spine`: `pixi-silk` is an
+exact signed distance field. A production build should not pay for that
+dependency, so the drawing half of debugging moved behind its own subpath, the
+same way Spine support lives behind `pixi-reels/spine`. `pixi-silk` is an
 optional peer, and only `pixi-reels/debug` imports it.
 
 ## Install pixi-silk for the overlay
@@ -28,7 +28,7 @@ pnpm add -D pixi-silk
 ```
 
 It is only needed where you import `pixi-reels/debug`. A dev dependency is
-enough when the overlay is dev-only, which it should be.
+enough, since the overlay should be dev-only.
 
 ### What pixi-silk needs to draw
 
@@ -36,10 +36,10 @@ pixi-silk 0.1 draws through a WebGL shader, and everything in
 `pixi-reels/debug` that draws (`debugOverlay`, `DebugPlaque`, `WinLines`) is
 built on it. Two things follow:
 
-- **A WebGL renderer.** On WebGPU the plates, outlines and lines draw nothing
+- A WebGL renderer. On WebGPU the plates, outlines and lines draw nothing
   (Pixi logs `Mesh shader has no gpuProgram`); only plaque text shows. Ask for
   WebGL while you debug: `await app.init({ preference: 'webgl' })`.
-- **A DOM, or a stand-in for one, to build them.** A `SilkGraphics` probes the
+- A DOM, or a stand-in for one, to build them. A `SilkGraphics` probes the
   shader's precision through `DOMAdapter.createCanvas()`, so in plain Node
   `new DebugPlaque()`, `new WinLines()` and `debugOverlay()` (its `describe()`
   included) throw `document is not defined`. A headless test hands Pixi a
@@ -73,10 +73,10 @@ import type { DebugOverlayHandle, DebugOverlayLayer } from 'pixi-reels/debug';
 The options, the layer names and `describe()` are the same. Each layer is now a
 `SilkGraphics` rather than a `Graphics`, still labelled
 `pixi-reels:debugOverlay:<layer>`; code that read a layer's bounds keeps
-working. Three layers are new (`hud` became a plaque, `metrics` and `timeline`
-were added), so `layers: 'all'` draws more than it did, and the two new panels
-sit under the mask: fit your camera after enabling them, or list the layers you
-want.
+working. Three layers are new: `hud` became a plaque, and `metrics` and
+`timeline` were added. `layers: 'all'` draws more than it did, and the two new
+panels sit under the mask, so fit your camera after enabling them, or list the
+layers you want.
 
 ## `showMask()` and `overlay()` left the window hook
 
@@ -117,6 +117,6 @@ Or set `stopDelay` on each profile, which is what the wave reads now.
 ## New, if you want it
 
 - `SpinMetrics`: the per-round recorder behind the `metrics` and `timeline`
-  layers, usable on its own. See [Debugging](/guides/debugging/).
+  layers, usable on its own. See [Debugging](/learn/debugging/).
 - `DebugPlaque`: the readout plate every panel and every recipe label uses.
 - `__PIXI_REELS_DEBUG.metrics()`: the same rounds as plain JSON for an agent.

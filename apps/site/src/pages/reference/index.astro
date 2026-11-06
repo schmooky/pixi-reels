@@ -1,0 +1,57 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import { REFERENCE_NAV } from '../../content/nav.ts';
+import { ARCH_PAGES } from '../../content/architectureNav.ts';
+---
+<Docs title="Reference" section="reference" eyebrow="Reference" description="The pixi-reels API explained in prose and as generated TypeDoc, with a glossary and the migration guides.">
+  <p>
+    The API reference for <code>pixi-reels</code>, with an architecture tour and a glossary.
+    Each page below explains one part in plain language first, then gives signatures and examples.
+  </p>
+
+  <p class="!mt-2 text-sm text-muted-foreground">
+    Looking for a how-to? Start with <a href="/learn/getting-started/">Getting started</a> or a <a href="/mechanics/">mechanic</a>.
+  </p>
+
+  <div class="mt-12 space-y-12">
+    {REFERENCE_NAV.filter((s) => s.title !== 'Architecture').map((section, i) => (
+      <section>
+        <h2 class="eyebrow mb-4 mt-0">{section.title}</h2>
+        <div class="divide-y divide-border border-y border-border">
+          {section.items.map((item) => (
+            <a
+              href={item.href}
+              class="group flex items-center justify-between gap-4 py-3 text-sm font-medium text-foreground no-underline"
+            >
+              <span>{item.label}</span>
+              <svg class="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1 group-hover:text-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+
+    <section>
+      <h2 class="eyebrow mb-4 mt-0">Architecture</h2>
+      <p class="mb-4 mt-0 text-sm text-muted-foreground">How pixi-reels works inside, drawn as SVG diagrams. Start with the overview.</p>
+      <div class="divide-y divide-border border-y border-border">
+        {ARCH_PAGES.map((p) => (
+          <a
+            href={`/architecture/${p.slug}/`}
+            class="group flex items-center justify-between gap-4 py-3 text-sm no-underline"
+          >
+            <span class="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+              <span class="font-medium text-foreground">{p.title}</span>
+              <span class="truncate text-[13px] font-normal text-muted-foreground">{p.subtitle}</span>
+            </span>
+            <svg class="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:translate-x-1 group-hover:text-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </a>
+        ))}
+      </div>
+    </section>
+  </div>
+</Docs>

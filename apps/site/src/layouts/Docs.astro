@@ -1,18 +1,22 @@
 ---
 import Base from './Base.astro';
 import DocsSidebar from '../components/DocsSidebar.astro';
-import { GUIDES_NAV, WIKI_NAV, type NavSection } from '../content/nav.ts';
+import { LEARN_NAV, REFERENCE_NAV, type NavSection } from '../content/nav.ts';
 import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+
+type Section = 'learn' | 'reference' | 'api';
 
 interface Props {
   title?: string;
   description?: string;
-  section?: 'guides' | 'wiki' | 'api' | 'docs';
+  section?: Section;
   eyebrow?: string;
   frontmatter?: {
     title?: string;
+    /** The browser and search title, when it should say more than the heading. */
+    seoTitle?: string;
     description?: string;
-    section?: 'guides' | 'wiki' | 'api' | 'docs';
+    section?: Section;
     eyebrow?: string;
   };
 }
@@ -24,30 +28,29 @@ const description =
   props.description ??
   fm.description ??
   `${title}. pixi-reels, open-source slot machine reel engine for PixiJS v8.`;
-const section = (props.section ?? fm.section ?? 'guides') as 'guides' | 'wiki' | 'api' | 'docs';
+const section = (props.section ?? fm.section ?? 'learn') as Section;
 const eyebrow = props.eyebrow ?? fm.eyebrow;
 const pathname = Astro.url.pathname;
 
-// Auto-detect API and docs sections by URL when frontmatter doesn't set them.
-// TypeDoc-generated pages live under /api/, hand-written narrative under /docs/.
-const resolvedSection = section === 'guides' && pathname.startsWith('/api/')
+// Auto-detect the API and reference sections by URL when frontmatter doesn't
+// set them. TypeDoc-generated pages live under /api/, hand-written narrative
+// under /reference/.
+const resolvedSection: Section = section === 'learn' && pathname.startsWith('/api/')
   ? 'api'
-  : section === 'guides' && pathname.startsWith('/docs/')
-    ? 'docs'
+  : section === 'learn' && pathname.startsWith('/reference/')
+    ? 'reference'
     : section;
 
-const navMap: Record<string, NavSection[]> = {
-  guides: GUIDES_NAV,
-  wiki: WIKI_NAV,
-  docs: WIKI_NAV,
-  api: WIKI_NAV,
+const navMap: Record<Section, NavSection[]> = {
+  learn: LEARN_NAV,
+  reference: REFERENCE_NAV,
+  api: REFERENCE_NAV,
 };
 const nav = navMap[resolvedSection] ?? [];
 
-const sectionLabel: Record<string, string> = {
-  guides: 'Guides',
-  wiki: 'Docs',
-  docs: 'Docs',
+const sectionLabel: Record<Section, string> = {
+  learn: 'Learn',
+  reference: 'Reference',
   api: 'API reference',
 };
 
@@ -55,13 +58,13 @@ const jsonLd = [
   articleLd({ title, description, path: pathname }),
   breadcrumbLd([
     { name: SITE.name, url: '/' },
-    { name: sectionLabel[resolvedSection], url: `/${resolvedSection === 'api' ? 'api' : resolvedSection}/` },
+    { name: sectionLabel[resolvedSection], url: `/${resolvedSection}/` },
     { name: title, url: pathname },
   ]),
 ];
 ---
 <Base
-  title={`${title} · ${SITE.name}`}
+  title={`${fm.seoTitle ?? title} · ${SITE.name}`}
   description={description}
   path={pathname}
   type="article"
@@ -71,12 +74,8 @@ const jsonLd = [
   <div class="container grid gap-10 py-12 md:grid-cols-[220px_minmax(0,1fr)]">
     {nav.length > 0 && <DocsSidebar nav={nav} pathname={pathname} />}
     <article class:list={["prose-docs min-w-0 max-w-3xl animate-fade-in", { 'md:col-span-2 mx-auto': nav.length === 0 }]}>
-      {eyebrow && (
-        <div class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-          {eyebrow}
-        </div>
-      )}
-      <h1 class="mb-6 text-4xl font-semibold tracking-tight">{title}</h1>
+      <p class="eyebrow my-0 leading-none">{eyebrow ?? sectionLabel[resolvedSection]}</p>
+      <h1 class="display mb-8 mt-4 text-4xl sm:text-5xl">{title}</h1>
       <slot />
     </article>
   </div>

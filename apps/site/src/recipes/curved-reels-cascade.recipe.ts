@@ -1,6 +1,17 @@
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
-//           PIXI, gsap, app
+import * as PIXI from 'pixi.js';
+import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
+import { createAssets, tapToSpin, presentWithSpotlight } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Cascades on a drum',
+  topic: 'reel-curvature',
+  tags: ['curve', 'curvature', 'perspective', 'projection', 'cylinder', 'drum', '3d'],
+  height: 460,
+  needs: ['spine:cascade'],
+} as const satisfies RecipeMeta;
 
 // Cascades on a drum.
 //
@@ -32,124 +43,131 @@
 //     hole onto the background.
 //
 // Framing it is the fix, and it is what a real cabinet does anyway.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
+  const cascade = await assets.spineSet('cascade');
 
-const cascade = await loadSpineSet('cascade');
+  const IDS = [...cascade.symbolIds];
+  const REELS = 6;
+  const ROWS = 4;
+  const SCALE = 0.68;
+  const CELL_W = cascade.set.cellSize.width * SCALE;
+  const CELL_H = cascade.set.cellSize.height * SCALE;
+  const CLUSTER = 'low1';
+  const HIT_ROW = 2;
+  const HIT_COLS = [0, 1, 2];
 
-const IDS = [...cascade.symbolIds];
-const REELS = 6;
-const ROWS = 4;
-const SCALE = 0.68;
-const CELL_W = cascade.set.cellSize.width * SCALE;
-const CELL_H = cascade.set.cellSize.height * SCALE;
-const CLUSTER = 'low1';
-const HIT_ROW = 2;
-const HIT_COLS = [0, 1, 2];
-
-function randSymbol(exclude) {
-  let s;
-  do {
-    s = IDS[Math.floor(Math.random() * IDS.length)];
-  } while (s === exclude);
-  return s;
-}
-
-// The authored `explode` clip runs 1.27s, too long for this cascade's timing.
-const EXPLODE_TIME_SCALE = 2.4;
-
-class TimedExplodeSymbol extends SpineReelSymbol {
-  async playOut() {
-    const entry = this.playOnTrack(0, 'explode', false);
-    if (!entry) return;
-    entry.timeScale = EXPLODE_TIME_SCALE;
-    await new Promise((resolve) => {
-      entry.listener = { complete: () => resolve() };
-    });
+  function randSymbol(exclude: string) {
+    let s;
+    do {
+      s = IDS[Math.floor(Math.random() * IDS.length)];
+    } while (s === exclude);
+    return s;
   }
-}
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(ROWS)
-  .symbolSize(CELL_W, CELL_H)
-  .symbolGap(0, 0)
-  // Pure tumble: no strip scrolling, so no below-window buffer at all.
-  .bufferSymbols({ start: 1, end: 0 })
-  .curve(0.4)
-  .curveFocus('set-lean')
-  .curveMode('warp')
-  .curveBleed(30) // the high symbol's head overflows its plate
-  .renderer(app.renderer)
-  .symbols((r) => {
-    const spineMap = cascade.spineMap;
-    for (const id of cascade.symbolIds) {
-      r.register(id, TimedExplodeSymbol, { spineMap, scale: SCALE, outAnimation: 'explode' });
+  // The authored `explode` clip runs 1.27s, too long for this cascade's timing.
+  const EXPLODE_TIME_SCALE = 2.4;
+
+  class TimedExplodeSymbol extends SpineReelSymbol {
+    async playOut() {
+      const entry = this.playOnTrack(0, 'explode', false);
+      if (!entry) return;
+      entry.timeScale = EXPLODE_TIME_SCALE;
+      await new Promise<void>((resolve) => {
+        entry.listener = { complete: () => resolve() };
+      });
     }
-  })
-  // zIndex only. `unmask` would lift it out of the reel texture and it would
-  // stop being warped - see the note at the top.
-  .symbolData({ high: { zIndex: 10 } })
-  .speed('normal', {
-    ...SpeedPresets.NORMAL,
-    stopDelay: 150,
-    bounceDistance: 0,
-    bounceDuration: 0,
-  })
-  .tumble({
-    fall: { duration: 283, ease: 'power3.in', cellStagger: 67 },
-    dropIn: { duration: 450, ease: 'power2.in', cellStagger: 67, distance: 'perHole' },
-  })
-  .ticker(app.ticker)
-  .build();
+  }
 
-// --- bezel -------------------------------------------------------------
-// Measured, not guessed: `curve.mapMain(0)` is exactly where the drum's top
-// edge lands, so the frame covers precisely the band that falls short.
-const bw = reelSet.viewport.maskWidth;
-const bh = reelSet.viewport.maskHeight;
-const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
-const bezel = new PIXI.Graphics();
-bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0a0910 });
-bezel
-  .moveTo(0, lip)
-  .lineTo(bw, lip)
-  .moveTo(0, bh - lip)
-  .lineTo(bw, bh - lip)
-  .stroke({ color: 0x2f2a44, width: 2 });
-reelSet.addChild(bezel);
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCells(ROWS)
+    .symbolSize(CELL_W, CELL_H)
+    .symbolGap(0, 0)
+    // Pure tumble: no strip scrolling, so no below-window buffer at all.
+    .bufferSymbols({ start: 1, end: 0 })
+    .curve(0.4)
+    .curveFocus('set-lean')
+    .curveMode('warp')
+    .curveBleed(30) // the high symbol's head overflows its plate
+    .renderer(app.renderer)
+    .symbols((r) => {
+      const spineMap = cascade.spineMap;
+      for (const id of cascade.symbolIds) {
+        r.register(id, TimedExplodeSymbol, { spineMap, scale: SCALE, outAnimation: 'explode' });
+      }
+    })
+    // zIndex only. `unmask` would lift it out of the reel texture and it would
+    // stop being warped - see the note at the top.
+    .symbolData({ high: { zIndex: 10 } })
+    .speed('normal', {
+      ...SpeedPresets.NORMAL,
+      stopDelay: 150,
+      bounceDistance: 0,
+      bounceDuration: 0,
+    })
+    .tumble({
+      fall: { duration: 283, ease: 'power3.in', cellStagger: 67 },
+      dropIn: { duration: 450, ease: 'power2.in', cellStagger: 67, distance: 'perHole' },
+    })
+    .ticker(app.ticker)
+    .build();
 
-return {
-  reelSet,
-  onSpin: async () => {
-    const stage0 = Array.from({ length: REELS }, (_, c) =>
-      Array.from({ length: ROWS }, (_, r) =>
-        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
-      ),
-    );
+  // --- bezel -------------------------------------------------------------
+  // Measured, not guessed: `curve.mapMain(0)` is exactly where the drum's top
+  // edge lands, so the frame covers precisely the band that falls short.
+  const bw = reelSet.viewport.maskWidth;
+  const bh = reelSet.viewport.maskHeight;
+  const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
+  const bezel = new PIXI.Graphics();
+  bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0a0910 });
+  bezel
+    .moveTo(0, lip)
+    .lineTo(bw, lip)
+    .moveTo(0, bh - lip)
+    .lineTo(bw, bh - lip)
+    .stroke({ color: 0x2f2a44, width: 2 });
+  reelSet.addChild(bezel);
 
-    reelSet.setDropOrder('ltr');
-    const spinDone = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 200));
-    reelSet.setResult(stage0.map((visible) => ({ visible })));
-    await spinDone;
-    await new Promise((r) => setTimeout(r, 300));
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const stage0 = Array.from({ length: REELS }, (_, c) =>
+        Array.from({ length: ROWS }, (_, r) =>
+          r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+        ),
+      );
 
-    reelSet.setDropOrder('all');
-    let detected = false;
-    await reelSet.runCascade({
-      detectWinners: () => {
-        if (detected) return [];
-        detected = true;
-        return HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
-      },
-      nextGrid: (prev, winners) => {
-        const next = prev.map((reel) => [...reel]);
-        for (const w of winners) {
-          for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
-          next[w.reel][0] = randSymbol(CLUSTER);
-        }
-        return next.map((visible) => ({ visible }));
-      },
-      pauseAfterDestroyMs: 250,
-    });
-  },
-};
+      reelSet.setDropOrder('ltr');
+      const spinDone = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 200));
+      reelSet.setResult(stage0.map((visible) => ({ visible })));
+      await spinDone;
+      await new Promise((r) => setTimeout(r, 300));
+
+      reelSet.setDropOrder('all');
+      let detected = false;
+      await reelSet.runCascade({
+        // The winners get their beat before they go: losers dim, winners wow, a short hold.
+        presentWinners: presentWithSpotlight(reelSet),
+        detectWinners: () => {
+          if (detected) return [];
+          detected = true;
+          return HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
+        },
+        nextGrid: (prev, winners) => {
+          const next = prev.map((reel) => [...reel]);
+          for (const w of winners) {
+            for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+            next[w.reel][0] = randSymbol(CLUSTER);
+          }
+          return next.map((visible) => ({ visible }));
+        },
+        pauseAfterDestroyMs: 250,
+      });
+    },
+  });
+  return { reelSet };
+}

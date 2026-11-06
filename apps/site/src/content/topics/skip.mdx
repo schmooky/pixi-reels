@@ -1,0 +1,313 @@
+---
+title: Skip and slam
+group: lines
+oneLiner: "Decide what a tap does mid-spin: stop every reel, land them one by one, or let a tease finish."
+order: 18
+tags:
+  - skip
+  - slam
+  - anticipation
+  - tease
+  - phases
+  - timing
+  - groups
+guides:
+  - spin-lifecycle
+---
+
+<ConceptPart title="Spin lifecycle" lede="The phases of a spin, the events they fire, and where to hook in.">
+
+A spin has three phases, and a fourth when you ask for it.
+
+The start phase pulls back a little and then accelerates, like a lever. The
+spin phase runs at full speed and waits for the server. The anticipation
+phase is optional. It slows one reel to build tension, and it only runs if
+you called `setAnticipation()` before the result arrived. Most scatter games
+use it, so it ships with the library. The stop phase brakes onto the target
+frame, overshoots, and settles.
+
+<a id="what-events-will-be-fired-by-reelset"></a>
+
+## What events the reel set fires
+
+The reel set reports each step as an event, so you do not need to poll. One
+`await reelSet.spin()` fires them in this order.
+
+`spin:start` fires on every `spin()`, however the spin ends. The reels are
+moving.
+
+`spin:allStarted` fires when every reel except the held ones is at full
+speed. This is the event that matters for timing. You can call `setResult()`
+earlier, and the engine holds it until this event has fired.
+
+`spin:stopping` fires once per reel, with its index, as the reel starts
+braking. Held reels never fire it.
+
+`spin:reelLanding` fires when a reel is on its result frame: the strip has
+snapped, every visible symbol has been told it landed, and the bounce is
+about to start. It carries the reel index and its symbols. Start anything
+tied to the landing here, such as an overlay growing over the reel, a
+per-reel sound, or a symbol takeover.
+
+`spin:reelLanded` fires when that reel has settled, a full `bounceDuration`
+after `spin:reelLanding`. On a slam, which has no bounce, the two fire on the
+same tick. It carries the index and the symbols. Use it for per-reel effects
+that should wait for the bounce, such as a scatter ping or a column glow,
+without waiting for the whole grid.
+
+Each symbol hears the landing too. `onReelLanded(ctx)` runs on every visible
+symbol immediately before `spin:reelLanding`, and the context says which reel and
+cell it landed in. A Spine symbol's `autoPlayLanding` option can be a
+function of that context, returning `true`, `false` or an animation name. That
+lets the symbols on a reel that a takeover is about to cover skip their
+landing while the rest land as usual:
+
+```ts
+new SpineReelSymbol({
+  spineMap,
+  autoPlayLanding: ({ reelIndex }) => !copyReels.has(reelIndex),
+});
+
+reelSet.events.on('spin:reelLanding', (reelIndex) => {
+  if (copyReels.has(reelIndex)) overlay.growOver(reelIndex);
+});
+```
+
+A symbol that starts a landing animation this way exposes it as
+`symbol.landing`, a promise that holds until the reel moves again. Code that
+should play after the landing can await it instead of taking over the
+animation track.
+
+`spin:allLanded` fires when the last non-held reel is down, with the full
+result attached.
+
+`spin:complete` fires right after, with the same `SpinResult`, which already
+carries `duration`. Start the win presentation here.
+
+<a id="pattern-fetch-result-mid-spin"></a>
+
+## Fetch the result mid-spin
+
+A slot calls the server while the reels spin.
+
+```ts
+const promise = reelSet.spin();
+const response = await fetch('/api/spin').then((r) => r.json());
+reelSet.setResult(response.symbols);
+if (response.anticipationReels?.length) {
+  reelSet.setAnticipation(response.anticipationReels);
+}
+const result = await promise;
+```
+
+Call `setResult()` while the reels are spinning. Calling it early is fine,
+because the engine holds the stop until every reel is in the spin phase. If
+you never call it, the promise waits forever.
+
+<a id="player-slam-stop"></a>
+
+## The skip calls
+
+There are three calls, and you pick one by what the player did.
+
+`skipSpin()` is for a player press on the slam button. It knows about the
+round. It throws if the result has not arrived yet, so use `requestSkip()` in
+that window. The first press also raises the speed in standard mode, or makes
+later refills slam on their own in cascade mode. It fires `skip:boosted` when
+it raises the speed.
+
+`requestSkip()` slams as soon as it can. It is safe to call before
+`setResult()`: it queues and fires once, with no boost. Use it for a player
+pressing the button before the server answers.
+
+`slamStop()` lands the reels now, with no boost and no queueing.
+
+All three land on whatever `setResult()` gave the engine and set
+`result.wasSkipped` to `true`. Every lifecycle event still fires on the slam
+path, so the win presenter needs no second code path.
+
+`skipStage` tells you where the round is: 0 before any press, 2 after the
+press that ended it, and 1 while a protected tease is still running (see
+below). Drive the button's look from it.
+
+<a id="skip-granularity"></a>
+
+## Skip granularity
+
+By default a slam lands every reel. It force-completes every active phase,
+including the skippable anticipation phase, so a press on a teasing spin ends
+the tease before the player sees it.
+
+To land some reels and let others keep playing:
+
+```ts
+// The tease rule, applied by the engine.
+reelSet.setAnticipation([2, 3, 4], { stagger: 'sequential', protect: 'once' });
+// press 1 -> reels 0-1 land now, 2-4 keep teasing, skipStage becomes 1
+// press 2 -> the tease ends too, skipStage becomes 2
+
+// 'stepwise' releases the tease one reel per press instead.
+reelSet.setAnticipation([2, 3, 4], { protect: 'stepwise' });
+// press 1 -> reels 0-1;  press 2 -> reel 2;  press 3 -> reel 3;
+// press 4 -> reel 4, and that press ends the round
+
+// Or do it by hand, for your own rule.
+reelSet.slamStop({ except: [3, 4] });
+```
+
+For a grouping the built-in modes do not cover, use `protect: 'always'`, so
+no press can end a tease, and land your own groups with `slamStop({ reels })`
+on each press.
+
+`protect` applies to `skipSpin()` and `requestSkip()`, including a press
+queued before the result arrived, which is the case it exists for. Call
+`setAnticipation` before `setResult` so the queued press can see the tease.
+A bare `slamStop()` always lands now.
+
+`skip:requested` and `skip:completed` carry `{ reels, partial }`, so a
+listener can tell a partial slam from the one that ends the round.
+
+In a tumble cascade the initial spin protects the same way. Two things
+change. The round's side effect is that refills slam on their own instead of
+a speed boost, and refills carry no tease, since `refill()` clears the
+anticipation set on entry. A Hold & Win board is one single-reel set per
+cell, so a per-reel slam has nothing to divide there and
+`BoardGrid.skipSpinning()` skips per cell instead. The
+[cascade protect demo](/mechanics/skip/#skip-cascade-protect) and the section
+after it cover both.
+
+Two mid-spin calls look like they would help here and do not. Both are
+covered by tests. Shrinking the set with `setAnticipation()` does not release
+a reel that is already teasing, because the set is read once, when a reel
+leaves the spin phase. And `setSpeed()` does not re-time the round in flight,
+because `spin()` captures the active profile and hands that instance to every
+phase. That is also why the `skipSpin()` boost takes effect on the next spin.
+
+## Spin floor
+
+`minimumSpinTime` sets how long a reel spins before it may stop. It lives on
+the speed profile, so it is one value shared by every reel. `setStopDelays()`
+is per reel but cannot go under it, so on their own the two settings could
+not make one reel land on arrival while another kept spinning.
+`setMinimumSpinTime` overrides the floor per reel and covers that case.
+
+```ts
+reelSet.setMinimumSpinTime([0, 0, 0, 900, 900]); // last two hold longer
+reelSet.setMinimumSpinTime(null);                // back to the profile
+```
+
+On teasing spins, use `protect` instead of a raised floor. If a scatterless
+skip lands instantly but a teasing one settles slower, the response time
+tells the player a feature is coming before the reels have landed.
+
+<a id="holding-some-reels"></a>
+
+## Holding some reels
+
+Expanding wilds and single-reel respins need some reels to stay put.
+
+```ts
+
+const spin = reelSet.spin({ holdReels: [0, 4] });
+reelSet.setResult(serverGrid);
+await spin;
+```
+
+A held reel does not spin and keeps what it is showing. It counts as already
+landed, so `spin:allLanded` waits only on the others, and it fires neither
+`spin:stopping` nor `spin:reelLanded`. `setAnticipation([...])` drops held
+indices without an error.
+
+<a id="overriding-spin-mode"></a>
+
+## Overriding the spin mode
+
+Some slots spin first and then cascade. The `mode` spin option swaps the
+phase chain for one call.
+
+```ts
+const reelSet = new ReelSetBuilder()
+  // ...
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  cellStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
+  })
+  .ticker(app.ticker)
+  .build();
+
+await reelSet.spin();                  // round 1: strip-spin (default mode)
+await reelSet.spin({ mode: 'cascade' }); // respin: cascade drop-in
+```
+
+Picking `'cascade'` without `.tumble(...)` throws, and the error names the
+missing method. See the [spin-then-cascade demo](/mechanics/cascade/#spin-then-cascade).
+
+<a id="how-to-nudge"></a>
+
+## Nudge
+
+After a spin lands, you can move one reel a few cells to reveal symbols you
+choose. The spin pipeline is idle while this runs, and the nudge drives the
+strip itself.
+
+```ts
+await reelSet.spin();
+await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
+```
+
+The direction is relative to the reel's own travel, not to the screen. See
+[Orientation & direction](/mechanics/orientation-and-direction/#concept).
+For several reels at once, run independent calls under `Promise.all`.
+
+A nudge can be cancelled mid-tween through its `signal` option, which rejects
+with an `AbortError` and fires `nudge:cancelled`, or finished early with
+`skipNudge`, which resolves normally.
+
+The [nudge page](/mechanics/nudge/#concept) has the full contract and these
+demos: [nudge](/mechanics/nudge/), [skip](/mechanics/nudge/#nudge-skip),
+[abort](/mechanics/nudge/#nudge-abort), [stagger](/mechanics/nudge/#nudge-stagger),
+[spotlight after a nudge](/mechanics/nudge/#nudge-spotlight),
+[big symbols](/mechanics/nudge/#nudge-big-symbol).
+
+<a id="full-event-map"></a>
+
+## Full event map
+
+| Event                  | Payload                                         | When |
+| ---------------------- | ----------------------------------------------- | ---- |
+| `spin:start`           | none                                            | Any `spin()` call |
+| `spin:allStarted`      | none                                            | Every non-held reel is in the spin phase |
+| `spin:stopping`        | `(reelIndex)`                                   | A reel begins its stop (held reels never fire) |
+| `spin:reelLanding`     | `(reelIndex, symbols)`                          | A reel is on its result frame, bounce not started, after every `onReelLanded()`. Every landing path, cascade refill stages included |
+| `spin:reelLanded`      | `(reelIndex, symbols)`                          | A reel landed (held reels never fire) |
+| `spin:allLanded`       | `(result)`                                      | The last non-held reel landed |
+| `spin:complete`        | `(result)`                                      | Just after `spin:allLanded` |
+| `skip:requested`       | `({ reels, partial })`                          | A slam fired, from `skipSpin()`, `requestSkip()` (after `setResult`) or `slamStop()`. `partial` is `true` when reels are still spinning after it |
+| `skip:completed`       | `({ reels, partial })`                          | Those reels have been force-landed |
+| `skip:boosted`         | `({ previous, current })`                       | First `skipSpin()` press of a standard-mode round. The engine bumped the speed to the fastest registered profile for the rest of the round. Cascade mode auto-slams refills instead |
+| `speed:changed`        | `(profile, previous)`                           | `setSpeed()` called |
+| `spotlight:start`      | `(positions)`                                   | `spotlight.cycle(...)` began |
+| `spotlight:end`        | none                                            | The spotlight finished |
+| `pin:placed`           | `(pin)`                                         | `reelSet.pin(...)` succeeded |
+| `pin:expired`          | `(pin, reason)`                                 | A pin was removed by `unpin`, by its `turns` running out, by an `'eval'` reset, or by a `'collision'` (a reshape clamped it onto an occupied cell) |
+| `pin:moved`            | `(pin, from)`                                   | `reelSet.movePin(...)` resolved |
+| `pin:migrated`         | `(pin, info)`                                   | A MultiWays reshape moved a pin to a new cell |
+| `pin:overlayCreated`   | `(pin, symbol)`                                 | A mid-spin overlay symbol was mounted for a pin |
+| `pin:overlayDestroyed` | `(pin, symbol)`                                 | A mid-spin overlay was torn down on land |
+| `shape:changed`        | `(cellsPerReel)`                                | MultiWays `setShape(...)` accepted |
+| `adjust:start`         | `({ reelIndex, fromCells, toCells })`           | The adjust phase entered for a reel |
+| `adjust:complete`      | `({ reelIndex })`                               | The adjust phase finished |
+| `nudge:start`          | `({ reelIndex, distance, direction })`          | `reelSet.nudge(...)` pre-placement done, tween about to begin |
+| `nudge:complete`       | `({ reelIndex, distance, direction, symbols })` | The nudged reel snapped to its new grid position |
+| `nudge:cancelled`      | `({ reelIndex, distance, direction, reason })`  | The nudge signal aborted or the reel was destroyed mid-tween. Never fires together with `nudge:complete` |
+| `destroyed`            | none                                            | `destroy()` called |
+
+<a id="deeper-dive"></a>
+
+## Reference
+
+* [Phases](/reference/api-phases/): customize start, spin and stop timing
+* [Events](/reference/api-events/): types and exact signatures
+* [SpinOptions](/reference/api-builder/#spin-options): `holdReels`, `mode`
+
+</ConceptPart>

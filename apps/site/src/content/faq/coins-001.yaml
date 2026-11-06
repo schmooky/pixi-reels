@@ -1,8 +1,9 @@
 id: coins-001
 group: coins
+topic: hold-and-win
 question: How do I print a money value on a coin?
 answer: Use the shared `CoinSymbol` with `coinValue(amount)` (or your own text)
   to render the amount on the coin face.
 links:
-  - label: "Recipe: Hold & Win — collector"
-    href: /recipes/hold-and-win-collector/
+  - label: "Recipe: Hold & Win: collector"
+    href: /mechanics/hold-and-win/#hold-and-win-collector

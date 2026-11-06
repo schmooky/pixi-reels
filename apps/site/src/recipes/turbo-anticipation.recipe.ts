@@ -1,81 +1,100 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
-//
+import * as PIXI from 'pixi.js';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Anticipation in turbo',
+  topic: 'anticipation',
+  tags: ['anticipation', 'tension', 'scatter', 'near-miss', 'spine', 'horizontal', 'reverse', 'curve', 'acceleration'],
+  needs: ['hw-sprites', 'generic-symbols'],
+} as const satisfies RecipeMeta;
+
 // TURBO anticipation. SuperTurbo's profile has `anticipationDelay: 0`, so a
 // plain setAnticipation would skip the tease entirely. The per-call `duration`
 // override forces it to play anyway - the big "will I hit the bonus?" moment
 // survives turbo. No profile juggling.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const SCAT = 'SCAT';
+  const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+  const TEASE = [2, 3, 4];
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const SCAT = 'SCAT';
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
-const TEASE = [2, 3, 4];
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+    })
+    // Only SuperTurbo is registered - its anticipationDelay is 0.
+    .speed('superTurbo', SpeedPresets.SUPER_TURBO)
+    .initialSpeed('superTurbo')
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
-  })
-  // Only SuperTurbo is registered - its anticipationDelay is 0.
-  .speed('superTurbo', SpeedPresets.SUPER_TURBO)
-  .initialSpeed('superTurbo')
-  .ticker(app.ticker)
-  .build();
+  // ── Hold & Win anticipation glow, driven off the anticipation events ──
+  const antSheet = await PIXI.Assets.load<PIXI.Spritesheet>('/hw-sprites/anticipation.json');
+  const antFrames = (pre: string) => Object.entries(antSheet.textures)
+    .filter(([k]) => k.startsWith(pre)).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
+  const ANT_IN = antFrames('in/'), ANT_LOOP = antFrames('loop/');
+  const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
-// ── Hold & Win anticipation glow, driven off the anticipation events ──
-const antSheet = await PIXI.Assets.load('/hw-sprites/anticipation.json');
-const antFrames = (pre) => Object.entries(antSheet.textures)
-  .filter(([k]) => k.startsWith(pre)).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
-const ANT_IN = antFrames('in/'), ANT_LOOP = antFrames('loop/');
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const glowLayer = new PIXI.Container();
+  reelSet.addChild(glowLayer);
+  const glows = new Map();
+  const stopGlow = (i: number) => { const g = glows.get(i); if (g) { try { g.destroy(); } catch {} glows.delete(i); } };
+  const startGlow = (i: number) => {
+    stopGlow(i);
+    const g = new PIXI.AnimatedSprite(ANT_IN.length ? ANT_IN : ANT_LOOP);
+    g.anchor.set(0.5);
+    g.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H / 2);
+    g.width = g.height = SIZE * 2.0;
+    g.blendMode = 'add';
+    g.animationSpeed = 0.5; g.loop = false;
+    g.onComplete = () => { if (ANT_LOOP.length) { g.textures = ANT_LOOP; g.loop = true; g.play(); } };
+    glowLayer.addChild(g); g.play();
+    glows.set(i, g);
+  };
 
-const glowLayer = new PIXI.Container();
-reelSet.addChild(glowLayer);
-const glows = new Map();
-const stopGlow = (i) => { const g = glows.get(i); if (g) { try { g.destroy(); } catch {} glows.delete(i); } };
-const startGlow = (i) => {
-  stopGlow(i);
-  const g = new PIXI.AnimatedSprite(ANT_IN.length ? ANT_IN : ANT_LOOP);
-  g.anchor.set(0.5);
-  g.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H / 2);
-  g.width = g.height = SIZE * 2.0;
-  g.blendMode = 'add';
-  g.animationSpeed = 0.5; g.loop = false;
-  g.onComplete = () => { if (ANT_LOOP.length) { g.textures = ANT_LOOP; g.loop = true; g.play(); } };
-  glowLayer.addChild(g); g.play();
-  glows.set(i, g);
-};
+  reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
+  reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
+  reelSet.events.on('spin:complete', () => { for (const i of [...glows.keys()]) stopGlow(i); });
 
-reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
-reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
-reelSet.events.on('spin:complete', () => { for (const i of [...glows.keys()]) stopGlow(i); });
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = [
+        { visible: [rv(), SCAT, rv()] },
+        { visible: [rv(), SCAT, rv()] },
+        { visible: [rv(), rv(), rv()] },
+        { visible: [rv(), rv(), rv()] },
+        { visible: [rv(), rv(), rv()] },
+      ];
 
-return {
-  reelSet,
-  cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
-  onSpin: async () => {
-    const grid = [
-      { visible: [rv(), SCAT, rv()] },
-      { visible: [rv(), SCAT, rv()] },
-      { visible: [rv(), rv(), rv()] },
-      { visible: [rv(), rv(), rv()] },
-      { visible: [rv(), rv(), rv()] },
-    ];
-
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 120));
-    reelSet.setResult(grid);
-    // The reels rip past at SuperTurbo speed, but `duration` keeps the tease:
-    reelSet.setAnticipation(TEASE, {
-      duration: 420,           // overrides the profile's anticipationDelay of 0
-      stagger: 240,
-      slowdown: { from: 0.5, to: 0.12 },
-    });
-    await p;
-  },
-};
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 120));
+      reelSet.setResult(grid);
+      // The reels rip past at SuperTurbo speed, but `duration` keeps the tease:
+      reelSet.setAnticipation(TEASE, {
+        duration: 420,           // overrides the profile's anticipationDelay of 0
+        stagger: 240,
+        slowdown: { from: 0.5, to: 0.12 },
+      });
+      await p;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const i of [...glows.keys()]) stopGlow(i); try { glowLayer.destroy(); } catch {} },
+  };
+}

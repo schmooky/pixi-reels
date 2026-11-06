@@ -1,5 +1,15 @@
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app
+import * as PIXI from 'pixi.js';
+import { ReelSetBuilder, ReelSymbol, SpeedPresets } from 'pixi-reels';
+import { tapToSpin } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Numbers, not art',
+  topic: 'reel-curvature',
+  tags: ['curve', 'curvature', 'perspective', 'projection', 'cylinder', 'drum', '3d'],
+  height: 360,
+} as const satisfies RecipeMeta;
 
 // A single value reel: 1 reel, 3 cells, money amounts spinning past.
 //
@@ -16,137 +26,147 @@
 //
 // Text is authored big and scaled down to fit, which keeps `1000.00` and
 // `5.00` on the same optical size without reflowing the font.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const VALUES = ['5.00', '10.00', '25.00', '50.00', '100.00', '250.00', '1000.00'];
 
-const VALUES = ['5.00', '10.00', '25.00', '50.00', '100.00', '250.00', '1000.00'];
+  // Rarer as they get bigger, like a real prize ladder.
+  const WEIGHTS = {
+    '5.00': 30, '10.00': 24, '25.00': 18, '50.00': 12,
+    '100.00': 8, '250.00': 5, '1000.00': 2,
+  };
 
-// Rarer as they get bigger, like a real prize ladder.
-const WEIGHTS = {
-  '5.00': 30, '10.00': 24, '25.00': 18, '50.00': 12,
-  '100.00': 8, '250.00': 5, '1000.00': 2,
-};
+  const CELL_W = 260;
+  const CELL_H = 88;
 
-const CELL_W = 260;
-const CELL_H = 88;
+  class ValueSymbol extends ReelSymbol {
+    private _text: PIXI.Text;
+    private _w: number;
+    private _h: number;
+    private _fitScale: number;
+    private _winTween: gsap.core.Tween | null;
 
-class ValueSymbol extends ReelSymbol {
-  constructor() {
-    super();
-    this._text = new PIXI.Text({
-      text: '',
-      style: {
-        // Authored large, scaled down in `_fit`. Rasterising once at a big
-        // size and shrinking beats re-rasterising per value.
-        fontSize: 64,
-        fontWeight: '700',
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        fill: 0xfff6d5,
-        letterSpacing: 1,
-      },
-    });
-    this._text.anchor.set(0.5);
-    this.view.addChild(this._text);
-    this._w = 0;
-    this._h = 0;
-    this._fitScale = 1;
-    this._winTween = null;
-  }
-
-  onActivate(symbolId) {
-    this._text.text = `$${symbolId}`;
-    // Bigger prizes read warmer, so the reel is a ladder at a glance.
-    const rank = VALUES.indexOf(symbolId) / (VALUES.length - 1);
-    this._text.style.fill = rank > 0.7 ? 0xffcf4d : rank > 0.35 ? 0xf0e2bd : 0xa79b83;
-    this._fit();
-  }
-
-  onDeactivate() {
-    this._killWin();
-    this._text.scale.set(this._fitScale);
-  }
-
-  async playWin() {
-    this._killWin();
-    const to = this._fitScale * 1.16;
-    return new Promise((resolve) => {
-      this._winTween = this.gsap.to(this._text.scale, {
-        x: to, y: to, duration: 0.16, yoyo: true, repeat: 1,
-        ease: 'power2.inOut', onComplete: resolve,
+    constructor() {
+      super();
+      this._text = new PIXI.Text({
+        text: '',
+        style: {
+          // Authored large, scaled down in `_fit`. Rasterising once at a big
+          // size and shrinking beats re-rasterising per value.
+          fontSize: 64,
+          fontWeight: '700',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fill: 0xfff6d5,
+          letterSpacing: 1,
+        },
       });
-    });
-  }
-
-  stopAnimation() {
-    this._killWin();
-    this._text.scale.set(this._fitScale);
-  }
-
-  resize(width, height) {
-    this._w = width;
-    this._h = height;
-    this._text.x = width / 2;
-    this._text.y = height / 2;
-    this._fit();
-  }
-
-  _fit() {
-    if (this._w <= 0 || !this._text.text) return;
-    // Reset before measuring, or each fit compounds on the last one's scale.
-    this._text.scale.set(1);
-    const room = Math.min((this._w - 24) / this._text.width, (this._h - 16) / this._text.height);
-    this._fitScale = Math.min(room, 1);
-    this._text.scale.set(this._fitScale);
-  }
-
-  _killWin() {
-    if (this._winTween) {
-      this._winTween.kill();
+      this._text.anchor.set(0.5);
+      this.view.addChild(this._text);
+      this._w = 0;
+      this._h = 0;
+      this._fitScale = 1;
       this._winTween = null;
     }
+
+    onActivate(symbolId: string) {
+      this._text.text = `$${symbolId}`;
+      // Bigger prizes read warmer, so the reel is a ladder at a glance.
+      const rank = VALUES.indexOf(symbolId) / (VALUES.length - 1);
+      this._text.style.fill = rank > 0.7 ? 0xffcf4d : rank > 0.35 ? 0xf0e2bd : 0xa79b83;
+      this._fit();
+    }
+
+    onDeactivate() {
+      this._killWin();
+      this._text.scale.set(this._fitScale);
+    }
+
+    async playWin(): Promise<void> {
+      this._killWin();
+      const to = this._fitScale * 1.16;
+      return new Promise<void>((resolve) => {
+        this._winTween = this.gsap.to(this._text.scale, {
+          x: to, y: to, duration: 0.16, yoyo: true, repeat: 1,
+          ease: 'power2.inOut', onComplete: resolve,
+        });
+      });
+    }
+
+    stopAnimation() {
+      this._killWin();
+      this._text.scale.set(this._fitScale);
+    }
+
+    resize(width: number, height: number) {
+      this._w = width;
+      this._h = height;
+      this._text.x = width / 2;
+      this._text.y = height / 2;
+      this._fit();
+    }
+
+    _fit() {
+      if (this._w <= 0 || !this._text.text) return;
+      // Reset before measuring, or each fit compounds on the last one's scale.
+      this._text.scale.set(1);
+      const room = Math.min((this._w - 24) / this._text.width, (this._h - 16) / this._text.height);
+      this._fitScale = Math.min(room, 1);
+      this._text.scale.set(this._fitScale);
+    }
+
+    _killWin() {
+      if (this._winTween) {
+        this._winTween.kill();
+        this._winTween = null;
+      }
+    }
   }
+
+  const reelSet = new ReelSetBuilder()
+    .reels(1)
+    .visibleCells(3)
+    .symbolSize(CELL_W, CELL_H)
+    .symbolGap(0, 6)
+    .curve(0.5)
+    .curveMode('warp') // a Text cell has no texture of its own to bend
+    .renderer(app.renderer)
+    .symbols((r) => {
+      for (const v of VALUES) r.register(v, ValueSymbol, {});
+    })
+    .weights(WEIGHTS)
+    // Slow on purpose. A prize reel is read, not raced: the player is following
+    // the amounts as they pass, so the strip crawls and takes its time settling.
+    .speed('normal', {
+      ...SpeedPresets.NORMAL,
+      spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.28,
+      accelerationDuration: 700,
+      minimumSpinTime: 1200,
+      bounceDuration: 700,
+    })
+    .speed('turbo', {
+      ...SpeedPresets.NORMAL,
+      spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.6,
+      minimumSpinTime: 600,
+    })
+    .ticker(app.ticker)
+    .build();
+
+  const pick = () => {
+    const total = Object.values(WEIGHTS).reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (const [v, w] of Object.entries(WEIGHTS)) {
+      r -= w;
+      if (r <= 0) return v;
+    }
+    return VALUES[0];
+  };
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    // One reel, three cells: the middle one is the prize, the neighbours are
+    // just the ladder either side of it.
+    next: () => [[pick(), pick(), pick()]],
+  });
+  return { reelSet };
 }
-
-const reelSet = new ReelSetBuilder()
-  .reels(1)
-  .visibleCells(3)
-  .symbolSize(CELL_W, CELL_H)
-  .symbolGap(0, 6)
-  .curve(0.5)
-  .curveMode('warp') // a Text cell has no texture of its own to bend
-  .renderer(app.renderer)
-  .symbols((r) => {
-    for (const v of VALUES) r.register(v, ValueSymbol, {});
-  })
-  .weights(WEIGHTS)
-  // Slow on purpose. A prize reel is read, not raced: the player is following
-  // the amounts as they pass, so the strip crawls and takes its time settling.
-  .speed('normal', {
-    ...SpeedPresets.NORMAL,
-    spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.28,
-    accelerationDuration: 700,
-    minimumSpinTime: 1200,
-    bounceDuration: 700,
-  })
-  .speed('turbo', {
-    ...SpeedPresets.NORMAL,
-    spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.6,
-    minimumSpinTime: 600,
-  })
-  .ticker(app.ticker)
-  .build();
-
-const pick = () => {
-  const total = Object.values(WEIGHTS).reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (const [v, w] of Object.entries(WEIGHTS)) {
-    r -= w;
-    if (r <= 0) return v;
-  }
-  return VALUES[0];
-};
-
-return {
-  reelSet,
-  // One reel, three cells: the middle one is the prize, the neighbours are
-  // just the ladder either side of it.
-  nextResult: () => [[pick(), pick(), pick()]],
-};

@@ -1,9 +1,10 @@
 id: layout-012
 group: layout
+topic: orientation-and-direction
 question: Can the horizontal banner reel cascade like the main reels when a
   symbol was part of a win?
 answer: >-
-  Yes -- the banner is a plain `ReelSet`, so it uses the same cascade API as the
+  Yes. The banner is a plain `ReelSet`, so it uses the same cascade API as the
   main board. Build it with `.orientation('horizontal')` plus
   `.tumble({ fall, dropIn })`, then `await reelSet.refill({ winners, grid })`
   with the winning `Cell`s (`{ reel, cell }`) and the next `ColumnTarget[]`, or
@@ -12,5 +13,5 @@ answer: >-
   `cascade:dropIn:*` and `cascade:chain:end`.
 links:
   - label: "Recipe: Horizontal reel (paying-symbol banner)"
-    href: /recipes/horizontal-reel/
-recipe: horizontal-reel
+    href: /mechanics/orientation-and-direction/#horizontal-reel
+recipe: horizontal-banner

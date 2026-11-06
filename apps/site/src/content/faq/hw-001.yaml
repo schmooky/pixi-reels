@@ -1,12 +1,13 @@
 id: hw-001
 group: hw
+topic: hold-and-win
 question: How do I build a Hold & Win board where each cell spins on its own?
-answer: A Hold & Win cell is its own 1×1 ReelSet — the engine's atomic spin unit
+answer: A Hold & Win cell is its own 1x1 ReelSet. The engine's atomic spin unit
   is the reel, the mechanic's is the cell. `HoldAndWinBuilder` (in `pixi-reels`)
   builds the whole grid of independent cells plus the lock / respin
   choreography. Import it and drive it with `enter()` then `respin()` per round.
 links:
   - label: "Recipe: Hold & Win respin"
-    href: /recipes/hold-and-win/
-  - label: "Recipe: Hold & Win — Spine coins"
-    href: /recipes/hold-and-win-spine/
+    href: /mechanics/hold-and-win/
+  - label: "Recipe: Hold & Win: Spine coins"
+    href: /mechanics/hold-and-win/#hold-and-win-spine

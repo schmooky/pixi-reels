@@ -1,7 +1,18 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app,
-//                   SilkGraphics, DebugPlaque, DEBUG_FONT
-//
+import * as PIXI from 'pixi.js';
+import { SilkGraphics } from 'pixi-silk';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { DEBUG_FONT } from 'pixi-reels/debug';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'The gas pedal: bounded acceleration',
+  topic: 'anticipation',
+  tags: ['anticipation', 'tension', 'scatter', 'near-miss', 'spine', 'horizontal', 'reverse', 'curve', 'acceleration'],
+  height: 440,
+} as const satisfies RecipeMeta;
+
 // THE GAS PEDAL: `motionModel('drive')`.
 //
 // Every recipe above still shapes the tease with an EASE. An ease can only
@@ -30,155 +41,164 @@
 // Two moments stay instant on purpose: LANDING halts the drive dead so the reel
 // can snap to grid and bounce, and a SKIP press means now. Both are identical
 // in the tween model, so neither is the drive's to smooth.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const SCAT = 'SCAT';
+  const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+  const TEASE = [2, 3, 4];
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const SCAT = 'SCAT';
-const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
-const TEASE = [2, 3, 4];
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+      r.register(SCAT, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+    })
+    .motionModel('drive', {
+      // Roughly 20 frames from rest to full speed.
+      accelFrames: 20,
+      // Slower coming down than going up: the reel leans into its stops.
+      decelFrames: 34,
+      // The S-curve. Comment this line out to feel the difference - without it
+      // the acceleration still steps to its bound, it just cannot exceed it.
+      jerkFrames: 260,
+    })
+    .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 120 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
-  })
-  .motionModel('drive', {
-    // Roughly 20 frames from rest to full speed.
-    accelFrames: 20,
-    // Slower coming down than going up: the reel leans into its stops.
-    decelFrames: 34,
-    // The S-curve. Comment this line out to feel the difference - without it
-    // the acceleration still steps to its bound, it just cannot exceed it.
-    jerkFrames: 260,
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 120 })
-  .ticker(app.ticker)
-  .build();
+  const H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const H = ROWS * SIZE + (ROWS - 1) * GAP;
-const W = REELS * SIZE + (REELS - 1) * GAP;
+  const hud = readout.plaque({ text: 'Trace is reel 4 speed, no ease anywhere', minWidth: W, maxWidth: W });
+  hud.position.set(0, H + 10);
+  reelSet.addChild(hud);
 
-const hud = new DebugPlaque({ text: 'press spin - trace is reel 4 speed, no ease anywhere', minWidth: W, maxWidth: W });
-hud.position.set(0, H + 10);
-reelSet.addChild(hud);
+  // Speed AND acceleration, so the bounded second derivative is visible rather
+  // than merely asserted.
+  //
+  // Both panels are drawn ONCE, at setup. The recipe runner scales and centres
+  // the reel set to fit the frame and it measures bounds at setup time, so a
+  // Graphics that is still empty then contributes nothing: the fit gets solved
+  // for the reels alone and the chart spills out of the frame when it finally
+  // draws. Reserving the boxes up front is what makes the runner scale the reels
+  // and the charts together.
+  const LANE_H = 46;
+  const LANE_GAP = 8;
+  const SPEED_TOP = hud.y + hud.plateHeight + 8;
+  const ACCEL_TOP = SPEED_TOP + LANE_H + LANE_GAP;
+  const SPAN = 260;
+  const V_MAX = 2;
+  // Acceleration is a per-frame delta of a 0..1 value, so it is tiny. This is the
+  // magnification that puts the drive's plateau on screen at a readable height.
+  const A_MAX = 0.06;
 
-// Speed AND acceleration, so the bounded second derivative is visible rather
-// than merely asserted.
-//
-// Both panels are drawn ONCE, at setup. The recipe runner scales and centres
-// the reel set to fit the frame and it measures bounds at setup time, so a
-// Graphics that is still empty then contributes nothing: the fit gets solved
-// for the reels alone and the chart spills out of the frame when it finally
-// draws. Reserving the boxes up front is what makes the runner scale the reels
-// and the charts together.
-const LANE_H = 46;
-const LANE_GAP = 8;
-const SPEED_TOP = hud.y + hud.plateHeight + 8;
-const ACCEL_TOP = SPEED_TOP + LANE_H + LANE_GAP;
-const SPAN = 260;
-const V_MAX = 2;
-// Acceleration is a per-frame delta of a 0..1 value, so it is tiny. This is the
-// magnification that puts the drive's plateau on screen at a readable height.
-const A_MAX = 0.06;
+  // Same plate as the plaques. SilkGraphics keeps the rounded panels, the dotted
+  // guides and the traces exact at whatever scale the runner fits them to.
+  const panels = new SilkGraphics();
+  panels.roundRect(0, SPEED_TOP, W, LANE_H, 8, 0.6)
+    .fill({ color: 0x0b0e14, alpha: 0.84 })
+    .stroke({ width: 1, color: 0xffffff, alpha: 0.1, alignment: 'inside' });
+  panels.roundRect(0, ACCEL_TOP, W, LANE_H, 8, 0.6)
+    .fill({ color: 0x0b0e14, alpha: 0.84 })
+    .stroke({ width: 1, color: 0xffffff, alpha: 0.1, alignment: 'inside' });
+  // 1x spin speed on the speed lane, and zero acceleration on the accel lane.
+  const oneY = SPEED_TOP + LANE_H - (1 / V_MAX) * LANE_H;
+  const zeroY = ACCEL_TOP + LANE_H / 2;
+  panels.line(6, oneY, W - 6, oneY).stroke({ width: 1, color: 0xffffff, alpha: 0.3, dash: [2, 3] });
+  panels.line(6, zeroY, W - 6, zeroY).stroke({ width: 1, color: 0xffffff, alpha: 0.3, dash: [2, 3] });
+  reelSet.addChild(panels);
 
-// Same plate as the plaques. SilkGraphics keeps the rounded panels, the dotted
-// guides and the traces exact at whatever scale the runner fits them to.
-const panels = new SilkGraphics();
-panels.roundRect(0, SPEED_TOP, W, LANE_H, 8, 0.6)
-  .fill({ color: 0x0b0e14, alpha: 0.84 })
-  .stroke({ width: 1, color: 0xffffff, alpha: 0.1, alignment: 'inside' });
-panels.roundRect(0, ACCEL_TOP, W, LANE_H, 8, 0.6)
-  .fill({ color: 0x0b0e14, alpha: 0.84 })
-  .stroke({ width: 1, color: 0xffffff, alpha: 0.1, alignment: 'inside' });
-// 1x spin speed on the speed lane, and zero acceleration on the accel lane.
-const oneY = SPEED_TOP + LANE_H - (1 / V_MAX) * LANE_H;
-const zeroY = ACCEL_TOP + LANE_H / 2;
-panels.line(6, oneY, W - 6, oneY).stroke({ width: 1, color: 0xffffff, alpha: 0.3, dash: [2, 3] });
-panels.line(6, zeroY, W - 6, zeroY).stroke({ width: 1, color: 0xffffff, alpha: 0.3, dash: [2, 3] });
-reelSet.addChild(panels);
-
-const labels = [];
-for (const [text, y, fill] of [
-  ['speed 1x', oneY - 6, 0x6ad0ff],
-  ['accel 0', zeroY - 6, 0xf0a06a],
-]) {
-  const t = new PIXI.Text({
-    text,
-    style: { fontFamily: DEBUG_FONT, fontSize: 9, fill },
-  });
-  // INSIDE the panel: a label hanging off the right edge widens the composition
-  // past the reels, and the runner's fit centres on total bounds, which would
-  // push the board visibly off-centre.
-  t.position.set(W - 56, y - 6);
-  reelSet.addChild(t);
-  labels.push(t);
-}
-
-const trace = new SilkGraphics();
-reelSet.addChild(trace);
-
-let speeds = [];
-let accels = [];
-let lastSpeed = 0;
-
-// Clamped, so a stray sample can never grow the bounds the fit was solved for.
-const speedY = (v) => SPEED_TOP + LANE_H - Math.max(0, Math.min(1, v / V_MAX)) * LANE_H;
-const accelY = (a) => zeroY - Math.max(-1, Math.min(1, a / A_MAX)) * (LANE_H / 2);
-
-const tick = () => {
-  const v = reelSet.reels[4].speedNormalized;
-  speeds.push(v);
-  accels.push(v - lastSpeed);
-  lastSpeed = v;
-  if (speeds.length > SPAN) { speeds.shift(); accels.shift(); }
-  if (speeds.length < 2) return;
-
-  trace.clear();
-  const plot = (series, y, color) => {
-    const pts = [];
-    for (let i = 0; i < series.length; i++) pts.push((i / SPAN) * W, y(series[i]));
-    trace.polyline(pts).stroke({ width: 2, color, cap: 'round' });
-  };
-  plot(speeds, speedY, 0x6ad0ff);
-  // A tween model spikes here at the start of every transition. A drive shows a
-  // plateau, and with `jerk` set, a trapezoid: the acceleration ramps too.
-  plot(accels, accelY, 0xf0a06a);
-};
-app.ticker.add(tick);
-
-return {
-  reelSet,
-  cleanup: () => {
-    app.ticker.remove(tick);
-    try { trace.destroy(); } catch {}
-    try { panels.destroy(); } catch {}
-    for (const t of labels) { try { t.destroy(); } catch {} }
-    try { hud.destroy({ children: true }); } catch {}
-  },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    grid[0].visible[1] = SCAT;
-    grid[1].visible[1] = SCAT;
-    speeds = []; accels = []; lastSpeed = 0;
-    hud.text = 'blue = speed, orange = accel (bounded, ramped by jerk)';
-
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 420));
-    reelSet.setResult(grid);
-    // Under a drive the segment `duration` is the leg's time BUDGET, not a
-    // tween length: the bounds decide how fast the reel can actually get there.
-    reelSet.setAnticipation(TEASE, {
-      stagger: 240,
-      curve: [
-        { speed: 1.7, duration: 260 },
-        { speed: 0.1, duration: 520, hold: 260 },
-      ],
+  const labels: PIXI.Text[] = [];
+  for (const [text, y, fill] of [
+    ['speed 1x', oneY - 6, 0x6ad0ff],
+    ['accel 0', zeroY - 6, 0xf0a06a],
+  ] satisfies [string, number, number][]) {
+    const t = new PIXI.Text({
+      text,
+      style: { fontFamily: DEBUG_FONT, fontSize: 9, fill },
     });
-    await p;
-    hud.text = 'landed. blue = speed, orange = acceleration';
-  },
-};
+    // INSIDE the panel: a label hanging off the right edge widens the composition
+    // past the reels, and the runner's fit centres on total bounds, which would
+    // push the board visibly off-centre.
+    t.position.set(W - 56, y - 6);
+    reelSet.addChild(t);
+    labels.push(t);
+  }
+
+  const trace = new SilkGraphics();
+  reelSet.addChild(trace);
+
+  let speeds: number[] = [];
+  let accels: number[] = [];
+  let lastSpeed = 0;
+
+  // Clamped, so a stray sample can never grow the bounds the fit was solved for.
+  const speedY = (v: number) => SPEED_TOP + LANE_H - Math.max(0, Math.min(1, v / V_MAX)) * LANE_H;
+  const accelY = (a: number) => zeroY - Math.max(-1, Math.min(1, a / A_MAX)) * (LANE_H / 2);
+
+  const tick = () => {
+    const v = reelSet.reels[4].speedNormalized;
+    speeds.push(v);
+    accels.push(v - lastSpeed);
+    lastSpeed = v;
+    if (speeds.length > SPAN) { speeds.shift(); accels.shift(); }
+    if (speeds.length < 2) return;
+
+    trace.clear();
+    const plot = (series: number[], y: (v: number) => number, color: number) => {
+      const pts = [];
+      for (let i = 0; i < series.length; i++) pts.push((i / SPAN) * W, y(series[i]));
+      trace.polyline(pts).stroke({ width: 2, color, cap: 'round' });
+    };
+    plot(speeds, speedY, 0x6ad0ff);
+    // A tween model spikes here at the start of every transition. A drive shows a
+    // plateau, and with `jerk` set, a trapezoid: the acceleration ramps too.
+    plot(accels, accelY, 0xf0a06a);
+  };
+  app.ticker.add(tick);
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      grid[0].visible[1] = SCAT;
+      grid[1].visible[1] = SCAT;
+      speeds = []; accels = []; lastSpeed = 0;
+      hud.text = 'blue = speed, orange = accel (bounded, ramped by jerk)';
+
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 420));
+      reelSet.setResult(grid);
+      // Under a drive the segment `duration` is the leg's time BUDGET, not a
+      // tween length: the bounds decide how fast the reel can actually get there.
+      reelSet.setAnticipation(TEASE, {
+        stagger: 240,
+        curve: [
+          { speed: 1.7, duration: 260 },
+          { speed: 0.1, duration: 520, hold: 260 },
+        ],
+      });
+      await p;
+      hud.text = 'landed. blue = speed, orange = acceleration';
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      app.ticker.remove(tick);
+      try { trace.destroy(); } catch {}
+      try { panels.destroy(); } catch {}
+      for (const t of labels) { try { t.destroy(); } catch {} }
+      try { hud.destroy({ children: true }); } catch {}
+    },
+  };
+}

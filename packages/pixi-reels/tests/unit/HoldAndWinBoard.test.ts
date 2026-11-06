@@ -227,10 +227,10 @@ describe('HoldAndWinBoard landing wave', () => {
     ticker.destroy();
   });
 
-  it('the default board keeps its 70 ms diagonal', () => {
+  it('the default board keeps its 110 ms diagonal', () => {
     const { board, ticker, floor } = wave((b) => b);
     expect(floor({ reel: 0, cell: 0 }, 'normal')).toBe(320);
-    expect(floor({ reel: 1, cell: 1 }, 'normal')).toBe(320 + 2 * 70);
+    expect(floor({ reel: 1, cell: 1 }, 'normal')).toBe(320 + 2 * 110);
     board.destroy();
     ticker.destroy();
   });

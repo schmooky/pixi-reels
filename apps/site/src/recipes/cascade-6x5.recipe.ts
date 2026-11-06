@@ -1,79 +1,94 @@
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           PIXI, gsap, app, pickWeighted
+import { CARD_DECK, ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets, presentWithSpotlight } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Cascade 6x4 tumble',
+  topic: 'cascade',
+  tags: ['cascade', 'tumble', 'refill', 'anticipation', 'spine', 'thunderkick', 'horizontal', 'reverse', 'orientation', 'gravity'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // Cascade-tumble end-to-end on the modern API. no helpers, no scripted
 // stages. `reelSet.runCascade({ detectWinners, nextGrid })` owns the
 // orchestration; the two callbacks own the game rules.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+  const REELS = 6, ROWS = 4, SIZE = 72;
+  const CLUSTER = '10';
+  const HIT_ROW = 2;
+  const HIT_COLS = [0, 1, 2];
 
-const IDS = ['7', '8', '9', '10', 'J', 'Q'];
-const REELS = 6, ROWS = 4, SIZE = 72;
-const CLUSTER = '10';
-const HIT_ROW = 2;
-const HIT_COLS = [0, 1, 2];
+  function randSymbol(exclude: string) {
+    let s;
+    do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+    return s;
+  }
 
-function randSymbol(exclude) {
-  let s;
-  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
-  return s;
-}
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => {
-    for (const sym of CARD_DECK) {
-      if (IDS.includes(sym.id)) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
-      }
-    }
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
-  .tumble({
-    fall:   { duration: 283, ease: 'power3.in', cellStagger: 67 },  // 17f, 4f stagger
-    dropIn: { duration: 450, ease: 'power2.in', cellStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
-  })
-  .ticker(app.ticker).build();
-
-return {
-  reelSet,
-  onSpin: async () => {
-    // Stage 0: cluster of CLUSTER on cell 2, cols 0-2.
-    const stage0 = Array.from({ length: REELS }, (_, c) =>
-      Array.from({ length: ROWS }, (_, r) =>
-        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
-      )
-    );
-
-    // Moment A. initial spin lands the stage-0 cluster, left-to-right reveal.
-    reelSet.setDropOrder('ltr');
-    const spinDone = reelSet.spin();
-    await new Promise(r => setTimeout(r, 200));
-    reelSet.setResult(stage0.map((visible) => ({ visible })));
-    await spinDone;
-    await new Promise(r => setTimeout(r, 300));
-
-    // Moment B. cascade refill driven entirely by runCascade. The
-    // first call to detectWinners returns the planted cluster; the second
-    // returns [] (no more wins on the post-refill grid), ending the chain.
-    // The orchestration (destroy → pause → refill → re-detect) is library-owned.
-    reelSet.setDropOrder('all');
-    let detected = false;
-    await reelSet.runCascade({
-      detectWinners: () => {
-        if (detected) return [];
-        detected = true;
-        return HIT_COLS.map(c => ({ reel: c, cell: HIT_ROW }));
-      },
-      nextGrid: (prev, winners) => {
-        // Survivors slide down 1; new symbol at cell 0.
-        const next = prev.map(reel => [...reel]);
-        for (const w of winners) {
-          for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
-          next[w.reel][0] = randSymbol(CLUSTER);
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+    .symbols(r => {
+      for (const sym of CARD_DECK) {
+        if (IDS.includes(sym.id)) {
+          r.register(sym.id, StickerSymbol, { textures, tile: false });
         }
-        return next.map((visible) => ({ visible }));
-      },
-      pauseAfterDestroyMs: 250,
-    });
-  },
-};
+      }
+    })
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+    .tumble({
+      fall:   { duration: 283, ease: 'power3.in', cellStagger: 67 },  // 17f, 4f stagger
+      dropIn: { duration: 450, ease: 'power2.in', cellStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
+    })
+    .ticker(app.ticker).build();
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      // Stage 0: cluster of CLUSTER on cell 2, cols 0-2.
+      const stage0 = Array.from({ length: REELS }, (_, c) =>
+        Array.from({ length: ROWS }, (_, r) =>
+          r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
+        )
+      );
+
+      // Moment A. initial spin lands the stage-0 cluster, left-to-right reveal.
+      reelSet.setDropOrder('ltr');
+      const spinDone = reelSet.spin();
+      await new Promise(r => setTimeout(r, 200));
+      reelSet.setResult(stage0.map((visible) => ({ visible })));
+      await spinDone;
+      await new Promise(r => setTimeout(r, 300));
+
+      // Moment B. cascade refill driven entirely by runCascade. The
+      // first call to detectWinners returns the planted cluster; the second
+      // returns [] (no more wins on the post-refill grid), ending the chain.
+      // The orchestration (destroy → pause → refill → re-detect) is library-owned.
+      reelSet.setDropOrder('all');
+      let detected = false;
+      await reelSet.runCascade({
+        // The winners get their beat before they go: losers dim, winners wow, a short hold.
+        presentWinners: presentWithSpotlight(reelSet),
+        detectWinners: () => {
+          if (detected) return [];
+          detected = true;
+          return HIT_COLS.map(c => ({ reel: c, cell: HIT_ROW }));
+        },
+        nextGrid: (prev, winners) => {
+          // Survivors slide down 1; new symbol at cell 0.
+          const next = prev.map(reel => [...reel]);
+          for (const w of winners) {
+            for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+            next[w.reel][0] = randSymbol(CLUSTER);
+          }
+          return next.map((visible) => ({ visible }));
+        },
+        pauseAfterDestroyMs: 250,
+      });
+    },
+  });
+  return { reelSet };
+}

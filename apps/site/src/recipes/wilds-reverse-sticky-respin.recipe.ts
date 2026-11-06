@@ -1,6 +1,14 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Sticky wilds on a roll-up respin',
+  topic: 'wilds-and-pins',
+  tags: ['wild', 'sticky', 'multiplier', 'mystery', 'respin', 'cell-pin', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // A sticky-wild respin round on a ROLL-UP set.
 //
@@ -13,81 +21,88 @@
 // The round: any wild that lands is pinned for the rest of the round, three
 // respins follow, wilds picked up on the way stick too, and the pins are
 // released when the round ends.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const REELS = 5, CELLS = 3, SIZE = 84;
+  const WILD = WILD_CARD.id;
+  const RESPINS = 3;
+  const FILLER = ['7', '8', '9', '10', 'J'];
+  const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+  const col = () => Array.from({ length: CELLS }, filler);
 
-const REELS = 5, CELLS = 3, SIZE = 84;
-const WILD = WILD_CARD.id;
-const RESPINS = 3;
-const FILLER = ['7', '8', '9', '10', 'J'];
-const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
-const col = () => Array.from({ length: CELLS }, filler);
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCells(CELLS)
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(4, 4)
+    .direction('reverse')
+    .symbols((r) => {
+      for (const sym of [...CARD_DECK, WILD_CARD]) {
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+    })
+    .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
+    .speed('normal', SpeedPresets.NORMAL)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(4, 4)
-  .direction('reverse')
-  .symbols((r) => {
-    for (const sym of [...CARD_DECK, WILD_CARD]) {
-      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
-    }
-  })
-  .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
-  .speed('normal', SpeedPresets.NORMAL)
-  .ticker(app.ticker)
-  .build();
+  // Grid with wilds planted at the given cells.
+  function gridWith(cells: { reel: number; cell: number }[]) {
+    const grid = Array.from({ length: REELS }, () => col());
+    for (const { reel, cell } of cells) grid[reel][cell] = WILD;
+    return grid.map((visible) => ({ visible }));
+  }
 
-// Grid with wilds planted at the given cells.
-function gridWith(cells) {
-  const grid = Array.from({ length: REELS }, () => col());
-  for (const { reel, cell } of cells) grid[reel][cell] = WILD;
-  return grid.map((visible) => ({ visible }));
-}
-
-// Pin every wild the landing shows. `turns: 'permanent'` is the default; the
-// round releases them itself at the end.
-function pinLandedWilds() {
-  const grid = reelSet.getVisibleGrid();
-  for (let reel = 0; reel < REELS; reel++) {
-    for (let cell = 0; cell < CELLS; cell++) {
-      if (grid[reel][cell] === WILD && !reelSet.getPin(reel, cell)) {
-        reelSet.pin(reel, cell, WILD, { turns: 'permanent' });
+  // Pin every wild the landing shows. `turns: 'permanent'` is the default; the
+  // round releases them itself at the end.
+  function pinLandedWilds() {
+    const grid = reelSet.getVisibleGrid();
+    for (let reel = 0; reel < REELS; reel++) {
+      for (let cell = 0; cell < CELLS; cell++) {
+        if (grid[reel][cell] === WILD && !reelSet.getPin(reel, cell)) {
+          reelSet.pin(reel, cell, WILD, { turns: 'permanent' });
+        }
       }
     }
   }
-}
 
-async function land(cells) {
-  const p = reelSet.spin();
-  await new Promise((r) => setTimeout(r, 220));
-  reelSet.setResult(gridWith(cells));
-  await p;
-  pinLandedWilds();
-}
+  async function land(cells: { reel: number; cell: number }[]) {
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(gridWith(cells));
+    await p;
+    pinLandedWilds();
+  }
 
-// Scripted round: two wilds trigger, one more arrives on the second respin.
-const TRIGGER = [{ reel: 1, cell: 0 }, { reel: 3, cell: 2 }];
-const RESPIN_HITS = [[], [{ reel: 2, cell: 1 }], []];
+  // Scripted round: two wilds trigger, one more arrives on the second respin.
+  const TRIGGER = [{ reel: 1, cell: 0 }, { reel: 3, cell: 2 }];
+  const RESPIN_HITS = [[], [{ reel: 2, cell: 1 }], []];
 
-let busy = false;
-return {
-  reelSet,
-  onSpin: async () => {
-    if (busy) return;
-    busy = true;
-    try {
-      // Release last round's pins. Copy the map first: unpin mutates it.
-      for (const pin of [...reelSet.pins.values()]) reelSet.unpin(pin.reel, pin.cell);
+  let busy = false;
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        // Release last round's pins. Copy the map first: unpin mutates it.
+        for (const pin of [...reelSet.pins.values()]) reelSet.unpin(pin.reel, pin.cell);
 
-      await land(TRIGGER);
-      await new Promise((r) => setTimeout(r, 500));
+        await land(TRIGGER);
+        await new Promise((r) => setTimeout(r, 500));
 
-      for (let i = 0; i < RESPINS; i++) {
-        await land(RESPIN_HITS[i] ?? []);
-        await new Promise((r) => setTimeout(r, 400));
+        for (let i = 0; i < RESPINS; i++) {
+          await land(RESPIN_HITS[i] ?? []);
+          await new Promise((r) => setTimeout(r, 400));
+        }
+      } finally {
+        busy = false;
       }
-    } finally {
-      busy = false;
-    }
-  },
-};
+    },
+  });
+  return { reelSet };
+}

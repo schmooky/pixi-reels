@@ -2,22 +2,27 @@
 title: Recipe previews
 order: 17
 eyebrow: For authors
-description: How to give a recipe a card thumbnail and inline body images.
-  Convention-first — drop a file in public/ and it appears. Missing assets fall
-  back to a generated placeholder, so the page always looks finished.
+description: How to give a recipe a card thumbnail and inline body images. Drop a file in public/; a missing one falls back to a generated placeholder.
 ---
 
-Every recipe card and every recipe page can carry preview media: a gif, an animated webp, a static screenshot, or a short clip. It is **convention-first and zero-config**: drop a file in the right place and it shows up. Nothing is required. anything missing renders a generated placeholder built from the recipe title, so the index and pages always look finished.
+Every card on the recipes index and every topic page can carry preview media: a gif, an animated webp, a static screenshot, or a short clip. Nothing is required. Drop a file in the right place and it shows up. Anything missing renders a generated placeholder built from the title, so the index and the pages always look finished.
 
 ## Card thumbnails
 
-Each recipe card on the [/recipes/](/recipes/) grid shows a **16:10** thumbnail. To give a recipe a real one, drop a file at:
+Each card on the [/mechanics/](/mechanics/) grid is one topic page, and it shows a 16:10 thumbnail. The card looks for its media in this order.
+
+1. A hand-drawn cover for the slug, from `components/recipes-index/covers.ts`. Every topic page has one at the moment, so the index shows these.
+2. An explicit `image` path from the topic page's frontmatter, if that file exists under `public/`. See [Non-conventional paths](#non-conventional-paths).
+3. A file at the conventional path.
+4. The generated placeholder.
+
+The conventional path is:
 
 ```
 public/recipes/<slug>/card.<ext>
 ```
 
-where `<slug>` matches the recipe's URL (the `slug` in `content/recipes.ts`). That's the whole step — no registry edit. The card picks it up on the next build.
+where `<slug>` is the topic page's file name under `src/content/recipes/`, which is also its URL. There is no registry to edit. The card picks the file up on the next build.
 
 Supported extensions, in priority order:
 
@@ -25,13 +30,13 @@ Supported extensions, in priority order:
 gif  webp  avif  png  jpg  jpeg  mp4  webm
 ```
 
-Animated formats win over static, so if both `card.gif` and `card.png` exist, the gif is used. `mp4` / `webm` render as a muted, looping, autoplaying `<video>`. The image is `object-cover`, so any source proportion works, but compose for ~16:10 so nothing important sits where the crop bites.
+Animated formats win over static ones, so if both `card.gif` and `card.png` exist, the gif is used. `mp4` and `webm` render as a muted, looping, autoplaying `<video>`. The image is `object-cover`, so any source proportion works, but compose for about 16:10 so nothing important sits where the crop bites.
 
-When no file is found, the card shows a placeholder: a tinted faux-reel board with a monogram from the title. It's deterministic (same title → same tint), so the grid stays varied and intentional rather than blank.
+When nothing is found, the card shows a placeholder: a tinted faux-reel board with a monogram from the title. The same title always gives the same tint, so the grid stays varied rather than blank.
 
 ## Inline body images
 
-Inside a recipe's MDX body, use the `Image` component for figures (it is `RecipeImage.astro` under the hood): gifs of a mechanic mid-motion, before/after stills, a frame breakdown:
+Inside a topic page's MDX body, use the `Image` component for figures (it is `RecipeImage.astro` under the hood): gifs of a mechanic mid-motion, before and after stills, a frame breakdown. The same component is available on the Learn and Reference pages.
 
 ```mdx
 
@@ -45,31 +50,27 @@ Inside a recipe's MDX body, use the `Image` component for figures (it is `Recipe
 | Prop | Required | Notes |
 |---|---|---|
 | `src` | no | Public URL, e.g. `/recipes/<slug>/foo.gif`. Omit to force a placeholder. |
-| `alt` | **yes** | Accessible name **and** the placeholder's caption when `src` is missing. |
+| `alt` | yes | The accessible name, and the placeholder's caption when `src` is missing. |
 | `caption` | no | Figure caption under the media. |
 | `ratio` | no | Placeholder box ratio, default `16/10`. Real media uses its own size. |
 
-Drop as many as you like. They follow the same rule as cards: if the file exists under `public/`, it renders; if not, you get a placeholder that **shows the `alt` text and the exact path to provide**, so an unfinished page reads as "art pending here: `public/recipes/x/foo.gif`", never as a broken image. Write the `alt` as if the image were already there; it does double duty.
+Add as many as you like. They follow the same rule as cards: if the file exists under `public/`, it renders. If not, you get a placeholder that shows the `alt` text and the exact path to provide, so an unfinished page reads as "art pending here: `public/recipes/x/foo.gif`" and never as a broken image. Write the `alt` as if the image were already there, since it does both jobs.
 
 ## Non-conventional paths
 
-If an asset lives somewhere other than `public/recipes/<slug>/card.*`, set an explicit `image` on the recipe in `content/recipes.ts`:
+If a card asset lives somewhere other than `public/recipes/<slug>/card.*`, set `image` in the topic page's frontmatter (`src/content/recipes/<slug>.mdx`):
 
-```ts
-{
-  slug: 'my-recipe',
-  // ...
-  image: '/shared/my-shared-preview.gif',
-}
+```yaml
+image: /shared/my-shared-preview.gif
 ```
 
-An `image` that points at a real file wins over the conventional lookup; one that points at nothing falls through to the convention, then to the placeholder.
+An `image` that points at a real file wins over the conventional lookup. One that points at nothing falls through to the convention, then to the placeholder. A hand-drawn cover still wins over both.
 
 ## Tips
 
-- **Keep gifs small.** A card is shown at ~370px wide; 800px source is plenty. Trim to 2-4 seconds and a tight loop. Prefer animated `webp` over `gif` for the same motion at a fraction of the bytes.
-- **Capture from the live demo.** Every recipe ships a runnable demo; record the canvas region for a 1:1 preview of exactly what the reader will run.
-- **Compose for the crop.** Cards are `object-cover` at 16:10; center the board, leave a little breathing room.
-- **Light background.** The site card is light; export with an opaque light backdrop (or composite onto one) so transparent canvases don't read as gray.
+- Keep gifs small. A card is shown at about 370px wide, so an 800px source is plenty. Trim to 2 to 4 seconds and a tight loop. Prefer animated `webp` over `gif` for the same motion at a fraction of the bytes.
+- Capture from the live demo. Every recipe ships a runnable demo, so record the canvas region for a 1:1 preview of what the reader will run.
+- Compose for the crop. Cards are `object-cover` at 16:10. Center the board and leave a little room around it.
+- Use a light background. The site card is light, so export with an opaque light backdrop (or composite onto one) so transparent canvases do not read as gray.
 
-The Hold & Win recipes ([respin](/recipes/hold-and-win/), [Spine coins](/recipes/hold-and-win-spine/), [collector](/recipes/hold-and-win-collector/)) ship real captured cards; browse the rest of the [grid](/recipes/) to see the placeholders they fall back to.
+The [Hold & Win](/mechanics/hold-and-win/) page has captured `card.png` files under `public/recipes/` from before the covers existed. The index shows its hand-drawn cover instead. Browse the rest of the [grid](/mechanics/) to see the covers and the placeholder they would fall back to.

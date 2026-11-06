@@ -4,11 +4,11 @@ eyebrow: Step-by-step
 description: Build, spin, and react to a reel set from scratch.
 order: 1
 ---
-We build a 5x3 fruit slot. From nothing.
+This page builds a 5x3 fruit slot from nothing.
 
 ## 0. Before you start
 
-You have a Pixi app already. Install: `npm i pixi-reels`.
+You have a Pixi app already. Install the engine with `npm i pixi-reels`.
 
 ## 1. Make a builder
 
@@ -17,7 +17,7 @@ import { ReelSetBuilder } from 'pixi-reels';
 const builder = new ReelSetBuilder();
 ```
 
-Builder first. Configure it. Build it last.
+You configure the builder, then build the reel set from it at the end.
 
 ## 2. Set the grid
 
@@ -30,18 +30,17 @@ builder
   .bufferSymbols(1);         // optional, default 1
 ```
 
-Nothing on screen yet. Nothing broken either. The builder does nothing until
-`.build()`.
+Nothing is on screen yet. The builder does nothing until you call `.build()`.
 
 ## 3. Register symbols
 
-Every symbol needs an id and a class.
+Every symbol needs an id and a class. Three classes ship with the engine.
 
-- `SpriteSymbol` -- one static texture
-- `AnimatedSpriteSymbol` -- sprite-sheet animation
-- `SpineSymbol` -- Spine skeletons
+- `SpriteSymbol` draws one static texture
+- `AnimatedSpriteSymbol` plays a sprite-sheet animation
+- `SpineSymbol` plays a Spine skeleton
 
-Want something else? Extend `ReelSymbol` and draw whatever you like.
+For anything else, extend `ReelSymbol` and draw what you like.
 
 ```ts
 import { SpriteSymbol } from 'pixi-reels';
@@ -53,7 +52,7 @@ builder.symbols((r) => {
 });
 ```
 
-Register nothing and `.build()` throws: `symbols() must register at least one symbol.`
+If you register nothing, `.build()` throws with `symbols() must register at least one symbol.`
 
 ## 4. Weights, ticker, build
 
@@ -68,10 +67,10 @@ const reelSet = builder.build();
 app.stage.addChild(reelSet);
 ```
 
-Now you see a 5x3 grid of random symbols. Still. Not spinning.
+You now see a 5x3 grid of random symbols, standing still.
 
 Real slots do not open on random symbols. They open on a chosen frame, or on
-whatever the player left behind last round. Use `initialFrame` for that:
+whatever the player left behind last round. Set that with `initialFrame`.
 
 ```ts
 builder.initialFrame([
@@ -91,16 +90,16 @@ It takes buffer symbols too, if you want something peeking in from off-window.
 const promise = reelSet.spin();
 ```
 
-It spins. It keeps spinning.
+The reels spin and keep spinning.
 
 Do not call this straight from a button click. Call it from the state that
-opens a round and sends the server request. The button starts a round; the
+opens a round and sends the server request. The button starts a round, and the
 round starts the reels.
 
 ## 6. Stop
 
-The spin promise does not resolve on its own. It waits for you to say what to
-land on:
+The spin promise does not resolve on its own. It waits until you say what to
+land on.
 
 ```ts
 const promise = reelSet.spin();
@@ -116,14 +115,14 @@ reelSet.setResult([
 await promise;
 ```
 
-Reels stop. Reels show your grid.
+The reels stop and show your grid.
 
-**The classic mistake:** `await reelSet.spin()` on its own. It never resolves,
-because nothing ever told it where to stop. Hold the promise, set the result,
+The classic mistake is `await reelSet.spin()` on its own. It never resolves,
+because nothing told it where to stop. Hold the promise, set the result,
 then await.
 
 ## What next
 
-* React to events: [Spin lifecycle](/guides/spin-lifecycle/)
-* Go faster: [Speed modes](/guides/speed-modes/)
-* Animate wins: [Win animations](/guides/win-animations/)
+* React to events: [Spin lifecycle](/mechanics/skip/#concept)
+* Go faster: [Speed modes](/mechanics/feel/#concept-speed-modes)
+* Animate wins: [Win animations](/mechanics/cells-and-banners/#concept)

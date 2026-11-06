@@ -1,0 +1,22 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base
+  title="Page not found · pixi-reels"
+  description="This page does not exist. The pixi-reels docs moved to one page per mechanic; the links below lead to the current shelves."
+  noIndex
+>
+  <section class="container max-w-[880px] py-20">
+    <p class="eyebrow">404</p>
+    <h1 class="display mt-4 text-4xl sm:text-5xl">This page does not exist.</h1>
+    <p class="mt-5 max-w-[620px] text-lg leading-relaxed text-muted-foreground">
+      The docs moved to one page per mechanic, and most old links redirect. If this one did not, start from a shelf or search.
+    </p>
+    <ul class="mt-10 grid gap-3 sm:grid-cols-2">
+      <li><a class="block border border-border p-4 hover:border-brand" href="/mechanics/"><span class="font-semibold">Mechanics</span><span class="mt-1 block text-sm text-muted-foreground">Every mechanic with its live demos.</span></a></li>
+      <li><a class="block border border-border p-4 hover:border-brand" href="/learn/"><span class="font-semibold">Learn</span><span class="mt-1 block text-sm text-muted-foreground">Getting started and the tutorials.</span></a></li>
+      <li><a class="block border border-border p-4 hover:border-brand" href="/reference/"><span class="font-semibold">Reference</span><span class="mt-1 block text-sm text-muted-foreground">The API guides, glossary and migrations.</span></a></li>
+      <li><a class="block border border-border p-4 hover:border-brand" href="/faq/"><span class="font-semibold">FAQ</span><span class="mt-1 block text-sm text-muted-foreground">Answers grouped by mechanic.</span></a></li>
+    </ul>
+  </section>
+</Base>

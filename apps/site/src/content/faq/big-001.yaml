@@ -1,9 +1,10 @@
 id: big-001
 group: big
-question: How do I place a 2×2 symbol on the board?
+topic: big-symbols
+question: How do I place a 2x2 symbol on the board?
 answer: "Give the id `size: { reels: 2, cells: 2 }` via `.symbolData(...)` and `weight:
   0` via `.weights(...)`, place its anchor cell via `setResult`, and the engine
   paints OCCUPIED across the block."
 links:
-  - label: "Recipe: Big symbols (N×M)"
-    href: /recipes/big-symbols-mxn/
+  - label: "Recipe: Big symbols (NxM)"
+    href: /mechanics/big-symbols/#big-symbols-mxn

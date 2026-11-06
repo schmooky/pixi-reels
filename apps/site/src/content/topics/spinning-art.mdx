@@ -1,0 +1,28 @@
+---
+title: Spinning art
+group: symbols
+oneLiner: While a reel spins it shows a blurred still of each symbol, so heavy art costs nothing and reads as motion.
+order: 52
+tags:
+  - static-spin
+  - motion-blur
+  - spine
+guides: []
+---
+
+A symbol at rest can be anything: a Spine skeleton, an animated sprite, a
+container of layers. Register it through `StaticSpinSymbol` and give it a
+`createInner` that builds the real symbol. At rest the inner symbol is live,
+so idle loops and win animations play as usual. When the reel starts, the
+wrapper deactivates it and spins a plain sprite of it instead. On landing it
+brings the inner symbol back with the final id.
+
+The sprite's texture comes from a `SpinTextureCache` shared by the set, which
+snapshots each id once. With `spinTexture: 'blurred'`, the default, it also
+bakes a motion blur along the reel's travel and crossfades to it over
+`blurRampMs`. `spinTexture: 'static'` spins the sharp snapshot instead. No
+filter runs during the spin, and no skeleton updates while the strip moves.
+
+`prewarmSpinTextures` bakes every id before the first spin. Without it, each
+id is baked the first time it is needed. If you have hand-drawn blur frames,
+`cache.setBlurred(id, texture)` makes the cache use them instead.

@@ -38,16 +38,21 @@ jobs:
       - name: Build docs site
         run: pnpm site:build
 
-      - name: Generated llms.txt is committed
-        # `site:build` regenerates apps/site/public/llms.txt from the page
+      - name: Generated llms.txt and llms-full.txt are committed
+        # `site:build` regenerates apps/site/public/llms.txt (the index) and
+        # llms-full.txt (every page inlined) from the page
         # tree (prebuild runs `llms:gen`). The file is committed because it is
         # served as a static asset, and until this check existed nothing
         # compared the committed copy with the freshly generated one: CI
         # rebuilt it into its own output and threw it away, so the file sat at
         # v2.8.0 through a 3.0.0 release. Fix a failure by regenerating and
         # committing:
-        #   pnpm site:build && git add apps/site/public/llms.txt
-        run: git diff --exit-code -- apps/site/public/llms.txt
+        #   pnpm site:build && git add apps/site/public/llms.txt apps/site/public/llms-full.txt
+        run: git diff --exit-code -- apps/site/public/llms.txt apps/site/public/llms-full.txt
+
+      - name: llms-full.txt is tracked
+        # git diff ignores an untracked file, so a missing commit would pass.
+        run: git ls-files --error-unmatch apps/site/public/llms-full.txt
 
       - name: Bundle size check
         # Fails the PR when the library's gzipped dist grows more than

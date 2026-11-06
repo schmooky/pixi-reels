@@ -1,5 +1,6 @@
 id: pins-008
 group: pins
+topic: big-symbols
 question: How do I make a pin migrate back to its origin row when there is room?
 answer: >-
   `reelSet.pin(reel, cell, id, { migration: 'origin', originCell })`. `'origin'`
@@ -9,4 +10,4 @@ answer: >-
   lock-and-never-restore.
 links:
   - label: "Recipe: Sticky wild + MultiWays"
-    href: /recipes/sticky-wild-multiways/
+    href: /mechanics/big-symbols/#sticky-wild-multiways

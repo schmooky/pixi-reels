@@ -1,0 +1,287 @@
+---
+title: Nudge
+group: lines
+oneLiner: Push a reel that has already stopped up or down a few places to pull a symbol into view.
+order: 12
+tags:
+  - nudge
+  - stagger
+  - spotlight
+  - big-symbols
+  - abort
+  - skip
+  - horizontal
+  - reverse
+  - orientation
+guides:
+  - nudge
+---
+
+<ConceptPart title="Nudge" lede="Shift a reel forward or back by one or more positions after it has stopped, bringing in symbols you supply.">
+
+A nudge moves one reel a few cells after it has landed, and brings in symbols
+you choose. The classic use is a near-miss: the reels land one symbol short,
+then one reel nudges by one cell to reveal the symbol that was missing.
+
+```ts
+await reelSet.spin();
+
+await reelSet.nudge(2, {
+  distance: 1,
+  direction: 'forward',
+  incoming: ['wild'],
+});
+```
+
+Reel 2 moves one cell. Everything on it shifts along, the last symbol leaves
+the window, and the wild arrives at the front.
+
+<RecipeDemo code="nudge" />
+
+<a id="the-contract"></a>
+
+## The contract
+
+```ts
+interface NudgeOptions {
+  /**
+   * Number of full positions to shift. Positive integer, strictly less than
+   * the reel's total strip capacity (bufferStart + visibleCells + bufferEnd).
+   */
+  distance: number;
+  /**
+   *  - 'forward': the way this reel travels; new symbols enter at its
+   *    feed edge.
+   *  - 'reverse': the other way; new symbols enter at the opposite edge.
+   *
+   * Relative to the reel, not the screen. On a reel built with
+   * direction('reverse'), 'forward' nudges upward.
+   */
+  direction: 'forward' | 'reverse';
+  /**
+   * Symbol ids in top-down order of their final on-strip position,
+   * including any overflow into the off-screen buffer. Length must equal
+   * `distance` exactly.
+   */
+  incoming: string[];
+  /** Tween duration in ms. Default: `200 * distance`. */
+  duration?: number;
+  /** GSAP ease name. Default: `'power2.out'` (smooth deceleration, no overshoot). */
+  ease?: string;
+  /** Delay before the tween begins (ms). Sugar for staggered Promise.all. */
+  startDelay?: number;
+  /** Abort the nudge mid-flight. Strip still snaps to landed position. */
+  signal?: AbortSignal;
+}
+
+reelSet.nudge(reel: number, options: NudgeOptions): Promise<{ symbols: string[] }>;
+reelSet.skipNudge(reel?: number): void;
+```
+
+The promise resolves with the reel's new visible cells, in order, which you
+can feed straight into win detection. It rejects with an `AbortError` if the
+signal aborts or the set is destroyed mid-tween.
+
+<a id="how-incoming-lays-out"></a>
+
+## How `incoming` lays out
+
+For a 3-cell reel landed on `['A', 'B', 'C']` (first, middle, last):
+
+| Call | New visible (first to last) |
+| --- | --- |
+| `nudge(r, { distance: 1, direction: 'forward', incoming: ['X'] })` | `['X', 'A', 'B']` |
+| `nudge(r, { distance: 2, direction: 'forward', incoming: ['X', 'Y'] })` | `['X', 'Y', 'A']` |
+| `nudge(r, { distance: 1, direction: 'reverse', incoming: ['X'] })` | `['B', 'C', 'X']` |
+| `nudge(r, { distance: 2, direction: 'reverse', incoming: ['X', 'Y'] })` | `['C', 'X', 'Y']` |
+
+The first entry always ends up nearest the start of the reel and the last
+entry nearest the end.
+
+A nudge further than the visible cell count pushes the overflow into the
+buffer on the matching side. With `'forward'`, the trailing entries spill into
+the buffer at the exit edge. With `'reverse'`, the leading entries spill into
+the other one. Nothing is thrown away. Every entry stays on the strip, ready
+for a follow-up nudge or the next spin's opening frame.
+
+A distance equal to or larger than the strip capacity throws, because a full
+rotation would silently overwrite a pre-placed buffer entry.
+
+<a id="sequential-vs-parallel"></a>
+
+## Sequential or parallel
+
+One nudge moves one reel. When several reels nudge, you choose how to start
+them. The engine output is the same either way; only the pacing differs.
+
+<a id="sequential-three-separate-beats"></a>
+
+### Sequential
+
+<RecipeDemo code="nudge-sequential" />
+
+```ts
+for (const reel of [1, 2, 3]) {
+  await reelSet.nudge(reel, { distance: 1, direction: 'forward', incoming: ['wild'], duration: 480 });
+}
+```
+
+Each `await` waits for that reel to land, so the player sees reel 1's wild
+before reel 2 starts. The total time is the number of reels times the
+duration.
+
+<a id="parallel-one-synchronised-beat"></a>
+
+### Parallel
+
+<RecipeDemo code="nudge-parallel" />
+
+```ts
+await Promise.all(
+  [1, 2, 3].map((reel) =>
+    reelSet.nudge(reel, { distance: 1, direction: 'forward', incoming: ['wild'], duration: 480 }),
+  ),
+);
+```
+
+All the tweens start on the same frame and the whole line arrives together.
+The total time is one duration, however many reels.
+
+<a id="stagger-sugar-in-between"></a>
+<a id="stagger-in-between"></a>
+
+### Stagger
+
+The `startDelay` option gives you a wave without a loop:
+
+```ts
+await Promise.all(
+  [1, 2, 3].map((reel, i) =>
+    reelSet.nudge(reel, { ...opts, startDelay: i * 80 }),
+  ),
+);
+```
+
+The tweens start at 0, 80 and 160 ms and run concurrently. Validation still
+throws synchronously at the call site. Only the movement is delayed.
+
+<a id="big-symbols-on-the-reel"></a>
+
+## Big symbols on the reel
+
+A tall block moves as one piece, as long as the whole block is still on the
+strip afterwards:
+
+| Direction | Survival condition |
+| --- | --- |
+| `'forward'` | `anchorStripIdx + h - 1 + distance < total` |
+| `'reverse'`   | `anchorStripIdx - distance >= 0` |
+
+Here `total` is the strip capacity (buffer start plus visible cells plus
+buffer end) and `anchorStripIdx` counts from 0 at the outermost start-buffer
+cell, so the index of visible cell 0 equals the buffer start count.
+
+A block may sit partly in a buffer and still render correctly. The engine
+sizes the anchor to span the whole block wherever it lives, and the mask clips
+the rest. This is how a tail reveal works: land a tall wild with its anchor in the
+buffer, nudge, and the rest of it moves into view.
+
+A block wider than one reel always throws. Nudging one reel would tear the
+block off its cells on the next one.
+
+```ts
+// A 1x2 wild sits at visible cell 1 with its tail in bufferEnd.
+// Nudge back by 1 and the whole block lands at cells 0 and 1.
+await reelSet.nudge(2, { distance: 1, direction: 'reverse', incoming: ['filler'] });
+```
+
+<a id="aborting--skipping"></a>
+<a id="aborting-and-skipping"></a>
+
+## Skip and abort
+
+There are two ways to cut a nudge short.
+
+```ts
+// 1. Skip: fast-forward to landed. The promise resolves normally.
+const p = reelSet.nudge(2, { ...opts });
+button.onclick = () => reelSet.skipNudge(2);
+const { symbols } = await p;
+```
+
+```ts
+// 2. Abort: reject with AbortError. The strip still snaps to landed.
+const controller = new AbortController();
+const p = reelSet.nudge(2, { ...opts, signal: controller.signal });
+button.onclick = () => controller.abort();
+try { await p; }
+catch (e) { if (e.name !== 'AbortError') throw e; }
+```
+
+The difference is what happens to the promise. `skipNudge` resolves it, so
+your success path runs. An abort rejects it and fires `nudge:cancelled`, so
+your error path runs. Skip when the win plays next, and abort when you are
+tearing the feature down.
+
+Either way the strip lands where it was going to land. A nudge never stops
+half-tweened.
+
+<a id="events"></a>
+
+## Events
+
+| Event | Payload | When |
+| --- | --- | --- |
+| `nudge:start` | `({ reelIndex, distance, direction })` | Pre-placement is done and the tween is about to begin. |
+| `nudge:complete` | `({ reelIndex, distance, direction, symbols })` | The strip snapped to the post-nudge grid. `symbols` is the new visible column. |
+| `nudge:cancelled` | `({ reelIndex, distance, direction, reason })` | The signal aborted or the reel was destroyed mid-tween. Never fires together with `nudge:complete`; the promise rejected instead. |
+| `phase:enter` (per reel) | `('nudge')` | Mirror of `nudge:start`, on the affected reel's bus. |
+| `phase:exit` (per reel) | `('nudge')` | Mirror of `nudge:complete`. |
+
+The per-reel `landed` event does not fire on a nudge. It belongs to the spin
+pipeline. Listen to `nudge:complete` instead.
+
+```ts
+reelSet.events.on('nudge:complete', ({ reelIndex, symbols }) => {
+  console.log(`reel ${reelIndex} now reads`, symbols);
+  // Re-run win detection on reelSet.getVisibleGrid() here.
+});
+```
+
+<a id="when-nudge-throws-or-rejects"></a>
+
+## When `nudge()` throws or rejects
+
+Bad arguments throw at the call. Cancellation rejects later.
+
+It throws synchronously when:
+
+- The reel set is spinning, refilling, or in a cascade.
+- `reel` is out of range.
+- The target reel has an active pin. Call `unpin` first.
+- `distance` is below 1, not an integer, or at least the strip capacity.
+- `direction` is neither `'forward'` nor `'reverse'`.
+- The length of `incoming` differs from `distance`.
+- An incoming id is not registered, or is a big symbol.
+- A block on the target reel would not survive the rotation.
+- A cell on the target reel belongs to a block wider than one reel.
+
+It rejects with an `AbortError` when:
+
+- The signal aborts before or during the tween.
+- `reelSet.destroy()` is called mid-tween.
+
+A nudge touches one reel. The other reels, their pins and any spotlight are
+left alone.
+
+<a id="recipes"></a>
+
+## Recipes
+
+- [Single nudge](/mechanics/nudge/), the smallest demo.
+- [Spotlight after a nudge](/mechanics/nudge/#nudge-spotlight), a nudge that completes a line, then the win.
+- [Big symbols](/mechanics/nudge/#nudge-big-symbol), the block survival rule and the tail reveal.
+- [Land a big symbol partially in buffer](/mechanics/big-symbols/#big-symbol-partial-land), land with the tail showing, then nudge to reveal it.
+- [Nudge a big symbol in, then hold it across a respin](/mechanics/big-symbols/#big-symbol-held-respin), reveal a buffer-anchored wild, then hold the reel while the others respin.
+
+</ConceptPart>

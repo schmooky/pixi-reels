@@ -1,6 +1,14 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, app
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Nudge a big symbol in, then hold it across a respin',
+  topic: 'big-symbols',
+  tags: ['big-symbols', 'multiways', 'pyramid', 'spine', 'geometry', 'sticky-wild', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
 // Reel 3 lands with a tall wild whose anchor sits in bufferStart (only
@@ -28,96 +36,102 @@
 //   - `_coordinateBigSymbols` runs on the result grid passed by the
 //     player for the non-held reels; the held column's placeholder entry
 //     is ignored.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, w: 1, h: 3 };
+  const set = await createAssets().genericSymbols();
+  // The block wears a framed sticker; the deck's ids map onto the set.
+  const { frames } = set;
+  const textures = { ...set.textures, [TALL.id]: set.textures.H1 };
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const REELS = 5;
+  const HELD_REEL = 2;
+  const ROWS = 3;
+  const SIZE = 80;
+  const GAP = 4;
 
-const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, w: 1, h: 3 };
-const REELS = 5;
-const HELD_REEL = 2;
-const ROWS = 3;
-const SIZE = 80;
-const GAP = 4;
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCells(ROWS)
+    // bufferStart >= 2 lets the 1x3 anchor sit at cell -2 (block extends
+    // through cell 0. tail visible).
+    .bufferSymbols(2)
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(GAP, GAP)
+    .symbols((registry) => {
+      for (const card of CARD_DECK) {
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+      registry.register(TALL.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures, frames, span: { reels: TALL.w, cells: TALL.h } }), cache, blurRampMs: 140 });
+    })
+    .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+    .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
+    .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(ROWS)
-  // bufferStart >= 2 lets the 1x3 anchor sit at cell -2 (block extends
-  // through cell 0. tail visible).
-  .bufferSymbols(2)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(GAP, GAP)
-  .symbols((registry) => {
-    for (const card of CARD_DECK) {
-      registry.register(card.id, CardSymbol, {
-        color: card.color, label: card.label, textColor: card.textColor,
+  const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+  const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+  const ct = () => ({ visible: [filler(), filler(), filler()] });
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      // ── 1. Initial spin lands the tail-visible wild on reel 2. ──────
+      const initialGrid = [
+        ct(), ct(),
+        // Reel 2: anchor at bufferStart[1] = cell -2. Block spans cells
+        // -2, -1, 0. Only cell 0 shows the block's bottom cell.
+        { visible: [filler(), filler(), filler()], bufferStart: [undefined, TALL.id] },
+        ct(), ct(),
+      ];
+      const spin1 = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 240));
+      reelSet.setResult(initialGrid);
+      await spin1;
+      await new Promise((r) => setTimeout(r, 900));
+
+      // ── 2. Nudge the held reel DOWN by 2 to reveal the full block. ──
+      //
+      // Survival check (down): anchor strip index (0) + h - 1 + distance =
+      // 0 + 3 - 1 + 2 = 4 < total 7 ✓. The block moves as a unit from
+      // strip[0..2] to strip[2..4]. Visible[0..2] = ['tall', 'tall', 'tall'].
+      await reelSet.nudge(HELD_REEL, {
+        distance: 2,
+        direction: 'forward',
+        incoming: [filler(), filler()],
+        duration: 620,
       });
-    }
-    registry.register(TALL.id, CardSymbol, {
-      color: TALL.color, label: TALL.label, textColor: TALL.textColor,
-    });
-  })
-  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
-  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
-  .ticker(app.ticker)
-  .build();
 
-const FILLER_IDS = ['7', '8', '9', '10', 'J'];
-const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
-const ct = () => ({ visible: [filler(), filler(), filler()] });
-
-return {
-  reelSet,
-  onSpin: async () => {
-    // ── 1. Initial spin lands the tail-visible wild on reel 2. ──────
-    const initialGrid = [
-      ct(), ct(),
-      // Reel 2: anchor at bufferStart[1] = cell -2. Block spans cells
-      // -2, -1, 0. Only cell 0 shows the block's bottom cell.
-      { visible: [filler(), filler(), filler()], bufferStart: [undefined, TALL.id] },
-      ct(), ct(),
-    ];
-    const spin1 = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 240));
-    reelSet.setResult(initialGrid);
-    await spin1;
-    await new Promise((r) => setTimeout(r, 900));
-
-    // ── 2. Nudge the held reel DOWN by 2 to reveal the full block. ──
-    //
-    // Survival check (down): anchor strip index (0) + h - 1 + distance =
-    // 0 + 3 - 1 + 2 = 4 < total 7 ✓. The block moves as a unit from
-    // strip[0..2] to strip[2..4]. Visible[0..2] = ['tall', 'tall', 'tall'].
-    await reelSet.nudge(HELD_REEL, {
-      distance: 2,
-      direction: 'forward',
-      incoming: [filler(), filler()],
-      duration: 620,
-    });
-
-    // ── 3. Respin everything EXCEPT reel 2. ─────────────────────────
-    //
-    // `holdReels: [HELD_REEL]` tells the engine to skip START/SPIN/STOP
-    // on reel 2 entirely. The grid we pass below MUST include all 5
-    // columns (every shipped slot expects a full grid), but the entry at
-    // index 2 is ignored. the held reel keeps whatever it had.
-    //
-    // The block on reel 2 (anchor at strip[0], stubs at strip[1..2])
-    // survives because:
-    //   - no motion runs on reel 2 (strip array unchanged)
-    //   - `_finalizeFrame` doesn't re-run (occupancy unchanged)
-    //   - the anchor's sized sprite stays at its post-land dimensions
-    //
-    // We hand the held column a placeholder ColumnTarget; the held
-    // entry's contents are not validated against the current strip
-    // and are dropped during frame building.
-    const respinGrid = [
-      ct(), ct(),
-      ct(), // ignored. reel 2 is held
-      ct(), ct(),
-    ];
-    const spin2 = reelSet.spin({ holdReels: [HELD_REEL] });
-    await new Promise((r) => setTimeout(r, 240));
-    reelSet.setResult(respinGrid);
-    await spin2;
-    await new Promise((r) => setTimeout(r, 900));
-  },
-};
+      // ── 3. Respin everything EXCEPT reel 2. ─────────────────────────
+      //
+      // `holdReels: [HELD_REEL]` tells the engine to skip START/SPIN/STOP
+      // on reel 2 entirely. The grid we pass below MUST include all 5
+      // columns (every shipped slot expects a full grid), but the entry at
+      // index 2 is ignored. the held reel keeps whatever it had.
+      //
+      // The block on reel 2 (anchor at strip[0], stubs at strip[1..2])
+      // survives because:
+      //   - no motion runs on reel 2 (strip array unchanged)
+      //   - `_finalizeFrame` doesn't re-run (occupancy unchanged)
+      //   - the anchor's sized sprite stays at its post-land dimensions
+      //
+      // We hand the held column a placeholder ColumnTarget; the held
+      // entry's contents are not validated against the current strip
+      // and are dropped during frame building.
+      const respinGrid = [
+        ct(), ct(),
+        ct(), // ignored. reel 2 is held
+        ct(), ct(),
+      ];
+      const spin2 = reelSet.spin({ holdReels: [HELD_REEL] });
+      await new Promise((r) => setTimeout(r, 240));
+      reelSet.setResult(respinGrid);
+      await spin2;
+      await new Promise((r) => setTimeout(r, 900));
+    },
+  });
+  return { reelSet };
+}

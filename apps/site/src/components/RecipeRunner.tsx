@@ -1,16 +1,15 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { RefreshCw, ExternalLink, SkipForward, Bug } from 'lucide-react';
+import { ExternalLink, Bug, Volume2, VolumeX } from 'lucide-react';
 import { Application } from 'pixi.js';
-import type { Texture, Ticker } from 'pixi.js';
-import * as PIXI from 'pixi.js';
+import type { Ticker } from 'pixi.js';
 import { gsap } from 'gsap';
 // DO NOT DELETE THESE TWO. Neither identifier is referenced in this file, so
 // they read as dead imports -- but they are load-bearing. They force the spine
 // runtime to be initialised eagerly, as one instance, before any recipe runs.
-// Remove them and spine arrives only through the dynamic LAZY_GROUPS path in
-// recipeGlobals, which races: /recipes/{cascade,hold-and-win,starters,symbols,
+// Remove them and spine arrives only through the dynamic import table in
+// lib/recipeModule, which races: /recipes/{cascade,hold-and-win,starters,symbols,
 // wilds-and-pins}/ then die on mount with "Cannot read properties of undefined
 // (reading 'validateRenderable')". Verified by bisect -- these two lines are
 // the difference between 21/21 and 16/21 on recipes-mount.spec.ts.
@@ -21,65 +20,14 @@ import { gsap } from 'gsap';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import {
-  ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol,
-  enableDebug, WinPresenter,
-  RectMaskStrategy, SharedRectMaskStrategy,
-  ReelSet, ReelSymbol,
-  EmptySymbol, HoldAndWinBuilder, BoardGrid,
-  anticipationForScatters,
-  SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
-} from 'pixi-reels';
-import {
-  debugOverlay, SpinMetrics,
-  type DebugOverlayHandle, type DebugOverlayLayer,
-} from 'pixi-reels/debug';
-import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
-import {
-  CoinSymbol,
-  COIN_TIER,
-  COIN_FEATURE,
-  COIN_MYSTERY,
-  COIN_TRIGGER,
-  coinValue,
-  coinMultiplier,
-  drawCoin,
-} from '../runtime/CoinSymbol.ts';
-import {
-  GoldCoinSymbol,
-  coinWaves,
-  bezierFly,
-  settleMoneyFace,
-  freezeAtEnd,
-  fitText,
-} from '../runtime/holdAndWinFx.ts';
-import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
-import {
-  loadGeneratedSpines,
-  buildSpineMap,
-} from '../runtime/generatedSpineLoader.ts';
-import {
-  loadThunderkickSpines,
-  buildThunderkickSpineMap,
-  THUNDERKICK_SYMBOL_IDS,
-} from '../runtime/thunderkickSpineLoader.ts';
-import {
-  loadCascadeSpines,
-  buildCascadeSpineMap,
-  CASCADE_SYMBOL_IDS,
-  CASCADE_PLATE_W,
-  CASCADE_PLATE_H,
-} from '../runtime/cascadeSpineLoader.ts';
-import { loadHoldAndWinSprites } from '../runtime/holdAndWinSprites.ts';
-import { transform as sucraseTransform } from 'sucrase';
-import { runRecipeSource } from '@/lib/recipeGlobals';
+import { enableDebug, ReelSet } from 'pixi-reels';
+import { CUE_STRIP } from '@pixi-reels/kit';
+import type { RecipeResult } from '@pixi-reels/kit';
+import { readyAudio, soundEnabled, setSoundEnabled, onSoundEnabled } from '../runtime/audio.ts';
+import { runRecipeModule, OFF_STAGE } from '@/lib/recipeModule';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
-import { EventsPanel, ROW_LIMIT } from './EventsPanel';
-import type { EventEntry } from './EventsPanel';
-import { onNotice } from 'pixi-reels';
 
 // Renderer teardown options for `app.destroy(...)`.
 //
@@ -141,153 +89,51 @@ function releaseGsapApp(app: Application): void {
   }
 }
 
-// Use AsyncFunction so recipes can do top-level `await loadPixellabSymbols(...)`
-// inside the injected body. Plain `new Function(...)` returns a sync function
-// where top-level await is a SyntaxError.
-const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
-
-function pickWeighted(weights: Record<string, number>): string {
-  const total = Object.values(weights).reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (const [id, w] of Object.entries(weights)) {
-    r -= w;
-    if (r <= 0) return id;
-  }
-  return Object.keys(weights)[0];
-}
+/** One toolbar voice: mono, 11px, uppercase; the primary action is the brand fill. */
+const TOOL_BUTTON =
+  'inline-flex h-6 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[11px] uppercase tracking-[0.14em] '
+  + 'transition-[color,background-color,border-color,transform] duration-[133ms] active:scale-[0.97] '
+  + 'disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
- * Every `ReelSet` currently on the stage, `primary` first.
- *
- * A recipe returns at most ONE set (the rest it parents itself, usually under
- * a `stage` composition root), so a debug toggle driven off the returned one
- * left the banner strip in `banner-ways` and the second grid in
- * `symbols-transposed-pair` with no overlay at all. Walking the display tree
- * finds them whatever the recipe did with them, and needs no per-recipe
- * bookkeeping.
+ * What a recipe returns. `stage` is a composition root the runner fits
+ * instead of `reelSet`. See `RecipeResult` in `@pixi-reels/kit`.
  */
-function collectReelSets(stage: PIXI.Container, primary: ReelSet | null): ReelSet[] {
-  const found: ReelSet[] = primary ? [primary] : [];
-  const walk = (node: PIXI.Container): void => {
-    if (node instanceof ReelSet) {
-      if (!found.includes(node)) found.push(node);
-      // Don't descend: a set's own children are reels and viewports, and a
-      // ReelSet is never nested inside another one.
-      return;
-    }
-    for (const child of node.children) walk(child as PIXI.Container);
-  };
-  walk(stage);
-  return found;
-}
-
-/**
- * The overlay's layers in the groups the debug bar toggles. Everything at once
- * buries the reels, so each group answers one question: `info` is what the
- * engine is doing and how long it took, `grid` is where the cells are, `motion`
- * is which way the strips travel and where they wrap, `bounds` is what each
- * symbol actually covers.
- */
-const LAYER_GROUPS = {
-  info: ['hud', 'metrics', 'timeline'],
-  grid: ['mask', 'cells', 'blocks', 'pins'],
-  motion: ['axis', 'feed', 'buffers', 'thresholds'],
-  bounds: ['bounds'],
-} as const satisfies Record<string, readonly DebugOverlayLayer[]>;
-type LayerGroup = keyof typeof LAYER_GROUPS;
-const DEFAULT_GROUPS: readonly LayerGroup[] = ['info', 'grid'];
-
-function layersFor(groups: readonly LayerGroup[]): DebugOverlayLayer[] {
-  return groups.flatMap((g) => [...LAYER_GROUPS[g]]);
-}
-
-interface RunResult {
-  reelSet?: ReelSet;
-  /**
-   * A container holding a MULTI-SET composition (e.g. a horizontal banner
-   * above a vertical grid). When present the runner scales and centres THIS,
-   * not `reelSet`, so every set moves together.
-   *
-   * Without it a recipe that builds a second set has to `app.stage.addChild`
-   * it itself, and the runner's fit then scales and centres only `reelSet` -
-   * leaving the other set at unscaled stage coordinates, nowhere near where
-   * the recipe put it. Lay the composition out from its own origin (top-left
-   * at 0,0) so the fit's bounds math holds.
-   */
-  stage?: PIXI.Container;
-  nextResult?: () => string[][];
-  onSpin?: () => Promise<void>;
-  /**
-   * Optional override for the canvas button's "skip while running"
-   * behaviour. Recipes that drive a nudge / cascade / custom timeline
-   * can intercept the player's mid-action button press here. If absent,
-   * the runner falls back to: nudge in flight → `skipNudge()`; otherwise
-   * try `skip()` and fall through to `requestSkip()`.
-   */
-  onSkip?: () => void;
-  /**
-   * A board (HoldAndWinBoard) whose bus the events panel should hear beside
-   * the reel sets it finds on the stage. Cells are reel sets and are found on
-   * their own; this is for the board-level events (`feature:*`, `coin:*`).
-   */
-  board?: { events: AnyBus };
-  cleanup?: () => void;
-}
-
-/** The two methods the events panel needs from any bus, typed loosely on purpose. */
-interface AnyBus {
-  onAny(fn: (event: string, ...args: unknown[]) => void): unknown;
-  offAny(fn: (event: string, ...args: unknown[]) => void): unknown;
-}
+type RunResult = RecipeResult;
 
 interface Env {
   app: Application;
-  textures: Record<string, Texture>;
-  blurTextures: Record<string, Texture>;
-  SYMBOL_IDS: string[];
 }
 
 interface RecipeRunnerProps {
   code: string;
   height?: number;
+  /**
+   * The browser took this demo's WebGL context away (it drops the oldest
+   * once too many are alive). The host remounts the demo on a fresh one
+   * rather than showing the failure as the recipe's.
+   */
+  onContextLost?: () => void;
 }
 
-export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
+export function RecipeRunner({ code, height = 300, onContextLost }: RecipeRunnerProps) {
+  const onContextLostRef = useRef(onContextLost);
+  onContextLostRef.current = onContextLost;
   const hostRef = useRef<HTMLDivElement>(null);
   const envRef = useRef<Env | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
-  const nextResultRef = useRef<(() => string[][]) | null>(null);
-  const onSpinRef = useRef<(() => Promise<void>) | null>(null);
-  const onSkipRef = useRef<(() => void) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
-  // One handle per reel set on the stage, not per recipe: a recipe is free to
-  // build several (a banner strip above the grid, a transposed pair), and an
-  // overlay on only the one it happened to return explains half the picture.
-  const overlayRef = useRef<DebugOverlayHandle[]>([]);
-  // One recorder per reel set, running from mount: the timeline and metrics
-  // panels can then show the spin that made you reach for the Debug button.
-  const metricsRef = useRef<Map<ReelSet, SpinMetrics>>(new Map());
-  // Re-fit after the overlay grows the set's bounds (panels under the mask).
   const fitRef = useRef<(() => void) | null>(null);
-  const [groups, setGroups] = useState<readonly LayerGroup[]>(DEFAULT_GROUPS);
-  const [spinning, setSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [debugOn, setDebugOn] = useState(false);
-  // The overlay draws into a container on the ReelSet, so a recipe that
-  // returns only `onSpin` (HoldAndWinBoard, BoardGrid) has nothing to draw on.
-  const [canDebug, setCanDebug] = useState(false);
-  // The events recorder. Always on (a push per event, capped), rendered only
-  // while the panel is open: `eventsTick` bumps once per animation frame with
-  // new rows, so a burst of `symbol:created` is one re-render, not a hundred.
-  const eventsRef = useRef<EventEntry[]>([]);
-  const eventsDirtyRef = useRef(false);
-  const eventsFrameRef = useRef<number | null>(null);
-  const spinOriginRef = useRef<number | null>(null);
-  const eventIdRef = useRef(0);
+  const [soundOn, setSoundOn] = useState(true);
+  // The remembered choice, read after mount so the server and first client
+  // render agree; every runner on the page follows one toggle.
+  useEffect(() => {
+    setSoundOn(soundEnabled());
+    return onSoundEnabled(setSoundOn);
+  }, []);
   const unsubscribeRef = useRef<Array<() => void>>([]);
-  const debugOnRef = useRef(false);
-  const [eventsTick, setEventsTick] = useState(0);
   // Hold the skeleton for at least 250ms so it doesn't flash for one
   // frame on fast loads.
   const showSkeleton = useMinDisplay(!ready, 250);
@@ -311,12 +157,13 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
       host.innerHTML = '';
       host.appendChild(app.canvas);
+      // Removed in the cleanup before `app.destroy`, which loses the context
+      // on purpose and would otherwise report our own teardown.
+      const onLost = () => onContextLostRef.current?.();
+      app.canvas.addEventListener('webglcontextlost', onLost);
+      unsubscribeRef.current.push(() => app.canvas.removeEventListener('webglcontextlost', onLost));
 
-      const { textures, blurTextures } = await loadPrototypeSymbols();
-      if (cancelled) return;
-
-      const SYMBOL_IDS = Object.keys(textures);
-      const env: Env = { app, textures, blurTextures, SYMBOL_IDS };
+      const env: Env = { app };
       envRef.current = env;
 
       // Register only once the app is fully established (past every cancel
@@ -324,122 +171,60 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       liveApps.add(app);
       ensureGsapDriver();
 
-      let js: string;
-      try {
-        js = sucraseTransform(code, { transforms: ['typescript'] }).code;
-      } catch (e) {
-        setError(`Compile error: ${(e as Error).message}`);
-        return;
-      }
-
       let result: RunResult;
       try {
-        // One shared global surface for all three recipe runtimes. See
-        // lib/recipeGlobals.ts for why the hand-written parameter lists went.
-        result = await runRecipeSource<RunResult>(js, {
-          app, textures, blurTextures, SYMBOL_IDS, pickWeighted,
-          ReelSetBuilder,
-        });
+        // The recipe is a module: its imports resolve through the one table
+        // in lib/recipeModule.ts, the same for Studio and the share viewer.
+        result = await runRecipeModule(code, { app });
       } catch (e) {
+        // Unmounted while the recipe was still loading: the cleanup already
+        // destroyed the app it was building on, renderer included.
+        if (cancelled) return;
+        // A recipe that dies because the context went away did nothing wrong.
+        const gl = (app.renderer as { gl?: WebGLRenderingContext }).gl;
+        if (gl?.isContextLost() && onContextLostRef.current) {
+          onContextLostRef.current();
+          return;
+        }
         setError(`Runtime error: ${(e as Error).message}`);
         return;
       }
+      if (cancelled) return;
 
-      if (!result?.reelSet && !result?.onSpin) {
-        setError('Recipe must return { reelSet } or { onSpin }.');
-        return;
-      }
-
+      // The recipe owns its round, its control and its sounds; the runner
+      // reads only what the chrome needs: the set for the overlay and the
+      // panel, the root to fit, the board to record, the cleanup to run.
+      result ??= {};
       reelSetRef.current = result.reelSet ?? null;
-      nextResultRef.current = result.nextResult ?? null;
-      onSpinRef.current = result.onSpin ?? null;
-      onSkipRef.current = result.onSkip ?? null;
       cleanupRef.current = result.cleanup ?? null;
-
-      // Record every bus in the demo for the events panel: each reel set on
-      // the stage (a board's cells included), each of their reels, the board
-      // itself when the recipe hands it over, and engine notices.
-      const record = (source: string) => (event: string, ...args: unknown[]): void => {
-        const now = performance.now();
-        if (event === 'spin:start') {
-          // A board starts its cells within the same burst: keep one origin.
-          const prev = spinOriginRef.current;
-          if (prev === null || now - prev > 100) spinOriginRef.current = now;
-        }
-        const origin = spinOriginRef.current;
-        const list = eventsRef.current;
-        list.push({ id: ++eventIdRef.current, t: now, rel: origin === null ? null : now - origin, source, name: event, args });
-        if (list.length > ROW_LIMIT) list.splice(0, list.length - ROW_LIMIT);
-        eventsDirtyRef.current = true;
-        if (debugOnRef.current && eventsFrameRef.current === null) {
-          eventsFrameRef.current = requestAnimationFrame(() => {
-            eventsFrameRef.current = null;
-            if (!eventsDirtyRef.current) return;
-            eventsDirtyRef.current = false;
-            setEventsTick((n) => n + 1);
-          });
-        }
-      };
-      const listen = (bus: AnyBus, source: string): void => {
-        const fn = record(source);
-        bus.onAny(fn);
-        unsubscribeRef.current.push(() => bus.offAny(fn));
-      };
-      const sets = collectReelSets(app.stage, result.reelSet ?? null);
-      for (const rs of sets) metricsRef.current.set(rs, new SpinMetrics(rs, { ticker: app.ticker }));
-      sets.forEach((rs, k) => {
-        const setLabel = sets.length === 1 ? 'set' : `set${k}`;
-        listen(rs.events as unknown as AnyBus, setLabel);
-        // A growing set (`addReels`, `expand`) adds reels after mount: follow
-        // them, and let go of each one's bus when it is removed.
-        const reelOff: Array<() => void> = [];
-        const listenReel = (i: number): void => {
-          const bus = rs.reels[i].events as unknown as AnyBus;
-          const fn = record(sets.length === 1 ? `reel ${i}` : `${setLabel}/r${i}`);
-          bus.onAny(fn);
-          reelOff[i] = () => bus.offAny(fn);
-        };
-        rs.reels.forEach((_, i) => listenReel(i));
-        const onAdded = ({ from, count }: { from: number; count: number }): void => {
-          for (let i = from; i < from + count; i++) listenReel(i);
-        };
-        const onRemoved = ({ from }: { from: number }): void => {
-          for (const off of reelOff.splice(from)) off();
-        };
-        rs.events.on('reels:added', onAdded);
-        rs.events.on('reels:removed', onRemoved);
-        unsubscribeRef.current.push(() => {
-          rs.events.off('reels:added', onAdded);
-          rs.events.off('reels:removed', onRemoved);
-          for (const off of reelOff) off();
-        });
-      });
-      if (result.board?.events) listen(result.board.events, 'board');
-      unsubscribeRef.current.push(onNotice((n) => record('notice')(n.code, { kind: n.kind, message: n.message, detail: n.detail })));
 
       if (result.reelSet) {
         const rs = result.reelSet;
         // Fit the composition root when there is one, so a banner set moves,
         // scales and centres with the grid it sits above.
         const fitted = result.stage ?? rs;
+        if (!fitted.parent) {
+          setError(OFF_STAGE);
+          return;
+        }
         // Fit the local bounds, offset included: the debug overlay draws the
         // buffers and feed markers above the mask and its panels under it, so
         // the content does not start at (0, 0) once it is on.
         const fit = () => {
           const b = fitted.getLocalBounds();
           if (!(b.width > 0) || !(b.height > 0)) return;
+          // The strip under the reels belongs to the recipe's tap cue.
           const pad = 16;
-          const scale = Math.min(1, (app.screen.width - pad * 2) / b.width, (app.screen.height - pad * 2) / b.height);
+          const freeH = app.screen.height - CUE_STRIP - pad;
+          const scale = Math.min(1, (app.screen.width - pad * 2) / b.width, (freeH - pad) / b.height);
           fitted.scale.set(scale);
           fitted.x = (app.screen.width - b.width * scale) / 2 - b.x * scale;
-          fitted.y = (app.screen.height - b.height * scale) / 2 - b.y * scale;
+          fitted.y = pad + (freeH - pad - b.height * scale) / 2 - b.y * scale;
         };
-        app.stage.addChild(fitted);
         fit();
         fitRef.current = fit;
         app.renderer.on('resize', fit);
         enableDebug(rs);
-        setCanDebug(true);
         // The events panel docks beside the canvas and takes width from it;
         // PixiJS only watches the window, so the host's own resize is ours.
         const ro = new ResizeObserver(() => app.resize());
@@ -463,15 +248,16 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           const b = app.stage.getLocalBounds();
           if (!(b.width > 0) || !(b.height > 0)) return;
           const pad = 16;
+          const freeH = app.screen.height - CUE_STRIP - pad;
           const scale = Math.min(
             1,
             (app.screen.width - pad * 2) / b.width,
-            (app.screen.height - pad * 2) / b.height,
+            (freeH - pad) / b.height,
           );
           app.stage.scale.set(scale);
           app.stage.position.set(
             (app.screen.width - b.width * scale) / 2 - b.x * scale,
-            (app.screen.height - b.height * scale) / 2 - b.y * scale,
+            pad + (freeH - pad - b.height * scale) / 2 - b.y * scale,
           );
         };
         fitStage();
@@ -490,16 +276,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         try { off(); } catch { /* ignore */ }
       }
       unsubscribeRef.current = [];
-      if (eventsFrameRef.current !== null) cancelAnimationFrame(eventsFrameRef.current);
       try { cleanupRef.current?.(); } catch { /* ignore */ }
-      // Before the set and the app: the overlay is a child of the ReelSet and
-      // holds a TickerRef on app.ticker.
-      for (const o of overlayRef.current) {
-        try { o.destroy(); } catch { /* ignore */ }
-      }
-      overlayRef.current = [];
-      for (const m of metricsRef.current.values()) m.destroy();
-      metricsRef.current.clear();
       fitRef.current = null;
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
@@ -508,117 +285,34 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         try { app.destroy(DESTROY_RENDERER, { children: true }); } catch { /* ignore */ }
       }
       reelSetRef.current = null;
-      onSpinRef.current = null;
       cleanupRef.current = null;
       envRef.current = null;
     };
   }, []);
 
-  async function handleSpin() {
-    if (!ready || !!error) return;
-    if (spinning) {
-      // Recipe-supplied skip handler wins. lets a nudge / cascade / custom
-      // timeline recipe intercept the player's mid-action tap. Otherwise
-      // fall through to the built-in heuristics.
-      if (onSkipRef.current) {
-        onSkipRef.current();
-        return;
-      }
-      // Nudge in flight → skip THAT first (the spin pipeline is idle).
-      const reelSet = reelSetRef.current;
-      if (reelSet && reelSet.reels.some((r) => r.isNudging)) {
-        reelSet.skipNudge();
-        return;
-      }
-      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
-      // in the catch so a player tap during the server-wait window still
-      // queues the slam and fires it the moment the result is in.
-      try { reelSetRef.current?.skipSpin(); }
-      catch { reelSetRef.current?.requestSkip(); }
-      return;
-    }
-    setSpinning(true);
-    try {
-      if (onSpinRef.current) {
-        await onSpinRef.current();
-      } else {
-        const reelSet = reelSetRef.current;
-        if (!reelSet) return;
-        const p = reelSet.spin();
-        await new Promise((r) => setTimeout(r, 150));
-        const result = nextResultRef.current?.();
-        if (result) reelSet.setResult(result.map((visible) => ({ visible })));
-        await p;
-      }
-    } catch (err) {
-      // Don't surface mid-spin transient errors in the UI (recipe runner
-      // shouldn't flash error banners during normal cleanup races). DO
-      // log them. silently swallowing here previously hid a real shape
-      // bug where recipes passed `string[][]` to `refill({ grid })` and
-      // the engine threw inside a Promise that no one was watching.
-      // eslint-disable-next-line no-console -- diagnostic surface
-      console.error('[RecipeRunner] handleSpin threw:', err);
-    } finally {
-      setSpinning(false);
-    }
-  }
-
-  function toggleDebug() {
-    if (debugOn) {
-      for (const o of overlayRef.current) o.destroy();
-      overlayRef.current = [];
-      debugOnRef.current = false;
-      setDebugOn(false);
-      fitRef.current?.();
-      return;
-    }
-    debugOnRef.current = true;
-    setDebugOn(true);
-    setEventsTick((n) => n + 1);
-    const reelSet = reelSetRef.current;
-    const app = envRef.current?.app;
-    if (!reelSet || !app) return;
-    // Built on first press, not at mount: a umbrella page mounts several
-    // recipes at once and none of them should pay for an overlay nobody asked
-    // to see. `live` drives the bounds / blocks / pins / info layers off the
-    // recipe's own app.ticker, so they track a spin instead of freezing on the
-    // frame the overlay happened to be built in.
-    overlayRef.current = collectReelSets(app.stage, reelSet).map((rs) =>
-      debugOverlay(rs, {
-        layers: layersFor(groups),
-        live: true,
-        ticker: app.ticker,
-        metrics: metricsRef.current.get(rs),
-      }),
-    );
-    fitRef.current?.();
-  }
-
-  function toggleGroup(group: LayerGroup) {
-    const next = groups.includes(group) ? groups.filter((g) => g !== group) : [...groups, group];
-    setGroups(next);
-    for (const o of overlayRef.current) o.setLayers(layersFor(next));
-    fitRef.current?.();
-  }
-
-  function clearEvents() {
-    eventsRef.current = [];
-    setEventsTick((n) => n + 1);
-  }
-
-  function openInStudio() {
-    window.location.href = `/studio/#code=${btoa(unescape(encodeURIComponent(code)))}`;
+  // Studio is where a demo is read and debugged at full size: the code
+  // beside the canvas, the overlay and the events panel beside both. The
+  // docs page only hands the module over.
+  function openInStudio(debug = false) {
+    const hash = `#code=${btoa(unescape(encodeURIComponent(code)))}${debug ? '&debug=1' : ''}`;
+    window.location.href = `/studio/${hash}`;
   }
 
   return (
     // Outer card frame + my-5 margin are supplied by the surrounding
     // <RecipeFrame> Astro wrapper so the layout is stable before JS
-    // hydrates. Don't add a duplicate card here. With the events panel open
-    // the canvas keeps its height and gives up width to the panel on the
-    // right; below the `sm` breakpoint the panel goes under the canvas.
-    <div className={cn('flex w-full bg-background', debugOn && 'flex-col sm:flex-row')} style={{ '--recipe-h': `${height}px` } as CSSProperties}>
+    // hydrates. Don't add a duplicate card here. The well keeps `height`;
+    // the toolbar under it is the strip RecipeFrame's skeleton reserves.
+    <div className="flex w-full flex-col bg-background" style={{ '--recipe-h': `${height}px` } as CSSProperties}>
+    <div className="flex w-full">
+    {/*
+      The recipe owns the canvas: its `tapToSpin` turns a tap into a round
+      and draws the cue. `data-state` is for the e2e suite, which taps the
+      canvas once the recipe is ready.
+    */}
     <div
-      className="relative flex min-w-0 flex-1 items-center justify-center"
+      data-state={error ? 'error' : ready ? 'ready' : 'loading'}
+      className="relative flex min-w-0 flex-1 cursor-pointer select-none items-center justify-center bg-[#111114]"
       style={{ height }}
     >
         <div
@@ -631,88 +325,48 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
             {error}
           </div>
         )}
+    </div>
+    </div>
+    <div className="flex min-h-9 flex-wrap items-center gap-1.5 border-t border-border px-1.5 py-1.5">
         <button
           type="button"
-          onClick={() => void handleSpin()}
+          onClick={() => openInStudio(true)}
           disabled={!!error || !ready}
-          title={spinning ? 'Skip' : 'Spin'}
-          aria-label={spinning ? 'Skip' : 'Spin'}
+          title="Open this demo in Studio with the overlay and the events panel"
+          aria-label="Debug in Studio"
+          className={cn(TOOL_BUTTON, 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground')}
+        >
+          <Bug size={11} strokeWidth={2.25} />
+          Debug
+        </button>
+        <button
+          type="button"
+          onClick={() => { setSoundEnabled(!soundOn); if (!soundOn) void readyAudio().catch(() => {}); }}
+          title={soundOn ? 'Mute the demos' : 'Unmute the demos'}
+          aria-label={soundOn ? 'Mute' : 'Unmute'}
+          aria-pressed={soundOn}
           className={cn(
-            // Right edge, vertically centered. Bigger touch target than
-            // the corner bottom-right pill. easier to hit on mobile, more
-            // obvious as the primary action on the canvas.
-            'absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-14 w-14 items-center justify-center rounded-full',
-            'border border-border/70 bg-background/80 text-foreground shadow-md backdrop-blur',
-            'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
-            spinning && 'bg-primary text-primary-foreground border-primary',
-            'disabled:cursor-not-allowed disabled:opacity-50',
+            TOOL_BUTTON,
+            'ml-auto',
+            soundOn
+              ? 'border-border text-foreground hover:border-foreground/60'
+              : 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground',
           )}
         >
-          {spinning
-            ? <SkipForward size={22} strokeWidth={2.25} />
-            : <RefreshCw size={22} strokeWidth={2.25} />}
+          {soundOn ? <Volume2 size={11} strokeWidth={2.25} /> : <VolumeX size={11} strokeWidth={2.25} />}
+          Sound
         </button>
-        {(
-          <button
-            type="button"
-            onClick={toggleDebug}
-            disabled={!!error || !ready}
-            title={debugOn ? 'Hide the events panel and overlay' : canDebug ? 'Show the events panel and overlay' : 'Show the events panel'}
-            aria-label={debugOn ? 'Hide debug' : 'Show debug'}
-            aria-pressed={debugOn}
-            className={cn(
-              'absolute left-2 top-2 inline-flex items-center gap-1 rounded-md border px-2 py-1',
-              'text-[10px] backdrop-blur transition-colors',
-              debugOn
-                ? 'border-primary bg-primary/90 text-primary-foreground'
-                : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
-            <Bug size={10} />
-            Debug
-          </button>
-        )}
-        {debugOn && canDebug && (
-          <div className="absolute left-2 top-9 flex flex-col gap-1" role="group" aria-label="Overlay layers">
-            {(Object.keys(LAYER_GROUPS) as LayerGroup[]).map((group) => (
-              <button
-                key={group}
-                type="button"
-                onClick={() => toggleGroup(group)}
-                aria-pressed={groups.includes(group)}
-                title={`Overlay: ${LAYER_GROUPS[group].join(', ')}`}
-                className={cn(
-                  'rounded-md border px-2 py-0.5 text-left font-mono text-[10px] backdrop-blur transition-colors',
-                  groups.includes(group)
-                    ? 'border-primary/70 bg-primary/20 text-foreground'
-                    : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {group}
-              </button>
-            ))}
-          </div>
-        )}
         <button
           type="button"
-          onClick={openInStudio}
+          onClick={() => openInStudio()}
           title="Open in Studio"
           aria-label="Open in Studio"
-          className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
+          className={cn(TOOL_BUTTON, 'border-border text-muted-foreground hover:border-foreground/60 hover:text-foreground')}
         >
-          <ExternalLink size={10} />
+          <ExternalLink size={11} strokeWidth={2.25} />
           Studio
         </button>
     </div>
-    {debugOn && (
-      <EventsPanel
-        entries={eventsRef.current}
-        tick={eventsTick}
-        onClear={clearEvents}
-        className="h-[220px] w-full shrink-0 border-t sm:h-[var(--recipe-h)] sm:w-[360px] sm:max-w-[46%] sm:border-l sm:border-t-0"
-      />
-    )}
     </div>
   );
 }

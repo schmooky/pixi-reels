@@ -1,6 +1,14 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app, DebugPlaque
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Abort a nudge',
+  topic: 'nudge',
+  tags: ['nudge', 'stagger', 'spotlight', 'big-symbols', 'abort', 'skip', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // ABORT NUDGE pattern.
 //
@@ -15,84 +23,87 @@
 // semantics. error path runs, follow-up steps are skipped. Use skipNudge
 // for "land it now" semantics (see /recipes/nudge-skip/) where the
 // success path should still run.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const SYMBOLS = [...CARD_DECK, WILD_CARD];
+  const FILLER = ['7', '8', '9', '10', 'J'];
+  const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+  const col3 = () => [filler(), filler(), filler()];
 
-const SYMBOLS = [...CARD_DECK, WILD_CARD];
-const FILLER = ['7', '8', '9', '10', 'J'];
-const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
-const col3 = () => [filler(), filler(), filler()];
-
-const reelSet = new ReelSetBuilder()
-  .reels(5)
-  .visibleCells(3)
-  .symbolSize(72, 72)
-  .symbolGap(4, 4)
-  .symbols((r) => {
-    for (const sym of SYMBOLS) {
-      r.register(sym.id, CardSymbol, {
-        color: sym.color,
-        label: sym.label,
-        textColor: sym.textColor,
-      });
-    }
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .ticker(app.ticker)
-  .build();
-
-// The abort, step by step, under the reels: the timer that aborts, the bus
-// event, then the handler's catch. Three rows from the start, so the plate
-// the runner fits is the size it keeps.
-const W = reelSet.viewport.maskWidth;
-const H = reelSet.viewport.maskHeight;
-const steps = ['press spin', '', ''];
-const hud = new DebugPlaque({ text: steps.join('\n'), minWidth: W, maxWidth: W });
-hud.position.set(0, H + 10);
-reelSet.addChild(hud);
-const say = (row, text) => {
-  steps[row] = text;
-  hud.text = steps.join('\n');
-};
-
-reelSet.events.on('nudge:cancelled', (info) => {
-  say(1, `nudge:cancelled reel=${info.reelIndex} reason='${info.reason}'`);
-});
-
-return {
-  reelSet,
-  onSpin: async () => {
-    const p = reelSet.spin();
-    await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
-    await p;
-    await new Promise((resolve) => setTimeout(resolve, 320));
-
-    const controller = new AbortController();
-    steps.fill('');
-    say(0, 'nudging reel 2 over 2000ms');
-    // Abort the nudge ~700ms in. the tween will be killed mid-flight.
-    setTimeout(() => {
-      say(0, 'aborting nudge after 700ms');
-      controller.abort();
-    }, 700);
-
-    try {
-      await reelSet.nudge(2, {
-        distance: 1,
-        direction: 'forward',
-        incoming: ['wild'],
-        duration: 2000,
-        signal: controller.signal,
-      });
-      // Not reached on abort.
-      say(2, 'nudge completed normally');
-    } catch (err) {
-      if (err && err.name === 'AbortError') {
-        // Expected. clean up here. Strip is at its post-nudge landing
-        // position regardless, so subsequent reads are deterministic.
-        say(2, 'caught AbortError; strip still snapped to landed');
-      } else {
-        throw err;
+  const reelSet = new ReelSetBuilder()
+    .reels(5)
+    .visibleCells(3)
+    .symbolSize(72, 72)
+    .symbolGap(4, 4)
+    .symbols((r) => {
+      for (const sym of SYMBOLS) {
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
       }
-    }
-  },
-};
+    })
+    .speed('normal', SpeedPresets.NORMAL)
+    .ticker(app.ticker)
+    .build();
+
+  // The abort, step by step, under the reels: the timer that aborts, the bus
+  // event, then the handler's catch. Three rows from the start, so the plate
+  // the runner fits is the size it keeps.
+  const W = reelSet.viewport.maskWidth;
+  const H = reelSet.viewport.maskHeight;
+  const steps = ['A nudge can be aborted partway.', '', ''];
+  const hud = readout.plaque({ text: steps.join('\n'), minWidth: W, maxWidth: W });
+  hud.position.set(0, H + 10);
+  reelSet.addChild(hud);
+  const say = (row: number, text: string) => {
+    steps[row] = text;
+    hud.text = steps.join('\n');
+  };
+
+  reelSet.events.on('nudge:cancelled', (info) => {
+    say(1, `nudge:cancelled reel=${info.reelIndex} reason='${info.reason}'`);
+  });
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const p = reelSet.spin();
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+      await p;
+      await new Promise((resolve) => setTimeout(resolve, 320));
+
+      const controller = new AbortController();
+      steps.fill('');
+      say(0, 'nudging reel 2 over 2000ms');
+      // Abort the nudge ~700ms in. the tween will be killed mid-flight.
+      setTimeout(() => {
+        say(0, 'aborting nudge after 700ms');
+        controller.abort();
+      }, 700);
+
+      try {
+        await reelSet.nudge(2, {
+          distance: 1,
+          direction: 'forward',
+          incoming: ['wild'],
+          duration: 2000,
+          signal: controller.signal,
+        });
+        // Not reached on abort.
+        say(2, 'nudge completed normally');
+      } catch (err) {
+        if (err && (err as Error).name === 'AbortError') {
+          // Expected. clean up here. Strip is at its post-nudge landing
+          // position regardless, so subsequent reads are deterministic.
+          say(2, 'caught AbortError; strip still snapped to landed');
+        } else {
+          throw err;
+        }
+      }
+    },
+  });
+  return { reelSet };
+}

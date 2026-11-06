@@ -7,7 +7,7 @@ export const SITE = {
   githubRepo: 'https://github.com/schmooky/pixi-reels',
   tagline: 'Open-source slot machine reel engine for PixiJS v8',
   description:
-    'Open-source reel engine for PixiJS v8. Fluent builder, typed events, configurable spin phases, win presenters, and a headless testing harness. Ships with runnable recipes for lines, scatters, free spins, hold & win, cascades, sticky wilds, and anticipation. MIT licensed.',
+    'An open-source slot reel engine for PixiJS v8, with a fluent builder, typed events and spins you can test in Node. MIT licensed.',
   // Organization/Author details for JSON-LD
   twitter: '',
   defaultImage: '/og/default.png',
@@ -30,17 +30,18 @@ export function ogUrlForPath(pathname: string | undefined): string {
   };
 
   return (
-    item('recipes', /^\/recipes\/([^/]+)$/) ??
-    item('guides', /^\/guides\/([^/]+)$/) ??
+    (p === '/reference/changelog' ? '/og/section/changelog.png' : null) ??
+    item('mechanics', /^\/mechanics\/([^/]+)$/) ??
+    item('learn', /^\/learn\/([^/]+)$/) ??
     item('faq', /^\/faq\/([^/]+)$/) ??
-    item('docs', /^\/docs\/([^/]+)$/) ??
+    item('reference', /^\/reference\/([^/]+)$/) ??
     item('architecture', /^\/architecture\/([^/]+)$/) ??
-    (p === '/recipes' ? '/og/section/recipes.png' : null) ??
-    (p === '/guides' ? '/og/section/guides.png' : null) ??
+    (p === '/mechanics' ? '/og/section/mechanics.png' : null) ??
+    (p === '/learn' ? '/og/section/learn.png' : null) ??
     (p === '/faq' ? '/og/section/faq.png' : null) ??
-    (p === '/docs' ? '/og/section/docs.png' : null) ??
+    (p === '/reference' ? '/og/section/reference.png' : null) ??
     (p === '/architecture' ? '/og/section/architecture.png' : null) ??
-    (p === '/changelog' ? '/og/section/changelog.png' : null) ??
+    (p === '/studio' ? '/og/section/studio.png' : null) ??
     (p.startsWith('/api') ? '/og/section/api.png' : null) ??
     SITE.defaultImage
   );

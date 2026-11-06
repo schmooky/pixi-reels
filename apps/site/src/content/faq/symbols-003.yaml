@@ -1,8 +1,9 @@
 id: symbols-003
 group: symbols
+topic: hold-and-win
 question: How do I make a symbol from a sprite-sheet animation?
 answer: "Use `AnimatedSpriteSymbol` with `{ frames: Record<id, Texture[]>,
   animationSpeed }`; the board calls `playWin()` to play the sequence."
 links:
-  - label: "Recipe: Hold & Win — sprite coins"
-    href: /recipes/hold-and-win-sprites/
+  - label: "Recipe: Hold & Win: sprite coins"
+    href: /mechanics/hold-and-win/#hold-and-win-sprites

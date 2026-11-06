@@ -1,5 +1,6 @@
 id: result-012
 group: result
+topic:
 question: How do I replay the exact same spin again for a bug report?
 answer: >-
   Re-inject the same seeded `.rng(fn)` and the same `setResult` grid.
@@ -8,4 +9,4 @@ answer: >-
   `stopRecording(reelSet)` when you are done.
 links:
   - label: "Guide: Debugging"
-    href: /guides/debugging/
+    href: /learn/debugging/

@@ -1,8 +1,9 @@
 id: hw-014
 group: hw
+topic: hold-and-win
 question: How do I gate the next respin until all land animations have settled?
 answer: Collect each lock effect's promise and `await Promise.all(...)` before
   the next `board.respin(...)`.
 links:
-  - label: "Recipe: Hold & Win — collector"
-    href: /recipes/hold-and-win-collector/
+  - label: "Recipe: Hold & Win: collector"
+    href: /mechanics/hold-and-win/#hold-and-win-collector

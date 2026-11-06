@@ -133,8 +133,8 @@ If you've tried three approaches and none work, do not try a fourth random appro
 
 **Monorepo layout:**
 - `packages/pixi-reels/`. The npm-publishable library
-- `apps/site/`. The docs site. Its `/recipes` route is where live, runnable demos live now: ~130 of them, each an `apps/site/src/recipes/<slug>.recipe.ts` driven by an umbrella page under `src/content/recipes/`
-- `apps/site/src/runtime/`. Symbol classes and asset loaders the recipes run on (BlurSpriteSymbol, CoinSymbol, Spine loaders, atlas loader)
+- `apps/site/`. The docs site. Its `/recipes` route is where live, runnable demos live now: ~230 of them, each an `apps/site/src/recipes/<slug>.recipe.ts` module (`export const meta`, `export default async function recipe(ctx)`) driven by an umbrella page under `src/content/recipes/`. `src/lib/recipeModule.ts` runs one from source; what you read is what runs, in the docs, in Studio and in a game
+- `packages/kit/`. `@pixi-reels/kit`, publishable (private until its npm scope exists): symbol classes and asset loaders the recipes run on (BlurSpriteSymbol, CoinSymbol, Spine loaders, atlas loader), `createAssets`, `tapToSpin` (the canvas as the spin button, with the "tap to spin" plaque), `pickWeighted`, `readout` (the switchable explanation layer) and the `RecipeContext` / `RecipeResult` / `RecipeMeta` contract. Subpaths: `/spine`, `/sound` (`reelSounds`, `boardSounds`), `/ways` (`evaluateWays`, `countWays`)
 - `apps/site/public/prototype-symbols/`. Open-licensed sprite atlas the recipes draw with
 - `packages/cheats/`. `CheatEngine` + `SeededRng`. Deliberately outside the library (ADR 009); used by the docs site and by the library's own integration tests
 - `tests/e2e/fixtures/orientation-matrix/`. All four travel combinations on one page. The Playwright target for browser coverage of the axis
@@ -290,14 +290,20 @@ debugOverlay(reelSet, { layers: 'all', live: true, ticker: app.ticker });
 | `utils/` | Disposable (interface), TickerRef (safe ticker wrapper) |
 | `debug/` | debugSnapshot, debugGrid, enableDebug; the `pixi-reels/debug` subpath: debugOverlay, DebugPlaque, SpinMetrics, roundRectPath |
 
-### Recipe runtime (`apps/site/src/runtime/`)
-| Directory | Purpose |
+### Recipe kit (`packages/kit/src/`)
+| File | Purpose |
 |-----------|---------|
-| `shared/prototypeSpriteLoader.ts` | Loads the `prototype-symbols` TexturePacker atlas |
-| `shared/BlurSpriteSymbol.ts` | Sprite symbol that swaps to a pre-rendered motion-blur texture during SPIN |
-| `shared/mockServer.ts` | Fake spin results, cascade logic, win detection |
-| `shared/ui.ts` | HTML overlay (spin button, speed toggle, win display) |
-| `assets/prototype-symbols/` | 84-frame sprite atlas (base + motion-blur variants) |
+| `recipe.ts` | `RecipeContext` (`app`, plus Studio-only `userSymbols` / `userSymbolData`), `RecipeResult` (`reelSet?`, `stage?`, `board?`, `cleanup?`), `RecipeMeta`: the contract every recipe module is written against. A recipe adds its root to `app.stage`, wires its own control and sounds, and returns only what a host's chrome reads |
+| `tapToSpin.ts` | `tapToSpin(app, { reelSet, next })` or `tapToSpin(app, { spin, skip })`: the canvas as the spin button, a tap mid-round skips, the cue plaque drawn in the canvas; `ownTap(event)` keeps a tap on a display object from reaching it |
+| `assets.ts` | `createAssets(baseUrl)`: the atlas, Spine sets, Hold & Win and clover kits by name. A recipe calls it itself; nothing comes through the context |
+| `sound.ts` | The `@pixi-reels/kit/sound` subpath: one zvuk engine per page, the sound set, `reelSounds(reelSet)` / `boardSounds(board)` with the default cue tables, `configureSounds({ baseUrl })` |
+| `ways.ts` | The `@pixi-reels/kit/ways` subpath: `evaluateWays`, `countWays` (moved here from `@pixi-reels/cheats/ways`) |
+| `readout.ts` | `readout.plaque()` / `readout.graphics()`: explanation drawings a host can switch off (`setReadouts`) |
+| `prototypeSpriteLoader.ts` | Loads the `prototype-symbols` TexturePacker atlas (`apps/site/public/prototype-symbols/`, 84 frames + blur variants) |
+| `StickerSymbol.ts`, `motion.ts`, `genericSymbols.ts`, `pillar.ts` | Modular symbol art: a colour tile that stretches to the cell, a sticker that never stretches, a 9-slice frame in the symbol's colour for a block (`span: { reels, cells }` with `frames`), and the 5-slice WILD pillar (`WildPillar`) for a tall wild; on a two-container rig (`move` for where, `body` for shape) with the studio motion primitives (`impact` on land, `wowL`/`wowM`/`wowS` plus an additive flash and a masked shine on a win). `playMotion(rig, name)` drives any container pair from the same table. The generic set under `apps/site/public/generic-symbols/` is eleven 384 px stickers, seven frames and eight pillar slices; `GENERIC_ALIASES` maps the card deck's ids (`7`..`A`, `wild`, `SCAT`) onto it, so a recipe keeps its ids and only changes the art |
+| `BlurSpriteSymbol.ts` | Sprite symbol that swaps to a pre-rendered motion-blur texture during SPIN |
+| `CoinSymbol.ts`, `hwClover.ts`, `holdAndWinSprites.ts` | Example symbols and sheets for the Hold & Win recipes |
+| `spine.ts` | The `@pixi-reels/kit/spine` subpath: `GoldCoinSymbol`, `CloverSpineSymbol`, anything that pulls the Spine runtime in |
 
 ### Dependency flow (no circular deps)
 ```

@@ -1,0 +1,82 @@
+---
+/**
+ * A connector inside a `<Diagram>`. Straight, orthogonal (via `via` points)
+ * or a gentle curve, with an arrow head at the end (or both ends, or none)
+ * and an optional label box placed at a point along the path.
+ *
+ * Route edges so they leave and enter box EDGES (x+w, y+h/2 ...), never box
+ * centres, and never pass under text. Put a label where there is empty
+ * space, nudging it with labelDx / labelDy.
+ */
+type Pt = [number, number];
+interface Props {
+  from: Pt;
+  to: Pt;
+  /** Intermediate corner points: the path becomes a polyline. */
+  via?: Pt[];
+  /** Curve the path (ignored when `via` is given). */
+  curve?: boolean;
+  kind?: 'muted' | 'primary' | 'accent';
+  style?: 'solid' | 'dashed' | 'dotted';
+  arrow?: 'end' | 'both' | 'none' | 'start';
+  label?: string;
+  /** Where along the path the label sits, 0..1 (straight/curve); polylines use the longest segment. */
+  at?: number;
+  labelDx?: number;
+  labelDy?: number;
+  mono?: boolean;
+}
+const {
+  from, to, via = [], curve = false, kind = 'muted', style = 'solid', arrow = 'end',
+  label, at = 0.5, labelDx = 0, labelDy = 0, mono = true,
+} = Astro.props as Props;
+
+let d: string;
+let lx: number;
+let ly: number;
+if (via.length) {
+  const pts = [from, ...via, to];
+  d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ');
+  let best = 0; let bi = 1;
+  for (let i = 1; i < pts.length; i++) {
+    const len = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if (len > best) { best = len; bi = i; }
+  }
+  lx = (pts[bi][0] + pts[bi - 1][0]) / 2;
+  ly = (pts[bi][1] + pts[bi - 1][1]) / 2;
+} else if (curve) {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const vertical = Math.abs(dy) >= Math.abs(dx);
+  const c1: Pt = vertical ? [from[0], from[1] + dy * 0.5] : [from[0] + dx * 0.5, from[1]];
+  const c2: Pt = vertical ? [to[0], to[1] - dy * 0.5] : [to[0] - dx * 0.5, to[1]];
+  d = `M ${from[0]} ${from[1]} C ${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${to[0]} ${to[1]}`;
+  const t = at;
+  const lerp = (a: Pt, b: Pt): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const p01 = lerp(from, c1); const p12 = lerp(c1, c2); const p23 = lerp(c2, to);
+  const p012 = lerp(p01, p12); const p123 = lerp(p12, p23);
+  const p = lerp(p012, p123);
+  lx = p[0]; ly = p[1];
+} else {
+  d = `M ${from[0]} ${from[1]} L ${to[0]} ${to[1]}`;
+  lx = from[0] + (to[0] - from[0]) * at;
+  ly = from[1] + (to[1] - from[1]) * at;
+}
+const markerEnd = arrow === 'end' || arrow === 'both' ? `url(#arch-arrow-${kind})` : undefined;
+const markerStart = arrow === 'start' || arrow === 'both' ? `url(#arch-arrow-${kind})` : undefined;
+const labelW = label ? label.length * (mono ? 7.6 : 7) + 18 : 0;
+---
+<g class="edge-group">
+  <path
+    d={d}
+    class:list={['edge', `edge-${kind}`, { 'edge-dashed': style === 'dashed', 'edge-dotted': style === 'dotted' }]}
+    marker-end={markerEnd}
+    marker-start={markerStart}
+  />
+  {label && (
+    <g transform={`translate(${lx + labelDx} ${ly + labelDy})`}>
+      <rect x={-labelW / 2} y={-12} width={labelW} height="24" rx="2" class="edge-label-bg" />
+      <text x="0" y="4.5" text-anchor="middle" font-size="13" font-weight="500" class:list={['edge-label', { mono }]}>{label}</text>
+    </g>
+  )}
+</g>

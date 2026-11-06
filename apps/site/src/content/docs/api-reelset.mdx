@@ -2,30 +2,29 @@
 title: ReelSet
 order: 0
 eyebrow: API
-description: The main orchestrator. Created via ReelSetBuilder, drives every
-  spin, refill, pin, and win animation.
+description: The PIXI.Container that runs the reels. Build it with ReelSetBuilder, then call its methods to spin, set results and run cascades.
 ---
 
-`ReelSet` extends `PIXI.Container`. Construct via [`ReelSetBuilder`](/docs/api-builder/), add it to your stage, then drive it with the verbs below.
+`ReelSet` extends `PIXI.Container`. Construct it with [`ReelSetBuilder`](/reference/api-builder/), add it to your stage, then drive it with the methods below.
 
-Every method on this page is non-async unless its return type is `Promise`. Most errors throw synchronously at the call site, in the same stack frame you wrote. The exceptions are cancellation: `spin()` rejects on its watchdog or `SpinOptions.signal`, and `nudge()` rejects with an `AbortError`.
+Every method on this page is synchronous unless its return type is `Promise`. Most errors throw synchronously at the call site, in the same stack frame you wrote. The exceptions are cancellation: `spin()` rejects on its watchdog or `SpinOptions.signal`, and `nudge()` rejects with an `AbortError`.
 
 ## Spin
 
 | Method | Signature | Notes |
 |---|---|---|
-| `spin` | `(options?: SpinOptions) => Promise<SpinResult>` | Start a spin. Resolves on `spin:complete`. Pass `{ holdReels: [...] }` to freeze columns, `{ mode: 'cascade' }` to override the builder default for one call. |
+| `spin` | `(options?: SpinOptions) => Promise<SpinResult>` | Start a spin. Resolves on `spin:complete`. Pass `{ holdReels: [...] }` to freeze columns, or `{ mode: 'cascade' }` to override the builder default for one call. |
 | `setResult` | `(symbols: ColumnTarget[]) => void` | Set the target grid. Triggers the stop sequence. One `ColumnTarget` per reel: `{ visible, bufferStart?, bufferEnd? }`. |
-| `setAnticipation` | `(reelIndices: number[], options?) => void` | Mark reels that should enter `ANTICIPATION` before stopping. Held indices are filtered silently. Options: `stagger`, `slowdown`, `duration`, and `protect` (`'once'` \| `'stepwise'` \| `'always'`) to stop a skip press hiding the tease. |
-| `setStopDelays` | `(delays: number[]) => void` | One ms-delay per reel, overriding `reelIndex * speed.stopDelay` for the current spin. Persists across `refill()` calls in the same round. |
-| `setMinimumSpinTime` | `(ms: number \| number[] \| null) => void` | Override the `SpinPhase` floor the profile's single `minimumSpinTime` imposes on every reel. Per-reel with an array. This is what lets one reel land below the shared floor without slamming the whole set. Persists until cleared with `null`. |
-| `setDropOrder` | `(order: 'ltr' \| 'rtl' \| 'all' \| number[] \| null, stepMs?: number) => void` | Wraps `setStopDelays`. Common patterns: `'ltr'` (initial cascade reveal), `'all'` (canonical refill), `[0,0,200,200,400]` (V-shape). A named order counts over the reels that spin, so it covers reels added later and orders an `expand()` step by place. |
-| `skipSpin` | `(options?: SkipOptions) => void` | Round-aware press. First press boosts speed (standard mode) or flags refills to auto-slam (cascade mode); subsequent presses free the rest. `options.mode` is what the press does to the reels it frees: `'slam'` places them (the default unless `builder.skipMode()` says otherwise), `'quicken'` asks each for its landing sooner - tease over, delay cut, spin-out and bounce still played, on `options.speed` if named. `payload` reaches every phase's `onSkip(ctx)`, rides on `skip:requested` / `skip:completed` beside the `speed` profile, and ends up in `SpinResult.skipContext`. Throws before `setResult()`. Between two `expand()` steps, when nothing spins, the press carries to the next step instead of being dropped. |
-| `requestSkip` | `(options?: SkipOptions) => void` | Safe pre-`setResult` press. Queues until the result arrives, then presses with the same `options` as `skipSpin`. Bypasses the round-side-effect machine. Between two `expand()` steps it queues for the next step, as `skipSpin()` does there. Either mode is a skip: `skipStage` advances, `wasSkipped` is `true`, `SpinResult.skipMode` says which. A quicken press treats the reels it already quickened as down and walks on to the next group; a slam press cuts them. In cascade mode a quicken slams and warns once with code `quicken-cascade`. |
-| `slamStop` | `(options?: { reels?: number[] \| except?: number[] }) => void` | Unconditional slam, whatever the set's `skipMode`. No boost, no auto-slam flag, no tease protection. With `reels` / `except` (not both) it lands only those reels and every other reel keeps running to a natural landing. Throws before `setResult()`, like `skipSpin()`; a spin whose result will never come is aborted through `spin({ signal })`. |
-| `skipNudge` | `(reel?: number) => void` | Fast-forward an in-flight `nudge()` to its landed state. Distinct from `skipSpin` and `slamStop`: those land a spin; this lands a nudge. |
-| `skipStage` | `readonly 0 \| 1 \| 2` | `0` until the first press of the round, `2` after the press that ended it, in either mode. `1` means a press freed the reels around a protected tease and left the tease running. the button should stay live, because the next press ends it. Decided before the press lands anything, so a `spin:complete` listener already sees `2`. Drive UI labels from this, but gate on `isSpinning` first: the stage is ROUND-scoped and only resets on the next `spin()`, so an `'always'` round (where no press ever reaches `2`) leaves it parked at `1` through the idle window. |
-| `isSpinning` | `readonly boolean` | `true` between `spin:start` and `spin:complete`. Oscillates per refill in a cascade round. see [cascades guide](/guides/cascades/). |
+| `setAnticipation` | `(reelIndices: number[], options?) => void` | Mark reels that should enter `ANTICIPATION` before stopping. Held indices are dropped without an error. Options: `stagger`, `slowdown`, `duration`, and `protect` (`'once'` \| `'stepwise'` \| `'always'`), which stops a skip press from hiding the tease. |
+| `setStopDelays` | `(delays: number[]) => void` | One delay in ms per reel, overriding `reelIndex * speed.stopDelay` for the current spin. Persists across `refill()` calls in the same round. |
+| `setMinimumSpinTime` | `(ms: number \| number[] \| null) => void` | Override the `SpinPhase` floor the profile's single `minimumSpinTime` imposes on every reel. Pass an array for per-reel values. This lets one reel land below the shared floor without slamming the whole set. Persists until cleared with `null`. |
+| `setDropOrder` | `(order: 'ltr' \| 'rtl' \| 'all' \| number[] \| null, stepMs?: number) => void` | Wraps `setStopDelays`. Common patterns: `'ltr'` (initial cascade reveal), `'all'` (the usual refill), `[0,0,200,200,400]` (V-shape). A named order counts over the reels that spin, so it covers reels added later and orders an `expand()` step by place. |
+| `skipSpin` | `(options?: SkipOptions) => void` | The round-aware press. The first press boosts speed (standard mode) or flags refills to auto-slam (cascade mode); later presses free the rest. `options.mode` is what the press does to the reels it frees. `'slam'` places them (the default unless `builder.skipMode()` says otherwise). `'quicken'` asks each for its landing sooner: the tease ends, the delay is cut, and the spin-out and bounce still play, on `options.speed` if one is named. `payload` reaches every phase's `onSkip(ctx)`, rides on `skip:requested` / `skip:completed` beside the `speed` profile, and ends up in `SpinResult.skipContext`. Throws before `setResult()`. Between two `expand()` steps, when nothing spins, the press carries to the next step instead of being dropped. |
+| `requestSkip` | `(options?: SkipOptions) => void` | The safe press before `setResult()`. Queues until the result arrives, then presses with the same `options` as `skipSpin`. Bypasses the round-side-effect machine. Between two `expand()` steps it queues for the next step, as `skipSpin()` does there. Either mode is a skip: `skipStage` advances, `wasSkipped` is `true`, `SpinResult.skipMode` says which. A quicken press treats the reels it already quickened as down and walks on to the next group; a slam press cuts them. In cascade mode a quicken slams and warns once with code `quicken-cascade`. |
+| `slamStop` | `(options?: { reels?: number[] \| except?: number[] }) => void` | An unconditional slam, whatever the set's `skipMode`. No boost, no auto-slam flag, no tease protection. With `reels` or `except` (not both) it lands only those reels, and every other reel keeps running to a natural landing. Throws before `setResult()`, like `skipSpin()`; a spin whose result will never come is aborted through `spin({ signal })`. |
+| `skipNudge` | `(reel?: number) => void` | Fast-forward an in-flight `nudge()` to its landed state. `skipSpin` and `slamStop` land a spin; this lands a nudge. |
+| `skipStage` | `readonly 0 \| 1 \| 2` | `0` until the first press of the round, `2` after the press that ended it, in either mode. `1` means a press freed the reels around a protected tease and left the tease running, so the button should stay live; the next press ends it. Decided before the press lands anything, so a `spin:complete` listener already sees `2`. Drive UI labels from this, but gate on `isSpinning` first. The stage is scoped to the round and only resets on the next `spin()`, so an `'always'` round (where no press ever reaches `2`) leaves it parked at `1` through the idle window. |
+| `isSpinning` | `readonly boolean` | `true` between `spin:start` and `spin:complete`. In a cascade round it goes true and false once per refill. See the [cascades guide](/mechanics/cascade/#concept). |
 
 ```ts
 const result = await reelSet.spin({ holdReels: [0, 4] });
@@ -35,23 +34,23 @@ console.log(result.wasSkipped);    // true if slam ended the spin
 
 ## Cascade (tumble)
 
-Available when the builder was configured with `.tumble({...})`. See the [cascades guide](/guides/cascades/) for the mental model.
+Available when the builder was configured with `.tumble({...})`. See the [cascades guide](/mechanics/cascade/#concept) for the mental model.
 
 | Method | Signature | Notes |
 |---|---|---|
-| `refill` | `(opts: RefillOptions) => Promise<RefillResult>` | Moment B: place + drop-in for survivors and new symbols. Skip the fall and the wait-for-result entirely. Default `mode: 'combined'` animates survivors and new symbols together. Pass `mode: 'gravity-then-drop'` to split into a survivor-settle stage, a hold, then a drop-in stage. see [Two-stage refill](#two-stage-refill) below. Pass `signal: AbortSignal` for mid-refill cancellation. Throws without `.tumble()`. Result exposes `winnersRefilled`, `finalGrid`, `wasSkipped`, `duration`. |
-| `destroySymbols` | `(cells: ReadonlyArray<Cell>, opts?: DestroySymbolsOptions) => Promise<void>` | Defer to each symbol's `playDestroy()` (the default is a brief scale/fade implode). Lifts zIndex so destroys aren't clipped. Optional `delay`, `zIndex`, `dim`, `signal`. |
-| `runCascade` | `(opts: RunCascadeOptions) => Promise<RunCascadeResult>` | One-call cascade orchestration. Loops detect, destroy, pause, refill. Pass `signal: AbortSignal` for caller-driven cancellation (use this for "player tapped slam between refills": `reelSet.skipSpin()` is a no-op when the engine is idle). The same `mode` / `gravityHoldMs` / `gravityHold` / `onGravityComplete` options apply per chain (passed as `refillMode` + `gravityHold(info)` builder); see [Two-stage refill](#two-stage-refill). Per-stage progress fires via `cascade:chain:start` / `cascade:chain:end`; the awaited promise tells you when the chain itself is over. |
+| `refill` | `(opts: RefillOptions) => Promise<RefillResult>` | Moment B: place and drop in the survivors and the new symbols. There is no fall and no wait for a result. The default `mode: 'combined'` animates survivors and new symbols together. `mode: 'gravity-then-drop'` splits it into a survivor-settle stage, a hold, then a drop-in stage; see [Two-stage refill](#two-stage-refill) below. Pass `signal: AbortSignal` to cancel mid-refill. Throws without `.tumble()`. The result exposes `winnersRefilled`, `finalGrid`, `wasSkipped`, `duration`. |
+| `destroySymbols` | `(cells: ReadonlyArray<Cell>, opts?: DestroySymbolsOptions) => Promise<void>` | Calls each symbol's `playDestroy()` (the default is a brief scale and fade implode). Lifts zIndex so the destroy is not clipped. Optional `delay`, `zIndex`, `dim`, `signal`. |
+| `runCascade` | `(opts: RunCascadeOptions) => Promise<RunCascadeResult>` | Runs the whole cascade in one call: detect, destroy, pause, refill, repeat. Pass `signal: AbortSignal` to cancel from the caller. Use it for a slam press between refills, because `reelSet.skipSpin()` does nothing while the engine is idle. The two-stage options apply per chain here: `mode` is called `refillMode`, and `gravityHold` is a function of `info` that builds the promise; `gravityHoldMs` and `onGravityComplete` keep their names. See [Two-stage refill](#two-stage-refill). Per-stage progress comes as `cascade:chain:start` and `cascade:chain:end`; the awaited promise resolves when the chain is over. |
 
 ```ts
 import type { Cell, RunCascadeResult } from 'pixi-reels';
 
-// Moment A. fall, wait, drop in.
+// Moment A: fall, wait, drop in.
 const spinDone = reelSet.spin({ mode: 'cascade' });
 reelSet.setResult(await server.spin());
 await spinDone;
 
-// Moment B. N refills until no more wins.
+// Moment B: N refills until no more wins.
 const summary: RunCascadeResult = await reelSet.runCascade({
   detectWinners: (grid): Cell[] => myClusterDetector(grid),
   nextGrid:      (_, winners) => server.cascade(winners),
@@ -65,12 +64,12 @@ console.log(summary.chainLength, summary.totalWinners, summary.wasSkipped);
 | Type | Shape | Notes |
 |---|---|---|
 | `Cell` | `{ reel: number; cell: number }` | A grid cell. `reel` is the column, `cell` is the visible cell index. Used by `destroySymbols`, `runCascade`'s `detectWinners`, and `refill({ winners })`. |
-| `DestroySymbolsOptions` | `{ delay?, zIndex?, dim?, signal? }` | Defaults: zero delay, zIndex `1000`, no viewport dim. `delay` accepts either a number OR a `(cell, index) => number` function for per-cell stagger. Pass `zIndex: null` to suppress the bump (useful when another presenter already drove the visual). `signal` aborts mid-destroy and snaps cells to their destroyed pose. |
-| `RunCascadeOptions` | `{ detectWinners, nextGrid, presentWinners?, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal?, refillMode?, gravityHoldMs?, gravityHold?, onGravityComplete? }` | `detectWinners` and `nextGrid` carry the game rules; everything else is timing / cancellation / gravity flavor. Both callbacks may be `async`. `nextGrid` must return `ColumnTarget[]` -- a plain `string[][]` is not accepted anywhere in the API, so wrap it with `grid.map((visible) => ({ visible }))`. Defaults: `pauseAfterDestroyMs: 250`, `maxChain: 32`, `refillMode: 'combined'`, `gravityHoldMs: 250`. `onCascade` payload is `{ chain, winners, currentGrid }`. same grid that `cascade:chain:start` reported. `gravityHold` is a **builder** here: `(info: { chain, winners }) => Promise<void>`. called once per chain stage; the returned promise gates that stage's drop-in. `onGravityComplete` is `(info) => void \| Promise<void>` and fires after both hold sources resolve, before drop-in starts. |
+| `DestroySymbolsOptions` | `{ delay?, zIndex?, dim?, signal? }` | Defaults: zero delay, zIndex `1000`, no viewport dim. `delay` accepts a number or a `(cell, index) => number` function for a per-cell stagger. Pass `zIndex: null` to suppress the bump, for when another presenter already drove the visual. `signal` aborts mid-destroy and snaps cells to their destroyed pose. |
+| `RunCascadeOptions` | `{ detectWinners, nextGrid, presentWinners?, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal?, refillMode?, gravityHoldMs?, gravityHold?, onGravityComplete? }` | `detectWinners` and `nextGrid` carry the game rules. Everything else is timing, cancellation or gravity feel. Both callbacks may be `async`. `nextGrid` must return `ColumnTarget[]`; a plain `string[][]` is not accepted anywhere in the API, so wrap it with `grid.map((visible) => ({ visible }))`. Defaults: `pauseAfterDestroyMs: 250`, `maxChain: 32`, `refillMode: 'combined'`, `gravityHoldMs: 250`. The `onCascade` payload is `{ chain, winners, currentGrid }`, the same grid `cascade:chain:start` reported. Here `gravityHold` is a function, `(info: { chain, winners }) => Promise<void>`, called once per chain stage; the promise it returns gates that stage's drop-in. `onGravityComplete` is `(info) => void \| Promise<void>` and fires after both hold sources resolve, before the drop-in starts. |
 | `RunCascadeResult` | `{ chainLength, totalWinners, finalGrid, wasSkipped }` | Returned by `runCascade`. `chainLength === 0` means no wins on the initial grid (no refill ran). |
 
 ```ts
-// Cancellation via AbortSignal. the right shape for "player tapped slam
+// Cancellation via AbortSignal: the right shape for "player tapped slam
 // between refills" (reelSet.skipSpin() is a no-op when the engine is idle).
 const controller = new AbortController();
 skipBtn.addEventListener('click', () => controller.abort());
@@ -81,14 +80,14 @@ const { wasSkipped } = await reelSet.runCascade({
 });
 ```
 
-`runCascade` listens to `skip:requested` too. Calling `reelSet.skipSpin()` during an in-flight refill works as expected, but the AbortSignal pattern is the one that handles the idle-window case.
+`runCascade` also listens to `skip:requested`, so `reelSet.skipSpin()` during a refill works. Only the AbortSignal handles a press in the idle window between refills.
 
 ### Two-stage refill
 
-`refill({ mode: 'gravity-then-drop' })` splits the refill into two beats: survivors slide first, then a global hold for anticipation visuals, then new symbols enter. This is the Reactoonz / Gates of Olympus / Mummyland feel. `'combined'` (default) is the Sweet Bonanza / Sugar Rush feel.
+`refill({ mode: 'gravity-then-drop' })` splits the refill in two. Survivors slide first, then there is a hold across the board for anticipation visuals, then the new symbols enter. This is how Reactoonz, Gates of Olympus and Mummyland refill. `'combined'`, the default, is how Sweet Bonanza and Sugar Rush refill.
 
 ```ts
-// Single refill. pass the promise directly.
+// Single refill: pass the promise directly.
 await reelSet.refill({
   winners,
   grid: nextGrid,
@@ -99,10 +98,10 @@ await reelSet.refill({
 });
 ```
 
-`gravityHoldMs` and `gravityHold` race in **parallel** via `Promise.all`. whichever finishes LAST gates the drop-in. Pass both when you want a wall-clock floor under an animation that might be fast. `onGravityComplete` runs *after* both, so it can read post-hold state.
+`gravityHoldMs` and `gravityHold` run in parallel under `Promise.all`, and the drop-in waits for whichever finishes last. Pass both when you want a wall-clock floor under an animation that might be fast. `onGravityComplete` runs after both, so it can read the state after the hold.
 
 ```ts
-// Per-cascade. runCascade calls the builder once per chain stage.
+// Per cascade: runCascade calls the builder once per chain stage.
 await reelSet.runCascade({
   detectWinners, nextGrid,
   refillMode:    'gravity-then-drop',
@@ -111,9 +110,9 @@ await reelSet.runCascade({
 });
 ```
 
-The events `cascade:gravity:start` / `cascade:gravity:symbol` / `cascade:gravity:end` fire only in this mode. see the [events reference](/docs/api-events/#cascade-tumble).
+The events `cascade:gravity:start`, `cascade:gravity:symbol` and `cascade:gravity:end` fire only in this mode. See the [events reference](/reference/api-events/#cascade-tumble).
 
-> **Heads-up.** If your `gravityHold` promise never resolves, the engine will wait forever. the cascade hangs. There's no built-in timeout. If your animation source can stall (animation library error, missed user input, hung XHR), wrap it in your own `Promise.race([yourPromise, timeoutReject])` before passing it in, or rely on `gravityHoldMs` alone. A rejection in `gravityHold` (or a throw from `onGravityComplete`) does **not** reject the `refill()` / `runCascade()` call -- the engine catches it, emits `cascade:gravity:error`, logs it, and slams to recover, so the awaited promise still resolves. A `try` block will never see it; subscribe to `cascade:gravity:error`.
+If your `gravityHold` promise never resolves, the engine waits forever and the cascade hangs. There is no built-in timeout. If your animation source can stall (an animation library error, missed user input, a hung XHR), wrap it in your own `Promise.race([yourPromise, timeoutReject])` before passing it in, or rely on `gravityHoldMs` alone. A rejection in `gravityHold`, or a throw from `onGravityComplete`, does not reject the `refill()` or `runCascade()` call. The engine catches it, emits `cascade:gravity:error`, logs it and slams to recover, so the awaited promise still resolves. A `try` block never sees it; subscribe to `cascade:gravity:error`.
 
 ## MultiWays
 
@@ -121,26 +120,26 @@ Available when the builder was configured with `.multiways({...})`.
 
 | Method | Signature | Notes |
 |---|---|---|
-| `setShape` | `(rowsPerReel: number[]) => void` | Record the row counts each reel should land on this spin. Must be called BETWEEN `spin()` and `setResult()`. |
+| `setShape` | `(rowsPerReel: number[]) => void` | Record the row counts each reel should land on this spin. Call it between `spin()` and `setResult()`. |
 | `isMultiWaysSlot` | `readonly boolean` | True if the builder used `.multiways(...)`. Read once at startup, not every spin. |
 
 ## Growing the board
 
-Add reels after the last one and take them away again, at rest. `expand()` is the "infinity reels" chain built on them; see the [recipes](/recipes/infinity-reels/).
+Add reels after the last one and take them away again, at rest. `expand()` is the "infinity reels" chain built on them; see the [recipes](/mechanics/infinity-reels/).
 
 | Method | Signature | Notes |
 |---|---|---|
-| `addReels` | `(count: number, options?: AddReelsOptions) => readonly Reel[]` | Append `count` reels, laid out, masked and pooled like the built ones; `reelSet.reels` grows in place and the viewport with it. `options.visibleCells` (one number, or one per reel; default the last reel's count, MultiWays `maxCells`) and `options.initialFrame` (one `ColumnTarget` per reel). A reel may not be taller than the tallest one. The reels one call adds join a `setReelGroups()` layout as one trailing group, take a `setCurve()` curve, and land a pending `setShape()` at the shape they were added with. Fires `reels:added`. |
-| `removeReels` | `(count?: number) => void` | Destroy the last `count` reels; without `count`, every reel added since `build()`, a no-op when there are none. Their symbols go back to the pool (an animation still playing on one stops with it), pins on them expire (`'explicit'`), a spotlight hides, groups drop them, viewport, mask and pool shrink back. Fires `reels:removed`. |
+| `addReels` | `(count: number, options?: AddReelsOptions) => readonly Reel[]` | Append `count` reels, laid out, masked and pooled like the built ones; `reelSet.reels` grows in place and the viewport with it. `options.visibleCells` is one number or one per reel (default the last reel's count, or `maxCells` on MultiWays), and `options.initialFrame` is one `ColumnTarget` per reel. A reel may not be taller than the tallest one. The reels one call adds join a `setReelGroups()` layout as one trailing group, take a `setCurve()` curve, and land a pending `setShape()` at the shape they were added with. Fires `reels:added`. |
+| `removeReels` | `(count?: number) => void` | Destroy the last `count` reels; without `count`, every reel added since `build()`, a no-op when there are none. Their symbols go back to the pool (an animation still playing on one stops with it), pins on them expire (`'explicit'`), a spotlight hides, groups drop them, and the viewport, mask and pool shrink back. Fires `reels:removed`. |
 | `addRows` | `(count: number, options?: AddRowsOptions) => void` | Grow every reel by `count` rows below the last one, at its cell size; the viewport, mask and pool grow with it. `options.cells` is what the new rows show, one array per reel (default random). Between `expand()` steps it goes in `onStepLanded`. Not on MultiWays, where a reel's rows are its shape. Fires `rows:added`. |
-| `removeRows` | `(count?: number) => void` | Remove the last `count` rows from every reel; without `count`, every row `addRows()` added, a no-op when there are none. Pins on removed rows expire (`'explicit'`). A big symbol that no longer fits the shorter strip is random-filled. Fires `rows:removed`. |
-| `setColumn` | `(reel: number, column: ColumnTarget, options?: SetColumnOptions) => void` | Show `column` on one reel at rest: it shows `column.visible.length` cells. `options.height` says what gives: `'grow'` (the default) keeps the cell size and the reel grows or shrinks, the board re-anchoring around it (the default `reelAnchor` `'center'` grows it both ways); `'keep'` keeps the reel's height and resizes its cells to share it. On MultiWays `'keep'` is the default and the only mode, within `[minCells, maxCells]`. Big symbols get their whole block, as in a landing. A pinned cell has to keep its pinned symbol. Only the cells that change are replaced: every other symbol keeps its instance and animation. Fires `column:set`. |
-| `splitSymbol` | `(reel: number, cell: number, ids: string[], options?: SetColumnOptions) => { reelIndex, from, count }` | Split the symbol covering `(reel, cell)`, any symbol one reel wide in full view (a 1x1 or a stack), into `ids`, one per cell. The cells above and below keep their symbols, and a pin below rides down with its symbol. A pinned symbol does not split, and a big symbol in `ids` has to end inside them. `options.height` as in `setColumn()`: `'grow'` adds the difference to the reel, `'keep'` shrinks its cells. Returns where the new cells are. Through `setColumn()`. |
-| `resetColumns` | `() => void` | Every reel back to the cells it was built or added with, at their size, keeping its top cells: undoes `setColumn()`, `splitSymbol()` and `addRows()`. A pin past a reel's cells expires, as on `removeRows()`. A no-op when no reel changed. Not on MultiWays. |
+| `removeRows` | `(count?: number) => void` | Remove the last `count` rows from every reel; without `count`, every row `addRows()` added, a no-op when there are none. Pins on removed rows expire (`'explicit'`). A big symbol that no longer fits the shorter strip is replaced with random symbols. Fires `rows:removed`. |
+| `setColumn` | `(reel: number, column: ColumnTarget, options?: SetColumnOptions) => void` | Show `column` on one reel at rest: it shows `column.visible.length` cells. `options.height` says what gives. `'grow'`, the default, keeps the cell size, so the reel grows or shrinks and the board re-anchors around it (with the default `reelAnchor` of `'center'` it grows both ways). `'keep'` keeps the reel's height and resizes its cells to share it. On MultiWays `'keep'` is the default and the only mode, within `[minCells, maxCells]`. Big symbols get their whole block, as in a landing. A pinned cell has to keep its pinned symbol. Only the cells that change are replaced; every other symbol keeps its instance and animation. Fires `column:set`. |
+| `splitSymbol` | `(reel: number, cell: number, ids: string[], options?: SetColumnOptions) => { reelIndex, from, count }` | Split the symbol covering `(reel, cell)`, any symbol one reel wide in full view (a 1x1 or a stack), into `ids`, one per cell. The cells above and below keep their symbols, and a pin below rides down with its symbol. A pinned symbol does not split, and a big symbol in `ids` has to end inside them. `options.height` works as in `setColumn()`: `'grow'` adds the difference to the reel, `'keep'` shrinks its cells. Returns where the new cells are. Implemented through `setColumn()`. |
+| `resetColumns` | `() => void` | Every reel back to the cells it was built or added with, at their size, keeping its top cells. This undoes `setColumn()`, `splitSymbol()` and `addRows()`. A pin past a reel's cells expires, as on `removeRows()`. A no-op when no reel changed. Not on MultiWays. |
 | `isExpanding` | `boolean` (getter) | `true` from `expand:start` on: the `spin:*` events a step fires belong to the expansion, not a new round. `false` again by `expand:complete` and `expand:end`, so a listener there can start the next round. |
 | `expand` | `(options: ExpandOptions) => Promise<ExpandResult>` | Grow the board by `columns` (one `ColumnTarget` per reel to add; the server decides how many), `step` reels at a time (a number, default `1`, or a function of the step): add them, spin only them, land them, repeat. Awaits `onStepAdded(step)` before each step spins and `onStepLanded(step)` after it lands. `anticipation` teases a step's reels (`true`, `AnticipationOptions`, or a function per step). Aborting `signal` fast-forwards: everything still to come lands in one step. The steps are one round: pin turns are not spent per step, a skip press speeds up the rest once (the fastest profile; in cascade mode the later steps land at once), a press between steps carries to the next one, and delays stagger by place in the step. MultiWays reels take their shape from `visible.length`; a big symbol widens the step it would straddle. Columns, symbol ids, shapes, blocks and an `anticipation` object are validated before the first reel is added. |
 
-`addReels`, `removeReels` and `expand` throw while the reels spin, a nudge runs, or `expand()` runs; `spin()` throws while `expand()` runs. `addRows`, `removeRows`, `setColumn`, `splitSymbol` and `resetColumns` throw while the reels spin or a nudge runs, and inside an expansion they are allowed only between steps (in `onStepLanded`). `setColumn` and `splitSymbol` also throw on a reel that a big symbol wider than one reel covers: the reels a block spans share one geometry.
+`addReels`, `removeReels` and `expand` throw while the reels spin, a nudge runs, or `expand()` runs; `spin()` throws while `expand()` runs. `addRows`, `removeRows`, `setColumn`, `splitSymbol` and `resetColumns` throw while the reels spin or a nudge runs, and inside an expansion they are allowed only between steps (in `onStepLanded`). `setColumn` and `splitSymbol` also throw on a reel that a big symbol wider than one reel covers, because the reels a block spans share one geometry.
 
 | Type | Shape | Notes |
 |---|---|---|
@@ -153,43 +152,43 @@ Add reels after the last one and take them away again, at rest. `expand()` is th
 | Accessor / Method | Signature |
 |---|---|
 | `speed` | `readonly SpeedManager` |
-| `setSpeed` | `(name: string) => void`. activates a registered profile, emits `speed:changed` |
+| `setSpeed` | `(name: string) => void`. Activates a registered profile and emits `speed:changed`. |
 
 ## Spotlight + wins
 
 | Accessor | Description |
 |---|---|
-| `spotlight` | `SymbolSpotlight`. dim losers, cycle winning lines, play per-cell win animations |
-| `viewport` | `ReelViewport`. masked + unmasked + spotlight containers (use `showDim(alpha)` / `hideDim()` for full-board dim) |
+| `spotlight` | `SymbolSpotlight`. Dims losers, cycles winning lines, plays per-cell win animations. |
+| `viewport` | `ReelViewport`. The masked, unmasked and spotlight containers. Use `showDim(alpha)` / `hideDim()` for a full-board dim. |
 
-The library ships [`WinPresenter`](/docs/api-events/) as a higher-level events-driven win driver. listen to `win:start`, `win:group`, `win:symbol`, `win:end`.
+The library also ships [`WinPresenter`](/reference/api-events/), a higher-level win driver that works through events. Listen to `win:start`, `win:group`, `win:symbol` and `win:end`.
 
 ## Pins (persistent cell claims)
 
 | Method | Signature | Notes |
 |---|---|---|
-| `pin` | `(reel, cell, symbolId, opts?: CellPinOptions) => CellPin` | Place a sticky/expanding/turn-bound pin. Applies immediately if idle, otherwise at the next `setResult()`. |
+| `pin` | `(reel, cell, symbolId, opts?: CellPinOptions) => CellPin` | Place a sticky, expanding or turn-bound pin. Applies immediately if idle, otherwise at the next `setResult()`. |
 | `unpin` | `(reel, cell) => void` | Remove a pin. No-op if none. Fires `pin:expired` with reason `'explicit'`. |
-| `getPin` | `(reel, cell) => CellPin \| undefined` | Convenience map lookup. |
+| `getPin` | `(reel, cell) => CellPin \| undefined` | A map lookup. |
 | `pins` | `readonly ReadonlyMap<string, CellPin>` | Keyed by `"reel:cell"`. Reads are safe at any time. |
-| `movePin` | `(from, to, opts?: MovePinOptions) => Promise<void>` | Animate a pin to a new cell at rest. Engine-native walking-wild primitive. |
-| `setSymbolAt` | `(reel, cell, symbolId) => void` | Swap a single cell in place, at rest. Throws on pinned cells. `unpin()` first if intentional. |
+| `movePin` | `(from, to, opts?: MovePinOptions) => Promise<void>` | Animate a pin to a new cell at rest. The engine's walking-wild primitive. |
+| `setSymbolAt` | `(reel, cell, symbolId) => void` | Swap a single cell in place, at rest. Throws on a pinned cell; call `unpin()` first if you mean it. |
 
 ## Cell / footprint queries
 
 | Method | Signature | Notes |
 |---|---|---|
-| `getVisibleGrid` | `() => string[][]` | One id per visible cell. Cross-reel OCCUPIED stubs resolve to the big symbol's anchor id. |
-| `getTargets` | `() => ColumnTarget[]` | The whole board in the shape `setResult` takes -- buffers included, big-symbol anchors at their true positions -- so `setResult(reelSet.getTargets())` reproduces it. `getVisibleGrid()` cannot: it reports the visible window only, so a block anchored in `bufferStart` with just its tail showing replays as an anchor at cell 0 and expands. Read with `getVisibleGrid`, replay with `getTargets`. |
-| `getCellBounds` | `(reel, cell) => CellBounds` | ReelSet-local rectangle for a 1×1 cell. Use for paylines / hit areas / debug overlays. |
-| `getBlockBounds` | `(reel, cell) => CellBounds` | Pixel rect covering a big symbol's whole `N×M` block. Returns the cell bounds for 1×1. |
-| `getSymbolFootprint` | `(reel, cell) => { anchor: { reel, cell }; size: { reels, cells } }` | Resolves OCCUPIED stubs to the anchor cell and reports the block size. |
+| `getVisibleGrid` | `() => string[][]` | One id per visible cell. Cross-reel `OCCUPIED` stubs resolve to the big symbol's anchor id. |
+| `getTargets` | `() => ColumnTarget[]` | The whole board in the shape `setResult` takes, buffers included and big-symbol anchors at their true positions, so `setResult(reelSet.getTargets())` reproduces it. `getVisibleGrid()` cannot. It reports the visible window only, so a block anchored in `bufferStart` with just its tail showing would replay as an anchor at cell 0 and expand. Read with `getVisibleGrid`, replay with `getTargets`. |
+| `getCellBounds` | `(reel, cell) => CellBounds` | ReelSet-local rectangle for a 1x1 cell. Use it for paylines, hit areas and debug overlays. |
+| `getBlockBounds` | `(reel, cell) => CellBounds` | Pixel rect covering a big symbol's whole `NxM` block. Returns the cell bounds for a 1x1. |
+| `getSymbolFootprint` | `(reel, cell) => { anchor: { reel, cell }; size: { reels, cells } }` | Resolves `OCCUPIED` stubs to the anchor cell and reports the block size. |
 
 ## Random symbol pools
 
 | Accessor | Description |
 |---|---|
-| `randomSymbols` | `RandomSymbolControl`. `{ set(pool, scope?), clear(), weights(scope?) }`. Narrows what the engine may draw for cells you did not name -- globally or per reel, for the whole strip, for both buffer ends, or for one end on its own. |
+| `randomSymbols` | `RandomSymbolControl`. `{ set(pool, scope?), clear(), weights(scope?) }`. Narrows what the engine may draw for cells you did not name: globally or per reel, for the whole strip, for both buffer ends, or for one end on its own. |
 
 ```ts
 // Nothing collectible may sit half-visible above or below the grid.
@@ -204,13 +203,13 @@ reelSet.randomSymbols.set({ weights: { WILD: 40 } }, { reel: 2 });
 reelSet.randomSymbols.set(null, { reel: 2 });
 ```
 
-A pool governs the RANDOM draw only. an explicit `setResult` target always
-wins. Layers resolve base weights -> global spinning -> per-reel spinning ->
-global buffer -> per-reel buffer -> global side -> per-reel side; weights
-override per id, exclusions accumulate, and a narrower layer can never
-re-admit what a wider one banned. `weights({ slots: 'buffer' })` reports what
-both sides inherit; ask for a side to see exactly what it draws from.
-Build-time equivalent: `builder.randomSymbols(pool, scope)`.
+A pool governs the random draw only. An explicit `setResult` target always
+wins. Layers resolve in this order, widest first: base weights, global
+spinning, per-reel spinning, global buffer, per-reel buffer, global side,
+per-reel side. Weights override per id, exclusions accumulate, and a narrower
+layer can never re-admit what a wider one banned. `weights({ slots: 'buffer' })`
+reports what both sides inherit; ask for one side to see exactly what it draws
+from. The build-time equivalent is `builder.randomSymbols(pool, scope)`.
 
 ## Frame middleware (runtime-mutable)
 
@@ -229,11 +228,11 @@ reelSet.frame.remove('feature-wilds');
 | Accessor | Returns |
 |---|---|
 | `reels` | `readonly Reel[]` |
-| `getReel(i)` | `Reel`. per-column surface (`getSymbolAt`, `getVisibleSymbols`, `events`, `setSymbolAt`, …) |
+| `getReel(i)` | `Reel`. The per-column surface: `getSymbolAt`, `getVisibleSymbols`, `events`, `setSymbolAt` and so on. |
 
 ## Events
 
-`reelSet.events` is a typed `EventEmitter<ReelSetEvents>`. See the [events reference](/docs/api-events/) for the full surface. Per-reel events live on `reel.events`.
+`reelSet.events` is a typed `EventEmitter<ReelSetEvents>`. See the [events reference](/reference/api-events/) for the full surface. Per-reel events live on `reel.events`.
 
 ```ts
 reelSet.events.on('spin:complete', (r) => console.log(r.symbols));
@@ -248,7 +247,7 @@ reelSet.events.off('cascade:dropIn:symbol', squishOnLand); // unsubscribe
 | `isDestroyed` | `readonly boolean` |
 | `destroy()` | Releases pooled symbols, removes ticker callbacks, tears down pin overlays, removes all listeners. Cascades to every child (`{ children: true }`). |
 
-## Example. minimal cascade slot
+## Example: minimal cascade slot
 
 ```ts
 import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';

@@ -1,0 +1,16 @@
+---
+/**
+ * The hand-drawn cover for a recipe umbrella page on /recipes/. Draws the
+ * slug's SVG from `covers.ts`; a slug without one renders nothing, so the
+ * caller (RecipeThumb) must check `hasRecipeCover` first.
+ */
+import { recipeCover } from './covers.ts';
+
+interface Props {
+  slug: string;
+}
+
+const { slug } = Astro.props as Props;
+const svg = recipeCover(slug);
+---
+{svg && <Fragment set:html={svg} />}

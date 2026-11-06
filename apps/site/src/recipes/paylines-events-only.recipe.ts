@@ -1,94 +1,114 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted,
-//                   SilkGraphics
-//
+import * as PIXI from 'pixi.js';
+import { gsap } from 'gsap';
+import { SilkGraphics } from 'pixi-silk';
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, WinPresenter, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import type { ReelSymbol } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Draw paylines yourself from win:group',
+  topic: 'cells-and-banners',
+  tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
+  needs: ['generic-symbols'],
+} as const satisfies RecipeMeta;
+
 // The "events + getCellBounds" path: WinPresenter only
 // animates symbols; you draw every per-win visual (lines, outlines,
 // numbers) yourself by subscribing to `win:group` / `win:symbol`.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const A = '7', B = '8', C = '9';
+  const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
+  const IDS = [A, B, C, SEVEN];
+  const COLS = 5, ROWS = 3, SIZE = 90;
 
-const A = '7', B = '8', C = '9';
-const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
-const IDS = [A, B, C, SEVEN];
-const COLS = 5, ROWS = 3, SIZE = 90;
+  const GRID = [
+    [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C],
+  ];
 
-const GRID = [
-  [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C],
-];
+  const WINS = [0, 1, 2].map((cell) => ({
+    id: cell,
+    cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, cellIndex: cell })),
+    value: [300, 100, 60][cell],
+  }));
 
-const WINS = [0, 1, 2].map((cell) => ({
-  id: cell,
-  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, cellIndex: cell })),
-  value: [300, 100, 60][cell],
-}));
+  const LINE_COLORS = [0xffe04a, 0x33d1ff, 0xff7aa2];
 
-const LINE_COLORS = [0xffe04a, 0x33d1ff, 0xff7aa2];
+  const reelSet = new ReelSetBuilder()
+    .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+    .symbols(r => {
+      for (const sym of [...CARD_DECK, WILD_CARD]) {
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+    })
+    .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker).build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => {
-    for (const sym of [...CARD_DECK, WILD_CARD]) {
-      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
-    }
-  })
-  .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker).build();
+  // Our own line layer sits above the viewport.
+  const lineLayer = new PIXI.Container();
+  reelSet.addChild(lineLayer);
 
-// Our own line layer sits above the viewport.
-const lineLayer = new PIXI.Container();
-reelSet.addChild(lineLayer);
-
-// Draw a line from win:group using getCellBounds. Pulse in, fade out after
-// the per-win cycle (cycleGap) so the next win gets the stage. SilkGraphics
-// draws the polyline as one stroke with round ends, smooth at any scale.
-reelSet.events.on('win:group', (win, cells) => {
-  const gfx = new SilkGraphics();
-  gfx.zIndex = win.id ?? 0;
-  const color = LINE_COLORS[(win.id ?? 0) % LINE_COLORS.length];
-  const pts = cells.map(c => {
-    const b = reelSet.getCellBounds(c.reelIndex, c.cellIndex);
-    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  // Draw a line from win:group using getCellBounds. Pulse in, fade out after
+  // the per-win cycle (cycleGap) so the next win gets the stage. SilkGraphics
+  // draws the polyline as one stroke with round ends, smooth at any scale.
+  reelSet.events.on('win:group', (win, cells) => {
+    const gfx = new SilkGraphics();
+    gfx.zIndex = win.id ?? 0;
+    const color = LINE_COLORS[(win.id ?? 0) % LINE_COLORS.length];
+    const pts = cells.map(c => {
+      const b = reelSet.getCellBounds(c.reelIndex, c.cellIndex);
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    });
+    gfx.polyline(pts).stroke({ color, width: 6, alpha: 0.95, cap: 'round' });
+    lineLayer.addChild(gfx);
+    gsap.fromTo(gfx, { alpha: 0 }, { alpha: 1, duration: 0.18, ease: 'power1.out' });
+    gsap.to(gfx, { alpha: 0, duration: 0.3, delay: 1.0, onComplete: () => gfx.destroy() });
   });
-  gfx.polyline(pts).stroke({ color, width: 6, alpha: 0.95, cap: 'round' });
-  lineLayer.addChild(gfx);
-  gsap.fromTo(gfx, { alpha: 0 }, { alpha: 1, duration: 0.18, ease: 'power1.out' });
-  gsap.to(gfx, { alpha: 0, duration: 0.3, delay: 1.0, onComplete: () => gfx.destroy() });
-});
 
-// Scale a symbol's view container from its visual centre. Needed because
-// the view is positioned at the cell's top-left, so a naive gsap.to on
-// view.scale grows from the top-left corner.
-function scaleFromCenter(view, peak, durationMs) {
-  const b = view.getLocalBounds();
-  const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
-  const ox = view.pivot.x, oy = view.pivot.y, px = view.x, py = view.y;
-  view.pivot.set(cx, cy);
-  view.x = px + (cx - ox);
-  view.y = py + (cy - oy);
-  gsap.to(view.scale, {
-    x: peak, y: peak, duration: durationMs / 1000,
-    yoyo: true, repeat: 1, ease: 'sine.inOut',
-    onComplete: () => { view.pivot.set(ox, oy); view.x = px; view.y = py; },
+  // Scale a symbol's view container from its visual centre. Needed because
+  // the view is positioned at the cell's top-left, so a naive gsap.to on
+  // view.scale grows from the top-left corner.
+  function scaleFromCenter(view: PIXI.Container, peak: number, durationMs: number) {
+    const b = view.getLocalBounds();
+    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    const ox = view.pivot.x, oy = view.pivot.y, px = view.x, py = view.y;
+    view.pivot.set(cx, cy);
+    view.x = px + (cx - ox);
+    view.y = py + (cy - oy);
+    gsap.to(view.scale, {
+      x: peak, y: peak, duration: durationMs / 1000,
+      yoyo: true, repeat: 1, ease: 'sine.inOut',
+      onComplete: () => { view.pivot.set(ox, oy); view.x = px; view.y = py; },
+    });
+  }
+
+  // Decorate each winning cell with a little pulse in addition to playWin.
+  reelSet.events.on('win:symbol', (symbol) => {
+    scaleFromCenter((symbol as ReelSymbol).view, 1.1, 120);
   });
+
+  const presenter = new WinPresenter(reelSet, { stagger: 70, cycleGap: 700 });
+  reelSet.events.on('spin:start', () => presenter.abort());
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const p = reelSet.spin();
+      await new Promise(r => setTimeout(r, 150));
+      reelSet.setResult(GRID.map((visible) => ({ visible })));
+      await p;
+      await new Promise(r => setTimeout(r, 220));
+      await presenter.show(WINS);
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => { presenter.destroy(); lineLayer.destroy({ children: true }); },
+  };
 }
-
-// Decorate each winning cell with a little pulse in addition to playWin.
-reelSet.events.on('win:symbol', (symbol) => {
-  scaleFromCenter(symbol.view, 1.1, 120);
-});
-
-const presenter = new WinPresenter(reelSet, { stagger: 70, cycleGap: 700 });
-reelSet.events.on('spin:start', () => presenter.abort());
-
-return {
-  reelSet,
-  onSpin: async () => {
-    const p = reelSet.spin();
-    await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID.map((visible) => ({ visible })));
-    await p;
-    await new Promise(r => setTimeout(r, 220));
-    await presenter.show(WINS);
-  },
-  cleanup: () => { presenter.destroy(); lineLayer.destroy({ children: true }); },
-};

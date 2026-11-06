@@ -2,11 +2,10 @@
 title: ReelSetBuilder
 order: 1
 eyebrow: API
-description: Fluent builder for ReelSet. Reduces ~100 lines of manual wiring to
-  ~10, validates everything at .build() time.
+description: The fluent builder for ReelSet. Each method sets one part of the configuration, and build() checks it and returns the set.
 ---
 
-Every method returns `this` so you can chain. `build()` validates and returns a [`ReelSet`](/docs/api-reelset/). missing required calls throw with a single error listing every problem.
+Every method returns `this`, so calls chain. `build()` validates the configuration and returns a [`ReelSet`](/reference/api-reelset/). If a required call is missing, it throws one error that lists every problem.
 
 ## Required
 
@@ -18,44 +17,44 @@ Every method returns `this` so you can chain. `build()` validates and returns a 
 | `.symbols((r) => { r.register(...) })` | At least one symbol id. |
 | `.ticker(pixiTicker)` | Drives frame updates. |
 
-Missing any of these throws at `.build()` with a human-readable list of problems.
+Missing any of these throws at `.build()` with a readable list of problems.
 
 ## Optional
 
 | Method | Default |
 |---|---|
 | `.symbolGap(x, y)` | `{ x: 0, y: 0 }` |
-| `.bufferSymbols(n)` or `.bufferSymbols({ start, end })` | `1` (clamped to ≥ 1. the motion layer needs one buffer cell each side for wrap detection). `start` is the smaller main coordinate (above for vertical, left for horizontal), whichever way the reel travels. |
+| `.bufferSymbols(n)` or `.bufferSymbols({ start, end })` | `1`. Values below 1 are clamped to 1, because the motion layer needs one buffer cell on each side to detect wraps. `start` is the end at the smaller main coordinate (above for vertical, left for horizontal), whichever way the reel travels. |
 | `.weights({ id: n })` | `10` for each registered symbol |
-| `.randomSymbols(pool, scope?)` | No pools. Narrows the RANDOM draw on top of `weights()`. `pool` is `{ weights?, exclude? }`; `scope` is `{ reel?, slots?: 'spinning' \| 'buffer' \| 'bufferStart' \| 'bufferEnd' }` (default: every reel, every random cell). Each layer stacks on the wider ones, so a side pool narrows what `'buffer'` already allows. Same pools at run time: `reelSet.randomSymbols`. |
-| `.symbolData({ id: { zIndex, unmask, size, weight } })` | Per-symbol metadata. Auto-routes `unmask`; `size: { reels, cells }` beyond 1x1 declares a big symbol. `reels` spans the cross axis, `cells` the main axis, in every orientation. A big symbol defaults to weight `0` (landed only); a tall one (`reels: 1`) given a weight streams past during the spin as well. |
-| `.reelExtents([n,...])` | Per-reel MAIN-axis extents for pyramid layouts (pixel height when vertical, width when horizontal). Derived from the cell count if unset. |
-| `.reelAnchor('start' \| 'center' \| 'end')` | `'center'`. alignment of short reels along the MAIN axis, inside the longest reel's extent. |
+| `.randomSymbols(pool, scope?)` | No pools. Narrows the random draw on top of `weights()`. `pool` is `{ weights?, exclude? }`; `scope` is `{ reel?, slots?: 'spinning' \| 'buffer' \| 'bufferStart' \| 'bufferEnd' }` (default: every reel, every random cell). Each layer narrows the wider ones, so a side pool narrows what `'buffer'` already allows. The same pools are available at run time as `reelSet.randomSymbols`. |
+| `.symbolData({ id: { zIndex, unmask, size, weight } })` | Per-symbol metadata. Routes `unmask` for you. `size: { reels, cells }` beyond 1x1 declares a big symbol; `reels` spans the cross axis and `cells` the main axis, in every orientation. A big symbol defaults to weight `0` (it only lands); a tall one (`reels: 1`) given a weight also streams past during the spin. |
+| `.reelExtents([n,...])` | Per-reel main-axis extents for pyramid layouts (pixel height when vertical, width when horizontal). Derived from the cell count if unset. |
+| `.reelAnchor('start' \| 'center' \| 'end')` | `'center'`. How short reels align along the main axis, inside the longest reel's extent. |
 | `.speed(name, profile)` | `SpeedPresets.NORMAL` under `'normal'` |
 | `.initialSpeed(name)` | `'normal'` |
 | `.offsetConfig(config)` | `{ mode: 'none' }` |
 | `.spinningMode(mode)` | `new StandardMode()` |
-| `.frameMiddleware(mw)` | *(none)*. add as many as you want; sorted by priority. |
-| `.phases((f) => { f.register(...) })` | Built-in `START`/`SPIN`/`STOP`/`ANTICIPATION` (+ cascade phases when `.tumble()` is used). `f.register(key, Class, options)` re-registers a built-in with options; `{ steps }` edits its step list, see [Phases](/docs/api-phases/#steps). |
-| `.skipMode('slam' \| 'quicken')` | `'slam'`. What a skip press does to the reels it frees when `requestSkip()` / `skipSpin()` do not say. See [ReelSet](/docs/api-reelset/). |
-| `.tumble({ fall, dropIn })` | *(unset; required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`)*. see [the Tumble section](#tumble) below. |
-| `.multiways({ minCells, maxCells, reelExtent })` | *(unset; required for `setShape(...)`)*. `reelExtent` is a MAIN-axis extent. |
-| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. which screen axis the strip travels along. See [Orientation & direction](/guides/orientation-and-direction/). |
-| `.direction('forward' \| 'reverse')` | `'forward'`. which way along that axis symbols move. `'reverse'` on a vertical set is a roll-up. |
-| `.directionPerReel([d,...])` | *(unset)*. per-reel override; length must equal `reels()`. Cannot be combined with cross-reel big symbols. |
-| `.cellStacking('ascending' \| 'descending')` | `'ascending'`. which cell draws in front. Geometric: `direction('reverse')` does NOT flip it. |
-| `.reelStacking('ascending' \| 'descending')` | `'ascending'`. which reel draws in front. |
+| `.frameMiddleware(mw)` | *(none)*. Add as many as you need. They run sorted by priority. |
+| `.phases((f) => { f.register(...) })` | Built-in `START`/`SPIN`/`STOP`/`ANTICIPATION` (plus the cascade phases when `.tumble()` is used). `f.register(key, Class, options)` re-registers a built-in with options; `{ steps }` edits its step list, see [Phases](/reference/api-phases/#steps). |
+| `.skipMode('slam' \| 'quicken')` | `'slam'`. What a skip press does to the reels it frees when `requestSkip()` / `skipSpin()` do not say. See [ReelSet](/reference/api-reelset/). |
+| `.tumble({ fall, dropIn })` | *(unset)*. Required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`. See [the Tumble section](#tumble) below. |
+| `.multiways({ minCells, maxCells, reelExtent })` | *(unset)*. Required for `setShape(...)`. `reelExtent` is a main-axis extent. |
+| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. Which screen axis the strip travels along. See [Sideways and upward reels](/mechanics/orientation-and-direction/#concept). |
+| `.direction('forward' \| 'reverse')` | `'forward'`. Which way along that axis symbols move. `'reverse'` on a vertical set is a roll-up. |
+| `.directionPerReel([d,...])` | *(unset)*. A per-reel override. The array length must equal `reels()`. Cannot be combined with cross-reel big symbols. |
+| `.cellStacking('ascending' \| 'descending')` | `'ascending'`. Which cell draws in front. This is geometric, so `direction('reverse')` does not flip it. |
+| `.reelStacking('ascending' \| 'descending')` | `'ascending'`. Which reel draws in front. |
 | `.pinMigrationDuration(ms \| fn)` | `200` (MultiWays only) |
 | `.pinMigrationEase(ease)` | `'power2.out'` (MultiWays only) |
-| `.maskStrategy(strategy)` | Per-reel `RectMaskStrategy`. Auto-switches to `SharedRectMaskStrategy` when big or unmasked symbols are registered and the CROSS-axis gap is > 0. A custom strategy takes one `MaskContext` and must declare `version = MASK_STRATEGY_VERSION`. |
-| `.gsap(instance)` | The package's own `gsap` import. Use this when your app and the engine resolve to different `gsap` instances (symlinked workspaces, npm link, misconfigured `dedupe`). Bound PER SET at `build()`; pass the same instance to `driveGsapWithTicker(ticker, instance)`. |
+| `.maskStrategy(strategy)` | Per-reel `RectMaskStrategy`. Switches to `SharedRectMaskStrategy` on its own when big or unmasked symbols are registered and the cross-axis gap is above 0. A custom strategy takes one `MaskContext` and must declare `version = MASK_STRATEGY_VERSION`. |
+| `.gsap(instance)` | The package's own `gsap` import. Use this when your app and the engine resolve to different `gsap` instances (symlinked workspaces, npm link, a misconfigured `dedupe`). Bound per set at `build()`; pass the same instance to `driveGsapWithTicker(ticker, instance)`. |
 | `.initialFrame(ColumnTarget[])` | Random per `weights()`. One `ColumnTarget` per reel: `{ visible, bufferStart?, bufferEnd? }`. |
-| `.rng(fn)` | `Math.random`. Source for every symbol the engine picks itself -- the strip you watch scroll, and any buffer padding. Must return `[0, 1)`. Server-authoritative outcomes do **not** make that visible sequence reproducible; pass a seeded, audited PRNG if you need to replay a spin from its seed. |
-| `.poolCapacity(n)` | The whole strip (visible + buffer), per symbol id, so a grid that briefly goes all-one-symbol still recycles. Lower it to cap memory on very large grids; raise it for unusually heavy simultaneous swaps. |
+| `.rng(fn)` | `Math.random`. The source for every symbol the engine picks itself: the strip you watch scroll, and any buffer padding. Must return a number in `[0, 1)`. A server-authoritative outcome does not make that visible sequence reproducible. Pass a seeded, audited PRNG if you need to replay a spin from its seed. |
+| `.poolCapacity(n)` | The whole strip (visible plus buffer) per symbol id, so a grid that briefly shows one symbol everywhere still recycles. Lower it to cap memory on very large grids. Raise it for unusually heavy simultaneous swaps. |
 
 ## .build()
 
-Validates every required field, instantiates every subsystem, returns a `ReelSet`. Throws synchronously with the full list of problems. you never see a half-built reel set.
+Validates every required field, instantiates every subsystem and returns a `ReelSet`. If anything is wrong it throws synchronously with the full list of problems, so you never get a half-built reel set.
 
 ## Minimal example
 
@@ -78,7 +77,7 @@ const reelSet = new ReelSetBuilder()
 
 ## Tumble
 
-`.tumble(config?)` enables cascade mechanics. It replaces the strip-spin + bounce-stop chain with a three-phase pipeline (`cascade:fall` · `cascade:place` · `cascade:dropIn`) and flips the default spin mode to `'cascade'` for that builder.
+`.tumble(config?)` enables cascade mechanics. It replaces the strip-spin and bounce-stop chain with three phases, `cascade:fall`, `cascade:place` and `cascade:dropIn`, and makes `'cascade'` the default spin mode for that builder.
 
 ```ts
 .tumble({
@@ -92,35 +91,35 @@ const reelSet = new ReelSetBuilder()
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `duration` | `number` (ms) | `300` | Each symbol's fall-out tween length. |
-| `ease` | GSAP easing string | `'sine.in'` | Gravity feel. Any [GSAP easing](https://gsap.com/docs/v3/Eases) works. |
-| `cellStagger` | `number` (ms) | `0` | Delay between successive rows starting their fall. `0` = every row falls together. |
-| `cellOrder` | `'auto' \| 'endFirst' \| 'startFirst'` | `'auto'` | Which row begins first. `'auto'` starts at the gravity-exit end, so the default pairs with `setDropOrder('ltr')` for the canonical "bottom-left first, top-right last" feel, and inverts by itself when gravity does. `'endFirst'`/`'startFirst'` pin a geometric end. |
+| `ease` | GSAP easing string | `'sine.in'` | The gravity feel. Any [GSAP easing](https://gsap.com/docs/v3/Eases) works. |
+| `cellStagger` | `number` (ms) | `0` | Delay between successive rows starting their fall. `0` means every row falls together. |
+| `cellOrder` | `'auto' \| 'endFirst' \| 'startFirst'` | `'auto'` | Which row begins first. `'auto'` starts at the end gravity exits from, so the default pairs with `setDropOrder('ltr')` for the usual bottom-left first, top-right last order, and it inverts on its own when gravity does. `'endFirst'` and `'startFirst'` pin a geometric end. |
 
 ### TumbleDropInConfig
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `duration` | `number` (ms) | `600` | Each symbol's drop-in tween length. |
-| `ease` | GSAP easing string | `'power2.out'` | Clean deceleration with **no overshoot**. matches commercial slots that play a landing spine animation after the drop. Use `'back.out(1.5)'` for soft overshoot, `'bounce.out'` for cartoon bounce, `'expo.out'` for slam. |
-| `cellStagger` | `number` (ms) | `60` | Delay between successive rows starting their drop. `0` = simultaneous (the canonical refill choice). |
-| `cellOrder` | `'auto' \| 'endFirst' \| 'startFirst'` | `'auto'` | Which row arrives first when `cellStagger > 0`. `'auto'` fills from the gravity-exit end, the way a stack settles from its floor up. |
-| `distance` | `'perHole' \| 'auto' \| number` | `'perHole'` | `'perHole'` is gravity-correct (each symbol falls exactly its own offset). `'auto'` makes every symbol traverse the full column in unison ("rain column" feel). A number forces a uniform pixel distance. |
+| `ease` | GSAP easing string | `'power2.out'` | A clean deceleration with no overshoot, which matches commercial slots that play a landing Spine animation after the drop. Use `'back.out(1.5)'` for a soft overshoot, `'bounce.out'` for a cartoon bounce, `'expo.out'` for a slam. |
+| `cellStagger` | `number` (ms) | `60` | Delay between successive rows starting their drop. `0` means all rows drop together, the usual choice for a refill. |
+| `cellOrder` | `'auto' \| 'endFirst' \| 'startFirst'` | `'auto'` | Which row arrives first when `cellStagger > 0`. `'auto'` fills from the end gravity exits from, the way a stack settles from its floor up. |
+| `distance` | `'perHole' \| 'auto' \| number` | `'perHole'` | `'perHole'` drops each symbol exactly its own offset, which is what gravity would do. `'auto'` makes every symbol travel the full column together, the rain-column look. A number forces one pixel distance for all of them. |
 
 ### Picking a feel
 
-Five preset recipes you can copy verbatim. see the [tumble feels recipe](/recipes/tumble-feels/) for side-by-side canvases.
+Five presets you can copy as they are. The [tumble feels recipe](/mechanics/cascade/#tumble-feels) shows them side by side.
 
 | Feel | fall.ease | dropIn.ease | dropIn.cellStagger | When to use |
 |---|---|---|---|---|
 | Classic | `sine.in` | `back.out(1.6)` | 50 ms | Default. Start here. |
 | Cartoon bounce | `sine.in` | `bounce.out` | 70 ms | Multi-bounce landing. |
-| Slam | `power4.in` | `expo.out` | 25 ms | Turbo mode. sub-half-second tumbles. |
-| Rain column | `sine.in` | `sine.in` | 0 ms (+ `distance: 'auto'`) | Match-3 / puzzle / chess-board grids. |
-| Wave | `sine.in` | `back.out(2.0)` | 110 ms | Strong per-row stagger. row-by-row arrival. |
+| Slam | `power4.in` | `expo.out` | 25 ms | Turbo mode, with tumbles under half a second. |
+| Rain column | `sine.in` | `sine.in` | 0 ms (+ `distance: 'auto'`) | Match-3, puzzle and chess-board grids. |
+| Wave | `sine.in` | `back.out(2.0)` | 110 ms | Strong per-row stagger, so rows arrive one at a time. |
 
 ### Overriding a phase
 
-`.tumble()` registers three named phases (`cascade:fall`, `cascade:place`, `cascade:dropIn`). Each is an independently overridable `ReelPhase` subclass:
+`.tumble()` registers three named phases (`cascade:fall`, `cascade:place`, `cascade:dropIn`). Each is a `ReelPhase` subclass you can override on its own:
 
 ```ts
 builder
@@ -136,8 +135,8 @@ See [`docs/recipes/tumble-cascade.md`](https://github.com/schmooky/pixi-reels/bl
 
 | Field | Type | Notes |
 |---|---|---|
-| `holdReels` | `number[]` | Reel indices to FREEZE for this spin. Held reels skip `START`/`SPIN`/`STOP` entirely and stay on their current symbols. They count as already-landed for `spin:allLanded`. Out-of-range / duplicate / non-integer entries are silently filtered. `setAnticipation([...])` and `setStopDelays([...])` filter held indices too. |
-| `mode` | `'standard' \| 'cascade'` | Phase-chain selector for this spin. Overrides the builder default. `'cascade'` requires `.tumble(...)` on the builder. the engine throws at `spin()` if cascade phases aren't registered. |
+| `holdReels` | `number[]` | Reel indices to hold still for this spin. Held reels skip `START`, `SPIN` and `STOP` and stay on their current symbols. They count as already landed for `spin:allLanded`. Out-of-range, duplicate and non-integer entries are dropped without an error. `setAnticipation([...])` and `setStopDelays([...])` drop held indices too. |
+| `mode` | `'standard' \| 'cascade'` | Which phase chain this spin runs. Overrides the builder default. `'cascade'` requires `.tumble(...)` on the builder; without it the cascade phases are not registered and `spin()` throws. |
 
 ```ts
 // Hold reels 0 and 4; only the middle three reroll.
@@ -149,4 +148,4 @@ await spin;
 await reelSet.spin({ mode: 'cascade' });
 ```
 
-See the [spin lifecycle guide](/guides/spin-lifecycle/) for how these options interact with the event timeline, and the [cascades guide](/guides/cascades/) for the cascade-specific orchestration.
+See the [spin lifecycle guide](/mechanics/skip/#concept) for how these options interact with the event timeline, and the [cascades guide](/mechanics/cascade/#concept) for the cascade-specific orchestration.

@@ -15,15 +15,9 @@ export const OG = {
   surface: '#111114',
   fg: '#fafafa',
   muted: '#a1a1aa',
+  // zinc-300: the card subtitle, light enough to read in a feed thumbnail.
+  soft: '#d4d4d8',
   faint: '#71717a',
   border: '#27272a',
   borderSoft: '#1f1f23',
 } as const;
-
-/** Recipe/FAQ monogram badge color, mirroring `RecipePlaceholder.astro`. */
-export function badgeColor(hue: number): string {
-  return `hsl(${hue}, 68%, 52%)`;
-}
-export function tintSoft(hue: number): string {
-  return `hsl(${hue}, 70%, 55%)`;
-}

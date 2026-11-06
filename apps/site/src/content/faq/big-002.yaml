@@ -1,8 +1,9 @@
 id: big-002
 group: big
-question: How do I make a 3×3 colossal symbol overlay the grid?
+topic: big-symbols
+question: How do I make a 3x3 colossal symbol overlay the grid?
 answer: "Same mechanic with `size: { reels: 3, cells: 3 }` (via `.symbolData(...)`); use
   `SharedRectMaskStrategy` so the block is not clipped per reel."
 links:
-  - label: "Recipe: Big symbols (N×M)"
-    href: /recipes/big-symbols-mxn/
+  - label: "Recipe: Big symbols (NxM)"
+    href: /mechanics/big-symbols/#big-symbols-mxn

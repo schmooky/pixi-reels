@@ -1,11 +1,14 @@
 ---
 /**
- * Recipe card thumbnail. 16:10. Renders the recipe's preview media if a file
- * exists at `public/recipes/<slug>/card.<ext>` (or an explicit `image`
- * override), otherwise a generated placeholder. See `lib/recipeMedia.ts` for
- * the lookup convention.
+ * Recipe card thumbnail. 16:10. The slug's hand-drawn cover
+ * (`recipes-index/covers.ts`) wins, so the index reads as one set; a page
+ * without a cover falls back to its preview media at
+ * `public/recipes/<slug>/card.<ext>` (or an explicit `image` override), then
+ * to a generated placeholder. See `lib/recipeMedia.ts` for the lookup.
  */
 import { findCardMedia } from '../lib/recipeMedia.ts';
+import { hasRecipeCover } from './recipes-index/covers.ts';
+import RecipeCover from './recipes-index/RecipeCover.astro';
 import RecipePlaceholder from './RecipePlaceholder.astro';
 
 interface Props {
@@ -16,16 +19,17 @@ interface Props {
 }
 
 const { slug, title, image } = Astro.props as Props;
-const media = findCardMedia(slug, image);
+const cover = hasRecipeCover(slug);
+const media = cover ? null : findCardMedia(slug, image);
 ---
-<div class="relative aspect-[16/10] w-full overflow-hidden border-b border-border/60 bg-muted/30">
+<div class="relative aspect-[16/10] w-full overflow-hidden border-b border-border bg-muted/30">
   {media?.kind === 'image' && (
     <img
       src={media.src}
       alt={`${title} preview`}
       loading="lazy"
       decoding="async"
-      class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+      class="h-full w-full object-cover"
     />
   )}
   {media?.kind === 'video' && (
@@ -36,10 +40,11 @@ const media = findCardMedia(slug, image);
       playsinline
       preload="metadata"
       aria-label={`${title} preview`}
-      class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+      class="h-full w-full object-cover"
     >
       <source src={media.src} />
     </video>
   )}
-  {!media && <RecipePlaceholder title={title} />}
+  {cover && <RecipeCover slug={slug} />}
+  {!media && !cover && <RecipePlaceholder title={title} />}
 </div>

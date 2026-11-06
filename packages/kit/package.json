@@ -1,0 +1,61 @@
+{
+  "name": "@pixi-reels/kit",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The patterns the pixi-reels docs recipes run on: example symbols, bundled asset kits, the tap-to-spin control, the sound set and the recipe contract. Not engine API: import what fits, copy the rest into your game.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schmooky/pixi-reels.git",
+    "directory": "packages/kit"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./spine": "./src/spine.ts",
+    "./sound": "./src/sound.ts",
+    "./ways": "./src/ways.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./spine": {
+        "types": "./dist/spine.d.ts",
+        "import": "./dist/spine.js"
+      },
+      "./sound": {
+        "types": "./dist/sound.d.ts",
+        "import": "./dist/sound.js"
+      },
+      "./ways": {
+        "types": "./dist/ways.d.ts",
+        "import": "./dist/ways.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@esotericsoftware/spine-pixi-v8": "~4.2.110",
+    "@schmooky/zvuk": "^1.14.1",
+    "gsap": "^3.15.0",
+    "pixi-reels": "workspace:*",
+    "pixi-silk": "^0.1.0",
+    "pixi.js": "^8.20.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

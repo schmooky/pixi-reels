@@ -1,6 +1,14 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Expanding wild on a horizontal set',
+  topic: 'wilds-and-pins',
+  tags: ['wild', 'sticky', 'multiplier', 'mystery', 'respin', 'cell-pin', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // An expanding wild on a set that runs sideways.
 //
@@ -12,58 +20,65 @@
 //
 // The pin lifecycle is unchanged too: `turns: 3` keeps the expansion alive for
 // three more spins, and the engine expires it at zero.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const REELS = 3;  // 3 rows
+  const CELLS = 5;  // 5 cells along each row
+  const SIZE = 76;
+  const WILD = WILD_CARD.id;
+  const STICKY_TURNS = 3;
+  const FILLER = ['7', '8', '10', 'Q'];
 
-const REELS = 3;  // 3 rows
-const CELLS = 5;  // 5 cells along each row
-const SIZE = 76;
-const WILD = WILD_CARD.id;
-const STICKY_TURNS = 3;
-const FILLER = ['7', '8', '10', 'Q'];
+  const reelSet = new ReelSetBuilder()
+    .orientation('horizontal')
+    .reels(REELS)
+    .visibleCells(CELLS)
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(4, 4)
+    .symbols((r) => {
+      for (const sym of [...CARD_DECK, WILD_CARD]) {
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+    })
+    .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
+    .speed('normal', SpeedPresets.NORMAL)
+    .speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .orientation('horizontal')
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(4, 4)
-  .symbols((r) => {
-    for (const sym of [...CARD_DECK, WILD_CARD]) {
-      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
-    }
-  })
-  .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-// Any reel showing a wild turns wild end to end, for STICKY_TURNS spins. The
-// engine counts the turns down on every `spin:allLanded` and expires the pins
-// itself.
-reelSet.events.on('spin:allLanded', ({ symbols }) => {
-  for (let reel = 0; reel < symbols.length; reel++) {
-    if (!symbols[reel].includes(WILD)) continue;
-    for (let cell = 0; cell < symbols[reel].length; cell++) {
-      if (!reelSet.getPin(reel, cell)) {
-        reelSet.pin(reel, cell, WILD, { turns: STICKY_TURNS });
+  // Any reel showing a wild turns wild end to end, for STICKY_TURNS spins. The
+  // engine counts the turns down on every `spin:allLanded` and expires the pins
+  // itself.
+  reelSet.events.on('spin:allLanded', ({ symbols }) => {
+    for (let reel = 0; reel < symbols.length; reel++) {
+      if (!symbols[reel].includes(WILD)) continue;
+      for (let cell = 0; cell < symbols[reel].length; cell++) {
+        if (!reelSet.getPin(reel, cell)) {
+          reelSet.pin(reel, cell, WILD, { turns: STICKY_TURNS });
+        }
       }
     }
-  }
-});
+  });
 
-// Scripted: the wild alternates between the top row and the bottom one.
-const wildReels = [0, 2];
-let spinCount = 0;
+  // Scripted: the wild alternates between the top row and the bottom one.
+  const wildReels = [0, 2];
+  let spinCount = 0;
 
-return {
-  reelSet,
-  nextResult: () => {
-    const reel = wildReels[spinCount % wildReels.length];
-    const grid = Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
-    );
-    grid[reel][2] = WILD; // middle cell of the chosen row
-    spinCount++;
-    return grid;
-  },
-};
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () => {
+      const reel = wildReels[spinCount % wildReels.length];
+      const grid = Array.from({ length: REELS }, () =>
+        Array.from({ length: CELLS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
+      );
+      grid[reel][2] = WILD; // middle cell of the chosen row
+      spinCount++;
+      return grid;
+    },
+  });
+  return { reelSet };
+}

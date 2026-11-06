@@ -1,6 +1,14 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Nudge a horizontal set',
+  topic: 'nudge',
+  tags: ['nudge', 'stagger', 'spotlight', 'big-symbols', 'abort', 'skip', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
 
 // Nudging a set that runs sideways.
 //
@@ -16,63 +24,66 @@
 //      LEFT edge.
 //   2. Reel 2 reverse by 1  - the strip travels left, a wild enters at the
 //      RIGHT edge.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const SYMBOLS = [...CARD_DECK, WILD_CARD];
+  const REELS = 3;  // 3 rows
+  const CELLS = 5;  // 5 cells along each row
+  const SIZE = 76;
 
-const SYMBOLS = [...CARD_DECK, WILD_CARD];
-const REELS = 3;  // 3 rows
-const CELLS = 5;  // 5 cells along each row
-const SIZE = 76;
+  const FILLER = ['7', '8', '9', '10', 'J'];
+  const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+  const row = () => Array.from({ length: CELLS }, filler);
 
-const FILLER = ['7', '8', '9', '10', 'J'];
-const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
-const row = () => Array.from({ length: CELLS }, filler);
+  const reelSet = new ReelSetBuilder()
+    .orientation('horizontal')
+    .reels(REELS)
+    .visibleCells(CELLS)
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(4, 4)
+    .symbols((r) => {
+      for (const sym of SYMBOLS) {
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+    })
+    .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
+    .speed('normal', SpeedPresets.NORMAL)
+    .speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .orientation('horizontal')
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(4, 4)
-  .symbols((r) => {
-    for (const sym of SYMBOLS) {
-      r.register(sym.id, CardSymbol, {
-        color: sym.color,
-        label: sym.label,
-        textColor: sym.textColor,
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      // Land flat: no wilds anywhere.
+      const p = reelSet.spin();
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      reelSet.setResult(Array.from({ length: REELS }, () => ({ visible: row() })));
+      await p;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Travel-direction nudge: content slides toward the end edge (right),
+      // so the new cell arrives at cell 0 - the left of the screen.
+      await reelSet.nudge(0, {
+        distance: 1,
+        direction: 'forward',
+        incoming: ['wild'],
+        duration: 420,
       });
-    }
-  })
-  .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
 
-return {
-  reelSet,
-  onSpin: async () => {
-    // Land flat: no wilds anywhere.
-    const p = reelSet.spin();
-    await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult(Array.from({ length: REELS }, () => ({ visible: row() })));
-    await p;
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Travel-direction nudge: content slides toward the end edge (right),
-    // so the new cell arrives at cell 0 - the left of the screen.
-    await reelSet.nudge(0, {
-      distance: 1,
-      direction: 'forward',
-      incoming: ['wild'],
-      duration: 420,
-    });
-
-    // Against-travel nudge on another row: the new cell arrives at the last
-    // cell instead, on the right.
-    await reelSet.nudge(2, {
-      distance: 1,
-      direction: 'reverse',
-      incoming: ['wild'],
-      duration: 420,
-    });
-  },
-};
+      // Against-travel nudge on another row: the new cell arrives at the last
+      // cell instead, on the right.
+      await reelSet.nudge(2, {
+        distance: 1,
+        direction: 'reverse',
+        incoming: ['wild'],
+        duration: 420,
+      });
+    },
+  });
+  return { reelSet };
+}

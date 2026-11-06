@@ -1,7 +1,14 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, gsap, app,
-//                   DebugPlaque
-//
+import { CARD_DECK, CardSymbol, ReelSetBuilder } from 'pixi-reels';
+import { readout, tapToSpin } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Reveal a mystery symbol: out, swap, in',
+  topic: 'wilds-and-pins',
+  tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
+} as const satisfies RecipeMeta;
+
 // MYSTERY REVEAL: OUT, SWAP, IN.
 //
 // `setSymbolAt` already swaps a symbol's identity, but it swaps it INSTANTLY.
@@ -29,75 +36,81 @@
 // `playDestroy`, which is tuned as the cascade's "this cell was a winner and is
 // being consumed" poof; a reveal is a different beat and borrowing that one
 // reads wrong.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const MYST = 'MYST';
+  const PRIZES = ['WILD', 'GOLD'];
+  const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const MYST = 'MYST';
-const PRIZES = ['WILD', 'GOLD'];
-const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+      }
+      r.register(MYST, CardSymbol, { color: 0x2b2440, label: '?', textColor: 0xb388ff });
+      r.register('WILD', CardSymbol, { color: 0xb388ff, label: 'W', textColor: 0x241a33 });
+      r.register('GOLD', CardSymbol, { color: 0xffcc44, label: 'G', textColor: 0x3a2600 });
+    })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-    r.register(MYST, CardSymbol, { color: 0x2b2440, label: '?', textColor: 0xb388ff });
-    r.register('WILD', CardSymbol, { color: 0xb388ff, label: 'W', textColor: 0x241a33 });
-    r.register('GOLD', CardSymbol, { color: 0xffcc44, label: 'G', textColor: 0x3a2600 });
-  })
-  .ticker(app.ticker)
-  .build();
+  const H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const H = ROWS * SIZE + (ROWS - 1) * GAP;
-const W = REELS * SIZE + (REELS - 1) * GAP;
+  const hud = readout.plaque({ text: 'The ? tiles land, then reveal', minWidth: W, maxWidth: W });
+  hud.position.set(0, H + 10);
+  reelSet.addChild(hud);
 
-const hud = new DebugPlaque({ text: 'press spin - the ? tiles land, then reveal', minWidth: W, maxWidth: W });
-hud.position.set(0, H + 10);
-reelSet.addChild(hud);
+  // Which reel carries the mystery tiles this round. Rotated so the demo does not
+  // always play out in the same column.
+  let mysteryReel = 1;
 
-// Which reel carries the mystery tiles this round. Rotated so the demo does not
-// always play out in the same column.
-let mysteryReel = 1;
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      for (let cell = 0; cell < ROWS; cell++) grid[mysteryReel].visible[cell] = MYST;
 
-return {
-  reelSet,
-  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    for (let cell = 0; cell < ROWS; cell++) grid[mysteryReel].visible[cell] = MYST;
+      hud.text = `reel ${mysteryReel + 1} is mystery`;
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 300));
+      reelSet.setResult(grid);
+      await p;
 
-    hud.text = `reel ${mysteryReel + 1} is mystery`;
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 300));
-    reelSet.setResult(grid);
-    await p;
+      // Let the board settle before the reveal starts, so the two beats read as
+      // separate events rather than as one long stop.
+      await new Promise((r) => setTimeout(r, 260));
 
-    // Let the board settle before the reveal starts, so the two beats read as
-    // separate events rather than as one long stop.
-    await new Promise((r) => setTimeout(r, 260));
+      const prize = PRIZES[Math.floor(Math.random() * PRIZES.length)];
+      const cells = Array.from({ length: ROWS }, (_, cell) => ({
+        reel: mysteryReel,
+        cell,
+        id: prize,
+      }));
 
-    const prize = PRIZES[Math.floor(Math.random() * PRIZES.length)];
-    const cells = Array.from({ length: ROWS }, (_, cell) => ({
-      reel: mysteryReel,
-      cell,
-      id: prize,
-    }));
+      hud.text = `revealing ${prize}...`;
+      await reelSet.swapSymbols(cells, {
+        // Peel the tiles away top to bottom...
+        outDelay: (_, i) => i * 0.06,
+        // ...hold the empty column for a beat. This is where the reveal sound
+        // goes, and `onSwapped` is the hook for anything that has to wait on a
+        // real animation rather than a guessed number of milliseconds.
+        holdMs: 200,
+        // ...then bring the prize in, same order.
+        inDelay: (_, i) => i * 0.09,
+      });
 
-    hud.text = `revealing ${prize}...`;
-    await reelSet.swapSymbols(cells, {
-      // Peel the tiles away top to bottom...
-      outDelay: (_, i) => i * 0.06,
-      // ...hold the empty column for a beat. This is where the reveal sound
-      // goes, and `onSwapped` is the hook for anything that has to wait on a
-      // real animation rather than a guessed number of milliseconds.
-      holdMs: 200,
-      // ...then bring the prize in, same order.
-      inDelay: (_, i) => i * 0.09,
-    });
-
-    hud.text = `reel ${mysteryReel + 1}: ? -> ${prize}`;
-    mysteryReel = (mysteryReel + 1) % REELS;
-  },
-};
+      hud.text = `reel ${mysteryReel + 1}: ? -> ${prize}`;
+      mysteryReel = (mysteryReel + 1) % REELS;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
+  };
+}

@@ -1,10 +1,11 @@
 id: pins-006
 group: pins
+topic: wilds-and-pins
 question: How do I move a pin from one cell to another with animation?
 answer: >-
   `await reelSet.movePin({ reel: fromReel, cell: fromCell }, { reel: toReel, cell: toCell }, { duration, easing })`
-  flies the pin to a new cell. Only callable at rest -- it throws while spinning,
+  flies the pin to a new cell. Only callable at rest, it throws while spinning,
   and it throws if a pin already sits at the destination.
 links:
   - label: "Recipe: Walking wild (CellPin)"
-    href: /recipes/walking-wild-pin/
+    href: /mechanics/wilds-and-pins/#walking-wild-pin

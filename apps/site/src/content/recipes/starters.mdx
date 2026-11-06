@@ -1,70 +1,80 @@
 ---
-title: "Starters"
-group: starters
-oneLiner: "Copy-paste starting templates: classic lines, cascade tumble, MultiWays, Hold and Win, plus the horizontal and reverse variants."
-order: 0
-tags:
-  - starter
-  - 5x3
-  - cascade
-  - multiways
-  - hold-and-win
-  - horizontal
-  - reverse
-  - orientation
+title: Starters
 ---
 
-Canonical starting templates. copy one, swap in your art and math, and ship.
+Each starter is a small working slot. The line slots come first, then the other common layouts, then the symbol pools that control what the reels draw while they spin.
+
+## Line slots
 
 <a id="classic-5x3"></a>
 
-## Classic 5×3 starter
+### Classic 5x3 slot
 
-The copy-paste starting point for a left-to-right line-pay slot, the foundation of most slot games.
+A 5x3 slot that pays lines from left to right. Most slot games start from this layout.
 
 <RecipeDemo code="classic-5x3" />
 
-<a id="cascade-6x5"></a>
-
-## Cascade 6x4 tumble
-
-Modern tumble/cascade slot on runCascade; card symbols first, then the identical build with real Spine art.
-
-<RecipeDemo code="cascade-6x5" />
-<RecipeDemo code="cascade-6x5-spine" />
-
-## MultiWays
-
-Per-spin cell variation: each reel lands on a different cell count between minCells and maxCells, and total ways is the product of the per-reel cell counts.
-
-**Gotcha:** call reelSet.setShape(rowsPerReel) BEFORE setResult(), with serverGrid[i].length === rowsPerReel[i].
-
-<RecipeDemo code="multiways" />
-
-<a id="hold-and-win"></a>
-
-## Hold & Win respin
-
-Coins lock on land and respin until the grid fills; board events drive the HUD.
-
-<RecipeDemo code="hold-and-win" />
-
 <a id="starter-horizontal-5x3"></a>
 
-## Horizontal starter
+### Horizontal
 
-The same template with the strips turned sideways: three reels stacked down the screen, each scrolling along X. One call, `.orientation('horizontal')`, plus the cell size you want on screen.
+The same template with the reels turned sideways. Three reels are stacked down the screen and each one scrolls along x. The change is one call, `.orientation('horizontal')`, plus the cell size you want on screen.
 
-**Gotcha:** `symbolSize(w, h)` and `symbolGap(x, y)` stay screen-space here, so on a horizontal set the strip advances by the symbol WIDTH and `x` is the gap between cells while `y` is the gap between reels. Index space does not move: `reels(3).visibleCells(5)` and the `ColumnTarget[]` you pass `setResult()` are unchanged.
+`symbolSize(w, h)` and `symbolGap(x, y)` stay in screen space. On a horizontal set the strip advances by the symbol width, `x` is the gap between cells and `y` is the gap between reels. Index space does not change, so `reels(3).visibleCells(5)` and the `ColumnTarget[]` you pass to `setResult()` stay the same.
 
 <RecipeDemo code="starter-horizontal-5x3" />
 
 <a id="starter-reverse-5x3"></a>
 
-## Reverse starter
+### Reverse
 
-Classic 5x3, travelling the other way: symbols rise and each reel lands from below. The whole diff against the classic starter is `.direction('reverse')`.
+The classic 5x3 with the reels running the other way. Symbols rise and each reel lands from below. The only change from the classic starter is `.direction('reverse')`.
 
-**Gotcha:** buffers stay geometric. `bufferStart` is still the slot above the window, so on a reverse reel the "next up" slot is `bufferEnd`. Read `reel.axis.feedEdge` rather than assuming. See [orientation and direction](/recipes/orientation-and-direction/#roll-up) for the per-reel and mixed-axis variants.
+Buffers stay geometric. `bufferStart` is still the slot above the window, so on a reverse reel the next symbol to come in sits in `bufferEnd`. Read `reel.axis.feedEdge` instead of assuming. See [orientation and direction](/mechanics/orientation-and-direction/#roll-up) for per-reel and mixed-axis setups.
 
 <RecipeDemo code="starter-reverse-5x3" />
+
+## Other layouts
+
+<a id="cascade-6x5"></a>
+
+### Cascade 6x4
+
+A tumble slot built on `runCascade`. The first demo uses card symbols. The second is the same build with Spine art.
+
+<RecipeDemo code="cascade-6x5" />
+<RecipeDemo code="cascade-6x5-spine" />
+
+### MultiWays
+
+Each reel lands on its own number of cells between `minCells` and `maxCells` on each spin. The number of ways is the product of the per-reel cell counts.
+
+Call `reelSet.setShape(rowsPerReel)` before `setResult()`, with `serverGrid[i].length === rowsPerReel[i]`.
+
+<RecipeDemo code="multiways" />
+
+<a id="hold-and-win"></a>
+
+### Hold & Win
+
+Coins lock where they land and the free cells respin until the grid fills. Board events drive the HUD. The [Hold & Win page](/mechanics/hold-and-win/) builds on this board.
+
+<RecipeDemo code="hold-and-win" />
+
+<a id="symbol-pools"></a>
+
+## Which symbols may spawn where
+
+`weights()` is one table for the whole set. A pool is layered on top of it for a scope, which can be one reel, the buffer cells, or the buffer cells of one reel. A pool changes only the random draw. An explicit `setResult` target always wins.
+
+### Keep a symbol out of the buffers
+
+Each spin moves to the next pool state. First there is no pool, then COIN is kept out of the buffers of reel 1 (the second reel, since indices start at 0), then out of the buffers above the window, then out of all buffers. The labels above and below the grid show what the hidden cells hold, so you can watch COIN stop parking there.
+
+<RecipeDemo code="buffer-pool-exclude" height={440} />
+
+### A draw table per reel
+
+Each reel can have its own draw table. Watch the spin, not the landing. Reel 0 draws low cards only, reel 2 is mostly wilds while it scrolls, and reel 4 never draws a wild. All five share the same `weights()` underneath.
+
+<RecipeDemo code="per-reel-symbol-pool" height={400} />

@@ -1,0 +1,32 @@
+---
+title: Spinning art
+---
+
+Each demo spins through `StaticSpinSymbol`. The first bakes the blur for plain cards, the second does the same for a Spine set, and the third uses blur frames drawn by hand.
+
+<a id="static-spin-blur"></a>
+<a id="auto-baked-motion-blur-static-spin"></a>
+
+## Baked blur
+
+The cache snapshots each card once and bakes a motion blur from the snapshot, and the reels spin on those textures. There is no blur art in the demo, and no filter runs during the spin. `prewarmSpinTextures` bakes every id before the first spin so it does not stall.
+
+<RecipeDemo code="static-spin-blur" />
+
+<a id="static-spin-spine"></a>
+<a id="spin-static-not-spine"></a>
+
+## Spine at rest
+
+At rest every cell is a live Spine skeleton with its idle and landing animations. When the reels start, each cell switches to a cached snapshot and the skeleton is deactivated, so no skeleton updates while the reels spin. On landing the skeletons come back and play their landing animation.
+
+<RecipeDemo code="static-spin-spine" height={340} />
+
+<a id="static-spin-provided-blur"></a>
+<a id="bring-your-own-blur-textures"></a>
+
+## Your own blur art
+
+The round symbols use blur frames drawn in the atlas, handed to the cache with `cache.setStatic(id, texture)` and `cache.setBlurred(id, texture)`. The cache uses those as they are and never bakes or destroys them. The royal symbols have no blur frames, so the cache bakes theirs. Both kinds spin through the same `StaticSpinSymbol`.
+
+<RecipeDemo code="static-spin-provided-blur" />

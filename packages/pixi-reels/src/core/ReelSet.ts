@@ -560,7 +560,10 @@ export class ReelSet extends Container implements Disposable {
    */
   private static readonly PIN_OVERLAY_Z_INDEX = Z_INDEX_BUDGET.pinOverlay;
 
-  private _events = new EventEmitter<ReelSetEvents>();
+  // Not `_events`: that is the PixiJS Container's own listener store, and
+  // `super.destroy()` resets it, so a `finally` that unsubscribed from a
+  // field of that name after `destroy()` threw.
+  private _bus = new EventEmitter<ReelSetEvents>();
   private _reels: Reel[];
   private _viewport: ReelViewport;
   private _spinController: SpinController;
@@ -676,7 +679,7 @@ export class ReelSet extends Container implements Disposable {
       this._speedManager,
       params.frameBuilder,
       params.phaseFactory,
-      this._events,
+      this._bus,
       params.config.ticker,
       params.spinningMode,
       params.defaultSpinMode,
@@ -695,14 +698,14 @@ export class ReelSet extends Container implements Disposable {
     );
     this._spinController.defaultSkipMode = params.skipMode;
 
-    this._spotlight = new SymbolSpotlight(params.reels, params.viewport, this._events);
+    this._spotlight = new SymbolSpotlight(params.reels, params.viewport, this._bus);
 
     this.addChild(this._viewport);
 
     // Pin lifecycle: decrement numeric turns when the spin lands; clear 'eval'
     // pins when the next spin starts.
-    this._events.on('spin:allLanded', () => this._onSpinLanded());
-    this._events.on('spin:start', () => this._onSpinStart());
+    this._bus.on('spin:allLanded', () => this._onSpinLanded());
+    this._bus.on('spin:start', () => this._onSpinStart());
   }
 
   // ─── Event system ──────────────────────────────────────────
@@ -710,7 +713,7 @@ export class ReelSet extends Container implements Disposable {
 
   /** The event emitter for reel-specific events. */
   get events(): EventEmitter<ReelSetEvents> {
-    return this._events;
+    return this._bus;
   }
 
   // ─── Spin API ─────────────────────────────────────────────
@@ -836,7 +839,7 @@ export class ReelSet extends Container implements Disposable {
       wasSkipped = true;
       skipContext = skipContextOf(info);
     };
-    this._events.on('skip:requested', onSkip);
+    this._bus.on('skip:requested', onSkip);
 
     const onAbort = (): void => {
       wasSkipped = true;
@@ -859,7 +862,7 @@ export class ReelSet extends Container implements Disposable {
         duration: performance.now() - startTime,
       };
     } finally {
-      this._events.off('skip:requested', onSkip);
+      this._bus.off('skip:requested', onSkip);
       if (opts.signal) {
         opts.signal.removeEventListener('abort', onAbort);
       }
@@ -1067,7 +1070,7 @@ export class ReelSet extends Container implements Disposable {
     const z = opts?.zIndex === undefined ? 1000 : opts.zIndex;
 
     const signal = opts?.signal;
-    this._events.emit('cascade:destroy:start', { cells });
+    this._bus.emit('cascade:destroy:start', { cells });
     try {
       // allSettled (not all) so a single misbehaving playDestroy doesn't
       // strand its siblings mid-animation. Failed cells are surfaced via
@@ -1109,7 +1112,7 @@ export class ReelSet extends Container implements Disposable {
           );
         }
       }
-      this._events.emit('cascade:destroy:end',
+      this._bus.emit('cascade:destroy:end',
         failed.length > 0 ? { cells, failed } : { cells });
     } finally {
       if (dim) this._viewport.hideDim();
@@ -1167,7 +1170,7 @@ export class ReelSet extends Container implements Disposable {
       wasSkipped = true;
       skipContext = skipContextOf(info);
     };
-    this._events.on('skip:requested', onSkip);
+    this._bus.on('skip:requested', onSkip);
 
     const onAbort = (): void => {
       wasSkipped = true;
@@ -1195,7 +1198,7 @@ export class ReelSet extends Container implements Disposable {
         totalWinners += winners.length;
 
         const stage = chainLength + 1;
-        this._events.emit('cascade:chain:start', {
+        this._bus.emit('cascade:chain:start', {
           chain: stage,
           winners,
           currentGrid: current,
@@ -1273,14 +1276,14 @@ export class ReelSet extends Container implements Disposable {
         chainLength += 1;
         current = this.getVisibleGrid();
 
-        this._events.emit('cascade:chain:end', {
+        this._bus.emit('cascade:chain:end', {
           chain: stage,
           winners,
           nextGrid: current,
         });
       }
     } finally {
-      this._events.off('skip:requested', onSkip);
+      this._bus.off('skip:requested', onSkip);
       if (opts.signal) {
         opts.signal.removeEventListener('abort', onAbort);
       }
@@ -1742,13 +1745,13 @@ export class ReelSet extends Container implements Disposable {
         // Fires after Reel.nudge has validated, pre-placed, and snapped:
         // right before the GSAP tween starts. Now the bus event matches
         // observable state.
-        this._events.emit('nudge:start', {
+        this._bus.emit('nudge:start', {
           reelIndex: reel,
           distance: options.distance,
           direction: options.direction,
         });
       });
-      this._events.emit('nudge:complete', {
+      this._bus.emit('nudge:complete', {
         reelIndex: reel,
         distance: options.distance,
         direction: options.direction,
@@ -1757,13 +1760,11 @@ export class ReelSet extends Container implements Disposable {
       return result;
     } catch (err) {
       const isAbort = err instanceof Error && err.name === 'AbortError';
-      // If the ReelSet was destroyed mid-nudge, `super.destroy({children: true})`
-      // has already torn down our event bus (PixiJS Container has its own
-      // `_events` field that we shadow: after super.destroy ours is gone too).
-      // Skip the emit; the consumer's `nudge()` await will still see the
+      // A set destroyed mid-nudge has already emptied its bus; nobody is left
+      // to hear the cancel. The consumer's `nudge()` await still sees the
       // AbortError via the re-throw below.
       if (isAbort && !this._isDestroyed) {
-        this._events.emit('nudge:cancelled', {
+        this._bus.emit('nudge:cancelled', {
           reelIndex: reel,
           distance: options.distance,
           direction: options.direction,
@@ -2022,7 +2023,7 @@ export class ReelSet extends Container implements Disposable {
     if (this._targetShape) this._targetShape.length = from;
     this._afterBoardChange();
     this._spinController.onReelsRemoved();
-    this._events.emit('reels:removed', { from, count });
+    this._bus.emit('reels:removed', { from, count });
   }
 
   /**
@@ -2088,7 +2089,7 @@ export class ReelSet extends Container implements Disposable {
     });
     this._addedRows += count;
     this._afterBoardChange();
-    this._events.emit('rows:added', { count, rows: this._reels.map((reel) => reel.visibleCells) });
+    this._bus.emit('rows:added', { count, rows: this._reels.map((reel) => reel.visibleCells) });
   }
 
   /**
@@ -2138,7 +2139,7 @@ export class ReelSet extends Container implements Disposable {
     });
     this._addedRows = Math.max(0, this._addedRows - count);
     this._afterBoardChange();
-    this._events.emit('rows:removed', { count, rows: this._reels.map((reel) => reel.visibleCells) });
+    this._bus.emit('rows:removed', { count, rows: this._reels.map((reel) => reel.visibleCells) });
   }
 
   /** `addRows()` / `removeRows()` guard: not on MultiWays, and {@link _assertAtRest}. */
@@ -2444,8 +2445,8 @@ export class ReelSet extends Container implements Disposable {
           "RoundedRectMaskStrategy({ scope: 'reel' }).",
       );
     }
-    this._events.emit('column:set', { reelIndex: reel, fromCells, toCells: cells });
-    for (const { pin, from } of moved) this._events.emit('pin:moved', pin, { reel, cell: from });
+    this._bus.emit('column:set', { reelIndex: reel, fromCells, toCells: cells });
+    for (const { pin, from } of moved) this._bus.emit('pin:moved', pin, { reel, cell: from });
   }
 
   /**
@@ -2613,10 +2614,10 @@ export class ReelSet extends Container implements Disposable {
     // A set destroyed mid-step never settles that step's spin, so nothing
     // after its `await` runs: let go of the caller's signal here instead.
     const onDestroyed = (): void => signal?.removeEventListener('abort', slam);
-    if (signal) this._events.on('destroyed', onDestroyed);
+    if (signal) this._bus.on('destroyed', onDestroyed);
     this._expanding = true;
     let completed = false;
-    this._events.emit('expand:start', { from: start, to: start + columns.length, steps: plan.length });
+    this._bus.emit('expand:start', { from: start, to: start + columns.length, steps: plan.length });
     try {
       for (let k = 0, index = 0; k < columns.length; index++) {
         // A hook may have started a nudge and not awaited it. Say so here,
@@ -2645,7 +2646,7 @@ export class ReelSet extends Container implements Disposable {
           this._isMultiWaysSlot ? {} : { visibleCells: shapes.slice(k, k + count) },
           (i) => `expand() column ${k + i}`,
         );
-        this._events.emit('expand:stepAdded', step);
+        this._bus.emit('expand:stepAdded', step);
         await options.onStepAdded?.(step);
 
         const held = Array.from({ length: from }, (_, i) => i);
@@ -2683,24 +2684,24 @@ export class ReelSet extends Container implements Disposable {
 
         if (spun.wasSkipped || fastForward || signal?.aborted) result.wasSkipped = true;
         const landed: ExpandStepLanded = { ...step, result: spun };
-        this._events.emit('expand:stepLanded', landed);
+        this._bus.emit('expand:stepLanded', landed);
         await options.onStepLanded?.(landed);
         result.steps++;
         k += count;
       }
       completed = true;
     } finally {
-      this._events.off('destroyed', onDestroyed);
+      this._bus.off('destroyed', onDestroyed);
       this._expanding = false;
       this._expandStepPending = false;
       // A press during the last step's `onStepLanded` has no step left to land.
       this._spinController.clearCarriedSkip();
-      if (!completed) this._events.emit('expand:end', 'failed');
+      if (!completed) this._bus.emit('expand:end', 'failed');
     }
     result.reelCount = this._reels.length;
     result.symbols = this.getVisibleGrid();
-    this._events.emit('expand:complete', result);
-    this._events.emit('expand:end', 'complete');
+    this._bus.emit('expand:complete', result);
+    this._bus.emit('expand:end', 'complete');
     return result;
   }
 
@@ -2799,7 +2800,7 @@ export class ReelSet extends Container implements Disposable {
     // board had then. The new reels land at the shape they have now.
     if (this._targetShape) this._targetShape.push(...added.map((r) => r.visibleCells));
     this._baseCells.push(...added.map((r) => ({ cells: r.visibleCells, cellMain: r.cellMain, rows: this._addedRows })));
-    this._events.emit('reels:added', { from, count });
+    this._bus.emit('reels:added', { from, count });
     return added;
   }
 
@@ -2926,7 +2927,7 @@ export class ReelSet extends Container implements Disposable {
     }
 
     this._targetShape = [...cellsPerReel];
-    this._events.emit('shape:changed', [...cellsPerReel]);
+    this._bus.emit('shape:changed', [...cellsPerReel]);
 
     // Migrate pins to their post-reshape cells EAGERLY. before any
     // `setResult` overlay or frame build runs. Otherwise a pin at cell=4
@@ -3100,6 +3101,15 @@ export class ReelSet extends Container implements Disposable {
     };
   }
 
+  /**
+   * The mode of the spin running now, or of the last one: `'standard'` or
+   * `'cascade'` (a cascade refill counts as `'cascade'`). What a sound cue
+   * reads to stay quiet on a tumble.
+   */
+  get spinMode(): 'standard' | 'cascade' {
+    return this._spinController.currentSpinMode;
+  }
+
   // ─── Speed API ────────────────────────────────────────────
 
   /** Speed profile manager. */
@@ -3110,7 +3120,7 @@ export class ReelSet extends Container implements Disposable {
   /** Change speed and emit event. */
   setSpeed(name: string): void {
     const { previous, current } = this._speedManager.set(name);
-    this._events.emit('speed:changed', current, previous);
+    this._bus.emit('speed:changed', current, previous);
     // Tell the spin controller this was a user-driven change (not the
     // internal `skip()` boost), so the next `spin()`'s restore path
     // leaves the choice alone even if the name happens to match the
@@ -3460,7 +3470,7 @@ export class ReelSet extends Container implements Disposable {
       this._ensurePinOverlay(pin);
     }
 
-    this._events.emit('pin:placed', pin);
+    this._bus.emit('pin:placed', pin);
     return pin;
   }
 
@@ -3474,7 +3484,7 @@ export class ReelSet extends Container implements Disposable {
     if (!pin) return;
     this._pins.delete(key);
     this._destroyPinOverlay(key);
-    this._events.emit('pin:expired', pin, 'explicit');
+    this._bus.emit('pin:expired', pin, 'explicit');
   }
 
   /**
@@ -3554,7 +3564,7 @@ export class ReelSet extends Container implements Disposable {
 
     // No-op self-move: still fire the event so callers can treat it uniformly.
     if (from.reel === to.reel && from.cell === to.cell) {
-      this._events.emit('pin:moved', pin, { reel: from.reel, cell: from.cell });
+      this._bus.emit('pin:moved', pin, { reel: from.reel, cell: from.cell });
       return;
     }
 
@@ -3663,7 +3673,7 @@ export class ReelSet extends Container implements Disposable {
     this._viewport.unmaskedContainer.removeChild(flight.view);
     this._symbolFactory.release(flight);
 
-    this._events.emit('pin:moved', movedPin, {
+    this._bus.emit('pin:moved', movedPin, {
       reel: from.reel,
       cell: from.cell,
     });
@@ -3714,8 +3724,8 @@ export class ReelSet extends Container implements Disposable {
     this._symbolFactory.destroy();
     this._viewport.destroy();
     this._pins.clear();
-    this._events.emit('destroyed');
-    this._events.removeAllListeners();
+    this._bus.emit('destroyed');
+    this._bus.removeAllListeners();
 
     super.destroy({ children: true });
   }
@@ -3832,7 +3842,7 @@ export class ReelSet extends Container implements Disposable {
         // `_pins` and orphaning its overlay.
         this._pins.delete(fromKey);
         this._destroyPinOverlay(fromKey);
-        this._events.emit('pin:expired', pin, 'collision');
+        this._bus.emit('pin:expired', pin, 'collision');
         continue;
       }
       occupied.add(target);
@@ -3850,7 +3860,7 @@ export class ReelSet extends Container implements Disposable {
       }
 
       migrations.push({ pin: moved, fromCell, toCell: target, clamped });
-      this._events.emit('pin:migrated', moved, {
+      this._bus.emit('pin:migrated', moved, {
         fromCell,
         toCell: target,
         clamped,
@@ -3942,7 +3952,7 @@ export class ReelSet extends Container implements Disposable {
 
     for (const pin of expired) {
       this._pins.delete(pinKey(pin.reel, pin.cell));
-      this._events.emit('pin:expired', pin, 'turns' as PinExpireReason);
+      this._bus.emit('pin:expired', pin, 'turns' as PinExpireReason);
     }
   }
 
@@ -3965,7 +3975,7 @@ export class ReelSet extends Container implements Disposable {
 
       for (const pin of expired) {
         this._pins.delete(pinKey(pin.reel, pin.cell));
-        this._events.emit('pin:expired', pin, 'eval' as PinExpireReason);
+        this._bus.emit('pin:expired', pin, 'eval' as PinExpireReason);
       }
     }
 
@@ -4004,7 +4014,7 @@ export class ReelSet extends Container implements Disposable {
     overlay.view.zIndex = ReelSet.PIN_OVERLAY_Z_INDEX;
     this._viewport.unmaskedContainer.addChild(overlay.view);
     this._pinOverlays.set(key, { pin, overlay });
-    this._events.emit('pin:overlayCreated', pin, overlay);
+    this._bus.emit('pin:overlayCreated', pin, overlay);
   }
 
   /**
@@ -4076,7 +4086,7 @@ export class ReelSet extends Container implements Disposable {
     const entry = this._pinOverlays.get(key);
     if (!entry) return;
     const { pin, overlay } = entry;
-    this._events.emit('pin:overlayDestroyed', pin, overlay);
+    this._bus.emit('pin:overlayDestroyed', pin, overlay);
     this._viewport.unmaskedContainer.removeChild(overlay.view);
     this._symbolFactory.release(overlay);
     this._pinOverlays.delete(key);

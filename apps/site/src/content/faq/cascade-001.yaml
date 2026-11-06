@@ -1,10 +1,11 @@
 id: cascade-001
 group: cascade
+topic: cascade
 question: How do I remove the winning symbols and drop new ones in?
 answer: "Build with `.tumble(...)`, then after fading the winners call
   `reelSet.refill({ winners, grid: nextGrid })` with the cleared cells and the
   new symbols. Survivors fall into the gaps and fresh symbols drop in from
   above."
 links:
-  - label: "Recipe: Cascade 6×5"
-    href: /recipes/cascade-6x5/
+  - label: "Recipe: Cascade 6x5"
+    href: /mechanics/cascade/#cascade-6x5

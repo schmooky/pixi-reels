@@ -1,6 +1,16 @@
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol,
-//           loadHoldAndWinSprites, PIXI, app
+import * as PIXI from 'pixi.js';
+import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { BlurSpriteSymbol, createAssets, tapToSpin } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'On real art',
+  topic: 'reel-curvature',
+  tags: ['curve', 'curvature', 'perspective', 'projection', 'cylinder', 'drum', '3d'],
+  height: 420,
+  needs: ['hw-sprites'],
+} as const satisfies RecipeMeta;
 
 // Real art on the drum.
 //
@@ -27,64 +37,69 @@
 //
 // Blur-on-spin still works: the mesh is handed each new texture as the symbol
 // swaps to its motion-blur variant.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
+  const { symbols, blur } = await assets.holdAndWinSprites();
 
-const { symbols, blur } = await loadHoldAndWinSprites();
+  const IDS = ['1', '2', '3', '4', '5', '6', '7', '8', 'wild'];
 
-const IDS = ['1', '2', '3', '4', '5', '6', '7', '8', 'wild'];
+  class BlurCell extends BlurSpriteSymbol {
+    onReelSpinStart() { this.setBlurred(true); }
+    onReelSpinEnd() { this.setBlurred(false); }
+    onReelLanded() { this.setBlurred(false); }
+  }
 
-class BlurCell extends BlurSpriteSymbol {
-  onReelSpinStart() { this.setBlurred(true); }
-  onReelSpinEnd() { this.setBlurred(false); }
-  onReelLanded() { this.setBlurred(false); }
+  const REELS = 5;
+  const CELLS = 3;
+
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCells(CELLS)
+    .symbolSize(96, 96)
+    .symbolGap(6, 6)
+    .curve({ amount: 0.42, depth: 0.26 })
+    .curveFocus('set-lean')
+    .curveMode('warp') // bend the container: motion rides the curve too
+    .renderer(app.renderer)
+    .symbols((r) => {
+      for (const id of IDS) {
+        r.register(id, BlurCell, { textures: symbols, blurTextures: blur });
+      }
+    })
+    .speed('normal', SpeedPresets.NORMAL)
+    .speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker)
+    .build();
+
+  // --- bezel -------------------------------------------------------------
+  // A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
+  // the buffer cells show in that band, compressed as they curve away. Real
+  // cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
+  // top edge lands, so the frame is measured, not guessed.
+  //
+  // Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
+  // set's bounds and the recipe runner centres on those.
+  const bw = reelSet.viewport.maskWidth;
+  const bh = reelSet.viewport.maskHeight;
+  const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
+  const bezel = new PIXI.Graphics();
+  bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
+  bezel
+    .moveTo(0, lip)
+    .lineTo(bw, lip)
+    .moveTo(0, bh - lip)
+    .lineTo(bw, bh - lip)
+    .stroke({ color: 0x2c2740, width: 2 });
+  reelSet.addChild(bezel);
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () =>
+      Array.from({ length: REELS }, () =>
+        Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+      ),
+  });
+  return { reelSet };
 }
-
-const REELS = 5;
-const CELLS = 3;
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(96, 96)
-  .symbolGap(6, 6)
-  .curve({ amount: 0.42, depth: 0.26 })
-  .curveFocus('set-lean')
-  .curveMode('warp') // bend the container: motion rides the curve too
-  .renderer(app.renderer)
-  .symbols((r) => {
-    for (const id of IDS) {
-      r.register(id, BlurCell, { textures: symbols, blurTextures: blur });
-    }
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-// --- bezel -------------------------------------------------------------
-// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
-// the buffer cells show in that band, compressed as they curve away. Real
-// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
-// top edge lands, so the frame is measured, not guessed.
-//
-// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
-// set's bounds and the recipe runner centres on those.
-const bw = reelSet.viewport.maskWidth;
-const bh = reelSet.viewport.maskHeight;
-const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
-const bezel = new PIXI.Graphics();
-bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
-bezel
-  .moveTo(0, lip)
-  .lineTo(bw, lip)
-  .moveTo(0, bh - lip)
-  .lineTo(bw, bh - lip)
-  .stroke({ color: 0x2c2740, width: 2 });
-reelSet.addChild(bezel);
-
-return {
-  reelSet,
-  nextResult: () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
-    ),
-};

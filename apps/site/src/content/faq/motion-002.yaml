@@ -1,5 +1,6 @@
 id: motion-002
 group: motion
+topic: feel
 question: How do I make a reel land with a bounce?
 answer: The stop phase bounces by `bounceDistance` / `bounceDuration` on the
   active `SpeedProfile`.

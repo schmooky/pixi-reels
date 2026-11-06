@@ -1,9 +1,10 @@
 id: coins-019
 group: coins
+topic: hold-and-win
 question: How do I show a coin counting up its own value before locking?
 answer: Tween a `{ v }` counter from 0 to the value in your `cell:landed` /
   `coin:locked` handler, rewriting the label every frame, then pop the fitted
   final amount in.
 links:
-  - label: "Recipe: Hold & Win — count-up coin"
-    href: /recipes/hold-and-win-countup-coin/
+  - label: "Recipe: Hold & Win: count-up coin"
+    href: /mechanics/hold-and-win/#hold-and-win-countup-coin

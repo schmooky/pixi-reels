@@ -493,6 +493,11 @@ export class SpinController implements Disposable {
     return this._isDestroyed;
   }
 
+  /** The mode of the spin running now, or of the last one: a refill counts as `'cascade'`. */
+  get currentSpinMode(): 'standard' | 'cascade' {
+    return this._currentSpinMode;
+  }
+
   /**
    * The mode a spin would run in, validated against the set: `'cascade'`
    * needs `.tumble(...)`, `'standard'` needs a buffer to scroll through.

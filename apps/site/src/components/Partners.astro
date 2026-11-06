@@ -39,21 +39,21 @@ function scopeSvgIds(raw: string, token: string): string {
 const partners = PARTNERS;
 ---
 
-<section class="border-b border-border/60 py-20" aria-labelledby="partners-heading">
+<section class="border-b border-border/60 py-16 sm:py-20" aria-labelledby="partners-heading">
   <div class="container">
-    <div class="mx-auto mb-10 max-w-2xl text-center">
-      <h2 id="partners-heading" class="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-        Partners of <span class="gradient-text">pixi-reels</span>
+    <div class="reveal flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
+      <h2 id="partners-heading" class="font-display text-2xl font-bold tracking-tight">
+        Partners of pixi-reels
       </h2>
-      <p class="mt-3 text-muted-foreground">
+      <p class="text-muted-foreground">
         Game studios and providers collaborating on the engine.
       </p>
     </div>
 
-    <div class="group relative mx-auto max-w-2xl overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_12%,black_88%,transparent)]">
+    <div class="reveal group relative mt-10 overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]" style="--motion-delay: 80ms">
       <div class="flex w-max animate-marquee group-hover:[animation-play-state:paused] motion-reduce:animate-none">
         {[0, 1].map((copy) => (
-          <ul class="flex shrink-0 items-center gap-16 pr-16" role="list" aria-hidden={copy === 1 ? 'true' : undefined}>
+          <ul class="flex shrink-0 items-center gap-20 pr-20" role="list" aria-hidden={copy === 1 ? 'true' : undefined}>
             {partners.map((p, i) => {
               const raw = SVG_BY_LOGO[p.logo];
               const svg = raw ? scopeSvgIds(raw, `c${copy}p${i}`) : undefined;
@@ -62,12 +62,12 @@ const partners = PARTNERS;
                   <span
                     role="img"
                     aria-label={`${p.name} logo`}
-                    class="block text-foreground [&>svg]:h-10 [&>svg]:w-auto"
+                    class="block text-foreground [&>svg]:h-11 [&>svg]:w-auto"
                     set:html={svg}
                   />
                 )
                 : (
-                  <img src={p.logo} alt={`${p.name} logo`} loading="lazy" decoding="async" class="h-10 w-auto" />
+                  <img src={p.logo} alt={`${p.name} logo`} loading="lazy" decoding="async" class="h-11 w-auto" />
                 );
               return (
                 <li>
@@ -79,7 +79,7 @@ const partners = PARTNERS;
                         rel="noopener noreferrer"
                         aria-label={p.blurb ?? `${p.name} website`}
                         tabindex={copy === 1 ? -1 : undefined}
-                        class="block opacity-80 transition-opacity hover:opacity-100"
+                        class="block opacity-70 transition-opacity duration-[133ms] hover:opacity-100"
                       >
                         {logo}
                       </a>

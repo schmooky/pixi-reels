@@ -2,50 +2,49 @@
 title: Events
 order: 2
 eyebrow: API
-description: The full typed event surface. spin, cascade, pin, MultiWays, win,
-  speed, spotlight.
+description: The typed events on reelSet.events and reel.events, when each one fires, and what its payload holds.
 ---
 
 Two emitters:
 
-- `reelSet.events`. typed `EventEmitter<ReelSetEvents>`. Domain-level events for the whole board.
-- `reel.events`. typed `EventEmitter<ReelEvents>`. Per-column phase / symbol / land events.
+- `reelSet.events`, a typed `EventEmitter<ReelSetEvents>`. Domain events for the whole board.
+- `reel.events`, a typed `EventEmitter<ReelEvents>`. Per-column phase, symbol and land events.
 
-Both emitters' `on(name, cb)` returns the emitter, for chaining. Unsubscribe with `off(name, fn)` -- keep a reference to the same function. The library cleans up its own listeners on `destroy()`. A thrown exception inside a listener **does** stop the remaining listeners for that event and propagates out of `emit()` into the engine -- `emit()` has no try/catch, and nothing is logged. Wrap anything that can throw.
+On both, `on(name, cb)` returns the emitter, so subscriptions chain. Unsubscribe with `off(name, fn)`, which needs a reference to the same function. The library cleans up its own listeners on `destroy()`. An exception thrown inside a listener stops the remaining listeners for that event and propagates out of `emit()` into the engine. `emit()` has no try/catch and logs nothing, so wrap anything that can throw.
 
 ## Quick map
 
 | Family | Events | Fires from |
 |---|---|---|
-| Spin lifecycle | `spin:start` · `spin:allStarted` · `spin:stopping` · `spin:reelLanded` · `spin:allLanded` · `spin:complete` | Every `spin()` |
-| Nudge | `nudge:start` · `nudge:complete` · `nudge:cancelled` | `nudge()` |
-| Skip / slam | `skip:requested` · `skip:completed` · `skip:queued` · `skip:boosted` | `skipSpin()` · `requestSkip()` · `slamStop()` |
+| Spin lifecycle | `spin:start`, `spin:allStarted`, `spin:stopping`, `spin:reelLanded`, `spin:allLanded`, `spin:complete` | Every `spin()` |
+| Nudge | `nudge:start`, `nudge:complete`, `nudge:cancelled` | `nudge()` |
+| Skip / slam | `skip:requested`, `skip:completed`, `skip:queued`, `skip:boosted` | `skipSpin()`, `requestSkip()`, `slamStop()` |
 | Speed | `speed:changed` | `setSpeed()` |
-| Cascade | `cascade:chain:start` · `cascade:chain:end` · `cascade:fall:start` · `cascade:fall:symbol` · `cascade:fall:end` · `cascade:place:end` · `cascade:dropIn:start` · `cascade:dropIn:symbol` · `cascade:dropIn:end` · `cascade:destroy:start` · `cascade:destroy:end` · `cascade:gravity:start` · `cascade:gravity:symbol` · `cascade:gravity:end` · `cascade:gravity:error` | `.tumble()` + `spin({mode:'cascade'})` / `refill()` / `runCascade()` / `destroySymbols()` |
-| Spotlight | `spotlight:start` · `spotlight:end` | `spotlight.cycle(...)` |
-| Wins | `win:start` · `win:group` · `win:symbol` · `win:end` | `WinPresenter.show(...)` |
-| Pins | `pin:placed` · `pin:moved` · `pin:expired` · `pin:migrated` · `pin:overlayCreated` · `pin:overlayDestroyed` | `pin()` · `unpin()` · `movePin()` · MultiWays reshape |
-| MultiWays | `shape:changed` · `adjust:start` · `adjust:complete` | `setShape()` |
-| Growing the board | `reels:added` · `reels:removed` · `rows:added` · `rows:removed` · `column:set` · `expand:start` · `expand:stepAdded` · `expand:stepLanded` · `expand:complete` · `expand:end` | `addReels()` · `removeReels()` · `addRows()` · `removeRows()` · `setColumn()` · `splitSymbol()` · `resetColumns()` · `expand()` |
+| Cascade | `cascade:chain:start`, `cascade:chain:end`, `cascade:fall:start`, `cascade:fall:symbol`, `cascade:fall:end`, `cascade:place:end`, `cascade:dropIn:start`, `cascade:dropIn:symbol`, `cascade:dropIn:end`, `cascade:destroy:start`, `cascade:destroy:end`, `cascade:gravity:start`, `cascade:gravity:symbol`, `cascade:gravity:end`, `cascade:gravity:error` | `.tumble()` plus `spin({mode:'cascade'})`, `refill()`, `runCascade()` or `destroySymbols()` |
+| Spotlight | `spotlight:start`, `spotlight:end` | `spotlight.cycle(...)` |
+| Wins | `win:start`, `win:group`, `win:symbol`, `win:end` | `WinPresenter.show(...)` |
+| Pins | `pin:placed`, `pin:moved`, `pin:expired`, `pin:migrated`, `pin:overlayCreated`, `pin:overlayDestroyed` | `pin()`, `unpin()`, `movePin()`, a MultiWays reshape |
+| MultiWays | `shape:changed`, `adjust:start`, `adjust:complete` | `setShape()` |
+| Growing the board | `reels:added`, `reels:removed`, `rows:added`, `rows:removed`, `column:set`, `expand:start`, `expand:stepAdded`, `expand:stepLanded`, `expand:complete`, `expand:end` | `addReels()`, `removeReels()`, `addRows()`, `removeRows()`, `setColumn()`, `splitSymbol()`, `resetColumns()`, `expand()` |
 | Lifecycle | `destroyed` | `destroy()` |
 
-Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Scopes are `chain` (one stage inside the runCascade loop), `fall` / `place` / `dropIn` / `gravity` (phase-level animation), `destroy` (one batch of destroySymbols). Steps are `start` / `symbol` / `end`. `:symbol` appears only on the per-cell variants of fall, dropIn, and gravity. `:place` has only `:end` because placement is a single-moment swap with no animation. The runCascade chain itself is delimited by the returned `Promise`. `await` the call to know when it's done.
+Every cascade event has the same three-part name, `cascade:<scope>:<step>`. The scope is `chain` (one stage inside the `runCascade` loop), `fall`, `place`, `dropIn` or `gravity` (a phase-level animation), or `destroy` (one batch of `destroySymbols`). The step is `start`, `symbol` or `end`. `:symbol` exists only on the per-cell variants of fall, dropIn and gravity. `:place` has only `:end`, because placement is a one-moment swap with no animation. The chain itself has no event; the returned promise marks its end, so `await` the call.
 
 ## Spin lifecycle
 
 | Event | Payload | When |
 |---|---|---|
-| `spin:start` |. | Any `spin()` or `refill()` call. Cascades emit this per refill. |
-| `spin:allStarted` |. | Every non-held reel is in the `SPIN` phase. Cascade refills skip this event. |
+| `spin:start` | none | Any `spin()` or `refill()` call. Cascades emit this per refill. |
+| `spin:allStarted` | none | Every non-held reel is in the `SPIN` phase. Cascade refills skip this event. |
 | `spin:stopping` | `(reelIndex: number)` | A reel begins `STOP` (held reels never fire). |
-| `spin:reelLanded` | `(reelIndex: number, symbols: string[])` | An individual reel landed. `symbols` is its full visible column. |
-| `spin:allLanded` | `(result: SpinResult)` | Last non-held reel landed. |
+| `spin:reelLanded` | `(reelIndex: number, symbols: string[])` | One reel landed. `symbols` is its full visible column. |
+| `spin:allLanded` | `(result: SpinResult)` | The last non-held reel landed. |
 | `spin:complete` | `(result: SpinResult)` | Immediately after `spin:allLanded`. |
 
 ### Anticipation
 
-Only fires for reels that actually tease: in the anticipation set AND with a
-hold above 0.
+These fire only for reels that tease: reels in the anticipation set whose hold
+is above 0.
 
 | Event | Payload | When |
 |---|---|---|
@@ -66,10 +65,10 @@ interface SpinResult {
 
 | Event | Payload | When |
 |---|---|---|
-| `skip:requested` | `(info: SkipInfo)` = `({ reels: number[], partial: boolean, mode: SkipMode, speed?: SpeedProfile, payload?: unknown })` | A press freed reels. from `skipSpin()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. `reels` is what this press frees; `partial` is `true` when reels are still spinning after it (a protected tease, a reel group, or `slamStop({ reels })` / `slamStop({ except })`); `mode` says what freeing means: `'slam'` places them now, `'quicken'` asks each for its landing sooner and the landing arrives as the usual `spin:reelLanding` / `spin:reelLanded`. `speed` and `payload` are the press's own, the same `SkipContext` every phase's `onSkip(ctx)` saw; keys the press did not set are absent. An engine slam (abort, timeout, `slamStop()`) is a bare `mode: 'slam'`. |
+| `skip:requested` | `(info: SkipInfo)` = `({ reels: number[], partial: boolean, mode: SkipMode, speed?: SpeedProfile, payload?: unknown })` | A press freed reels, from `skipSpin()`, `requestSkip()` (once `setResult` has arrived) or `slamStop()`. `reels` is what this press frees. `partial` is `true` when reels are still spinning after it (a protected tease, a reel group, or `slamStop({ reels })` / `slamStop({ except })`). `mode` says what freeing means: `'slam'` places them now, `'quicken'` asks each for its landing sooner, and that landing arrives as the usual `spin:reelLanding` / `spin:reelLanded`. `speed` and `payload` are the press's own, the same `SkipContext` every phase's `onSkip(ctx)` saw; keys the press did not set are absent. An engine slam (abort, timeout, `slamStop()`) is a bare `mode: 'slam'`. |
 | `skip:completed` | `(info: SkipInfo)` | The same press, once its reels are down: in the same tick for a slam, as the last freed reel lands for a quicken (however it got down, its own stop or a later slam). The same `info` its `skip:requested` carried. |
-| `skip:queued` | `(info: SkipContext)` = `({ mode, speed?, payload? })` | `requestSkip()` came before `setResult()`, or a press came between two `expand()` steps: the press is kept and fires the moment the (next step's) result arrives. The same context its `skip:requested` will carry, minus the reels, which are not known yet. |
-| `skip:boosted` | `({ previous: SpeedProfile, current: SpeedProfile })` | First `skipSpin()` press of a STANDARD-mode round; engine bumped to the fastest registered profile for the rest of the round. Cascade rounds set the auto-slam-refills flag instead and never emit this event. Restore on the next `spin()` does **not** re-emit. |
+| `skip:queued` | `(info: SkipContext)` = `({ mode, speed?, payload? })` | `requestSkip()` came before `setResult()`, or a press came between two `expand()` steps. The press is kept and fires the moment the result (or the next step's result) arrives. The same context its `skip:requested` will carry, minus the reels, which are not known yet. |
+| `skip:boosted` | `({ previous: SpeedProfile, current: SpeedProfile })` | The first `skipSpin()` press of a standard-mode round. The engine bumped to the fastest registered profile for the rest of the round. Cascade rounds set the auto-slam-refills flag instead and never emit this. The restore on the next `spin()` does not emit it again. |
 
 ```ts
 reelSet.events.on('skip:boosted', ({ previous, current }) => {
@@ -81,15 +80,15 @@ reelSet.events.on('skip:boosted', ({ previous, current }) => {
 
 | Event | Payload | When |
 |---|---|---|
-| `speed:changed` | `(profile: SpeedProfile, previous: SpeedProfile)` | `setSpeed()` (or the round-end restore after `skip:boosted`). |
+| `speed:changed` | `(profile: SpeedProfile, previous: SpeedProfile)` | `setSpeed()`, or the round-end restore after `skip:boosted`. |
 
 ## Cascade (tumble)
 
-Available only when the builder used `.tumble({...})`. The per-symbol events fire **before** the library's `view.y` tween starts so listeners can run parallel tweens that finish in lockstep.
+Available only when the builder used `.tumble({...})`. The per-symbol events fire before the library starts its own `view.y` tween, so a listener can run a parallel tween that finishes on the same beat.
 
 ### Chain-scoped (one stage inside the loop)
 
-`runCascade(...)` returns `Promise<RunCascadeResult>`. `await` the call to know when the chain is over and read the summary. There's no separate round-start / round-end event because "round" isn't a reel-engine concept (the slot industry uses "round" for a bet→payout transaction; for the engine, a round is press-spin → all-stopped, which `spin:start` / `spin:allLanded` already cover).
+`runCascade(...)` returns `Promise<RunCascadeResult>`. Await the call to know when the chain is over and to read the summary. There is no separate round-start or round-end event, because a round is not a reel-engine concept. The slot industry uses "round" for one bet-to-payout transaction. For the engine, a round runs from the press to the last stop, which `spin:start` and `spin:allLanded` already cover.
 
 ```ts
 interface RunCascadeResult {
@@ -103,35 +102,35 @@ interface RunCascadeResult {
 
 | Event | Payload | When |
 |---|---|---|
-| `cascade:chain:start` | `{ chain: number, winners: readonly Cell[], currentGrid: string[][] }` | A chain stage opens inside `runCascade()`. winners were detected, destroy is about to run. `chain` is 1-indexed. |
-| `cascade:chain:end` | `{ chain: number, winners: readonly Cell[], nextGrid: string[][] }` | A chain stage closes. both destroy AND refill drop-in finished. About to loop back to `detectWinners` (or exit if winners came back empty). |
+| `cascade:chain:start` | `{ chain: number, winners: readonly Cell[], currentGrid: string[][] }` | A chain stage opens inside `runCascade()`: winners were detected and destroy is about to run. `chain` is 1-indexed. |
+| `cascade:chain:end` | `{ chain: number, winners: readonly Cell[], nextGrid: string[][] }` | A chain stage closes: both the destroy and the refill drop-in have finished. The loop goes back to `detectWinners` next, or exits if winners came back empty. |
 
 ### Phase-scoped (animation events on each refill or initial drop)
 
 | Event | Payload | When |
 |---|---|---|
-| `cascade:fall:start` | `{ reelIndex: number }` | A reel's fall-out begins (Moment A only. refill skips fall). |
+| `cascade:fall:start` | `{ reelIndex: number }` | A reel's fall-out begins (Moment A only; a refill has no fall). |
 | `cascade:fall:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, cellIndex: number, duration: number, ease: string, distance: number, signal: AbortSignal }` | One symbol's fall tween is about to start. Read `symbol` / `view` to attach a parallel tween. |
 | `cascade:fall:end` | `{ reelIndex: number }` | A reel's last fall tween settled. |
-| `cascade:place:end` | `{ reelIndex: number, placedSymbols: readonly ReelSymbol[], isInitial: boolean, winnerCells: readonly number[] }` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical decoration hook. `isInitial: true` on Moment A; `isInitial: false` + populated `winnerCells` on refills. Place has no `:start` because it's a synchronous swap. |
+| `cascade:place:end` | `{ reelIndex: number, placedSymbols: readonly ReelSymbol[], isInitial: boolean, winnerCells: readonly number[] }` | New identities are placed and snapped to the grid, before the drop-in starts. This is the place to decorate symbols. `isInitial` is `true` on Moment A; on a refill it is `false` and `winnerCells` is filled in. Place has no `:start` because it is a synchronous swap. |
 | `cascade:dropIn:start` | `{ reelIndex: number }` | A reel's drop-in begins. |
 | `cascade:dropIn:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, cellIndex: number, duration: number, ease: string, offsetCells: number, signal: AbortSignal }` | One symbol's drop-in tween is about to start. `offsetCells` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). |
 | `cascade:dropIn:end` | `{ reelIndex: number }` | A reel's last drop-in tween settled. |
-| `cascade:gravity:start` | `{ reelIndex: number }` | **Two-stage refill only** (`mode: 'gravity-then-drop'`). a reel's survivor-settle phase begins, before new symbols enter. Not emitted when refill is `'combined'`. |
-| `cascade:gravity:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, cellIndex: number, duration: number, ease: string, offsetCells: number, signal: AbortSignal }` | One survivor's settle tween about to start. Same payload shape as `dropIn:symbol`, scoped to survivors only. |
-| `cascade:gravity:end` | `{ reelIndex: number }` | A reel's survivor settle landed. The library now waits for `gravityHoldMs` + `gravityHold` to resolve (in parallel via `Promise.all`) before the drop-in stage begins. Use this as the asymmetric-anticipation cue. |
-| `cascade:gravity:error` | `{ error: unknown }` | Your `gravityHold` promise rejected, or `onGravityComplete` threw. The cascade still settles -- this event is the only place that reason survives, so forward it to your logger. Typed `unknown` because user code can throw anything. |
+| `cascade:gravity:start` | `{ reelIndex: number }` | Two-stage refill only (`mode: 'gravity-then-drop'`). A reel's survivor-settle stage begins, before new symbols enter. Not emitted when the refill is `'combined'`. |
+| `cascade:gravity:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, cellIndex: number, duration: number, ease: string, offsetCells: number, signal: AbortSignal }` | One survivor's settle tween is about to start. Same payload shape as `dropIn:symbol`, scoped to survivors only. |
+| `cascade:gravity:end` | `{ reelIndex: number }` | A reel's survivor settle landed. The library now waits for both `gravityHoldMs` and `gravityHold` (in parallel, under `Promise.all`) before the drop-in stage begins. Use it as the cue for anticipation visuals during the hold. |
+| `cascade:gravity:error` | `{ error: unknown }` | Your `gravityHold` promise rejected, or `onGravityComplete` threw. The cascade still settles. This event is the only place the reason survives, so forward it to your logger. Typed `unknown` because user code can throw anything. |
 
 ### Destroy-batch-scoped
 
 | Event | Payload | When |
 |---|---|---|
-| `cascade:destroy:start` | `{ cells: readonly Cell[] }` | `destroySymbols(...)` is about to start. Fires from EVERY call. both direct and inside `runCascade`. Empty-batch calls do **not** emit. |
-| `cascade:destroy:end` | `{ cells: readonly Cell[], failed?: readonly Cell[] }` | `destroySymbols(...)` finished. every `playDestroy()` resolved and the viewport dim (if any) was restored. |
+| `cascade:destroy:start` | `{ cells: readonly Cell[] }` | `destroySymbols(...)` is about to start. Fires from every call, direct or inside `runCascade`. A call with an empty batch does not emit. |
+| `cascade:destroy:end` | `{ cells: readonly Cell[], failed?: readonly Cell[] }` | `destroySymbols(...)` finished: every `playDestroy()` resolved and the viewport dim, if any, was restored. |
 
 ### Event order inside one `runCascade()` call
 
-Combined-mode refill (default. `refillMode: 'combined'`):
+Combined-mode refill (the default, `refillMode: 'combined'`):
 
 ```text
 for each chain stage with winners:
@@ -141,7 +140,11 @@ for each chain stage with winners:
     cascade:destroy:end
     onCascade callback (optional)
     pause (pauseAfterDestroyMs)
-    (refill: per reel. cascade:place:end → cascade:dropIn:start → ... → cascade:dropIn:end)
+    (refill, per reel:)
+      cascade:place:end
+      cascade:dropIn:start
+      cascade:dropIn:symbol, one per symbol
+      cascade:dropIn:end
   cascade:chain:end
 // then the awaited runCascade promise resolves with RunCascadeResult
 ```
@@ -151,13 +154,22 @@ Two-stage refill (`refillMode: 'gravity-then-drop'`) splits the refill into a gr
 ```text
 for each chain stage with winners:
   cascade:chain:start
-    cascade:destroy:start → ... → cascade:destroy:end
+    cascade:destroy:start
+      (destroy tweens, one per cell, parallel)
+    cascade:destroy:end
     onCascade callback (optional)
     pause (pauseAfterDestroyMs)
-    (gravity stage: per reel. cascade:place:end → cascade:gravity:start → cascade:gravity:symbol* → cascade:gravity:end)
-    hold (Promise.all of `gravityHoldMs` setTimeout + caller-supplied `gravityHold` promise)
+    (gravity stage, per reel:)
+      cascade:place:end
+      cascade:gravity:start
+      cascade:gravity:symbol, one per survivor
+      cascade:gravity:end
+    hold (Promise.all of the `gravityHoldMs` timer and the caller's `gravityHold` promise)
     onGravityComplete callback (optional)
-    (drop-in stage: per reel. cascade:dropIn:start → cascade:dropIn:symbol* → cascade:dropIn:end)
+    (drop-in stage, per reel:)
+      cascade:dropIn:start
+      cascade:dropIn:symbol, one per symbol
+      cascade:dropIn:end
   cascade:chain:end
 ```
 
@@ -195,80 +207,80 @@ reelSet.events.on('cascade:dropIn:symbol', ({ view, duration }) => {
 
 ## Nudge
 
-Fired by `reelSet.nudge(reel, opts)`. `landed` does not fire for a nudge --
-that belongs to the spin pipeline.
+Fired by `reelSet.nudge(reel, opts)`. `landed` does not fire for a nudge; it
+belongs to the spin pipeline.
 
 | Event | Payload | When |
 |---|---|---|
-| `nudge:start` | `{ reelIndex, distance, direction: 'forward' \| 'reverse' }` | Pre-placement done, tween about to begin. |
-| `nudge:complete` | `{ reelIndex, distance, direction, symbols: string[] }` | Strip snapped to the post-nudge grid; `symbols` is the new visible column. |
-| `nudge:cancelled` | `{ reelIndex, distance, direction, reason: string }` | Signal aborted or the reel was destroyed mid-tween. Does **not** fire alongside `nudge:complete`. |
+| `nudge:start` | `{ reelIndex, distance, direction: 'forward' \| 'reverse' }` | Pre-placement is done and the tween is about to begin. |
+| `nudge:complete` | `{ reelIndex, distance, direction, symbols: string[] }` | The strip snapped to the post-nudge grid; `symbols` is the new visible column. |
+| `nudge:cancelled` | `{ reelIndex, distance, direction, reason: string }` | The signal aborted or the reel was destroyed mid-tween. Does not fire alongside `nudge:complete`. |
 
 ## Spotlight
 
 | Event | Payload | When |
 |---|---|---|
 | `spotlight:start` | `(positions: SymbolPosition[])` | `spotlight.cycle(...)` began. |
-| `spotlight:end` |. | Spotlight finished. |
+| `spotlight:end` | none | The spotlight finished. |
 
 ## Wins (WinPresenter)
 
-Emitted by `WinPresenter` only. listeners are dead weight if you don't use it.
+Emitted by `WinPresenter` only. If you do not use it, these never fire.
 
 | Event | Payload | When |
 |---|---|---|
-| `win:start` | `(wins: readonly Win[])` | A presenter sequence began. List is sorted by `value` desc by default. |
-| `win:group` | `(win: Win, cells: readonly SymbolPosition[])` | Each individual win. fires once per win, before its cells animate. |
+| `win:start` | `(wins: readonly Win[])` | A presenter sequence began. The list is sorted by `value` descending by default. |
+| `win:group` | `(win: Win, cells: readonly SymbolPosition[])` | One win. Fires once per win, before its cells animate. |
 | `win:symbol` | `(symbol: unknown, cell: SymbolPosition, win: Win)` | Each cell, one at a time when `WinPresenter.stagger > 0`. Cast `symbol` to your concrete `ReelSymbol` subclass. |
-| `win:end` | `(reason: 'complete' \| 'aborted')` | Sequence finished. either naturally or via abort. |
+| `win:end` | `(reason: 'complete' \| 'aborted')` | The sequence finished, on its own or through an abort. |
 
 ## Pins
 
 | Event | Payload | When |
 |---|---|---|
-| `pin:placed` | `(pin: CellPin)` | `reelSet.pin(...)` succeeded. Replacing an existing pin does NOT fire `pin:expired` for the old one. only this event fires (silent replace). |
+| `pin:placed` | `(pin: CellPin)` | `reelSet.pin(...)` succeeded. Replacing an existing pin does not fire `pin:expired` for the old one; only this event fires. |
 | `pin:moved` | `(pin: CellPin, from: { reel: number; cell: number })` | `reelSet.movePin(...)` resolved. The pin's `reel`/`cell` are already at the destination; `from` carries the origin. |
-| `pin:expired` | `(pin: CellPin, reason: PinExpireReason)` | Pin removed. `'explicit'` (via `unpin`), `'turns'` (numeric counter hit zero), or `'eval'` (round-scoped pin reset on the next spin). |
-| `pin:migrated` | `(pin: CellPin, info: { fromCell: number; toCell: number; clamped: boolean; reelIndex: number })` | MultiWays reshape moved a pin to a new row inside the same reel. `clamped: true` when the origin row no longer fits the new shape. Never emitted on non-MultiWays slots. |
-| `pin:overlayCreated` | `(pin: CellPin, overlay: unknown)` | Mid-spin overlay symbol mounted. Cast `overlay` to your concrete symbol class (typed as `unknown` to keep this module free of symbol-layer imports). |
-| `pin:overlayDestroyed` | `(pin: CellPin, overlay: unknown)` | Mid-spin overlay torn down on land / unpin / replacement. Fires BEFORE the symbol returns to the pool, so you can stop animations on a still-valid instance. |
+| `pin:expired` | `(pin: CellPin, reason: PinExpireReason)` | A pin was removed. `'explicit'` (via `unpin`), `'turns'` (the numeric counter hit zero), or `'eval'` (a round-scoped pin reset on the next spin). |
+| `pin:migrated` | `(pin: CellPin, info: { fromCell: number; toCell: number; clamped: boolean; reelIndex: number })` | A MultiWays reshape moved a pin to a new row inside the same reel. `clamped: true` when the origin row no longer fits the new shape. Never emitted on non-MultiWays slots. |
+| `pin:overlayCreated` | `(pin: CellPin, overlay: unknown)` | A mid-spin overlay symbol was mounted. Cast `overlay` to your concrete symbol class (typed as `unknown` to keep this module free of symbol-layer imports). |
+| `pin:overlayDestroyed` | `(pin: CellPin, overlay: unknown)` | A mid-spin overlay was torn down on land, unpin or replacement. Fires before the symbol returns to the pool, so you can stop animations on a still-valid instance. |
 
 ## MultiWays
 
 | Event | Payload | When |
 |---|---|---|
-| `shape:changed` | `(cellsPerReel: number[])` | `setShape(...)` accepted. Fires before any geometry change. pin migrations and AdjustPhase happen later in the spin. |
-| `adjust:start` | `({ reelIndex: number, fromCells: number, toCells: number })` | Per-reel `AdjustPhase` entered. |
-| `adjust:complete` | `({ reelIndex: number })` | Per-reel `AdjustPhase` finished. |
+| `shape:changed` | `(cellsPerReel: number[])` | `setShape(...)` accepted. Fires before any geometry change; pin migrations and `AdjustPhase` happen later in the spin. |
+| `adjust:start` | `({ reelIndex: number, fromCells: number, toCells: number })` | A per-reel `AdjustPhase` entered. |
+| `adjust:complete` | `({ reelIndex: number })` | A per-reel `AdjustPhase` finished. |
 
 ## Growing the board
 
 | Event | Payload | When |
 |---|---|---|
-| `reels:added` | `({ from: number, count: number })` | `addReels()` or an `expand()` step appended reels `from .. from + count - 1`. They are in `reelSet.reels` and the viewport covers them: move a camera here (`reelSet.viewport.maskWidth` is the new board width). |
+| `reels:added` | `({ from: number, count: number })` | `addReels()` or an `expand()` step appended reels `from .. from + count - 1`. They are in `reelSet.reels` and the viewport covers them. Move a camera here; `reelSet.viewport.maskWidth` is the new board width. |
 | `reels:removed` | `({ from: number, count: number })` | `removeReels()` destroyed reels `from .. from + count - 1`. |
-| `rows:added` | `({ count: number, rows: number[] })` | `addRows()` grew every reel by `count` rows below the last one. `rows` is each reel's row count now; the viewport covers them (`reelSet.viewport.maskHeight` is the new height). |
+| `rows:added` | `({ count: number, rows: number[] })` | `addRows()` grew every reel by `count` rows below the last one. `rows` is each reel's row count now. The viewport covers them; `reelSet.viewport.maskHeight` is the new height. |
 | `rows:removed` | `({ count: number, rows: number[] })` | `removeRows()` took `count` rows off every reel. |
 | `column:set` | `({ reelIndex: number, fromCells: number, toCells: number })` | One reel changed its cells at rest: `setColumn()`, `splitSymbol()` (a symbol split into more cells) or `resetColumns()`. Under `height: 'keep'` the reel's height does not change; read its `cellMain` for the new cell size. The viewport already covers it. |
 | `expand:start` | `({ from: number, to: number, steps: number })` | `expand()` validated its columns and is about to add the first step. |
 | `expand:stepAdded` | `(step: ExpandStep)` | A step's reels are on the board; they spin next. Fires before `onStepAdded`. |
 | `expand:stepLanded` | `(step: ExpandStepLanded)` | A step's reels landed. Fires before `onStepLanded`. |
 | `expand:complete` | `(result: ExpandResult)` | Every step landed, the fast-forward step included. |
-| `expand:end` | `(reason: 'complete' \| 'failed')` | The expansion is over, whichever way: `'complete'` right after `expand:complete`, `'failed'` when it threw. The one place to put a UI back. `reelSet.isExpanding` is `false` again by then, so a listener here can start the next round. |
+| `expand:end` | `(reason: 'complete' \| 'failed')` | The expansion is over, either way: `'complete'` right after `expand:complete`, `'failed'` when it threw. This is the one place to put a UI back. `reelSet.isExpanding` is `false` again by then, so a listener here can start the next round. |
 
-Each step is a spin of its own reels with every earlier reel held, so the usual `spin:*` events fire for it too, and `spin:reelLanded` only for the reels the step added.
+Each step is a spin of its own reels with every earlier reel held, so the usual `spin:*` events fire for it too, and `spin:reelLanded` fires only for the reels the step added.
 
 ## Lifecycle
 
 | Event | Payload | When |
 |---|---|---|
-| `destroyed` |. | `reelSet.destroy()` called. Listeners attached BEFORE this fire one last time, then the emitter clears every listener. |
+| `destroyed` | none | `reelSet.destroy()` was called. Listeners attached before this fire one last time, then the emitter clears every listener. |
 
 ## Per-reel events
 
 `reel.events` is a smaller surface scoped to one column.
 
-Every bus (`reelSet.events`, `reel.events`, a board's `events`) also takes `onAny((event, ...args) => ...)` / `offAny(fn)`: every event, name first, after the event's own listeners. For a trace, an events panel, a recorder; game logic names the events it wants. Engine notices are not events; `onNotice(fn)` hears them the same way, whatever the log level.
+Every bus (`reelSet.events`, `reel.events`, a board's `events`) also takes `onAny((event, ...args) => ...)` and `offAny(fn)`. An `onAny` listener gets every event, name first, after the event's own listeners. It is meant for a trace, an events panel or a recorder; game logic should subscribe to the events it needs by name. Engine notices are not events. `onNotice(fn)` hears them the same way, whatever the log level.
 
 ```ts
 type ReelEvents = {
@@ -295,15 +307,15 @@ reelSet.getReel(4).events.on('phase:enter', (name) => {
 
 ## Listener etiquette
 
-- Subscribe once at startup; for hot-swap modules keep the function reference and call `off(name, fn)`.
-- Async listeners run "fire and forget." If you must `await` per-event work, queue it yourself. the engine doesn't.
-- The library emits `cascade:*:symbol` events BEFORE its own tween starts. Your listener can read the same `view` and queue a parallel tween. they'll run in lockstep.
-- The `Cell` type used in cascade payloads is `{ reel: number; cell: number }` (column = `reel`, visible cell = `cell`). Same shape as `destroySymbols` input.
+- Subscribe once at startup. For hot-swap modules keep the function reference and call `off(name, fn)`.
+- Async listeners are fire and forget. If you must await per-event work, queue it yourself; the engine does not.
+- The library emits `cascade:*:symbol` events before it starts its own tween. Your listener can read the same `view` and queue a parallel tween, and the two run together.
+- The `Cell` type used in cascade payloads is `{ reel: number; cell: number }` (`reel` is the column, `cell` the visible cell). Same shape as the `destroySymbols` input.
 
 ## Console notices
 
 Everything the library prints goes through one channel, so notices all look the
-same and all carry a stable CODE you can grep for, search the docs for, or
+same and all carry a stable code you can grep for, search the docs for, or
 quote in a bug report.
 
 ```ts
@@ -313,11 +325,12 @@ setLogLevel('warn');   // drop the advisory notices, keep problems
 setLogLevel('silent'); // production
 ```
 
-`'silent' | 'error' | 'warn' | 'info'`, each level including the ones before
-it. Default `'info'` (everything) - see the [debugging guide](/guides/debugging/#console-notices)
-for what each level covers and why the default is not quieter. In a browser a notice prints as a styled
-badge - `pixi-reels`, then the code, then the message; elsewhere it degrades to
-`[pixi-reels] warn(code) message`, since `%c` is a browser console feature.
+The levels are `'silent' | 'error' | 'warn' | 'info'`, and each includes the
+ones before it. The default is `'info'`, everything. The
+[debugging guide](/learn/debugging/#console-notices) says what each level
+covers and why the default is not quieter. In a browser a notice prints as a
+styled badge: `pixi-reels`, then the code, then the message. Elsewhere it prints
+as `[pixi-reels] warn(code) message`, since `%c` is a browser console feature.
 
 Notices keep using `console.warn` / `console.error` / `console.info` rather
 than one `console.log`, so devtools level filtering and stack capture still
@@ -332,5 +345,5 @@ work, and detail arguments pass through untouched (an `Error` keeps its stack).
 | `destroy-rejected` | warn | A cell's `playDestroy()` rejected during `destroySymbols()`. Reported per cell on `cascade:destroy:end` as well. |
 | `buffer-clamped` | warn | `bufferSymbols()` was given less than 1 and was clamped. Once per process. |
 | `hw-coin-win-failed` | warn | A Hold & Win coin win animation rejected. |
-| `mask-auto-shared` | info | The builder auto-selected `SharedRectMaskStrategy`. Pass `.maskStrategy(...)` to override. |
+| `mask-auto-shared` | info | The builder selected `SharedRectMaskStrategy` on its own. Pass `.maskStrategy(...)` to override. |
 | `warp-skips-unmask` | info | `curveMode('warp')` does not bend `unmask: true` symbols, the win spotlight or pin overlays. |

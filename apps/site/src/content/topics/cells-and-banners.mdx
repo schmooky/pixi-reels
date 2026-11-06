@@ -1,0 +1,76 @@
+---
+title: Paylines and overlays
+group: wins
+oneLiner: Find any cell on screen to draw paylines, badges and highlights over the board, or to make a cell tappable.
+order: 60
+tags:
+  - paylines
+  - hit-areas
+  - overlays
+  - wins
+  - horizontal
+  - orientation
+guides:
+  - win-animations
+---
+
+<ConceptPart title="Win animations" lede="Highlight the winning symbols, cycle through the lines, and dim the losers.">
+
+`reelSet.spotlight` dims the losing symbols, lifts the winners above the
+mask, and can step through several lines in turn.
+
+<a id="one-win-one-line"></a>
+
+## One win, one line
+
+```ts
+reelSet.events.on('spin:complete', async (result) => {
+  const wins = detectWins(result.symbols);      // your logic
+  if (wins.length === 0) return;
+
+  // positions: [{ reelIndex, cellIndex }, ...]
+  await reelSet.spotlight.show(wins[0].positions, {
+    dimAmount: 0.3,
+    playWinAnimation: true,
+  });
+});
+```
+
+<a id="multiple-lines-cycled"></a>
+
+## Several lines in turn
+
+```ts
+await reelSet.spotlight.cycle(
+  wins.map((w) => ({ positions: w.positions })),   // WinLine[]
+  {
+    displayDuration: 1000,   // ms per line. Default 2000
+    gapDuration: 300,        // ms between lines
+    cycles: 1,
+    dimAmount: 0.3,          // losers fade to 30%
+  },
+);
+```
+
+<a id="play-per-symbol-animations"></a>
+
+## Symbol animations
+
+With `playWinAnimation: true` the spotlight calls `playWin()` on each
+highlighted symbol. The three built-in symbol classes all implement it.
+
+```ts
+await reelSet.spotlight.show(wins[0].positions, { playWinAnimation: true });
+```
+
+`show()` resolves when the animation is done, so you can await it before
+the next step.
+
+<a id="events"></a>
+
+## Events
+
+`spotlight:start` and `spotlight:end` bracket a `cycle()`. Use them to
+disable the spin button while a win plays.
+
+</ConceptPart>

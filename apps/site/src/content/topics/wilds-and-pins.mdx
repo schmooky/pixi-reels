@@ -1,0 +1,227 @@
+---
+title: Wilds and mystery symbols
+group: lines
+oneLiner: Wilds that stay, spread or walk between spins, and mystery symbols that all turn into the same one.
+order: 10
+tags:
+  - wild
+  - sticky
+  - multiplier
+  - mystery
+  - respin
+  - cell-pin
+  - horizontal
+  - reverse
+  - orientation
+guides:
+  - pins
+---
+
+<ConceptPart title="Pins" lede="How a pin holds a cell across spins, the events it fires, how movePin animates it, and how to drive Spine tracks from it.">
+
+A pin keeps one cell on one symbol id across spins. Sticky, expanding and
+walking wilds are all pins, and so are multiplier overlays and mystery
+reveals. A pin works with any symbol class.
+
+```ts
+// Pin a cell. The id resolves through the SymbolFactory, like normal placement.
+const pin = reelSet.pin(reel, cell, 'sticky-wild', { turns: 'permanent' });
+
+// Move it to another cell with a tween.
+await reelSet.movePin({ reel, cell }, { reel: reel - 1, cell }, { duration: 600 });
+
+// Release it.
+reelSet.unpin(reel, cell);
+```
+
+<a id="what-a-pin-guarantees"></a>
+
+## What a pin guarantees
+
+- The cell shows the pinned symbol for as long as the pin exists.
+- The pin survives `spin()`, `setResult()` and `setShape()`. While the reel
+  spins, an overlay symbol holds the cell and the reel scrolls underneath it.
+- On a MultiWays reshape the pin moves by its `migration` policy. With
+  `'origin'` it returns to the cell it started on when the reel grows back.
+  With `'frozen'` it clamps and forgets where it started.
+- Pins and nudges do not mix. `spin`, `setResult`, `pin` and `setShape`
+  all throw while a `nudge()` is in flight.
+
+The [CellPin reference](/api/interfaces/index.CellPin/) has the full type.
+
+<a id="the-three-symbol-instances-involved"></a>
+
+## Three symbol instances
+
+One pin can be three different symbol instances at three different moments.
+All three come from the pool and all three go through `onActivate(symbolId)`.
+
+| Instance | When it exists | Where it lives |
+|---|---|---|
+| Reel-cell symbol | At rest, idle or landed | `reel.container` inside `viewport.maskedContainer` |
+| Overlay symbol | During a spin, one per active pin | `viewport.unmaskedContainer`, zIndex 10000 |
+| Flight symbol | During a `movePin` tween | `viewport.unmaskedContainer` |
+
+For a plain sticky cell this does not matter. It matters once you animate
+the pinned symbol while the reel moves, because the three are separate
+objects and animation state does not carry from one to the next.
+
+<a id="lifecycle-in-full"></a>
+
+## Lifecycle
+
+```
+pin(reel, cell, 'wild', { turns: 'permanent' })
+  The reel cell gets a fresh symbol from the SymbolFactory; onActivate runs.
+  fires pin:placed(pin)
+
+spin() begins
+  For each active pin, an overlay symbol is acquired, positioned at the pin's
+  cell, and added to unmaskedContainer.
+  fires pin:overlayCreated(pin, overlay)   <- set the overlay animation here
+
+  The reel scrolls underneath. The overlay is what the player sees.
+
+spin lands
+  fires pin:overlayDestroyed(pin, overlay) <- stop animations here
+  The overlay goes back to the pool. The reel-cell symbol takes over.
+
+movePin(from, to, opts)
+  A flight symbol is acquired, positioned at `from`, added to unmaskedContainer.
+  opts.onFlightCreated(flight) fires       <- start a motion animation here
+
+  GSAP tweens the flight's world coordinates from source to destination.
+
+  opts.onFlightCompleted(flight) fires     <- restore an idle animation here
+  The reel cell at the destination is updated, the flight is released.
+  fires pin:moved(newPin, oldCoord)
+
+unpin(reel, cell)  (or the pin expires after `turns: N`)
+  fires pin:expired(pin, reason)
+```
+
+<a id="a-minimal-sprite-symbol-example"></a>
+
+## Sprite symbol example
+
+```ts
+import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
+
+const reelSet = new ReelSetBuilder()
+  .reels(5).visibleCells(3).symbolSize(140, 140)
+  .symbols((r) => {
+    r.register('wild', SpriteSymbol, { textures: { wild: wildTex } });
+    // ...
+  })
+  .ticker(app.ticker)
+  .build();
+
+// Spin once, land, then pin a permanent wild at (2, 1).
+const spin = reelSet.spin();      // do not await here: spin() does not
+reelSet.setResult([/* ... */]);   // resolve until the result arrives
+await spin;
+reelSet.pin(2, 1, 'wild', { turns: 'permanent' });
+
+// The next spin scrolls underneath the pinned wild.
+await reelSet.spin();
+```
+
+Sprite symbols need no extra wiring. The pin creates the overlay, moves the
+cell on a reshape, and cleans up on unpin.
+
+<a id="spine-animation-hooks"></a>
+
+## Spine animation hooks
+
+With Spine symbols, each of the three instances above runs its own
+animation track. To show an `idle-sticky` track on the overlay and a `run`
+track on the flight, set them from the pin lifecycle events.
+
+The built-in `SpineSymbol` sets its `idle` and `win` tracks internally. A
+walking wild needs a small subclass that exposes track control:
+
+```ts
+import { SpineSymbol, type SpineSymbolOptions } from 'pixi-reels';
+
+export class WalkingSpineSymbol extends SpineSymbol {
+  constructor(options: SpineSymbolOptions) {
+    super(options);
+  }
+
+  /** Publicly swap the current animation track. */
+  setAnimation(name: string, loop = true): void {
+    const spine = (this as any)._spine;
+    if (!spine) return;
+    if (!spine.skeleton.data.findAnimation(name)) return;
+    spine.state.setAnimation(0, name, loop);
+  }
+}
+```
+
+Then wire the hooks:
+
+```ts
+// Overlay: sticky idle while the reel spins underneath
+reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
+  (overlay as WalkingSpineSymbol).setAnimation('idle-sticky', true);
+});
+
+// Flight: run animation during movePin
+async function walkLeft(pin: CellPin) {
+  await reelSet.movePin(
+    { reel: pin.reel, cell: pin.cell },
+    { reel: pin.reel - 1, cell: pin.cell },
+    {
+      duration: 600,
+      onFlightCreated: (flight) => {
+        (flight as WalkingSpineSymbol).setAnimation('run', true);
+      },
+      onFlightCompleted: (flight) => {
+        (flight as WalkingSpineSymbol).setAnimation('idle', true);
+      },
+    },
+  );
+}
+```
+
+The flight symbol is a fresh instance from the pool, not the reel-cell
+symbol. Whatever you set on the cell (a track, a tint, a skin) is not on the
+flight. The flight starts from what `onActivate` gives it, so set its
+animation in `onFlightCreated` as above.
+
+The overlay's animation does not carry over to the landed cell either. When
+the reel lands, the overlay is released and the reel-cell symbol shows
+whatever its own `onActivate` set, which is plain `idle`. If the landed cell
+should keep the sticky animation, set it on the reel cell when the pin is
+placed:
+
+```ts
+reelSet.events.on('pin:placed', (pin) => {
+  if (reelSet.isSpinning) return; // the overlay handles it during a spin
+  const sym = reelSet.getReel(pin.reel).getSymbolAt(pin.cell);
+  (sym as WalkingSpineSymbol).setAnimation?.('idle-sticky', true);
+});
+```
+
+An error thrown inside `onFlightCreated` or `onFlightCompleted` does not
+stop the move. The engine catches it and reports it on the notice channel as
+`pin-hook-threw`. The tween still runs, the pin moves and the flight symbol
+is released, so a bug in animation code does not leave the pin half moved.
+
+Every pooled symbol gets `resize(cellWidth, cellHeight)` when it is acquired.
+For a Spine symbol that computes a scale from the skeleton's bounds. If the
+skeleton data has not loaded yet, the first frame can show a zero-sized
+symbol. Once the pool is warm the skeleton is normally ready. If a pinned
+symbol pops in size, check this first.
+
+<a id="related"></a>
+
+## Related
+
+- [Walking wild](/mechanics/wilds-and-pins/#walking-wild-pin), the movePin pattern above as a demo
+- [Sticky wild](/mechanics/wilds-and-pins/#sticky-wild-pin), the smallest pin
+- [Expanding wild](/mechanics/wilds-and-pins/#expanding-wild-pin), one pin per cell of a reel
+- [Symbols](/mechanics/symbols/#concept), writing your own symbol class
+- [Spin lifecycle](/mechanics/skip/#concept), the events around a spin
+
+</ConceptPart>

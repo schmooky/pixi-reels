@@ -1,7 +1,17 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpinPhase, CardSymbol, CARD_DECK, app,
-//                   DebugPlaque
-//
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinPhase, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { SpinPhaseConfig } from 'pixi-reels';
+import type { DebugPlaque } from 'pixi-reels/debug';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'A spin floor the phase decides for itself',
+  topic: 'skip',
+  tags: ['skip', 'slam', 'anticipation', 'tease', 'phases', 'timing', 'groups'],
+  needs: ['generic-symbols'],
+} as const satisfies RecipeMeta;
+
 // SUBCLASS `SpinPhase`. Per-reel spin floor, decided by the phase itself.
 //
 // `SpinPhaseConfig.minimumSpinTime` has always documented an override of the
@@ -13,89 +23,98 @@
 // for the subclass when the floor is DERIVED rather than configured: read it
 // off the reel, off game state at the moment the phase enters, off whatever
 // the feature currently is. Here it comes from the reel index.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  // The rule the phase applies: each reel spins 250ms longer than the one left
+  // of it. A staircase no single profile value can express.
+  const floorFor = (reelIndex: number) => reelIndex * 250;
 
-// The rule the phase applies: each reel spins 250ms longer than the one left
-// of it. A staircase no single profile value can express.
-const floorFor = (reelIndex) => reelIndex * 250;
-
-class StaircaseSpinPhase extends SpinPhase {
-  onEnter(config) {
-    // Merge, don't replace: the controller may already be passing a floor
-    // (that is what `setMinimumSpinTime` does) and clobbering the whole
-    // config would drop anything added to it later.
-    super.onEnter({ ...config, minimumSpinTime: floorFor(this.reel.reelIndex) });
-  }
-}
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+  class StaircaseSpinPhase extends SpinPhase {
+    onEnter(config: SpinPhaseConfig) {
+      // Merge, don't replace: the controller may already be passing a floor
+      // (that is what `setMinimumSpinTime` does) and clobbering the whole
+      // config would drop anything added to it later.
+      super.onEnter({ ...config, minimumSpinTime: floorFor(this.reel.reelIndex) });
     }
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, minimumSpinTime: 0 })
-  .phases((f) => f.register('spin', StaircaseSpinPhase))
-  .ticker(app.ticker)
-  .build();
+  }
 
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+    })
+    .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, minimumSpinTime: 0 })
+    .phases((f) => f.register('spin', StaircaseSpinPhase))
+    .ticker(app.ticker)
+    .build();
 
-const labels = [];
-for (let i = 0; i < REELS; i++) {
-  const t = new DebugPlaque({
-    text: `${floorFor(i)}ms\nfloor`,
-    fontSize: 9,
-    color: i === 0 ? 0x9ca3af : 0xfef08a,
-    align: 'center',
-    anchor: { x: 0.5, y: 0 },
-    minWidth: SIZE,
+  const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+  const labels: DebugPlaque[] = [];
+  for (let i = 0; i < REELS; i++) {
+    const t = readout.plaque({
+      text: `${floorFor(i)}ms\nfloor`,
+      fontSize: 9,
+      color: i === 0 ? 0x9ca3af : 0xfef08a,
+      align: 'center',
+      anchor: { x: 0.5, y: 0 },
+      minWidth: SIZE,
+    });
+    t.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 8);
+    reelSet.addChild(t);
+    labels.push(t);
+  }
+
+  // Seeded, not 0: a landing that somehow fires before `onSpin` set it would
+  // otherwise print time-since-page-load as the reel's landing time.
+  let t0 = performance.now();
+
+  // A floor governs NATURAL landings only. A slam force-completes every phase
+  // and places the result, so it ignores `minimumSpinTime` however that floor
+  // was set - profile, `setMinimumSpinTime`, or this subclass. Tapping the
+  // button again mid-spin therefore lands all five together and flattens the
+  // staircase, which looks like the feature broke unless the readout says
+  // otherwise. So it says otherwise.
+  let slammed = false;
+  reelSet.events.on('spin:start', () => { slammed = false; });
+  reelSet.events.on('skip:requested', () => { slammed = true; });
+
+  reelSet.events.on('spin:reelLanded', (i) => {
+    // Two lines, not one: a single `250 -> 1324ms` line is wider than the reel
+    // it sits under, so five of them ran into each other. Stacked, the label
+    // cannot outgrow its column however big the numbers get.
+    labels[i].text = slammed
+      ? `${floorFor(i)}ms\n-> slam`
+      : `${floorFor(i)}ms\n-> ${Math.round(performance.now() - t0)}ms`;
   });
-  t.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 8);
-  reelSet.addChild(t);
-  labels.push(t);
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      for (let i = 0; i < REELS; i++) labels[i].text = `${floorFor(i)}ms\nfloor`;
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      t0 = performance.now();
+      // Result arrives early: reel 0 can act on it at once, each reel to its
+      // right is held a further 250ms by the phase's own floor.
+      await new Promise((r) => setTimeout(r, 100));
+      reelSet.setResult(grid);
+      await p;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => { for (const t of labels) { try { t.destroy({ children: true }); } catch {} } },
+  };
 }
-
-// Seeded, not 0: a landing that somehow fires before `onSpin` set it would
-// otherwise print time-since-page-load as the reel's landing time.
-let t0 = performance.now();
-
-// A floor governs NATURAL landings only. A slam force-completes every phase
-// and places the result, so it ignores `minimumSpinTime` however that floor
-// was set - profile, `setMinimumSpinTime`, or this subclass. Tapping the
-// button again mid-spin therefore lands all five together and flattens the
-// staircase, which looks like the feature broke unless the readout says
-// otherwise. So it says otherwise.
-let slammed = false;
-reelSet.events.on('spin:start', () => { slammed = false; });
-reelSet.events.on('skip:requested', () => { slammed = true; });
-
-reelSet.events.on('spin:reelLanded', (i) => {
-  // Two lines, not one: a single `250 -> 1324ms` line is wider than the reel
-  // it sits under, so five of them ran into each other. Stacked, the label
-  // cannot outgrow its column however big the numbers get.
-  labels[i].text = slammed
-    ? `${floorFor(i)}ms\n-> slam`
-    : `${floorFor(i)}ms\n-> ${Math.round(performance.now() - t0)}ms`;
-});
-
-return {
-  reelSet,
-  cleanup: () => { for (const t of labels) { try { t.destroy({ children: true }); } catch {} } },
-  onSpin: async () => {
-    for (let i = 0; i < REELS; i++) labels[i].text = `${floorFor(i)}ms\nfloor`;
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    const p = reelSet.spin();
-    t0 = performance.now();
-    // Result arrives early: reel 0 can act on it at once, each reel to its
-    // right is held a further 250ms by the phase's own floor.
-    await new Promise((r) => setTimeout(r, 100));
-    reelSet.setResult(grid);
-    await p;
-  },
-};

@@ -3,20 +3,17 @@
  * `pages/og/[...path].png.ts` renders one PNG per entry; `lib/seo.ts`'s
  * `ogUrlForPath` maps a request path to the matching `/og/<id>.png` by the same
  * convention, so the two never drift. Content routes are globbed from their
- * source (recipes/guides/docs frontmatter, RECIPES groups, answered FAQ)
+ * source (topic/guide/doc frontmatter, TOPIC groups, answered FAQ)
  * so adding a page mints its card automatically.
  */
 import type { OgTarget } from './render.ts';
-import { SITE } from '../lib/seo.ts';
-import { RECIPES, RECIPE_GROUPS } from '../content/recipes.ts';
-import { FAQ_ANSWERED, FAQ_GROUP_TITLE } from '../content/faq.ts';
+import { TOPICS } from '../content/topics.ts';
+import { FAQ_ANSWERED } from '../content/faq.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
-import { monogram, hueFor } from '../lib/recipeMedia.ts';
 
 interface Frontmatter {
   title?: string;
   description?: string;
-  eyebrow?: string;
   tags?: string[];
 }
 type FmModule = { frontmatter?: Frontmatter };
@@ -25,39 +22,19 @@ const slugOf = (key: string) => key.split('/').pop()!.replace(/\.(mdx|astro)$/, 
 const humanize = (slug: string) =>
   slug.replace(/[-_]/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
-const recipeGroupLabel = new Map(RECIPE_GROUPS.map((g) => [g.id, g.label.replace(/\s*\(.*\)$/, '')]));
-const recipeBySlug = new Map(RECIPES.map((r) => [r.slug, r]));
-
 // ── content globs (frontmatter read eagerly; Vite-only, runs in the build) ──
-// Recipes/guides/docs live in Keystatic content collections. Frontmatter is
-// read eagerly (Vite-only, runs in the build).
-const recipeMods = import.meta.glob<FmModule>('/src/content/recipes/*.mdx', { eager: true });
+// Guides/docs live in Keystatic content collections. Frontmatter is read
+// eagerly (Vite-only, runs in the build). Topics come through TOPICS.
 const guideMods = import.meta.glob<FmModule>('/src/content/guides/*.mdx', { eager: true });
 const docMods = import.meta.glob<FmModule>('/src/content/docs/*.mdx', { eager: true });
 
-function recipeTargets(): OgTarget[] {
-  return Object.entries(recipeMods).map(([key, mod]) => {
-    const slug = slugOf(key);
-    const meta = recipeBySlug.get(slug);
-    const fm = mod.frontmatter ?? {};
-    const title = fm.title ?? meta?.title ?? humanize(slug);
-    const group = meta ? recipeGroupLabel.get(meta.group) : undefined;
-    return {
-      id: `recipes/${slug}`,
-      eyebrow: group ? `Recipe · ${group}` : 'Recipe',
-      title,
-      subtitle: fm.description ?? meta?.oneLiner,
-      monogram: monogram(title),
-      hue: hueFor(title),
-      footerRight: `/recipes/${slug}`,
-    };
-  });
+function topicTargets(): OgTarget[] {
+  return TOPICS.map((t) => ({ id: `mechanics/${t.slug}`, title: t.title, subtitle: t.oneLiner }));
 }
 
 function fmTargets(
   mods: Record<string, FmModule>,
   prefix: string,
-  eyebrow: string,
 ): OgTarget[] {
   return Object.entries(mods)
     .filter(([key]) => slugOf(key) !== 'index')
@@ -66,10 +43,8 @@ function fmTargets(
       const fm = mod.frontmatter ?? {};
       return {
         id: `${prefix}/${slug}`,
-        eyebrow: fm.eyebrow ? `${eyebrow} · ${fm.eyebrow}` : eyebrow,
         title: fm.title ?? humanize(slug),
         subtitle: fm.description,
-        footerRight: `/${prefix}/${slug}`,
       };
     });
 }
@@ -77,48 +52,40 @@ function fmTargets(
 function faqTargets(): OgTarget[] {
   return FAQ_ANSWERED.map((q) => ({
     id: `faq/${q.id}`,
-    eyebrow: `FAQ · ${FAQ_GROUP_TITLE[q.group].en}`,
     title: q.en,
-    monogram: '?',
-    hue: hueFor(q.id),
-    footerRight: `/faq/${q.id}`,
   }));
 }
 
 function archTargets(): OgTarget[] {
   return ARCH_PAGES.map((p) => ({
     id: `architecture/${p.slug}`,
-    eyebrow: `Architecture · ${p.eyebrow}`,
     title: p.title,
     subtitle: p.subtitle,
-    footerRight: `/architecture/${p.slug}`,
   }));
 }
 
 const HOME: Omit<OgTarget, 'id'> = {
-  eyebrow: 'Open-source slot reel engine for PixiJS v8',
   title: 'Slot reels, ready to spin.',
-  subtitle: SITE.description,
-  footerRight: 'npm i pixi-reels',
+  // Shorter than SITE.description, which the card cut mid-word.
+  subtitle: 'A reel engine for PixiJS v8, with cascades, Hold & Win and big symbols built in.',
 };
 
-const SECTIONS: Array<{ id: string; eyebrow: string; title: string; subtitle: string }> = [
-  { id: 'recipes', eyebrow: 'Browse', title: 'Recipes', subtitle: 'Runnable, copy-paste slot mechanics — lines, cascades, hold & win, wilds, big symbols, and more.' },
-  { id: 'guides', eyebrow: 'Learn', title: 'Guides', subtitle: 'Mental models and step-by-step walkthroughs for building slots with pixi-reels.' },
-  { id: 'faq', eyebrow: 'Answers', title: 'Frequently asked questions', subtitle: 'Practical how-tos for building reels, symbols, wins, and features.' },
-  { id: 'api', eyebrow: 'Reference', title: 'API reference', subtitle: 'Every class, interface, and function in the pixi-reels public surface.' },
-  { id: 'docs', eyebrow: 'Reference', title: 'Documentation', subtitle: 'Builder, ReelSet, events, and phases — the pixi-reels API in prose.' },
-  { id: 'architecture', eyebrow: 'Internals', title: 'Architecture', subtitle: 'How the engine is wired: spin lifecycle, phases, events, cascade.' },
-  { id: 'changelog', eyebrow: 'Releases', title: 'Changelog', subtitle: 'What changed in each pixi-reels release.' },
+const SECTIONS: Array<{ id: string; title: string; subtitle: string }> = [
+  { id: 'mechanics', title: 'Mechanics', subtitle: 'Runnable slot mechanics to copy: lines, cascades, Hold & Win, wilds, big symbols and more.' },
+  { id: 'learn', title: 'Learn', subtitle: 'Mental models and step-by-step walkthroughs for building slots with pixi-reels.' },
+  { id: 'faq', title: 'Frequently asked questions', subtitle: 'Practical how-tos for building reels, symbols, wins, and features.' },
+  { id: 'api', title: 'API reference', subtitle: 'Every class, interface, and function in the pixi-reels public surface.' },
+  { id: 'reference', title: 'Reference', subtitle: 'The builder, ReelSet, events and phases: the pixi-reels API in prose.' },
+  { id: 'architecture', title: 'Architecture', subtitle: 'How the engine is wired: spin lifecycle, phases, events, cascade.' },
+  { id: 'studio', title: 'Studio', subtitle: 'Write a recipe module and watch the reels rebuild, with the debug overlay and the event log beside them.' },
+  { id: 'changelog', title: 'Changelog', subtitle: 'What changed in each pixi-reels release.' },
 ];
 
 function sectionTargets(): OgTarget[] {
   return SECTIONS.map((s) => ({
     id: `section/${s.id}`,
-    eyebrow: s.eyebrow,
     title: s.title,
     subtitle: s.subtitle,
-    footerRight: `/${s.id}`,
   }));
 }
 
@@ -126,9 +93,9 @@ export const OG_TARGETS: OgTarget[] = [
   { id: 'home', ...HOME },
   { id: 'default', ...HOME },
   ...sectionTargets(),
-  ...recipeTargets(),
-  ...fmTargets(guideMods, 'guides', 'Guide'),
-  ...fmTargets(docMods, 'docs', 'Docs'),
+  ...topicTargets(),
+  ...fmTargets(guideMods, 'learn'),
+  ...fmTargets(docMods, 'reference'),
   ...faqTargets(),
   ...archTargets(),
 ];

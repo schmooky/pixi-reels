@@ -1,0 +1,36 @@
+---
+title: Anticipation
+group: lines
+oneLiner: Hold the last reels back when a bonus is one scatter away, so the player watches them land.
+order: 14
+tags:
+  - anticipation
+  - tension
+  - scatter
+  - near-miss
+  - spine
+  - horizontal
+  - reverse
+  - curve
+  - acceleration
+---
+
+An anticipation tease slows the reels that could still complete a win, so the
+player watches them land. Call `setAnticipation(reelIndices, options)` after
+`spin()` and before `setResult()`. The named reels run an anticipation phase
+before they stop. The set is cleared at the start of every `spin()`.
+
+```ts
+const spinDone = reelSet.spin();
+const grid = await server.spin();          // ColumnTarget[]
+reelSet.setAnticipation(anticipationForScatters(grid, { symbol: 'SCAT', trigger: 2 }));
+reelSet.setResult(grid);
+await spinDone;
+```
+
+The second argument is either a stagger (`0`, a number of ms, a list of ms,
+or `'sequential'`) or an options object with `stagger`, `slowdown`,
+`duration`, `protect`, `curve` and `cells`. The demos above cover each of
+them. The speed profile's `anticipationDelay` sets how long a tease lasts, and a
+profile with `anticipationDelay: 0` skips the tease unless you pass
+`duration`.

@@ -1,5 +1,6 @@
 id: bonusgames-010
 group: bonusgames
+topic:
 question: How do I tally "you collected X" at the end of the pick?
 answer: Sum the picks in your state and show the total in your UI.
 links: []

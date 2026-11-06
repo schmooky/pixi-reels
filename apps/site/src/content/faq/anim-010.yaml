@@ -1,11 +1,12 @@
 id: anim-010
 group: anim
+topic: cascade
 question: How do I play a different destroy animation per symbol art (shatter vs
   disintegrate)?
 answer: >-
-  Override `playDestroy(opts)` per symbol class -- Spine plays a `disintegration`
+  Override `playDestroy(opts)` per symbol class, Spine plays a `disintegration`
   track, a sprite swaps to a shatter. The default is a scale-and-fade implode,
   no rotation.
 links:
   - label: "Recipe: Remove symbol"
-    href: /recipes/remove-symbol/
+    href: /mechanics/cascade/#cascade-destroy-and-present

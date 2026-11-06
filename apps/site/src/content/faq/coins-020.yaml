@@ -1,9 +1,10 @@
 id: coins-020
 group: coins
+topic: hold-and-win
 question: How do I make a blank coin reveal a random value with a spinning reel
   inside it?
 answer: Land it blank, then scroll a masked strip of candidate values inside the
   coin and ease it onto the revealed number, driven from `coin:locked`.
 links:
-  - label: "Recipe: Hold & Win — mystery value coin"
-    href: /recipes/hold-and-win-mystery-coin/
+  - label: "Recipe: Hold & Win: mystery value coin"
+    href: /mechanics/hold-and-win/#hold-and-win-mystery-coin

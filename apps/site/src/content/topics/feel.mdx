@@ -1,0 +1,182 @@
+---
+title: Spin feel
+group: lines
+oneLiner: "Tune how a spin starts and stops: the stagger between reels, a wind-up, the kick on landing."
+order: 16
+tags:
+  - phases
+  - steps
+  - timing
+  - fx
+  - anticipation
+  - speed
+  - skip
+guides:
+  - speed-modes
+  - sound
+---
+
+<ConceptPart title="Speed modes" id="concept-speed-modes" lede="The three built-in speed profiles, switching between them, and writing your own.">
+
+A speed profile holds the numbers that decide how a spin feels, such as the
+acceleration, the spin speed, the stagger between stops and the bounce.
+
+<a id="the-three-defaults"></a>
+
+## The three defaults
+
+```ts
+import { SpeedPresets } from 'pixi-reels';
+
+// SpeedPresets.NORMAL        relaxed feel
+// SpeedPresets.TURBO         faster stop, short acceleration
+// SpeedPresets.SUPER_TURBO   almost instant
+```
+
+A builder with no `.speed()` call gets `NORMAL` under the name `'normal'`.
+
+<a id="switch-at-runtime"></a>
+
+## Switch at runtime
+
+```ts
+reelSet.speed.addProfile('turbo', SpeedPresets.TURBO);
+reelSet.setSpeed('turbo');
+reelSet.events.on('speed:changed', (p, prev) => console.log(p.name, prev.name));
+```
+
+<a id="custom-profile"></a>
+
+## Custom profile
+
+```ts
+const CINEMATIC: SpeedProfile = {
+  name: 'cinematic',
+  spinDelay: 280,
+  spinSpeed: 38,
+  stopDelay: 180,
+  anticipationDelay: 1200,
+  bounceDistance: 14,
+  bounceDuration: 260,
+  accelerationEase: 'power3.in',
+  bounceEase: 'elastic.out(1, 0.5)',
+  accelerationDuration: 420,
+  minimumSpinTime: 1400,
+};
+
+builder
+  .speed('cinematic', CINEMATIC)
+  .initialSpeed('cinematic');
+```
+
+</ConceptPart>
+
+<ConceptPart title="Sound" id="concept-sound" lede="Attach a table of sound cues to a reel set's events, with a port for @schmooky/zvuk.">
+
+The engine fires events for each moment of a round, and your audio engine
+plays sounds. `attachReelSounds` connects the two with a table that says
+which sound plays on which event, when a loop starts and when it fades out.
+
+<a id="the-cue-table"></a>
+
+## The cue table
+
+```ts
+import { createEngine } from '@schmooky/zvuk';
+import { attachReelSounds, zvukPort } from 'pixi-reels';
+
+const engine = createEngine({ buses: { reels: {}, anticipation: {}, wins: {}, ui: {} } });
+await engine.unlock(); // from a gesture
+await engine.loadSound('spin', ['/sfx/spin.webm', '/sfx/spin.m4a'], { bus: 'reels' });
+await engine.loadVariants('reel-stop', [
+  ['/sfx/reel-stop.1.webm', '/sfx/reel-stop.1.m4a'],
+  ['/sfx/reel-stop.2.webm', '/sfx/reel-stop.2.m4a'],
+], { bus: 'reels' });
+// ... anticipation, skip, win, pop
+
+const sounds = attachReelSounds(reelSet, zvukPort(engine), {
+  spin: { play: 'spin' },
+  reelStop: { play: 'reel-stop', pitch: { jitter: 0.04 },
+              delay: ({ profile }) => profile.bounceDuration / 2000 },
+  anticipation: { loop: 'anticipation', fadeIn: 0.12, fadeOut: 0.25,
+                  pitch: ({ order }) => 1 + 0.08 * order },
+  skip: { play: 'skip' },
+  win: { play: 'win' },
+  cascadeDestroy: { play: 'pop' },
+});
+
+sounds.destroy(); // when the reel set goes
+```
+
+The demos on this site run a table like this one. `reelSounds(reelSet)` from
+`@pixi-reels/kit/sound` attaches it to a set, using one audio engine for the
+whole page, and `boardSounds(board)` does the same for a Hold & Win board.
+The Sound button under a demo mutes it. The files load on the first press.
+
+The spin cue plays once per spin. A loop under every spin
+(`spin: { loop: 'spin-loop', fadeIn: 0.05, fadeOut: 0.08 }`) is supported and
+fades out on the last landing, but on a page with many demos it gets
+tiring. The reel stop sounds are enough to mark the rhythm.
+
+<a id="the-beats"></a>
+
+## The beats
+
+| Cue | Starts on | A loop ends on | Context |
+|---|---|---|---|
+| `spin` | `spin:start` | `spin:allLanded` | |
+| `reelStop` | `spin:reelLanding`, on every landing path, cascade refills included | | `reelIndex` |
+| `anticipation` | `anticipation:reel`, one per teasing reel | that reel's `anticipation:reelEnd` | `order`, `total`, `reelIndex` |
+| `skip` | `skip:requested` | | |
+| `win` | `spotlight:start`, and `win:group` per presented win | | |
+| `cascadeDestroy` | `cascade:destroy:start` | | |
+| `on[event]` | the named event | its `until` event | |
+
+Every context also carries `speed` (the active profile's name), `profile`
+(the profile itself) and `mode` (`'standard'`, or `'cascade'` for a tumble
+and its refills).
+
+The default table the demos run uses `on` for events outside the spin
+lifecycle. It plays a shove on `nudge:start`, a tick on `column:set` when a
+symbol splits or a column changes, a rising sweep when a set gains cells or
+reels (`expand:stepAdded`, `reels:added`, `rows:added`), and a soft pop on
+`pin:placed`.
+
+<a id="a-hold--win-board"></a>
+
+## A Hold & Win board
+
+`attachBoardSounds(board, port, cues)` is the same table over a board's
+beats: `featureEnter`, `respinStart` (a loop that runs until `respin:end`),
+`cellLanded` (with `reelIndex`, `cell` and `hit`), `coinLocked`, `boardFull`,
+`featureEnd`, and `on` for any other board event. The demos play a quiet
+kick per respin, a thud when a coin lands, a ring a moment after it locks,
+and the win sound once when the feature ends. Empty cells land without a
+sound.
+
+A cue is `{ play: name }` for a one-shot or `{ loop: name, fadeIn, fadeOut }`
+for a bed. `volume` and `pitch` take a number, a `{ base, jitter }` spread so
+repeated thuds do not sound cloned, or a function of the context. The tease
+cue above climbs about a semitone per reel, and a spin cue can read `speed`
+to pitch up in turbo. `delay` is the time in seconds between the event and the
+sound. The demos delay the thud by half the profile's `bounceDuration`, which
+is when the reel reaches the bottom of its bounce. Without the delay it would
+play on the frame the reel snaps. `when(ctx)` keeps a cue quiet. On a tumble, where the
+symbols drop in one by one, the demos play the kick and the thuds at half
+level with no delay.
+
+Loops are tracked per event, so there is one tease loop per reel. They fade out
+when their beat ends and stop at once on `destroy()` or when the reel set is
+destroyed.
+
+<a id="any-engine"></a>
+
+## Any engine
+
+`attachReelSounds` only needs a `ReelAudioPort`: a `play(name, { bus, volume,
+pitch })` method and a `loop(name, { ..., fadeIn })` method that returns
+`{ stop({ fade }) }`. `zvukPort` is that port over a zvuk engine. A variants
+set plays its next take, and a missing name is skipped with one warning. Wrap
+Howler or raw Web Audio the same way.
+
+</ConceptPart>

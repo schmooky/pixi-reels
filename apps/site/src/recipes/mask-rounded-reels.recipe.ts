@@ -1,7 +1,16 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
-//                   CardSymbol, CARD_DECK, app, SilkGraphics, DebugPlaque
-//
+import { SilkGraphics } from 'pixi-silk';
+import { CARD_DECK, ReelSetBuilder, RoundedRectMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Each reel as its own card',
+  topic: 'masks',
+  tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+  needs: ['generic-symbols'],
+} as const satisfies RecipeMeta;
+
 // EACH REEL AS ITS OWN ROUNDED CARD.
 //
 // `scope: 'reel'` rounds all four corners of every reel box instead of the
@@ -15,58 +24,67 @@
 //
 // The gap is also why this scope is not the default: most slots butt their
 // reels together, and there `scope: 'set'` or SilhouetteMaskStrategy is right.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const REELS = 5, ROWS = 3, SIZE = 80;
+  // Non-zero CROSS gap. This is the precondition for scope 'reel'.
+  const GAP = 14;
+  const RADIUS = 18;
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const REELS = 5, ROWS = 3, SIZE = 80;
-// Non-zero CROSS gap. This is the precondition for scope 'reel'.
-const GAP = 14;
-const RADIUS = 18;
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE)
+    // x is the CROSS axis on a vertical set. y stays 0 so cells stack flush.
+    .symbolGap(GAP, 0)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+    })
+    .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS, scope: 'reel' }))
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE)
-  // x is the CROSS axis on a vertical set. y stays 0 so cells stack flush.
-  .symbolGap(GAP, 0)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-  })
-  .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS, scope: 'reel' }))
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
-  .ticker(app.ticker)
-  .build();
+  const H = ROWS * SIZE;
+  const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const H = ROWS * SIZE;
-const W = REELS * SIZE + (REELS - 1) * GAP;
+  const outline = new SilkGraphics();
+  for (let i = 0; i < REELS; i++) {
+    outline.roundRect(i * (SIZE + GAP), 0, SIZE, H, RADIUS);
+  }
+  outline.stroke({ width: 2, color: 0x6ad0ff, alpha: 0.85 });
+  reelSet.addChild(outline);
 
-const outline = new SilkGraphics();
-for (let i = 0; i < REELS; i++) {
-  outline.roundRect(i * (SIZE + GAP), 0, SIZE, H, RADIUS);
+  const hud = readout.plaque({
+    text: `scope: 'reel', radius ${RADIUS}  -  needs symbolGap.x > 0 (here ${GAP})`,
+    minWidth: W,
+    maxWidth: W,
+  });
+  hud.position.set(0, H + 10);
+  reelSet.addChild(hud);
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 380));
+      reelSet.setResult(grid);
+      await p;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      try { outline.destroy(); } catch {}
+      try { hud.destroy({ children: true }); } catch {}
+    },
+  };
 }
-outline.stroke({ width: 2, color: 0x6ad0ff, alpha: 0.85 });
-reelSet.addChild(outline);
-
-const hud = new DebugPlaque({
-  text: `scope: 'reel', radius ${RADIUS}  -  needs symbolGap.x > 0 (here ${GAP})`,
-  minWidth: W,
-  maxWidth: W,
-});
-hud.position.set(0, H + 10);
-reelSet.addChild(hud);
-
-return {
-  reelSet,
-  cleanup: () => {
-    try { outline.destroy(); } catch {}
-    try { hud.destroy({ children: true }); } catch {}
-  },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 380));
-    reelSet.setResult(grid);
-    await p;
-  },
-};

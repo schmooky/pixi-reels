@@ -1,8 +1,9 @@
 id: anim-001
 group: anim
+topic: cells-and-banners
 question: How do I play a win animation on a single symbol?
-answer: Call `playWin()` on the symbol —
+answer: Call `playWin()` on the symbol,
   `reelSet.getReel(col).getSymbolAt(row).playWin()`.
 links:
   - label: "Guide: Win animations"
-    href: /guides/win-animations/
+    href: /mechanics/cells-and-banners/#concept

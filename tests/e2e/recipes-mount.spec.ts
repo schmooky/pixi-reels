@@ -19,7 +19,7 @@ import { setTimeout as wait } from 'node:timers/promises';
  * screenshot baseline is GPU- and platform-dependent (same reasoning as
  * orientation-matrix.spec.ts).
  *
- * A third section drives named demos through their spin button, because
+ * A third section drives named demos by tapping their canvas, because
  * mounting proves nothing about a recipe whose point is inside `onSpin`. It
  * lives here rather than in its own spec so it shares this file's preview
  * server: the guard above refuses to attach to a server it did not start, and
@@ -39,22 +39,28 @@ const BASE = `http://localhost:${PORT}`;
 const PREVIEW_ENV = { ...process.env, ASTRO_PREVIEW_BACKGROUND: '1' };
 
 /**
- * Every recipe umbrella page. Recipes are evaluated from source at runtime,
- * so a page that builds can still throw on mount; only a real browser
- * catches that.
+ * Every topic page with live demos. Recipes are evaluated from source at
+ * runtime, so a page that builds can still throw on mount; only a real
+ * browser catches that.
  *
  * The `/demos` route used to be covered here too. It was deleted in 2.0 when
- * the standalone example apps moved to their own repo -- `/recipes` is the
- * only live-demo surface now.
+ * the standalone example apps moved to their own repo. The recipe umbrella
+ * pages that replaced it became the Demos section of the /mechanics/ topic
+ * pages (their old /recipes/ URLs redirect there), and the one guide that
+ * embedded recipes, nudge, is the Concept section of its topic. A topic page
+ * opens on its Demos section; the mount test still scrolls to `#demos` so it
+ * does not depend on the header's height.
  */
 const PAGES = [
   ...['anticipation', 'big-symbols', 'cascade', 'cells-and-banners', 'hold-and-win',
-      'masks', 'nudge', 'orientation-and-direction', 'starters', 'symbols', 'wilds-and-pins',
-     ].map((s) => `/recipes/${s}/`),
-  // The only guide that embeds recipes. Kept explicit rather than globbed so
-  // adding <RecipeDemo> to another guide is a deliberate act, not a silent
-  // gap in coverage.
-  '/guides/nudge/',
+      'layers', 'masks', 'nudge', 'orientation-and-direction', 'spinning-art', 'starters', 'symbols',
+      'wilds-and-pins',
+     ].map((s) => `/mechanics/${s}/`),
+  // The landing page mounts four live sets (hero + three mechanic panels)
+  // through LandingReels, not RecipeRunner. A mount failure there renders no
+  // canvas and no `.text-destructive`, so the canvas-count assertion is the
+  // one that catches it.
+  '/',
 ];
 
 test.beforeAll(async () => {
@@ -140,6 +146,9 @@ for (const path of PAGES) {
     // only; `recipes survive scrolling` below covers unmount/teardown.
     await page.setViewportSize({ width: 1280, height: 3000 });
     await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+    // A topic page's demos sit below its Concept prose; bring the section to
+    // the top of the viewport so the runner's intersection margin reaches them.
+    await page.evaluate(() => document.getElementById('demos')?.scrollIntoView());
     await page.waitForTimeout(3000);
 
     const canvases = await page.locator('canvas').count();
@@ -176,15 +185,15 @@ for (const path of PAGES) {
 const DRIVEN: { path: string; anchor: string; ms: number }[] = [
   // A lift held across three respin landings, each one a whole-board
   // `refreshCellZIndex()` over the lifted cell.
-  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift', ms: 12_000 },
+  { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-lift', ms: 12_000 },
   // `dim({ except })` under a `lift()`, both released in a `finally`.
-  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift-dim', ms: 9_000 },
+  { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-lift-dim', ms: 9_000 },
   // `dim()` and `dimSymbols()` back to back, both under a `lift()`.
-  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-symbols', ms: 12_000 },
+  { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-dim-symbols', ms: 12_000 },
   // One cell, chrome background vs symbol art, four dims in a row.
-  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-one-cell', ms: 12_000 },
+  { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-dim-one-cell', ms: 12_000 },
   // `reelSet.promote()` around a GSAP tween, run twice.
-  { path: '/recipes/symbols/', anchor: 'clover-promote-win-line', ms: 12_000 },
+  { path: '/mechanics/layers/', anchor: 'clover-promote-win-line', ms: 12_000 },
 ];
 
 for (const { path, anchor, ms } of DRIVEN) {
@@ -215,7 +224,14 @@ for (const { path, anchor, ms } of DRIVEN) {
       .map((t) => t.trim()).filter(Boolean);
     expect(mountFailures, `${anchor} threw on mount`).toEqual([]);
 
-    await frame.getByRole('button', { name: 'Spin' }).click();
+    // The canvas appears before the recipe has finished loading its kits.
+    // There is no DOM spin control: the recipe wires `tapToSpin`, so a tap on
+    // the canvas starts the round, and the runner's wrapper flips its
+    // `data-state` from `loading` to `ready` once that tap would be heard. On
+    // a page of 48 demos that can take longer than click()'s own 10 s wait.
+    await expect(frame.locator('[data-state="ready"]'), `${anchor} never became ready`)
+      .toHaveCount(1, { timeout: 60_000 });
+    await frame.locator('canvas').click({ force: true });
     await page.waitForTimeout(ms);
 
     // Both assertions below are load-bearing, and they catch different
@@ -239,11 +255,11 @@ for (const { path, anchor, ms } of DRIVEN) {
  * corrupt OTHER apps are invisible on a single-demo page.
  */
 const SCROLL_PAGES = [
-  '/recipes/big-symbols/',
-  '/recipes/nudge/',
-  '/recipes/cascade-6x5/',
-  '/recipes/hold-and-win/',
-  '/recipes/multiways/',
+  '/mechanics/big-symbols/',
+  '/mechanics/nudge/',
+  '/mechanics/cascade/',
+  '/mechanics/hold-and-win/',
+  '/mechanics/skip/',
 ];
 
 for (const path of SCROLL_PAGES) {
@@ -272,7 +288,10 @@ for (const path of SCROLL_PAGES) {
     // scrolled in cost to mount. On CI's software GL a Spine-heavy page (Hold
     // & Win stacks ~40 demos) spent the whole fixed 60s inside this loop, so
     // budget by page height instead: a longer page is not a red build.
-    test.setTimeout(Math.ceil(height / 700) * 2500 + 30_000);
+    // Measured on the 48-demo Hold & Win topic page (42k px, 61 steps) with
+    // the headless shell: 2.9 s a step on average, 13 s for the one that
+    // mounts the clover skeletons, so 4 s a step is the budget.
+    test.setTimeout(Math.ceil(height / 700) * 4000 + 30_000);
     for (let y = 0; y < height; y += 700) {
       await page.evaluate((to) => window.scrollTo(0, to), y);
       await page.waitForTimeout(700);
@@ -301,34 +320,43 @@ for (const path of SCROLL_PAGES) {
  * the metrics.
  */
 test('the debug overlay draws a spin without throwing', async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   const errors: string[] = [];
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
   page.on('pageerror', (err) => errors.push(String(err)));
 
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto(`${BASE}/recipes/anticipation/`, { waitUntil: 'networkidle' });
-  // The page's first demo.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE}/mechanics/anticipation/`, { waitUntil: 'networkidle' });
+  // The page's first demo. Its Debug button hands the module to Studio with
+  // `&debug=1`, where the overlay and the events panel open beside the
+  // reels at full size; the docs page draws no debug chrome of its own.
   const frame = page.locator('[data-recipe-frame]').first();
   await frame.scrollIntoViewIfNeeded();
-  await expect(frame.locator('canvas')).toHaveCount(1, { timeout: 30_000 });
+  await expect(frame.locator('[data-state="ready"]')).toHaveCount(1, { timeout: 60_000 });
+  await frame.getByRole('button', { name: 'Debug in Studio' }).click();
+  await page.waitForURL(/\/studio\//, { timeout: 30_000 });
 
-  await frame.getByRole('button', { name: 'Show debug' }).click();
+  // A fresh browser context has no saved Studio work, so the recipe from the
+  // hash runs on its own. `load`, not `networkidle`: Monaco streams from a
+  // CDN and the canvas does not wait for it.
+  const pane = page.locator('[data-state]');
+  await expect(pane).toHaveAttribute('data-state', 'ready', { timeout: 60_000 });
+  await expect(page.getByRole('button', { name: 'Hide debug' })).toBeVisible();
   // Turn on the two groups that are off by default, so every layer draws.
   for (const group of ['motion', 'bounds']) {
-    await frame.getByRole('button', { name: group, exact: true }).click();
+    await page.getByRole('button', { name: group, exact: true }).click();
   }
-  await frame.getByRole('button', { name: 'Spin' }).click();
+  await pane.locator('canvas').click({ force: true });
   await page.waitForTimeout(8_000);
   for (const group of ['info', 'grid', 'motion', 'bounds']) {
-    await frame.getByRole('button', { name: group, exact: true }).click();
+    await page.getByRole('button', { name: group, exact: true }).click();
   }
-  await frame.getByRole('button', { name: 'Hide debug' }).click();
+  await page.getByRole('button', { name: 'Hide debug' }).click();
   await page.waitForTimeout(500);
 
-  const shown = await frame.locator('.text-destructive').allInnerTexts();
+  const shown = await page.locator('.text-destructive').allInnerTexts();
   expect(shown.map((t) => t.trim()).filter(Boolean), 'the demo threw').toEqual([]);
   expect(errors, 'the debug overlay logged console errors').toEqual([]);
 });

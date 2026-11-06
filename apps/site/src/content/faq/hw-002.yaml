@@ -1,5 +1,6 @@
 id: hw-002
 group: hw
+topic: hold-and-win
 question: How do I lock a coin in place when it lands?
 answer: Stop spinning that cell and leave its symbol in place. With
   `HoldAndWinBuilder` a hit cell is not respun next round; the

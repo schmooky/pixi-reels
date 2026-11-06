@@ -1,13 +1,14 @@
 id: mways-004
 group: mways
+topic: big-symbols
 question: How do I animate a reel growing from 2 to 7 rows mid-spin?
 answer: >-
   Call `reelSet.setShape(cellsPerReel)` after `spin()` and before `setResult()`;
   it applies to that spin only, and throws if the result already arrived. The new
   geometry is committed under spin blur between the SPIN and STOP phases, so cell
   symbols resize instantly rather than tweening. `shape:changed` fires on
-  `setShape`; `adjust:start` / `adjust:complete` fire per reel that actually has
+  `setShape`; `adjust:start` / `adjust:complete` fire per reel that has
   pin overlays to move.
 links:
   - label: "Guide: MultiWays"
-    href: /guides/multiways/
+    href: /mechanics/big-symbols/#concept-multiways

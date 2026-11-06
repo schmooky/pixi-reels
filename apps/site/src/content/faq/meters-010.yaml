@@ -1,8 +1,9 @@
 id: meters-010
 group: meters
+topic: wilds-and-pins
 question: How do I sticky-stack position-locked multipliers that persist?
 answer: Pin the multiplier to its cell with a payload so it persists and stacks
   by position.
 links:
   - label: "Recipe: Positional multiplier (CellPin)"
-    href: /recipes/positional-multiplier-pin/
+    href: /mechanics/wilds-and-pins/#positional-multiplier-pin

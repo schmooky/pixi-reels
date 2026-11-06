@@ -12,7 +12,7 @@ const { command, class: className = '' } = Astro.props as Props;
 ---
 <div
   class:list={[
-    'inline-flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5 font-mono text-sm shadow-sm',
+    'inline-flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5 font-mono text-sm',
     className,
   ]}
 >
@@ -20,7 +20,7 @@ const { command, class: className = '' } = Astro.props as Props;
   <code class="text-foreground">{command}</code>
   <button
     type="button"
-    class="copy-cmd ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    class="copy-cmd ml-1 inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     data-command={command}
     aria-label="Copy command"
   >

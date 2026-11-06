@@ -1,7 +1,17 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   ReelSymbol, PIXI, app, SilkGraphics, DebugPlaque
-//
+import * as PIXI from 'pixi.js';
+import { SilkGraphics } from 'pixi-silk';
+import { CARD_DECK, ReelSetBuilder, ReelSymbol, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Buffer cells stay masked',
+  topic: 'layers',
+  tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
+  height: 400,
+} as const satisfies RecipeMeta;
+
 // `unmask: true` lifts VISIBLE cells only.
 //
 // An unmasked symbol is parented to the viewport-wide unmasked container on
@@ -11,130 +21,139 @@
 // cell is parked outside the window precisely so nobody sees it.
 //
 // Both cases are on screen at once below. Same symbol, one cell apart.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const PLATE = 'plate';
+  const FILLER = ['7', '8', '9', '10'];
 
-const PLATE = 'plate';
-const FILLER = ['7', '8', '9', '10'];
+  const COLS = 4, ROWS = 3, SIZE = 88, GAP = 6;
+  const GRID_W = COLS * (SIZE + GAP) - GAP;
+  const GRID_H = ROWS * (SIZE + GAP) - GAP;
 
-const COLS = 4, ROWS = 3, SIZE = 88, GAP = 6;
-const GRID_W = COLS * (SIZE + GAP) - GAP;
-const GRID_H = ROWS * (SIZE + GAP) - GAP;
+  // A deliberately oversized symbol: 1.7x its cell in both directions, so a
+  // lifted one overflows the grid edge and its neighbours, and a masked one
+  // would be impossible to miss if it ever leaked.
+  class PlateSymbol extends ReelSymbol {
+    private _w = 0;
+    private _h = 0;
 
-// A deliberately oversized symbol: 1.7x its cell in both directions, so a
-// lifted one overflows the grid edge and its neighbours, and a masked one
-// would be impossible to miss if it ever leaked.
-class PlateSymbol extends ReelSymbol {
-  onActivate() {
-    this._draw();
-  }
-  onDeactivate() {}
-  async playWin() {}
-  stopAnimation() {}
-  resize(width, height) {
-    this._w = width;
-    this._h = height;
-    this._draw();
-  }
-  _draw() {
-    if (!this._w) return;
-    this.view.removeChildren();
-    const w = this._w * 1.7;
-    const h = this._h * 1.7;
-    const x = (this._w - w) / 2;
-    const y = (this._h - h) / 2;
-    this.view.addChild(
-      new PIXI.Graphics()
-        .roundRect(x, y, w, h, 14)
-        .fill({ color: 0x7c3aed })
-        .stroke({ color: 0xfef08a, width: 4 }),
-    );
-    const label = new PIXI.Text({
-      text: 'JACKPOT',
-      style: { fontFamily: 'ui-monospace, monospace', fontSize: 15, fontWeight: '900', fill: 0xfef08a },
-    });
-    label.anchor.set(0.5);
-    label.x = this._w / 2;
-    label.y = this._h / 2;
-    this.view.addChild(label);
-  }
-}
-
-const spare = () => FILLER[Math.floor(Math.random() * FILLER.length)];
-const result = () => [
-  { visible: [spare(), spare(), spare()] },
-  // Visible cell 0 -> lifted above the mask on land.
-  { visible: [PLATE, spare(), spare()] },
-  { visible: [spare(), spare(), spare()] },
-  // Buffer cell above the window -> masked, invisible, and it must stay that
-  // way through a skip as well: hit SPIN then SKIP and nothing pops out.
-  { visible: [spare(), spare(), spare()], bufferStart: [PLATE] },
-];
-
-const reelSet = new ReelSetBuilder()
-  .reels(COLS)
-  .visibleCells(ROWS)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(GAP, GAP)
-  .bufferSymbols(1)
-  .symbols((r) => {
-    for (const sym of CARD_DECK) {
-      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    onActivate() {
+      this._draw();
     }
-    r.register(PLATE, PlateSymbol, {});
-  })
-  // The plate is never drawn at random: it only ever lands where the result
-  // puts it. A pool is the tidy way to say so.
-  .randomSymbols({ exclude: [PLATE] })
-  .symbolData({ [PLATE]: { unmask: true, zIndex: 10 } })
-  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 })
-  .initialFrame(result())
-  .ticker(app.ticker)
-  .build();
+    onDeactivate() {}
+    async playWin() {}
+    stopAnimation() {}
+    resize(width: number, height: number) {
+      this._w = width;
+      this._h = height;
+      this._draw();
+    }
+    _draw() {
+      if (!this._w) return;
+      this.view.removeChildren();
+      const w = this._w * 1.7;
+      const h = this._h * 1.7;
+      const x = (this._w - w) / 2;
+      const y = (this._h - h) / 2;
+      this.view.addChild(
+        new PIXI.Graphics()
+          .roundRect(x, y, w, h, 14)
+          .fill({ color: 0x7c3aed })
+          .stroke({ color: 0xfef08a, width: 4 }),
+      );
+      const label = new PIXI.Text({
+        text: 'JACKPOT',
+        style: { fontFamily: 'ui-monospace, monospace', fontSize: 15, fontWeight: '900', fill: 0xfef08a },
+      });
+      label.anchor.set(0.5);
+      label.x = this._w / 2;
+      label.y = this._h / 2;
+      this.view.addChild(label);
+    }
+  }
 
-// --- Captions ----------------------------------------------------------
-// The lifted plate overflows ABOVE the grid, and the buffer cell it is
-// compared against sits above it too, so the composition needs real headroom.
-// One root with the reels pushed down, returned as `stage`.
-const PAD_TOP = 118;
-const stage = new PIXI.Container();
-reelSet.y = PAD_TOP;
-stage.addChild(reelSet);
+  const spare = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+  const result = () => [
+    { visible: [spare(), spare(), spare()] },
+    // Visible cell 0 -> lifted above the mask on land.
+    { visible: [PLATE, spare(), spare()] },
+    { visible: [spare(), spare(), spare()] },
+    // Buffer cell above the window -> masked, invisible, and it must stay that
+    // way through a skip as well: hit SPIN then SKIP and nothing pops out.
+    { visible: [spare(), spare(), spare()], bufferStart: [PLATE] },
+  ];
 
-// One plaque for all three captions: three separate plates would stack too
-// tall to clear the marker below. Swatches key each row to what it describes
-// on the board: the plate's violet (too dark for text on the plaque) and the
-// marker's grey.
-const captions = new DebugPlaque({
-  title: 'same symbol, one cell apart',
-  rows: [
-    { text: 'reel 1, top VISIBLE cell: lifted, overflows the grid', swatch: 0x7c3aed },
-    { text: 'reel 3, BUFFER cell above: clipped by the mask at the grid edge', color: 0x94a3b8, swatch: 0x94a3b8 },
-  ],
-});
-stage.addChild(captions);
+  const reelSet = new ReelSetBuilder()
+    .reels(COLS)
+    .visibleCells(ROWS)
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(GAP, GAP)
+    .bufferSymbols(1)
+    .symbols((r) => {
+      for (const sym of CARD_DECK) {
+        r.register(sym.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+      r.register(PLATE, PlateSymbol, {});
+    })
+    // The plate is never drawn at random: it only ever lands where the result
+    // puts it. A pool is the tidy way to say so.
+    .randomSymbols({ exclude: [PLATE] })
+    .symbolData({ [PLATE]: { unmask: true, zIndex: 10 } })
+    .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 })
+    .initialFrame(result())
+    .ticker(app.ticker)
+    .build();
 
-// Mark where the buffered plate actually is, since the point of it is what
-// you canNOT see. The dashes sit one cell above the grid, over reel 3.
-const ghost = new SilkGraphics();
-const gx = 3 * (SIZE + GAP);
-const ghostY = PAD_TOP - SIZE - GAP + SIZE / 2;
-ghost.line(gx + 6, ghostY, gx + SIZE - 6, ghostY)
-  .stroke({ width: 2, color: 0x94a3b8, dash: [6, 8], cap: 'round' });
-const ghostLabel = new DebugPlaque({
-  text: 'plate is parked here',
-  fontSize: 9,
-  color: 0x94a3b8,
-  anchor: { x: 0.5, y: 0 },
-});
-ghostLabel.position.set(gx + SIZE / 2, ghostY + 6);
-stage.addChild(ghost, ghostLabel);
+  // --- Captions ----------------------------------------------------------
+  // The lifted plate overflows ABOVE the grid, and the buffer cell it is
+  // compared against sits above it too, so the composition needs real headroom.
+  // One root with the reels pushed down, returned as `stage`.
+  const PAD_TOP = 118;
+  const stage = new PIXI.Container();
+  reelSet.y = PAD_TOP;
+  stage.addChild(reelSet);
 
-return {
-  reelSet,
-  stage,
-  onSpin: async () => {
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 200));
-    reelSet.setResult(result());
-    await p;
-  },
-};
+  // One plaque for all three captions: three separate plates would stack too
+  // tall to clear the marker below. Swatches key each row to what it describes
+  // on the board: the plate's violet (too dark for text on the plaque) and the
+  // marker's grey.
+  const captions = readout.plaque({
+    title: 'same symbol, one cell apart',
+    rows: [
+      { text: 'reel 1, top VISIBLE cell: lifted, overflows the grid', swatch: 0x7c3aed },
+      { text: 'reel 3, BUFFER cell above: clipped by the mask at the grid edge', color: 0x94a3b8, swatch: 0x94a3b8 },
+    ],
+  });
+  stage.addChild(captions);
+
+  // Mark where the buffered plate actually is, since the point of it is what
+  // you canNOT see. The dashes sit one cell above the grid, over reel 3.
+  const ghost = new SilkGraphics();
+  const gx = 3 * (SIZE + GAP);
+  const ghostY = PAD_TOP - SIZE - GAP + SIZE / 2;
+  ghost.line(gx + 6, ghostY, gx + SIZE - 6, ghostY)
+    .stroke({ width: 2, color: 0x94a3b8, dash: [6, 8], cap: 'round' });
+  const ghostLabel = readout.plaque({
+    text: 'plate is parked here',
+    fontSize: 9,
+    color: 0x94a3b8,
+    anchor: { x: 0.5, y: 0 },
+  });
+  ghostLabel.position.set(gx + SIZE / 2, ghostY + 6);
+  stage.addChild(ghost, ghostLabel);
+
+  app.stage.addChild(stage);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 200));
+      reelSet.setResult(result());
+      await p;
+    },
+  });
+  return { reelSet, stage };
+}

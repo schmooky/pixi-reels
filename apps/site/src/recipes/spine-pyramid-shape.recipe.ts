@@ -1,76 +1,90 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadSpineSet, buildSpineMap, PIXI, gsap, app,
-//                   textures, blurTextures, SYMBOL_IDS, pickWeighted
-//
+import { ReelSetBuilder, SpeedPresets } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
+import { buildSpineMap, createAssets, tapToSpin } from '@pixi-reels/kit';
+import type { GeneratedSpineName, RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Pyramid shape with Spine',
+  topic: 'big-symbols',
+  tags: ['big-symbols', 'multiways', 'pyramid', 'spine', 'geometry', 'sticky-wild', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+  needs: ['spine:generated'],
+} as const satisfies RecipeMeta;
+
 // Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine symbols.
 // Spine skeletons scale cleanly to whatever cell size each reel hands them.
 // the outer 3-cell reels get taller cells than the inner 5-cell reels, and
 // the rig stays crisp at both because it's vector, not a baked sprite.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
+  await assets.spineSet("generated");
 
-await loadSpineSet("generated");
+  const VISIBLE = [3, 5, 5, 5, 3];
+  // 140 = the spines' authored frame size. render 1:1 to keep frame strokes
+  // crisp. Spine still scales the rig if individual cells get smaller in tight
+  // reshapes, but the baseline matches the bake.
+  const SIZE = 140;
+  const GAP = 4;
 
-const VISIBLE = [3, 5, 5, 5, 3];
-// 140 = the spines' authored frame size. render 1:1 to keep frame strokes
-// crisp. Spine still scales the rig if individual cells get smaller in tight
-// reshapes, but the baseline matches the bake.
-const SIZE = 140;
-const GAP = 4;
+  const SPINE_MAP: Record<string, GeneratedSpineName> = {
+    '9':  'low_a',
+    '10': 'low_k',
+    J:    'low_q',
+    Q:    'low_j',
+    K:    'mid_1',
+    A:    'high_1',
+  };
+  const IDS = Object.keys(SPINE_MAP);
 
-const SPINE_MAP = {
-  '9':  'low_a',
-  '10': 'low_k',
-  J:    'low_q',
-  Q:    'low_j',
-  K:    'mid_1',
-  A:    'high_1',
-};
-const IDS = Object.keys(SPINE_MAP);
+  const reelSet = new ReelSetBuilder()
+    .reels(VISIBLE.length)
+    .visibleCellsPerReel(VISIBLE)
+    .reelAnchor('center')
+    .symbolSize(SIZE, SIZE)
+    .symbolGap(GAP, GAP)
+    .symbols((registry) => {
+      const spineMap = buildSpineMap(SPINE_MAP);
+      for (const id of IDS) {
+        registry.register(id, SpineReelSymbol, {
+          spineMap,
+          autoPlayLanding: true,
+        });
+      }
+    })
+    .weights(Object.fromEntries(IDS.map((id, i) => [id, 12 - i])))
+    .speed('normal', SpeedPresets.NORMAL)
+    .speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(VISIBLE.length)
-  .visibleCellsPerReel(VISIBLE)
-  .reelAnchor('center')
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(GAP, GAP)
-  .symbols((registry) => {
-    const spineMap = buildSpineMap(SPINE_MAP);
-    for (const id of IDS) {
-      registry.register(id, SpineReelSymbol, {
-        spineMap,
-        autoPlayLanding: true,
-      });
-    }
-  })
-  .weights(Object.fromEntries(IDS.map((id, i) => [id, 12 - i])))
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-// Sync idle across every spine symbol once the spin fully completes.
-// Reels touch down staggered, so per-symbol idle would also start
-// staggered. After spin:complete + a short wait for landing one-shots
-// to finish, restart idle on every visible symbol so the breathing
-// loops are time-aligned.
-const LANDING_MS = 350;
-function syncIdle() {
-  for (let r = 0; r < reelSet.reelCount; r++) {
-    const reel = reelSet.getReel(r);
-    for (let cell = 0; cell < reel.visibleCells; cell++) {
-      const sym = reel.getSymbolAt(cell);
-      if (sym instanceof SpineReelSymbol) sym.stopAnimation();
+  // Sync idle across every spine symbol once the spin fully completes.
+  // Reels touch down staggered, so per-symbol idle would also start
+  // staggered. After spin:complete + a short wait for landing one-shots
+  // to finish, restart idle on every visible symbol so the breathing
+  // loops are time-aligned.
+  const LANDING_MS = 350;
+  function syncIdle() {
+    for (let r = 0; r < reelSet.reels.length; r++) {
+      const reel = reelSet.getReel(r);
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const sym = reel.getSymbolAt(cell);
+        if (sym instanceof SpineReelSymbol) sym.stopAnimation();
+      }
     }
   }
-}
-reelSet.events.on('spin:complete', () => {
-  setTimeout(syncIdle, LANDING_MS);
-});
+  reelSet.events.on('spin:complete', () => {
+    setTimeout(syncIdle, LANDING_MS);
+  });
 
-return {
-  reelSet,
-  nextResult: () =>
-    VISIBLE.map((cells) =>
-      Array.from({ length: cells }, () => IDS[Math.floor(Math.random() * IDS.length)]),
-    ),
-};
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () =>
+      VISIBLE.map((cells) =>
+        Array.from({ length: cells }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+      ),
+  });
+  return { reelSet };
+}

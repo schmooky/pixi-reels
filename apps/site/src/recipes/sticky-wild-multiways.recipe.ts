@@ -1,8 +1,15 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, textures, blurTextures,
-//                   SYMBOL_IDS, pickWeighted
-//
+import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Sticky wild on MultiWays',
+  topic: 'big-symbols',
+  tags: ['big-symbols', 'multiways', 'pyramid', 'spine', 'geometry', 'sticky-wild', 'horizontal', 'reverse', 'orientation'],
+  height: 300,
+} as const satisfies RecipeMeta;
+
 // Sticky wild on a MultiWays slot. Pin a wild on land with `originCell` set;
 // the pin survives every MultiWays reshape. When the next shape is shorter
 // than originCell, the pin clamps to the last visible cell (`pin:migrated`
@@ -10,75 +17,78 @@
 // originCell again, the pin migrates back. no wander.
 //
 // CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const REELS = 6;
+  const MIN_ROWS = 2;
+  const MAX_ROWS = 7;
+  const REEL_PIXEL_HEIGHT = 480;
+  const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
+  const GAP = 0;
+  const STICKY_TURNS = 3;
 
-const REELS = 6;
-const MIN_ROWS = 2;
-const MAX_ROWS = 7;
-const REEL_PIXEL_HEIGHT = 480;
-const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
-const GAP = 0;
-const STICKY_TURNS = 3;
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
+    .pinMigrationDuration(300)
+    .pinMigrationEase('power2.inOut')
+    .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
+    .symbolGap(GAP, GAP)
+    .symbols((registry) => {
+      for (const card of CARD_DECK) {
+        registry.register(card.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+      registry.register(WILD_CARD.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+    })
+    .weights(Object.fromEntries([...CARD_DECK.map((c, i) => [c.id, 12 - i]), [WILD_CARD.id, 2]]))
+    .symbolData({ [WILD_CARD.id]: { weight: 2, zIndex: 5 } })
+    .speed('normal', SpeedPresets.NORMAL)
+    .speed('turbo', SpeedPresets.TURBO)
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
-  .pinMigrationDuration(300)
-  .pinMigrationEase('power2.inOut')
-  .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
-  .symbolGap(GAP, GAP)
-  .symbols((registry) => {
-    for (const card of CARD_DECK) {
-      registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+  // On every landing, pin every wild for STICKY_TURNS spins. Each pin captures
+  // its current cell as `originCell` automatically. that's what lets the
+  // engine restore the pin to its original cell when shapes grow back.
+  reelSet.events.on('spin:allLanded', ({ symbols }) => {
+    for (let c = 0; c < symbols.length; c++) {
+      for (let r = 0; r < symbols[c].length; r++) {
+        if (symbols[c][r] !== WILD_CARD.id) continue;
+        if (reelSet.getPin(c, r)) continue;
+        reelSet.pin(c, r, WILD_CARD.id, { turns: STICKY_TURNS });
+      }
     }
-    registry.register(WILD_CARD.id, CardSymbol, {
-      color: WILD_CARD.color,
-      label: WILD_CARD.label,
-      textColor: WILD_CARD.textColor,
-    });
-  })
-  .weights(Object.fromEntries([...CARD_DECK.map((c, i) => [c.id, 12 - i]), [WILD_CARD.id, 2]]))
-  .symbolData({ [WILD_CARD.id]: { weight: 2, zIndex: 5 } })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
+  });
 
-// On every landing, pin every wild for STICKY_TURNS spins. Each pin captures
-// its current cell as `originCell` automatically. that's what lets the
-// engine restore the pin to its original cell when shapes grow back.
-reelSet.events.on('spin:allLanded', ({ symbols }) => {
-  for (let c = 0; c < symbols.length; c++) {
-    for (let r = 0; r < symbols[c].length; r++) {
-      if (symbols[c][r] !== WILD_CARD.id) continue;
-      if (reelSet.getPin(c, r)) continue;
-      reelSet.pin(c, r, WILD_CARD.id, { turns: STICKY_TURNS });
-    }
-  }
-});
+  // Cycle shapes so the demo deterministically shows clamp + restore.
+  const SHAPE_CYCLE = [
+    [5, 5, 5, 5, 5, 5],
+    [3, 3, 3, 3, 3, 3], // shrinks. high-cell wilds clamp
+    [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originCell
+    [4, 4, 4, 4, 4, 4],
+  ];
+  let spinCount = 0;
+  let plantedWild = false;
 
-// Cycle shapes so the demo deterministically shows clamp + restore.
-const SHAPE_CYCLE = [
-  [5, 5, 5, 5, 5, 5],
-  [3, 3, 3, 3, 3, 3], // shrinks. high-cell wilds clamp
-  [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originCell
-  [4, 4, 4, 4, 4, 4],
-];
-let spinCount = 0;
-let plantedWild = false;
-
-return {
-  reelSet,
-  nextResult: () => {
-    const shape = SHAPE_CYCLE[spinCount++ % SHAPE_CYCLE.length];
-    reelSet.setShape(shape);
-    const grid = shape.map((cells) =>
-      Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
-    );
-    // Plant a wild high up on the first spin so the clamp/restore is visible.
-    if (!plantedWild) {
-      grid[2][Math.min(4, shape[2] - 1)] = WILD_CARD.id;
-      plantedWild = true;
-    }
-    return grid;
-  },
-};
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    next: () => {
+      const shape = SHAPE_CYCLE[spinCount++ % SHAPE_CYCLE.length];
+      reelSet.setShape(shape);
+      const grid = shape.map((cells) =>
+        Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
+      );
+      // Plant a wild high up on the first spin so the clamp/restore is visible.
+      if (!plantedWild) {
+        grid[2][Math.min(4, shape[2] - 1)] = WILD_CARD.id;
+        plantedWild = true;
+      }
+      return grid;
+    },
+  });
+  return { reelSet };
+}

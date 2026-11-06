@@ -1,8 +1,9 @@
 id: coins-003
 group: coins
+topic: hold-and-win
 question: How do I scale the number to fit the coin face?
 answer: Fit the text by font size to a fraction of the coin width, so short
   values read big and long ones shrink.
 links:
-  - label: "Recipe: Hold & Win — Spine coins"
-    href: /recipes/hold-and-win-spine/
+  - label: "Recipe: Hold & Win: Spine coins"
+    href: /mechanics/hold-and-win/#hold-and-win-spine

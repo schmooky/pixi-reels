@@ -1,0 +1,157 @@
+---
+/**
+ * A mechanic's one page: Concept (the prose that used to be its guide), Demos
+ * (the live recipes), API (the TypeDoc pages those two mention) and Questions
+ * (the FAQ answers tagged with it). The page passes the rendered Concept and
+ * Demos bodies through the named slots; everything else arrives as data.
+ */
+import Base from './Base.astro';
+import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+import type { TopicMeta } from '../content/topics.ts';
+import type { TopicDemo } from '../lib/topicDemos.ts';
+import type { ApiEntry } from '../lib/topicApi.ts';
+import type { FaqQuestionResolved } from '../content/faq.ts';
+import { renderAnswer } from '../lib/faqRender.ts';
+
+interface Props {
+  topic: TopicMeta;
+  demos: TopicDemo[];
+  api: ApiEntry[];
+  questions: FaqQuestionResolved[];
+  /** False when the topic has no Concept prose yet; the section then shows the one-liner. */
+  hasConcept: boolean;
+}
+const { topic, demos, api, questions, hasConcept } = Astro.props as Props;
+const pathname = Astro.url.pathname;
+
+const jsonLd = [
+  articleLd({ title: topic.title, description: topic.oneLiner, path: pathname }),
+  breadcrumbLd([
+    { name: SITE.name, url: '/' },
+    { name: 'Mechanics', url: '/mechanics/' },
+    { name: topic.title, url: pathname },
+  ]),
+];
+
+// Demos first: a mechanic page opens on a reel you can tap, and the
+// concept is the "how it works" under it.
+const sections = [
+  { id: 'demos', label: 'Demos' },
+  { id: 'concept', label: 'Concept' },
+  { id: 'api', label: 'API' },
+  { id: 'questions', label: 'Questions' },
+];
+
+const KIND_LABEL: Record<ApiEntry['kind'], string> = {
+  class: 'class',
+  function: 'function',
+  interface: 'interface',
+  type: 'type',
+  variable: 'const',
+};
+const answered = questions.filter((q) => q.answer);
+const open = questions.filter((q) => !q.answer);
+---
+<Base
+  title={`${topic.title} · ${SITE.name}`}
+  description={topic.oneLiner}
+  path={pathname}
+  type="article"
+  article={{ section: 'Mechanics', tags: topic.tags }}
+  jsonLd={jsonLd}
+>
+  <div class="container max-w-[880px] py-10 animate-fade-in">
+    <header class="border-b border-border pb-6">
+      <a href="/mechanics/" class="group inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
+        <svg class="h-3.5 w-3.5 transition-transform duration-[133ms] ease-[cubic-bezier(0.333,1.6,0.667,1)] group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5M11 6l-6 6 6 6" />
+        </svg>
+        All mechanics
+      </a>
+      <p class="eyebrow mt-8 flex">Mechanics</p>
+      <h1 class="display mt-4 text-4xl sm:text-5xl lg:text-6xl">{topic.title}</h1>
+      <p class="mt-5 max-w-[620px] text-lg leading-relaxed text-muted-foreground">{topic.oneLiner}</p>
+    </header>
+
+    <nav aria-label="On this page" class="flex flex-wrap gap-x-7 gap-y-2 border-b border-border py-3 font-mono text-[11px] font-medium uppercase tracking-[0.18em]">
+      {sections.map((s) => (
+        <a href={`#${s.id}`} class="text-muted-foreground transition-colors hover:text-foreground">{s.label}</a>
+      ))}
+    </nav>
+
+    <section id="demos" class="scroll-mt-20 pb-10 pt-8">
+      <p class="eyebrow">Demos</p>
+      <article class="prose-docs mt-4">
+        <slot name="demos" />
+      </article>
+    </section>
+
+    <section id="concept" class="scroll-mt-20 border-t border-border py-10">
+      <p class="eyebrow">Concept</p>
+      <article class="prose-docs mt-6">
+        {hasConcept ? <slot name="concept" /> : <p>{topic.oneLiner}</p>}
+      </article>
+    </section>
+
+    <section id="api" class="scroll-mt-20 border-t border-border py-10">
+      <p class="eyebrow">API</p>
+      <p class="mt-4 max-w-[620px] text-sm leading-relaxed text-muted-foreground">
+        Every exported name the concept, the demos and their sources use, with the one-line summary from the generated reference.
+      </p>
+      {api.length > 0 ? (
+        <ul class="mt-6 divide-y divide-border border-y border-border">
+          {api.map((e) => (
+            <li class="grid gap-x-6 gap-y-1 py-3 sm:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+              <div class="flex min-w-0 items-baseline gap-3">
+                <a href={e.url} class="truncate font-mono text-sm font-medium text-foreground underline-offset-4 hover:underline">{e.name}</a>
+                <span class="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{KIND_LABEL[e.kind]}</span>
+              </div>
+              {e.summary && (
+                e.signature
+                  ? <code class="block truncate font-mono text-[12px] text-muted-foreground">{e.summary}</code>
+                  : <p class="text-sm leading-relaxed text-muted-foreground">{e.summary}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="mt-6 text-sm text-muted-foreground">Nothing on this page names a documented export yet.</p>
+      )}
+    </section>
+
+    <section id="questions" class="scroll-mt-20 border-t border-border py-10">
+      <p class="eyebrow">Questions</p>
+      <p class="mt-4 max-w-[620px] text-sm leading-relaxed text-muted-foreground">
+        From the <a href="/faq/" class="text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground">FAQ</a>, the questions tagged with this mechanic. Open one here, or follow it to its own page.
+      </p>
+      {questions.length > 0 ? (
+        <div class="mt-6 divide-y divide-border border-y border-border">
+          {answered.map((q) => (
+            <details class="group" id={`q-${q.id}`}>
+              <summary class="flex cursor-pointer list-none items-baseline gap-4 py-3 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                <span class="min-w-0 flex-1">{q.en}</span>
+                <span class="shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground group-open:hidden">open</span>
+                <span class="hidden shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground group-open:inline">close</span>
+              </summary>
+              <div class="space-y-3 pb-5 text-sm" set:html={renderAnswer(q.answer!.en)} />
+              <a href={`/faq/${q.id}/`} class="mb-5 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground">
+                Question page
+                <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </a>
+            </details>
+          ))}
+          {open.map((q) => (
+            <div class="flex items-baseline gap-4 py-3 text-sm text-muted-foreground" id={`q-${q.id}`} title="Open question">
+              <span class="min-w-0 flex-1">{q.en}</span>
+              <span class="shrink-0 font-mono text-[11px] uppercase tracking-[0.14em]">unanswered</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p class="mt-6 text-sm text-muted-foreground">No question is tagged with this mechanic yet.</p>
+      )}
+    </section>
+  </div>
+</Base>

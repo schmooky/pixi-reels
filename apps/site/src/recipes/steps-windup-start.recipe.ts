@@ -1,7 +1,23 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, StartPhase, PhaseCardSymbol,
-//                   step, insertAfter, replaceStep, gsap, app, DebugPlaque
-//
+import {
+  insertAfter,
+  PhaseCardSymbol,
+  ReelSetBuilder,
+  replaceStep,
+  SpeedPresets,
+  StartPhase,
+  step,
+} from 'pixi-reels';
+import { ownTap, readout, tapToSpin } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import type { StartStepContext } from 'pixi-reels';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'A wind-up launch',
+  topic: 'feel',
+  tags: ['phases', 'steps', 'timing', 'fx', 'anticipation', 'speed', 'skip'],
+} as const satisfies RecipeMeta;
+
 // A WIND-UP LAUNCH. Replace `pull` on StartPhase, insert `hold` after it.
 //
 // The built-in `pull` is a twitch: speed -2 for 50 ms, two pixels of
@@ -16,83 +32,90 @@
 // The `accelerate` step that follows is untouched. It ramps from wherever
 // the reel is, so the launch reads as one motion. Tap the readout to switch
 // the wind-up off and compare against the stock twitch.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+  const WINDUP = { speed: -7, ms: 140 };
+  const STOCK = { speed: -2, ms: 50 };
+  const HOLD_MS = 90;
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
-const WINDUP = { speed: -7, ms: 140 };
-const STOCK = { speed: -2, ms: 50 };
-const HOLD_MS = 90;
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  let windup = true;
 
-let windup = true;
+  const pull = (ctx: StartStepContext) => {
+    const reel = ctx.reel;
+    const { speed, ms } = windup ? WINDUP : STOCK;
+    if (reel.hasDrive) {
+      reel.targetSpeed = speed;
+      return ctx.wait(ms);
+    }
+    return ctx.gsap.to(reel, { speed, duration: ms / 1000, ease: 'power2.out' });
+  };
 
-const pull = (ctx) => {
-  const reel = ctx.reel;
-  const { speed, ms } = windup ? WINDUP : STOCK;
-  if (reel.hasDrive) {
-    reel.targetSpeed = speed;
-    return ctx.wait(ms);
-  }
-  return ctx.gsap.to(reel, { speed, duration: ms / 1000, ease: 'power2.out' });
-};
+  // The beat at the top of the pull: come to rest, hang, then `accelerate`
+  // takes it from 0. Instant when the wind-up is off.
+  const hold = (ctx: StartStepContext) => {
+    if (!windup) return;
+    const reel = ctx.reel;
+    if (reel.hasDrive) {
+      reel.targetSpeed = 0;
+      return ctx.wait(HOLD_MS);
+    }
+    return ctx.gsap.to(reel, { speed: 0, duration: HOLD_MS / 1000, ease: 'power1.out' });
+  };
 
-// The beat at the top of the pull: come to rest, hang, then `accelerate`
-// takes it from 0. Instant when the wind-up is off.
-const hold = (ctx) => {
-  if (!windup) return;
-  const reel = ctx.reel;
-  if (reel.hasDrive) {
-    reel.targetSpeed = 0;
-    return ctx.wait(HOLD_MS);
-  }
-  return ctx.gsap.to(reel, { speed: 0, duration: HOLD_MS / 1000, ease: 'power1.out' });
-};
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+    })
+    .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 70, accelerationDuration: 360 })
+    .phases((f) => f.register('start', StartPhase, {
+      steps: (steps) => insertAfter(
+        replaceStep(steps, 'pull', step('pull', pull)),
+        'pull',
+        step('hold', hold, { cut: true }),
+      ),
+    }))
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 70, accelerationDuration: 360 })
-  .phases((f) => f.register('start', StartPhase, {
-    steps: (steps) => insertAfter(
-      replaceStep(steps, 'pull', step('pull', pull)),
-      'pull',
-      step('hold', hold, { cut: true }),
-    ),
-  }))
-  .ticker(app.ticker)
-  .build();
+  const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+  const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+  const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
 
-const unwatch = PhaseCardSymbol.watch(reelSet.reels);
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-const TOTAL_W = REELS * SIZE + (REELS - 1) * GAP;
+  const label = () => (windup
+    ? `wind-up ON: pull ${WINDUP.speed} px/frame for ${WINDUP.ms} ms, hold ${HOLD_MS} ms, launch. tap to switch`
+    : `wind-up OFF: stock pull ${STOCK.speed} px/frame for ${STOCK.ms} ms, no hold. tap to switch`);
+  const hud = readout.plaque({ text: label(), minWidth: TOTAL_W, maxWidth: TOTAL_W });
+  hud.position.set(0, TOTAL_H + 10);
+  hud.eventMode = 'static';
+  hud.cursor = 'pointer';
+  hud.on('pointertap', (e) => {
+    ownTap(e);
+    windup = !windup;
+    hud.text = label();
+  });
+  reelSet.addChild(hud);
 
-const label = () => (windup
-  ? `wind-up ON: pull ${WINDUP.speed} px/frame for ${WINDUP.ms} ms, hold ${HOLD_MS} ms, launch. tap to switch`
-  : `wind-up OFF: stock pull ${STOCK.speed} px/frame for ${STOCK.ms} ms, no hold. tap to switch`);
-const hud = new DebugPlaque({ text: label(), minWidth: TOTAL_W, maxWidth: TOTAL_W });
-hud.position.set(0, TOTAL_H + 10);
-hud.eventMode = 'static';
-hud.cursor = 'pointer';
-hud.on('pointertap', () => {
-  windup = !windup;
-  hud.text = label();
-});
-reelSet.addChild(hud);
-
-return {
-  reelSet,
-  cleanup: () => {
-    unwatch();
-    try { hud.destroy({ children: true }); } catch {}
-  },
-  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(grid);
-    await p;
-  },
-};
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 250));
+      reelSet.setResult(grid);
+      await p;
+    },
+    skip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  });
+  return {
+    reelSet,
+    cleanup: () => {
+      unwatch();
+      try { hud.destroy({ children: true }); } catch {}
+    },
+  };
+}

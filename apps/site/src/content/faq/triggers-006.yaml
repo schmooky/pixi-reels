@@ -1,8 +1,9 @@
 id: triggers-006
 group: triggers
+topic: hold-and-win
 question: How do I show the scatters collecting into a trigger counter?
 answer: >-
-  On each scatter land, `bezierFly` it to your trigger counter and bump the count. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+  On each scatter land, `bezierFly` it to your trigger counter and bump the count. Those helpers are demo code in `packages/kit/src/holdAndWinFx.ts`, not exports of the `pixi-reels` package, copy them into your project.
 links:
-  - label: "Recipe: Hold & Win — collector"
-    href: /recipes/hold-and-win-collector/
+  - label: "Recipe: Hold & Win: collector"
+    href: /mechanics/hold-and-win/#hold-and-win-collector

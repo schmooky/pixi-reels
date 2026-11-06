@@ -1,113 +1,132 @@
-// @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app, DebugPlaque
-//
+import * as PIXI from 'pixi.js';
+import { gsap } from 'gsap';
+import { HoldAndWinBuilder } from 'pixi-reels';
+import type { HwCell } from 'pixi-reels';
+import { CLOVER_CELL, CLOVER_SPEED, cloverCellMask, cloverGridBackground, readout, createAssets, tapToSpin } from '@pixi-reels/kit';
+import { CloverSpineSymbol } from '@pixi-reels/kit/spine';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { boardSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Respin counter lamps',
+  topic: 'hold-and-win',
+  tags: ['hold-and-win', 'coins', 'collector', 'respin', 'spine', 'horizontal', 'reverse', 'orientation', 'rectangular', 'clovers'],
+  height: 420,
+  needs: ['hw-clover-spine'],
+} as const satisfies RecipeMeta;
+
 // The respin counter. Three lamps under the board: all lit when the feature
 // arms, one goes dark per miss, every hit relights them all. It is driven by
 // one event, `respins:changed`, whose `reason` says why the number moved -
 // seed, hit-reset or miss - so the lamps can pop on a reset and dim on a miss
 // without the game re-deriving any of it.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const assets = createAssets();
+  const COLS = 5, ROWS = 3;
+  const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+  const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const fmt = (v: number) => v.toFixed(2);
+  const pick = (a: number[]) => a[Math.floor(Math.random() * a.length)];
 
-const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
-const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const fmt = (v) => v.toFixed(2);
-const pick = (a) => a[Math.floor(Math.random() * a.length)];
-
-const art = await loadHwCloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
-// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
-// at rest (unmask), or every edge of every clover is clipped.
-const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
-class Clover extends CloverSpineSymbol {
-  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 3, 5]))); }
-}
-
-const board = new HoldAndWinBuilder()
-  .grid(COLS, ROWS)
-  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
-  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
-  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
-  .symbolData(UNMASK)
-  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
-  .speedProfile(CLOVER_SPEED)
-  // rounded cells, cut on the frame's own radius
-  .cellMask(cloverCellMask)
-  .respins(3)
-  .lockAnimation('landing')
-  .ticker(app.ticker)
-  .build();
-const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
-const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
-board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 24);
-// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
-const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
-app.stage.addChild(grid);
-app.stage.addChild(board.container);
-
-// -- the counter --
-const counter = new PIXI.Container();
-const lamps = [];
-for (let i = 0; i < 3; i++) {
-  const lamp = new PIXI.Container();
-  const bg = new PIXI.Graphics();
-  const digit = new PIXI.BitmapText({ text: String(i + 1), style: { fontFamily: 'CloverValue', fontSize: 24 } });
-  digit.anchor.set(0.5);
-  lamp.addChild(bg, digit);
-  lamp.x = i * 60;
-  counter.addChild(lamp);
-  lamps.push({ lamp, bg, digit });
-}
-const paint = (left) => {
-  lamps.forEach(({ bg, digit }, i) => {
-    const lit = i < left;
-    bg.clear().roundRect(-27, -15, 54, 30, 5).fill({ color: lit ? 0xf5b400 : 0x0b1a4a }).stroke({ color: lit ? 0xffe27a : 0x3f6bd8, width: 1 });
-    digit.alpha = lit ? 1 : 0.4;
-  });
-};
-counter.position.set(app.screen.width / 2 - 60, board.container.y + boardH + 40);
-app.stage.addChild(counter);
-paint(0);
-
-const hud = new DebugPlaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
-hud.position.set(app.screen.width / 2, counter.y + 24);
-app.stage.addChild(hud);
-
-board.events.on('respins:changed', ({ value, reason }) => {
-  paint(value);
-  if (reason === 'seed') hud.text = `armed: ${value} respins`;
-  else if (reason === 'hit-reset') {
-    hud.text = `hit - counter back to ${value}`;
-    for (const { lamp } of lamps) gsap.fromTo(lamp.scale, { x: 1.25, y: 1.25 }, { x: 1, y: 1, duration: 0.35, ease: 'back.out(2)' });
-  } else {
-    hud.text = `miss - ${value} left`;
-    const { lamp } = lamps[value];
-    gsap.fromTo(lamp, { alpha: 0.2 }, { alpha: 1, duration: 0.4 });
+  const art = await assets.cloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
+  // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+  // at rest (unmask), or every edge of every clover is clipped.
+  const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+  class Clover extends CloverSpineSymbol {
+    onActivate(id: string) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 3, 5]))); }
   }
-});
-board.events.on('cell:landed', ({ cell, coin }) => { if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value)); });
 
-const gold = (cell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 3, 5]) } });
-const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 1 }].map(gold);
-// two misses, a hit (relight), then three misses to the end
-const ROUNDS = [[], [], [{ reel: 0, cell: 2 }], [], [], []];
+  const board = new HoldAndWinBuilder<{ value: number }>()
+    .grid(COLS, ROWS)
+    .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+    .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
+    .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+    .symbolData(UNMASK)
+    // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+    .speedProfile(CLOVER_SPEED)
+    // rounded cells, cut on the frame's own radius
+    .cellMask(cloverCellMask)
+    .respins(3)
+    .lockAnimation('landing')
+    .ticker(app.ticker)
+    .build();
+  const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+  const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+  board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 24);
+  // the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+  const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+  app.stage.addChild(grid);
+  app.stage.addChild(board.container);
 
-let busy = false;
-return {
-  board,
-  cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy({ children: true }); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
-  onSpin: async () => {
-    if (busy) return;
-    busy = true;
-    board.reset();
-    board.enter(SEED);
-    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
-    await sleep(500);
-    for (const cells of ROUNDS) {
-      const res = await board.respin(cells.map(gold));
-      await sleep(600);
-      if (res.done) break;
+  // -- the counter --
+  const counter = new PIXI.Container();
+  const lamps: { lamp: PIXI.Container; bg: PIXI.Graphics; digit: PIXI.BitmapText }[] = [];
+  for (let i = 0; i < 3; i++) {
+    const lamp = new PIXI.Container();
+    const bg = new PIXI.Graphics();
+    const digit = new PIXI.BitmapText({ text: String(i + 1), style: { fontFamily: 'CloverValue', fontSize: 24 } });
+    digit.anchor.set(0.5);
+    lamp.addChild(bg, digit);
+    lamp.x = i * 60;
+    counter.addChild(lamp);
+    lamps.push({ lamp, bg, digit });
+  }
+  const paint = (left: number) => {
+    lamps.forEach(({ bg, digit }, i) => {
+      const lit = i < left;
+      bg.clear().roundRect(-27, -15, 54, 30, 5).fill({ color: lit ? 0xf5b400 : 0x0b1a4a }).stroke({ color: lit ? 0xffe27a : 0x3f6bd8, width: 1 });
+      digit.alpha = lit ? 1 : 0.4;
+    });
+  };
+  counter.position.set(app.screen.width / 2 - 60, board.container.y + boardH + 40);
+  app.stage.addChild(counter);
+  paint(0);
+
+  const hud = readout.plaque({ text: 'Lamps count down the respins left.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  hud.position.set(app.screen.width / 2, counter.y + 24);
+  app.stage.addChild(hud);
+
+  board.events.on('respins:changed', ({ value, reason }) => {
+    paint(value);
+    if (reason === 'seed') hud.text = `armed: ${value} respins`;
+    else if (reason === 'hit-reset') {
+      hud.text = `hit - counter back to ${value}`;
+      for (const { lamp } of lamps) gsap.fromTo(lamp.scale, { x: 1.25, y: 1.25 }, { x: 1, y: 1, duration: 0.35, ease: 'back.out(2)' });
+    } else {
+      hud.text = `miss - ${value} left`;
+      const { lamp } = lamps[value];
+      gsap.fromTo(lamp, { alpha: 0.2 }, { alpha: 1, duration: 0.4 });
     }
-    hud.text = `counter ran out · ${board.lockedCoins.length} held · press spin to replay`;
-    busy = false;
-  },
-};
+  });
+  board.events.on('cell:landed', ({ cell, coin }) => { if (coin) (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value)); });
+
+  const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 3, 5]) } });
+  const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 1 }].map(gold);
+  // two misses, a hit (relight), then three misses to the end
+  const ROUNDS = [[], [], [{ reel: 0, cell: 2 }], [], [], []];
+
+  let busy = false;
+  boardSounds(board);
+  tapToSpin(app, {
+    spin: async () => {
+      if (busy) return;
+      busy = true;
+      board.reset();
+      board.enter(SEED);
+      for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+      await sleep(500);
+      for (const cells of ROUNDS) {
+        const res = await board.respin(cells.map(gold));
+        await sleep(600);
+        if (res.done) break;
+      }
+      hud.text = `Counter ran out, ${board.lockedCoins.length} held.`;
+      busy = false;
+    },
+  });
+  return {
+    board,
+    cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy({ children: true }); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  };
+}

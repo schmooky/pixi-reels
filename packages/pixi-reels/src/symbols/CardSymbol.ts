@@ -171,7 +171,7 @@ export class CardSymbol extends ReelSymbol {
  * Standard high-card deck for prototyping. Each card has its own color
  * so a full grid is visually unambiguous at a glance.
  */
-export const CARD_DECK: ReadonlyArray<{ id: string; color: number; label: string }> = [
+export const CARD_DECK: ReadonlyArray<{ id: string; color: number; label: string; textColor?: number }> = [
   { id: '7',  color: 0xc0392b, label: '7' },   // crimson
   { id: '8',  color: 0xe67e22, label: '8' },   // orange
   { id: '9',  color: 0xf1c40f, label: '9' },   // amber

@@ -1,8 +1,9 @@
 id: perf-007
 group: perf
+topic: hold-and-win
 question: How do I tear down a feature's 20+ sub-reelsets safely?
-answer: Call `destroy()` on each sub-ReelSet — for a Hold & Win board,
+answer: Call `destroy()` on each sub-ReelSet. For a Hold & Win board,
   `board.destroy()` tears down all its cells at once.
 links:
   - label: "Recipe: Hold & Win respin"
-    href: /recipes/hold-and-win/
+    href: /mechanics/hold-and-win/

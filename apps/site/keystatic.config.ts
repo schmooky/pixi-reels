@@ -1,33 +1,36 @@
 import { config, fields, collection } from '@keystatic/core';
-import { block } from '@keystatic/core/content-components';
+import { block, wrapper } from '@keystatic/core/content-components';
 
-// ── Recipe groups: kept in sync with RECIPE_GROUPS in src/content/recipes.ts.
-// These are the section buckets the /recipes/ index renders cards under.
-const RECIPE_GROUP_OPTIONS = [
-  { label: 'Building blocks (start here)', value: 'basics' },
-  { label: 'Starter templates', value: 'starters' },
-  { label: 'Per-reel geometry (pyramid)', value: 'pyramid' },
-  { label: 'MultiWays', value: 'multiways' },
-  { label: 'Big symbols (N×M blocks)', value: 'big-symbols' },
-  { label: 'Wilds & sticky cells', value: 'wilds' },
-  { label: 'Features, bonuses & transforms', value: 'features' },
-  { label: 'Cascade & tumbling', value: 'cascade' },
-  { label: 'Wins & paylines', value: 'wins' },
-  { label: 'Anticipation, skip & respin', value: 'tension' },
-  { label: 'Cell coordinates & hit areas', value: 'cell-coords' },
-  { label: 'Symbol authoring', value: 'symbol-formats' },
-  { label: 'Runtime & feature modes', value: 'runtime' },
+// ── Topic groups: kept in sync with TOPIC_GROUPS in src/content/topics.ts.
+// These are the section buckets the /mechanics/ index renders cards under.
+const TOPIC_GROUP_OPTIONS = [
+  { label: 'Line slots', value: 'lines' },
+  { label: 'Cascade games', value: 'cascade' },
+  { label: 'Hold & Win games', value: 'hold-and-win' },
+  { label: 'Ways and MultiWays', value: 'ways' },
+  { label: 'Symbols', value: 'symbols' },
+  { label: 'Wins and overlays', value: 'wins' },
+  { label: 'Reel layout', value: 'layout' },
 ] as const;
 
-// ── Rich-text body shared by recipes, guides and docs. The two embeds below are
-// the ONLY non-prose constructs allowed in a body — every executable demo and
-// image goes through one of them, so the markdown round-trips losslessly through
-// the editor (no raw imports / JSX to drop). The matching renderers live in
-// src/components/keystatic/.
+// ── Rich-text body shared by topics, demos, guides and docs. The embeds below
+// are the ONLY non-prose constructs allowed in a body — every executable demo
+// and image goes through one of them, so the markdown round-trips losslessly
+// through the editor (no raw imports / JSX to drop). The page that renders a
+// body supplies the matching components (src/pages/mechanics/[slug].astro).
 function richBody(label: string) {
   return fields.mdx({
     label,
     components: {
+      ConceptPart: wrapper({
+        label: 'Concept part',
+        description: 'One merged guide inside a topic\'s Concept section: its title and lede above the prose.',
+        schema: {
+          title: fields.text({ label: 'Title' }),
+          id: fields.text({ label: 'Anchor id', description: 'Optional. concept-<old guide slug> on a topic with several parts.' }),
+          lede: fields.text({ label: 'Lede', multiline: true }),
+        },
+      }),
       RecipeDemo: block({
         label: 'Recipe demo',
         description: 'Live PixiJS demo, compiled from a src/recipes/<code>.recipe.ts module.',
@@ -62,14 +65,16 @@ export default config({
   ui: {
     brand: { name: 'pixi-reels docs' },
     navigation: {
-      Content: ['recipes', 'guides', 'docs'],
+      Content: ['topics', 'recipes', 'guides', 'docs'],
       FAQ: ['faq', 'faqGroups'],
     },
   },
   collections: {
-    recipes: collection({
-      label: 'Recipes',
-      path: 'src/content/recipes/*',
+    // One mechanic = one /mechanics/<slug>/ page, built from two entries that
+    // share a slug: the topic (frontmatter + Concept prose) and the demos body.
+    topics: collection({
+      label: 'Topics',
+      path: 'src/content/topics/*',
       slugField: 'title',
       format: { contentField: 'content' },
       columns: ['title', 'group'],
@@ -77,38 +82,55 @@ export default config({
       schema: {
         title: fields.slug({
           name: { label: 'Title' },
-          // slug is the filename; it's the canonical recipe slug used by routes,
-          // card media (public/recipes/<slug>/) and the demo code registry.
+          // slug is the filename; it's the canonical topic slug used by routes,
+          // card media (public/recipes/<slug>/) and the demos entry.
         }),
         group: fields.select({
           label: 'Group',
-          options: RECIPE_GROUP_OPTIONS,
-          defaultValue: 'features',
+          options: TOPIC_GROUP_OPTIONS,
+          defaultValue: 'mechanics',
         }),
         oneLiner: fields.text({
           label: 'One-liner',
           multiline: true,
-          description: 'Card text on the /recipes/ index.',
-        }),
-        description: fields.text({
-          label: 'Description',
-          multiline: true,
-          description: 'Longer summary used in the page header + SEO. Defaults to the one-liner.',
+          description: 'Card text on the /mechanics/ index and the lede under the page title.',
         }),
         order: fields.integer({
           label: 'Order within group',
-          description: 'Lower sorts first on the /recipes/ index. Ties fall back to slug.',
+          description: 'Lower sorts first on the /mechanics/ index. Ties fall back to slug.',
           defaultValue: 0,
         }),
         tags: fields.array(fields.text({ label: 'Tag' }), {
           label: 'Tags',
           itemLabel: (p) => p.value,
         }),
+        guides: fields.array(fields.text({ label: 'Guide slug' }), {
+          label: 'Merged guides',
+          description: 'Old /guides/<slug>/ pages whose prose now lives in this Concept; their URLs redirect here.',
+          itemLabel: (p) => p.value,
+        }),
         image: fields.text({
           label: 'Card image override',
           description: 'Optional. By default the card auto-resolves public/recipes/<slug>/card.*',
         }),
-        content: richBody('Body'),
+        content: richBody('Concept'),
+      },
+    }),
+
+    recipes: collection({
+      label: 'Demos',
+      path: 'src/content/recipes/*',
+      slugField: 'title',
+      format: { contentField: 'content' },
+      columns: ['title'],
+      entryLayout: 'content',
+      schema: {
+        title: fields.slug({
+          name: { label: 'Title' },
+          // slug is the filename and must match a topic's; the topic page
+          // renders this body as its Demos section.
+        }),
+        content: richBody('Demos'),
       },
     }),
 
@@ -157,6 +179,11 @@ export default config({
           label: 'Group',
           collection: 'faqGroups',
           description: 'Which FAQ section this question belongs to.',
+        }),
+        topic: fields.relationship({
+          label: 'Topic',
+          collection: 'topics',
+          description: 'The mechanic whose page lists this question. Blank = General on the FAQ index.',
         }),
         question: fields.text({ label: 'Question', multiline: true }),
         answer: fields.text({

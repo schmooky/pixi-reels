@@ -1,8 +1,9 @@
 id: antic-001
 group: antic
+topic: anticipation
 question: How do I slow the last reel down when a big win is possible?
 answer: "`reelSet.setAnticipation([reelIndex])` before it stops slows that reel
   using the profile's `anticipationDelay`."
 links:
   - label: "Recipe: Anticipate a reel"
-    href: /recipes/anticipate-a-reel/
+    href: /mechanics/anticipation/#anticipate-a-reel

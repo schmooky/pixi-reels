@@ -1,7 +1,15 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SilhouetteMaskStrategy,
-//                   CardSymbol, CARD_DECK, app, DebugPlaque
-//
+import { CARD_DECK, ReelSetBuilder, SilhouetteMaskStrategy, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
+import { readout, tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'Rounding a jagged board',
+  topic: 'masks',
+  tags: ['mask', 'rounded', 'silhouette', 'pyramid', 'jagged', 'frame'],
+  needs: ['generic-symbols'],
+} as const satisfies RecipeMeta;
+
 // ROUNDING A JAGGED BOARD.
 //
 // A pyramid (3-4-5-4-3) has no single rectangle to round. The two obvious
@@ -21,50 +29,59 @@
 // Reels must butt together (cross gap 0). With a gap the reels are genuinely
 // disjoint, their union is several rings rather than one, and the strategy says
 // so once and falls back to per-reel rounded rects.
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const { textures } = await createAssets().genericSymbols();
+  // The reels spin a baked motion blur of each sticker: one cache per set, filled on the first spin.
+  const cache = new SpinTextureCache({ renderer: app.renderer });
+  const IDS = ['9', '10', 'J', 'Q', 'K'];
+  const SHAPE = [3, 4, 5, 4, 3];
+  const REELS = SHAPE.length, SIZE = 76, GAP = 0;
+  const RADIUS = 26, CONCAVE = 9;
+  const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+  function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const SHAPE = [3, 4, 5, 4, 3];
-const REELS = SHAPE.length, SIZE = 76, GAP = 0;
-const RADIUS = 26, CONCAVE = 9;
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCellsPerReel(SHAPE)
+    .symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+    .symbols((r) => {
+      for (const c of CARDS) {
+        r.register(c.id, StaticSpinSymbol, { createInner: () => new StickerSymbol({ textures }), cache, blurRampMs: 140 });
+      }
+    })
+    .maskStrategy(new SilhouetteMaskStrategy({ radius: RADIUS, concaveRadius: CONCAVE }))
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 130 })
+    .ticker(app.ticker)
+    .build();
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCellsPerReel(SHAPE)
-  .symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-  })
-  .maskStrategy(new SilhouetteMaskStrategy({ radius: RADIUS, concaveRadius: CONCAVE }))
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 130 })
-  .ticker(app.ticker)
-  .build();
+  const TALLEST = Math.max(...SHAPE);
+  const H = TALLEST * SIZE;
+  const W = REELS * SIZE + (REELS - 1) * GAP;
 
-const TALLEST = Math.max(...SHAPE);
-const H = TALLEST * SIZE;
-const W = REELS * SIZE + (REELS - 1) * GAP;
+  // Grid-wide, and split so the constructor call stays on one row.
+  const hud = readout.plaque({
+    text: `SilhouetteMaskStrategy({ radius: ${RADIUS}, concaveRadius: ${CONCAVE} })\non ${SHAPE.join('-')}`,
+    minWidth: W,
+  });
+  hud.position.set(0, H + 10);
+  reelSet.addChild(hud);
 
-// Grid-wide, and split so the constructor call stays on one row.
-const hud = new DebugPlaque({
-  text: `SilhouetteMaskStrategy({ radius: ${RADIUS}, concaveRadius: ${CONCAVE} })\non ${SHAPE.join('-')}`,
-  minWidth: W,
-});
-hud.position.set(0, H + 10);
-reelSet.addChild(hud);
-
-return {
-  reelSet,
-  cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
-  onSpin: async () => {
-    const grid = SHAPE.map((cells) => ({
-      visible: Array.from({ length: cells }, rv),
-    }));
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 380));
-    reelSet.setResult(grid);
-    await p;
-  },
-};
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const grid = SHAPE.map((cells) => ({
+        visible: Array.from({ length: cells }, rv),
+      }));
+      const p = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 380));
+      reelSet.setResult(grid);
+      await p;
+    },
+  });
+  return {
+    reelSet,
+    cleanup: () => { try { hud.destroy({ children: true }); } catch {} },
+  };
+}

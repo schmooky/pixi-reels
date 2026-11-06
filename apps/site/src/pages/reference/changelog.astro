@@ -1,0 +1,67 @@
+---
+import Base from '../../layouts/Base.astro';
+import { Content as ChangelogContent } from '../../generated/CHANGELOG.md';
+import { PIXI_REELS_VERSION } from '../../lib/version.ts';
+import { SITE, articleLd, breadcrumbLd } from '../../lib/seo.ts';
+
+const title = 'Changelog';
+const description = `Per-release notes for the pixi-reels engine. Latest published version: v${PIXI_REELS_VERSION}.`;
+
+const jsonLd = [
+  articleLd({ title, description, path: '/reference/changelog/' }),
+  breadcrumbLd([
+    { name: SITE.name, url: '/' },
+    { name: 'Reference', url: '/reference/' },
+    { name: title, url: '/reference/changelog/' },
+  ]),
+];
+---
+<Base
+  title={`${title} · ${SITE.name}`}
+  description={description}
+  path="/reference/changelog/"
+  type="article"
+  article={{ section: 'Reference' }}
+  jsonLd={jsonLd}
+>
+  <div class="container py-12">
+    <article class="changelog prose-docs mx-auto min-w-0 max-w-3xl animate-fade-in">
+      <p class="eyebrow my-0 leading-none">Reference</p>
+      <h1 class="display mb-5 mt-4 text-4xl sm:text-5xl">Changelog</h1>
+      <p class="!mt-0 text-lg text-muted-foreground">
+        Latest published version: <a
+          href="https://www.npmjs.com/package/pixi-reels"
+          class="font-mono"
+          target="_blank"
+          rel="noopener"
+        >v{PIXI_REELS_VERSION}</a>. Full per-release notes are generated from
+        <a
+          href="https://github.com/schmooky/pixi-reels/blob/main/packages/pixi-reels/CHANGELOG.md"
+          target="_blank"
+          rel="noopener"
+        >packages/pixi-reels/CHANGELOG.md</a>.
+      </p>
+      <hr class="my-8 border-border/60" />
+      <ChangelogContent />
+    </article>
+  </div>
+</Base>
+
+<style>
+  /* The generated notes open with their own "# pixi-reels" title, already
+     said by the page heading. */
+  .changelog :global(h1:not(.display)) { display: none; }
+  /* The newest release is the first version heading in the generated notes;
+     it gets a lime "Latest" eyebrow above it. */
+  .changelog :global(h2:first-of-type)::before {
+    content: 'Latest';
+    display: block;
+    margin-bottom: 0.5rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Cascadia Mono', 'Roboto Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: hsl(var(--brand-text));
+  }
+</style>

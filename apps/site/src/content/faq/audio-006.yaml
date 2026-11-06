@@ -1,8 +1,9 @@
 id: audio-006
 group: audio
+topic: cells-and-banners
 question: How do I layer base vs feature music and crossfade between them?
 answer: Crossfade tracks in your audio engine on the feature swap; the engine
   just signals the mode change.
 links:
   - label: "Recipe: Feature mode swap"
-    href: /recipes/feature-mode-swap/
+    href: /mechanics/hold-and-win/#feature-mode-swap

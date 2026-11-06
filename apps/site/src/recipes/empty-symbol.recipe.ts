@@ -1,6 +1,17 @@
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, GoldCoinSymbol, Spine,
-//                   SharedRectMaskStrategy, PIXI, gsap, app, EmptySymbol, pickWeighted
+import * as PIXI from 'pixi.js';
+import { Spine } from '@esotericsoftware/spine-pixi-v8';
+import { EmptySymbol, ReelSetBuilder, SharedRectMaskStrategy, SpeedPresets } from 'pixi-reels';
+import { pickWeighted, tapToSpin } from '@pixi-reels/kit';
+import { GoldCoinSymbol } from '@pixi-reels/kit/spine';
+import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
+import { reelSounds } from '@pixi-reels/kit/sound';
+
+export const meta = {
+  title: 'EmptySymbol: render nothing for a registered id',
+  topic: 'symbols',
+  tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
+  needs: ['hw-spine'],
+} as const satisfies RecipeMeta;
 
 // EMPTY SYMBOL pattern.
 //
@@ -24,69 +35,73 @@
 //   - The coin is the production Spine gold coin (GoldCoinSymbol).
 //   - Weights `{ coin: 1, empty: 6 }`. most cells land blank; coins
 //     scatter sparsely (~1 in 7 by weight).
+export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
+  const COIN = 'coin';
+  const EMPTY = 'empty';
+  const REELS = 3, ROWS = 3, CELL = 88, GAP = 6;
 
-const COIN = 'coin';
-const EMPTY = 'empty';
-const REELS = 3, ROWS = 3, CELL = 88, GAP = 6;
+  const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-jackpot': '/hw-spine/jackpot.json' };
+  for (const [alias, src] of Object.entries(ASSETS)) {
+    if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} }
+  }
+  await PIXI.Assets.load(Object.keys(ASSETS));
+  const SPINE_MAP = { [COIN]: { skeleton: 'hw-jackpot', atlas: 'hw-atlas' } };
+  const probe = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
+  probe.state.setAnimation(0, 'mini_x', true);
+  try { probe.update(0); } catch {}
+  const pb = probe.getLocalBounds();
+  const COIN_SCALE = (CELL - 8) / Math.max(1, pb.width, pb.height);
+  probe.destroy();
 
-const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-jackpot': '/hw-spine/jackpot.json' };
-for (const [alias, src] of Object.entries(ASSETS)) {
-  if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} }
+  const reelSet = new ReelSetBuilder()
+    .reels(REELS)
+    .visibleCells(ROWS)
+    .symbolSize(CELL, CELL)
+    .symbolGap(GAP, GAP)
+    // Spine content ignores the per-reel rect mask; the shared strategy plus
+    // explicit empty buffers in every setResult keeps a scrolling coin clean.
+    .maskStrategy(new SharedRectMaskStrategy())
+    .symbols((registry) => {
+      registry.register(COIN, GoldCoinSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle', scale: COIN_SCALE, settleSize: CELL - 10 });
+      registry.register(EMPTY, EmptySymbol, {});
+    })
+    .weights({ [COIN]: 1, [EMPTY]: 6 })
+    // Seed two coins. A board of pure EMPTY is what this recipe is ABOUT,
+    // but an all-blank canvas on arrival is indistinguishable from a demo
+    // that failed to load, so the opening frame shows the contrast the
+    // recipe is teaching: blank cells with a coin sitting in them.
+    .initialFrame([
+      { visible: [EMPTY, COIN, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+      { visible: [EMPTY, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+      { visible: [COIN, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+    ])
+    .speed('normal', SpeedPresets.NORMAL)
+    .ticker(app.ticker)
+    .build();
+
+  app.stage.addChild(reelSet);
+  reelSounds(reelSet);
+  tapToSpin(app, {
+    reelSet,
+    spin: async () => {
+      const spin = reelSet.spin();
+      await new Promise((r) => setTimeout(r, 150));
+      // Coins scatter sparsely; buffers are forced empty so nothing spills.
+      const grid = Array.from({ length: REELS }, () => ({
+        visible: Array.from({ length: ROWS }, () => pickWeighted({ [COIN]: 1, [EMPTY]: 6 })),
+        bufferStart: [EMPTY],
+        bufferEnd: [EMPTY],
+      }));
+      // At 1:6 odds across 9 cells, roughly a quarter of spins land no coin
+      // at all -- correct for the weighting, but it makes the demo look
+      // broken rather than sparse. Force one so every spin shows a coin
+      // against blank cells. A real game would let the weights stand.
+      if (!grid.some((col) => col.visible.includes(COIN))) {
+        grid[Math.floor(Math.random() * REELS)].visible[Math.floor(Math.random() * ROWS)] = COIN;
+      }
+      reelSet.setResult(grid);
+      await spin;
+    },
+  });
+  return { reelSet };
 }
-await PIXI.Assets.load(Object.keys(ASSETS));
-const SPINE_MAP = { [COIN]: { skeleton: 'hw-jackpot', atlas: 'hw-atlas' } };
-const probe = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
-probe.state.setAnimation(0, 'mini_x', true);
-try { probe.update(0); } catch {}
-const pb = probe.getLocalBounds();
-const COIN_SCALE = (CELL - 8) / Math.max(1, pb.width, pb.height);
-probe.destroy();
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(ROWS)
-  .symbolSize(CELL, CELL)
-  .symbolGap(GAP, GAP)
-  // Spine content ignores the per-reel rect mask; the shared strategy plus
-  // explicit empty buffers in every setResult keeps a scrolling coin clean.
-  .maskStrategy(new SharedRectMaskStrategy())
-  .symbols((registry) => {
-    registry.register(COIN, GoldCoinSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle', scale: COIN_SCALE, settleSize: CELL - 10 });
-    registry.register(EMPTY, EmptySymbol, {});
-  })
-  .weights({ [COIN]: 1, [EMPTY]: 6 })
-  // Seed two coins. A board of pure EMPTY is what this recipe is ABOUT,
-  // but an all-blank canvas on arrival is indistinguishable from a demo
-  // that failed to load, so the opening frame shows the contrast the
-  // recipe is teaching: blank cells with a coin sitting in them.
-  .initialFrame([
-    { visible: [EMPTY, COIN, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
-    { visible: [EMPTY, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
-    { visible: [COIN, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
-  ])
-  .speed('normal', SpeedPresets.NORMAL)
-  .ticker(app.ticker)
-  .build();
-
-return {
-  reelSet,
-  onSpin: async () => {
-    const spin = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 150));
-    // Coins scatter sparsely; buffers are forced empty so nothing spills.
-    const grid = Array.from({ length: REELS }, () => ({
-      visible: Array.from({ length: ROWS }, () => pickWeighted({ [COIN]: 1, [EMPTY]: 6 })),
-      bufferStart: [EMPTY],
-      bufferEnd: [EMPTY],
-    }));
-    // At 1:6 odds across 9 cells, roughly a quarter of spins land no coin
-    // at all -- correct for the weighting, but it makes the demo look
-    // broken rather than sparse. Force one so every spin shows a coin
-    // against blank cells. A real game would let the weights stand.
-    if (!grid.some((col) => col.visible.includes(COIN))) {
-      grid[Math.floor(Math.random() * REELS)].visible[Math.floor(Math.random() * ROWS)] = COIN;
-    }
-    reelSet.setResult(grid);
-    await spin;
-  },
-};

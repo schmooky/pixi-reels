@@ -11,7 +11,7 @@
  * Usage:
  *   node scripts/build-all-publishable.mjs
  */
-import { readdir, readFile, copyFile } from 'node:fs/promises';
+import { readdir, readFile, copyFile, stat } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,11 +28,22 @@ const ROOT_FILES_TO_COPY = ['README.md', 'LICENSE', 'CONTRIBUTING.md'];
 
 async function syncRootFiles(pkgDir) {
   for (const name of ROOT_FILES_TO_COPY) {
+    // A package with a README of its own (the kit) keeps it; the library's
+    // README is only the fallback.
+    if (name === 'README.md' && (await exists(join(pkgDir, name)))) continue;
     try {
       await copyFile(join(repoRoot, name), join(pkgDir, name));
     } catch (err) {
       if (err.code !== 'ENOENT') throw err;
     }
+  }
+}
+async function exists(path) {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
   }
 }
 
