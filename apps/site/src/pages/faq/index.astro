@@ -7,7 +7,7 @@ import { SITE, articleLd, breadcrumbLd, faqLd } from '../../lib/seo.ts';
 
 const title = 'FAQ. how do I build this slot mechanic?';
 const description =
-  'A searchable knowledge base of slot-development questions answered with pixi-reels: how to spin, respin, set symbols, run Hold & Win, lock coins, reveal a mystery value, fly coins into a collector, play a destroy animation, and hundreds more.';
+  'Slot development questions answered with pixi-reels code, such as how to lock coins in Hold & Win or reveal a mystery value. Search by keyword.';
 
 const stripCode = (s: string) => s.replace(/`/g, '');
 // FAQPage rich-result data is built from the ANSWERED questions only.
@@ -54,8 +54,8 @@ const sections = [
       </p>
       <h1 class="display mt-4 text-4xl sm:text-5xl">How do I…?</h1>
       <p class="mt-5 max-w-xl text-lg text-muted-foreground">
-        The questions a slot developer actually asks — answered with pixi-reels.
-        Searchable, and growing.
+        Questions slot developers ask, answered with pixi-reels code. Search
+        them below.
         <span class="font-medium text-foreground/80">{FAQ_ANSWERED_COUNT}</span> of
         <span class="font-medium text-foreground/80">{FAQ_COUNT}</span> answered so far.
       </p>
@@ -66,7 +66,7 @@ const sections = [
           id="faq-search"
           type="search"
           autocomplete="off"
-          placeholder={`Search ${FAQ_COUNT} questions — try 'respin', 'mystery', 'collector'…`}
+          placeholder={`Search ${FAQ_COUNT} questions, for example respin, mystery or collector`}
           aria-label="Search the FAQ"
           class="w-full rounded-sm border border-border bg-background py-2.5 pl-10 pr-4 font-mono text-sm outline-none transition-colors duration-[133ms] placeholder:font-mono placeholder:text-muted-foreground focus:border-foreground"
         />

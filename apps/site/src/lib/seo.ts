@@ -7,7 +7,7 @@ export const SITE = {
   githubRepo: 'https://github.com/schmooky/pixi-reels',
   tagline: 'Open-source slot machine reel engine for PixiJS v8',
   description:
-    'Open-source reel engine for PixiJS v8. Fluent builder, typed events, configurable spin phases, win presenters, and a headless testing harness. Ships with runnable recipes for lines, scatters, free spins, hold & win, cascades, sticky wilds, and anticipation. MIT licensed.',
+    'An open-source slot reel engine for PixiJS v8, with a fluent builder, typed events and spins you can test in Node. MIT licensed.',
   // Organization/Author details for JSON-LD
   twitter: '',
   defaultImage: '/og/default.png',

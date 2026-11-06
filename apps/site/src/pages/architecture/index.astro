@@ -4,12 +4,12 @@ import { ARCH_PAGES, ARCH_SECTIONS } from '../../content/architectureNav.ts';
 import { SITE, articleLd, breadcrumbLd } from '../../lib/seo.ts';
 
 const title = 'Architecture. how pixi-reels is put together';
-const description = `A visual tour of the pixi-reels internals in ${ARCH_PAGES.length} pages: the builder, the ownership tree, the viewport and masks, symbols and pooling, motion and wrapping, the frame pipeline, curvature, the spin lifecycle and its timeline, skipping, anticipation, speed profiles, events, cascade physics, pins and boards, debug tooling and the test harness. Hand-laid SVG diagrams, no UML, no mermaid.`;
+const description = `How pixi-reels works inside, in ${ARCH_PAGES.length} pages of SVG diagrams. Start with the overview, or open the part of a spin you are debugging.`;
 
 const blurbs: Record<(typeof ARCH_SECTIONS)[number], string> = {
   'Structure': 'What you get back from build(), who owns what, and where things draw.',
   'Motion': 'How a column of symbols moves, wraps around, lands, and bends into a drum.',
-  'A spin': 'One spin from the button press to the last bounce, phase by phase and millisecond by millisecond.',
+  'A spin': 'What happens during one spin, phase by phase, and how long each part takes.',
   'Mechanics': 'The thinking behind cascades, sticky cells and boards.',
   'Tooling': 'How to see inside a canvas, and how to test a spin without one.',
 };

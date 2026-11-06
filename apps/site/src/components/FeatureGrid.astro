@@ -1,11 +1,11 @@
 ---
 const features = [
-  { title: 'Fluent builder', body: 'Zero to a running 5×3 reelset in 10 chainable lines. Validated on build().' },
-  { title: 'Typed events', body: 'spin:start, spin:reelLanded, speed:changed, spotlight:end. Fully typed payloads.' },
-  { title: 'Headless testing', body: 'createTestReelSet + FakeTicker run the full spin lifecycle in Node. No renderer, no flaky timers.' },
-  { title: 'Mechanic recipes', body: 'About 130 runnable mechanics under /recipes. Every one replayable, with its source alongside.' },
+  { title: 'Fluent builder', body: 'Chain the settings, then build() checks them and throws one error that lists whatever is missing.' },
+  { title: 'Typed events', body: 'Events such as spin:reelLanded and speed:changed, each with a typed payload.' },
+  { title: 'Headless testing', body: 'createTestReelSet and FakeTicker run a whole spin in Node, with no renderer and no DOM.' },
+  { title: 'Mechanic recipes', body: 'More than 200 runnable demos on the mechanics pages, each shown with its source.' },
   { title: 'Agent-friendly debug', body: 'enableDebug() attaches JSON snapshots and per-spin timings to window, so agents inspect state without reading the canvas. pixi-reels/debug draws the same on the canvas: cells, axes, a metrics plaque and a phase timeline.' },
-  { title: 'Plug in anything', body: 'Symbols, phases, spinning modes, frame middleware. Each extension is a named interface.' },
+  { title: 'Extension points', body: 'Write your own symbols, phases or spinning modes against a named interface.' },
 ];
 ---
 <section class="py-20 sm:py-24">
@@ -13,7 +13,7 @@ const features = [
     <div class="reveal max-w-3xl">
       <p class="eyebrow">In the box</p>
       <h2 class="display mt-4 text-4xl sm:text-5xl lg:text-6xl">
-        The parts you'd have to build anyway.
+        What is in the package.
       </h2>
     </div>
 

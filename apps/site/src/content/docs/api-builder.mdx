@@ -2,8 +2,7 @@
 title: ReelSetBuilder
 order: 1
 eyebrow: API
-description: Fluent builder for ReelSet. Reduces ~100 lines of manual wiring to
-  ~10, validates everything at .build() time.
+description: The fluent builder for ReelSet. Each method sets one part of the configuration, and build() checks it and returns the set.
 ---
 
 Every method returns `this`, so calls chain. `build()` validates the configuration and returns a [`ReelSet`](/reference/api-reelset/). If a required call is missing, it throws one error that lists every problem.

@@ -38,11 +38,11 @@ await result;
 
 ### Anticipation & near-miss
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/
-Reel-stop tension. Anticipation teases, scatter-driven and staggered slows, turbo and skippable variants, Spine jaw near-wins, and fake near-misses.
+Slow the last reels before they land to build tension. Drive the tease from scatters, shape its curve, and keep it when the player skips.
 Tags: anticipation, tension, scatter, near-miss, spine, horizontal, reverse, curve, acceleration
 
-Every way to hold the player at the reel stop, from one slowed reel to a full
-Spine near-win sequence.
+An anticipation tease slows the reels that could still complete a win, so the
+player watches them land. The demos start with one slowed reel.
 
 ##### Demos
 
@@ -184,7 +184,7 @@ Live demo (near-miss): https://pixi-reels.schmooky.dev/mechanics/anticipation/#n
 
 ### Big symbols & non-uniform grids
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/
-Big symbols in every shape, MultiWays row variation, static pyramids, and pins that survive per-spin reshapes.
+Symbols that cover several cells, and reels with different cell counts: MultiWays, which reshapes every spin, and static pyramids.
 Tags: big-symbols, multiways, pyramid, spine, geometry, sticky-wild, horizontal, reverse, orientation
 
 Most slots are uniform: every reel has the same number of cells. You do not
@@ -703,7 +703,7 @@ most of it hidden and one cell peeking in.
 
 ##### Demos
 
-Everything for N-by-M block symbols and non-uniform reel geometry, one live demo at a time.
+Live demos of block symbols that span several cells, and of reels with different cell counts.
 
 #### MxN big symbols: every shape
 
@@ -819,7 +819,7 @@ Live demo (sticky-wild-multiways): https://pixi-reels.schmooky.dev/mechanics/big
 
 ### Cascade & tumble
 URL: https://pixi-reels.schmooky.dev/mechanics/cascade/
-The tumble toolkit end to end, covering the destroy-and-refill loop, drop orders, lead-in delays, anticipation refills, and spin-then-cascade hybrids.
+Winners are destroyed, survivors fall into the holes and new symbols drop in, until no win is left. runCascade() runs the loop.
 Tags: cascade, tumble, refill, anticipation, spine, thunderkick, horizontal, reverse, orientation, gravity
 
 A cascade looks like one mechanic. It is two, and once you keep them apart
@@ -1085,7 +1085,7 @@ full `ReelPhase` contract: `onEnter`, `update`, `onSkip` and `_complete`.
 
 ##### Demos
 
-The full cascade and tumble toolkit, one live demo at a time.
+Each demo below runs the cascade loop with one thing changed, such as the refill order, the delay before the fall, or the direction of gravity.
 
 #### Cascade 6x4 tumble
 
@@ -1178,7 +1178,7 @@ Live demo (peek-from-above): https://pixi-reels.schmooky.dev/mechanics/cascade/#
 
 ### Cells, bounds, paylines & overlays
 URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/
-Cell geometry, self-drawn paylines and overlays, hit areas, and runtime feature-mode swaps.
+Get the pixel rect of any cell to draw paylines and overlays or to catch clicks, and swap feature modes at runtime.
 Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
 
 `SymbolSpotlight` dims the losing symbols, lifts the winners above the mask,
@@ -1304,7 +1304,7 @@ Live demo (feature-mode-swap): https://pixi-reels.schmooky.dev/mechanics/cells-a
 
 ### Feel: timings & landing FX
 URL: https://pixi-reels.schmooky.dev/mechanics/feel/
-Seven edits to the built-in phases' step lists that change how a spin feels. Stagger curves, a wind-up launch, a landing kick with dust, beats and FX that follow the speed profile, a step of your own tuned from a profile section, a spotlight around the tease, and one extra beat on the last reel. Each is a few lines against StartPhase, StopPhase or AnticipationPhase, with slam and quicken still working.
+Change how a spin feels by editing the step lists of StartPhase, StopPhase and AnticipationPhase. Each demo is a few lines, and slam and quicken keep working.
 Tags: phases, steps, timing, fx, anticipation, speed, skip
 
 A speed profile is every number that decides how a spin feels: acceleration,
@@ -1453,7 +1453,7 @@ Howler or raw Web Audio the same way.
 
 ##### Demos
 
-The built-in phases run named step lists. `StartPhase` runs `delay, launch, pull, accelerate, announce`, `StopPhase` runs `delay, spinOut, land, bounce`, `AnticipationPhase` runs `tease`, and `f.register('stop', StopPhase, { steps })` hands you the list before it runs. These recipes are the feel work that used to mean a subclass: each is one `insertBefore` / `insertAfter` / `replaceStep`, or a list built by hand, and every one keeps slam and quicken working because the waits stay marked `cut`. The step API itself is on the [Phases page](/reference/api-phases/#steps).
+The built-in phases run named step lists. `StartPhase` runs `delay, launch, pull, accelerate, announce`, `StopPhase` runs `delay, spinOut, land, bounce`, `AnticipationPhase` runs `tease`, and `f.register('stop', StopPhase, { steps })` hands you the list before it runs. These recipes are the feel work that used to mean a subclass: each is one `insertBefore`, `insertAfter` or `replaceStep`, or a list built by hand, and every one keeps slam and quicken working because the waits stay marked `cut`. The step API itself is on the [Phases page](/reference/api-phases/#steps).
 
 #### Stagger curves
 
@@ -1522,7 +1522,7 @@ Live demo (steps-last-reel-suspense): https://pixi-reels.schmooky.dev/mechanics/
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/mechanics/hold-and-win/
-Every Hold and Win building block on one page, from carrying a value on a coin to production Spine and sprite boards with collectors, multipliers, jackpots, meters, anticipation and skips, plus a rectangular-cell clover game from base spin to growing bonus board.
+Coins lock where they land and the free cells respin. These demos build the feature up from a single coin to full boards with collectors and jackpots.
 Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation, rectangular, clovers
 
 Hold & Win, also sold as Lock & Respin or Hold & Spin, is a feature where
@@ -1789,7 +1789,7 @@ on your side. The board only moves reels.
 
 ##### Demos
 
-Every Hold & Win building block on one page: the respin mechanic, value coins, collectors, jackpots, meters, and the beginner lessons that lead up to them, each a live demo.
+The demos start with the respin itself and add one piece at a time, such as value coins, collectors and jackpots. Beginner lessons on carrying a value on a coin are at the end.
 
 #### Hold & Win respin
 
@@ -2319,7 +2319,7 @@ Live demo (infinity-reels-skip): https://pixi-reels.schmooky.dev/mechanics/infin
 
 ### Masks & board shapes
 URL: https://pixi-reels.schmooky.dev/mechanics/masks/
-Clip the reels to something other than a rectangle. Rounded windows, rounded per-reel cards, the rounded outline of a jagged pyramid, arbitrary paths, and the inset and compose decorators.
+Clip the reels to something other than a rectangle: a rounded window, a card per reel, or any path you draw.
 Tags: mask, rounded, silhouette, pyramid, jagged, frame
 
 The viewport clips the reels through a `MaskStrategy`, so buffer cells never
@@ -2407,7 +2407,7 @@ Respect two things: `ctx.axis`, because `rects` are screen-space in every orient
 
 ### Nudge
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/
-Shift a landed reel up or down by N positions to reveal new symbols, sequential, parallel, staggered, skippable or abortable.
+Shift a landed reel up or down by N positions to bring in symbols you choose. A nudge can be staggered across reels, skipped or aborted.
 Tags: nudge, stagger, spotlight, big-symbols, abort, skip, horizontal, reverse, orientation
 
 A nudge moves one reel a few cells after it has landed, and brings in symbols
@@ -2653,7 +2653,7 @@ reel carry on untouched.
 
 ##### Demos
 
-Shift a landed reel up or down by N positions to reveal caller-supplied symbols: one primitive, with pacing and control variants below.
+Each demo nudges a landed reel by N positions to bring in symbols you supply, and changes the pacing or how a press stops it.
 
 #### Nudge a reel
 
@@ -2714,7 +2714,7 @@ Live demo (nudge-skip): https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-s
 
 ### Orientation & direction
 URL: https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/
-Reels that travel sideways, upward, or per reel. Horizontal banners, roll-up, mixed direction, reading reel.axis, and a banner that joins a ways win.
+Reels that travel sideways or upward, or a different way per reel. Symbols stay upright whichever way the strip moves.
 Tags: horizontal, orientation, direction, reverse, roll-up, banner, ways, axis
 
 A reel can travel down, up, or sideways. Two builder settings control that,
@@ -2954,7 +2954,7 @@ Live demo (orientation-axis-readout): https://pixi-reels.schmooky.dev/mechanics/
 
 ### Reel curvature
 URL: https://pixi-reels.schmooky.dev/mechanics/reel-curvature/
-Bend the reels onto a drum with one number, per set or per reel, so cells keystone into trapezoids instead of flat rectangles.
+Bend the reels onto a drum with .curve(amount). Cells away from the middle narrow into trapezoids, as they do on a physical drum.
 Tags: curve, curvature, perspective, projection, cylinder, drum, 3d
 
 ##### Demos
@@ -3075,7 +3075,7 @@ If you write your own with a single texture, `PerspectiveCell` is exported and d
 
 ### Skip & slam
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/
-Every skip lever end to end. Partial slams in both spellings, all three tease-protect modes, your own release plan, the quicken mode that lands instead of cutting (with groups, as a two-press button, and in a custom phase), queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
+Decide which reels a skip press lands, and when a reel may stop at all. Protect a tease, or quicken the reels so they spin in and bounce.
 Tags: skip, slam, anticipation, tease, phases, timing, groups
 
 A spin has three phases, sometimes four.
@@ -3625,7 +3625,7 @@ A reel a block wider than one reel covers cannot change on its own, or the block
 
 ### Starters
 URL: https://pixi-reels.schmooky.dev/mechanics/starters/
-Starting templates to copy: classic lines, cascade tumble, MultiWays, Hold and Win, plus the horizontal and reverse variants.
+Templates to start a new slot from, such as classic 5x3 lines, a cascade or Hold & Win.
 Tags: starter, 5x3, cascade, multiways, hold-and-win, horizontal, reverse, orientation
 
 Starting templates. Copy one, swap in your art and your math, and build from
@@ -3678,7 +3678,7 @@ Live demo (starter-reverse-5x3): https://pixi-reels.schmooky.dev/mechanics/start
 
 ### Symbols, layering & motion blur
 URL: https://pixi-reels.schmooky.dev/mechanics/symbols/
-Symbol classes, a card that shows its reel's phase, three-tier layering (zIndex, unmask, promote), multi-skin Spine tiers, and static-spin motion blur.
+Register and write symbol classes, layer art that overflows its cell, and spin on cached blur textures.
 Tags: symbols, reveal, mystery, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
 
 A symbol is what fills one cell. Three classes ship with the library. The
@@ -3798,7 +3798,7 @@ has the layering rules.
 
 ##### Demos
 
-Symbol building blocks and how they are drawn: the classes you register, the three ways to layer overflowing art, and spinning on cached blur textures.
+The symbol classes you register, the three ways to layer art that overflows its cell, and spinning on cached blur textures.
 
 #### CardSymbol: debug / prototyping helper
 
@@ -3947,7 +3947,7 @@ Live demo (static-spin-spine): https://pixi-reels.schmooky.dev/mechanics/symbols
 
 ### Wilds, multipliers & mystery (CellPin)
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/
-Sticky, expanding, walking and multiplier wilds plus mystery reveals, all built on the CellPin primitive.
+Wilds and mystery reveals built on CellPin, which keeps one cell on one symbol across spins.
 Tags: wild, sticky, multiplier, mystery, respin, cell-pin, horizontal, reverse, orientation
 
 A pin keeps one cell on one symbol id, and keeps it there across spins.
@@ -4147,7 +4147,7 @@ here if you ever see a size pop on a pin.
 
 ##### Demos
 
-Wild and mystery mechanics built on the engine CellPin primitive: pin once, the engine handles the overlay, countdown and cleanup.
+Wild and mystery mechanics built on CellPin. You pin a cell once, and the engine handles the overlay, the turn countdown and the cleanup.
 
 #### Expanding wild
 
@@ -4217,7 +4217,7 @@ Live demo (sticky-win-respin-pin): https://pixi-reels.schmooky.dev/mechanics/wil
 
 ### Cheats & testing
 URL: https://pixi-reels.schmooky.dev/learn/cheats-and-testing/
-Force deterministic outcomes, run spin lifecycles in Node, write mechanic tests that never flake.
+Force outcomes with cheats and run full spins in Node, so mechanic tests give the same result every run.
 
 pixi-reels is built so you can test mechanics without a canvas. Two tools
 make that possible.
@@ -4679,7 +4679,7 @@ migration on the builder.
 
 ### Getting started
 URL: https://pixi-reels.schmooky.dev/learn/getting-started/
-Install pixi-reels and run your first reel set in under 2 minutes.
+Install pixi-reels and get a 5x3 reel set spinning in a PixiJS v8 app.
 
 pixi-reels is a reel engine for a PixiJS v8 app. You add it to the stage like any other container.
 
@@ -4748,7 +4748,7 @@ If nothing happened, it is usually one of these.
 
 ### Recipe previews
 URL: https://pixi-reels.schmooky.dev/learn/recipe-previews/
-How to give a recipe a card thumbnail and inline body images. Convention-first. Drop a file in public/ and it appears. Missing assets fall back to a generated placeholder, so the page always looks finished.
+How to give a recipe a card thumbnail and inline body images. Drop a file in public/; a missing one falls back to a generated placeholder.
 
 Every card on the recipes index and every topic page can carry preview media: a gif, an animated webp, a static screenshot, or a short clip. Nothing is required. Drop a file in the right place and it shows up. Anything missing renders a generated placeholder built from the title, so the index and the pages always look finished.
 
@@ -4822,7 +4822,7 @@ The [Hold & Win](/mechanics/hold-and-win/) page has captured `card.png` files un
 
 ### Build your first cascade slot
 URL: https://pixi-reels.schmooky.dev/learn/your-first-cascade/
-From `npm install` to a working cascade slot in ~80 lines of TypeScript. No prior pixi-reels knowledge required.
+A tutorial that builds a 6x5 cascade slot in about 80 lines of TypeScript, for readers new to pixi-reels.
 
 This tutorial builds a 6x5 cascade slot in about 80 lines of TypeScript. A click drops the symbols in, the game detects 3-in-a-row wins, the winners vanish, new symbols refill from above, and that repeats until there are no more wins. You need no prior `pixi-reels` knowledge. PixiJS basics help.
 
@@ -5189,7 +5189,7 @@ then await.
 
 ### ReelSetBuilder
 URL: https://pixi-reels.schmooky.dev/reference/api-builder/
-Fluent builder for ReelSet. Reduces ~100 lines of manual wiring to ~10, validates everything at .build() time.
+The fluent builder for ReelSet. Each method sets one part of the configuration, and build() checks it and returns the set.
 
 Every method returns `this`, so calls chain. `build()` validates the configuration and returns a [`ReelSet`](/reference/api-reelset/). If a required call is missing, it throws one error that lists every problem.
 
@@ -5338,7 +5338,7 @@ See the [spin lifecycle guide](/mechanics/skip/#concept) for how these options i
 
 ### Events
 URL: https://pixi-reels.schmooky.dev/reference/api-events/
-The full typed event surface: spin, cascade, pin, MultiWays, win, speed, spotlight.
+The typed events on reelSet.events and reel.events, when each one fires, and what its payload holds.
 
 Two emitters:
 
@@ -6169,7 +6169,7 @@ landing at the same instant either way, so the only tell is on screen.
 
 ### ReelSet
 URL: https://pixi-reels.schmooky.dev/reference/api-reelset/
-The main orchestrator. Created via ReelSetBuilder, drives every spin, refill, pin, and win animation.
+The PIXI.Container that runs the reels. Build it with ReelSetBuilder, then call its methods to spin, set results and run cascades.
 
 `ReelSet` extends `PIXI.Container`. Construct it with [`ReelSetBuilder`](/reference/api-builder/), add it to your stage, then drive it with the methods below.
 
@@ -6441,7 +6441,7 @@ await reelSet.runCascade({
 
 ### Glossary
 URL: https://pixi-reels.schmooky.dev/reference/glossary/
-Plain-English definitions for every term you will see in pixi-reels docs, code, and slot-game conversations.
+Definitions of slot vocabulary and of the names pixi-reels gives its parts.
 
 Two groups of terms are mixed here: slot vocabulary, which every slot uses whatever the library, and library-specific names, which are what pixi-reels calls its pieces. If a word reads as jargon, it is probably defined here; search the page.
 
@@ -8987,7 +8987,7 @@ The z-index values the engine reserves, so a SymbolZIndexResolver can be bounds-
 
 ### Anticipation
 URL: https://pixi-reels.schmooky.dev/architecture/anticipation/
-The hesitation before a big reveal: how a reel slows, holds and creeps onto its symbols.
+How a teasing reel slows, holds and creeps onto its symbols before it lands.
 
 ### The builder
 URL: https://pixi-reels.schmooky.dev/architecture/builder/
@@ -9007,7 +9007,7 @@ How a flat strip is projected onto a drum, in two modes.
 
 ### Debug tooling
 URL: https://pixi-reels.schmooky.dev/architecture/debug/
-Snapshots for agents, the silk overlay, SpinMetrics, notices.
+JSON snapshots for agents, the canvas overlay drawn with pixi-silk, and SpinMetrics timings.
 
 ### Events
 URL: https://pixi-reels.schmooky.dev/architecture/events/
@@ -9019,11 +9019,11 @@ How a result grid becomes the symbols that land, wrap by wrap.
 
 ### Motion
 URL: https://pixi-reels.schmooky.dev/architecture/motion/
-How a column of symbols scrolls, wraps and stops exactly on the grid, every time.
+How a column of symbols scrolls, wraps and stops exactly on the grid.
 
 ### Overview
 URL: https://pixi-reels.schmooky.dev/architecture/overview/
-Every moving piece of pixi-reels on one page, and how they are wired.
+The main parts of pixi-reels and how they are wired together.
 
 ### Pins, boards, Hold & Win
 URL: https://pixi-reels.schmooky.dev/architecture/pins-and-boards/
@@ -9031,11 +9031,11 @@ Cell pins across spins, the BoardGrid, the Hold & Win state machine.
 
 ### Skipping
 URL: https://pixi-reels.schmooky.dev/architecture/skipping/
-What a button press does to reels that are still spinning: slam, quicken, protection and groups.
+What a press does to reels that are still spinning, and how tease protection and reel groups limit it.
 
 ### Speed profiles
 URL: https://pixi-reels.schmooky.dev/architecture/speed-profiles/
-The one object that holds every number a spin feels: stagger, speed, hold, bounce, and how to tune them.
+The object that holds a spin's timing, such as stagger, speed and bounce, and how to tune it.
 
 ### Spin lifecycle
 URL: https://pixi-reels.schmooky.dev/architecture/spin-lifecycle/
@@ -9043,7 +9043,7 @@ What happens to one reel between spin() and its landing, phase by phase.
 
 ### Symbols and pooling
 URL: https://pixi-reels.schmooky.dev/architecture/symbols/
-The ReelSymbol lifecycle, the registry, the factory, the pool.
+The ReelSymbol lifecycle, and how the registry, factory and pool supply symbols to a reel.
 
 ### Testing model
 URL: https://pixi-reels.schmooky.dev/architecture/testing/
@@ -9055,7 +9055,7 @@ One ordinary spin, replayed with a stopwatch, from the button press to spin:comp
 
 ### Viewport and masks
 URL: https://pixi-reels.schmooky.dev/architecture/viewport-and-masks/
-The five layers under and above the mask, and every mask strategy.
+The five layers under and above the mask, and the strategies that draw the mask.
 
 ## FAQ
 
@@ -11340,7 +11340,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       await p;
       sampling = false;
-      hud.text = 'landed. tap again';
+      hud.text = 'landed';
     },
   });
   return {
@@ -14895,7 +14895,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 300));
       hud.text = 'absorbing neighbours…';
       const sum = await absorb(COLLECTOR_CELL);
-      hud.text = `Collector absorbed ${sum}. Tap to reset.`;
+      hud.text = `Collector absorbed ${sum}.`;
       phase = 'done';
     },
   });
@@ -17506,8 +17506,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       stopPulse();
       hud.text = board.isFull
-        ? 'Board full, jackpot! Tap to replay.'
-        : 'Feature over. Tap to replay.';
+        ? 'Board full, jackpot.'
+        : 'Feature over.';
       busy = false;
     },
   });
@@ -17832,7 +17832,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -18359,7 +18359,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       await board.playWin();
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -18499,7 +18499,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       await board.playWin();
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -18614,7 +18614,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(400);
         if (res.done) break;
       }
-      hud.text = 'Feature over. Tap to replay.';
+      hud.text = 'Feature over.';
       busy = false;
     },
   });
@@ -18793,7 +18793,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `Feature over, board total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, board total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -19200,7 +19200,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin(golds().map((g) => g.cell));
       const total = golds().reduce((a, g) => a + g.data!.value, 0);
-      hud.text = `Feature over, gold total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, gold total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -19345,7 +19345,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       await board.playWin();
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -19779,7 +19779,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await lifted;
 
-      hud.text = `back in the pack after ${refreshes} whole-board refreshes - tap to replay`;
+      hud.text = `back in the pack after ${refreshes} whole-board refreshes`;
       busy = false;
     },
   });
@@ -20067,7 +20067,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -20204,7 +20204,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(600);
         if (res.done) break;
       }
-      hud.text = `Counter ran out, ${board.lockedCoins.length} held. Tap to replay.`;
+      hud.text = `Counter ran out, ${board.lockedCoins.length} held.`;
       busy = false;
     },
   });
@@ -20335,7 +20335,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       if (!res.done) for (let i = 0; i < 3; i++) { const r = await board.respin([]); if (r.done) break; }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `Feature over on ${board.speed}, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over on ${board.speed}, total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -20506,7 +20506,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'collecting…';
       await collect();
       phase = 'done';
-      hud.text = `Collected ${fmt(total)}. Tap to reset.`;
+      hud.text = `Collected ${fmt(total)}.`;
     },
   });
   return {
@@ -20791,7 +20791,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'collecting';
       await collectIntoOrb();
       phase = 'done';
-      hud.text = 'Collected 25.00. Tap to reset.';
+      hud.text = 'Collected 25.00.';
     },
   });
   return {
@@ -21229,7 +21229,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'Feature over, board.playWin() on every locked coin';
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `Total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -21452,7 +21452,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       playCounter('appear');
       await collectToMeter();
       phase = 'done';
-      hud.text = `Collected ${fmt(total)} of ${fmt(TARGET)}. Tap to reset.`;
+      hud.text = `Collected ${fmt(total)} of ${fmt(TARGET)}.`;
     },
   });
   return {
@@ -21598,7 +21598,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   ];
   const MULT_CELL = { reel: 3, cell: 0 };
   const MULT = 3;
-  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = `Held 4, total ${fmt(totalOf())}. Tap to spin for the multiplier.`; };
+  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = `Held 4, total ${fmt(totalOf())}. The next spin applies the multiplier.`; };
   const reset = () => { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); SEED.forEach((c, i) => (c.data.value = [5, 10, 5, 20][i])); board.reset(); seedBoard(); };
   seedBoard();
 
@@ -21624,7 +21624,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(70);
       }
       phase = 'done';
-      hud.text = `×${MULT} applied, total ${fmt(totalOf())}. Tap to reset.`;
+      hud.text = `×${MULT} applied, total ${fmt(totalOf())}.`;
     },
   });
   return {
@@ -21852,7 +21852,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(300);
         if (result.done) break;
       }
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
     },
   });
   return {
@@ -22006,7 +22006,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -22232,7 +22232,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'the orb pays every coin…';
       await payout(PAYER_CELL, PAY_VALUE);
       phase = 'done';
-      hud.text = `Paid, total ${fmt(totalOf())}. Tap to reset.`;
+      hud.text = `Paid, total ${fmt(totalOf())}.`;
     },
   });
   return {
@@ -22476,7 +22476,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
       busy = false;
     },
   });
@@ -22863,7 +22863,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await Promise.all(pendingFx.splice(0));
       await sleep(300);
       phase = 'done';
-      hud.text = `MINI awarded ${fmt(award)}. Tap to reset.`;
+      hud.text = `MINI awarded ${fmt(award)}.`;
     },
   });
   return {
@@ -23391,7 +23391,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       await collectAll();
-      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(total)}.`;
     },
   });
   return {
@@ -23551,7 +23551,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(450);
         if (result.done) break;
       }
-      hud.text = `Feature over, total ${fmt(totalOf())}. Tap to replay.`;
+      hud.text = `Feature over, total ${fmt(totalOf())}.`;
       busy = false;
     },
   });
@@ -23689,7 +23689,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       total += TARGET.data.value;
       meterText.text = String(total);
       gsap.fromTo(meterText.scale, { x: 1.4, y: 1.4 }, { x: 1, y: 1, duration: 0.25, ease: 'power2.out' });
-      hud.text = 'Collected with its badge. Tap to reset.';
+      hud.text = 'Collected with its badge.';
       phase = 'collected';
     },
   });
@@ -24143,8 +24143,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       for (const coin of ordered) { await upgradeCoin(coin); await sleep(90); }
       const top = board.lockedCoins.every((c) => c.data!.value === LADDER[LADDER.length - 1]);
       hud.text = top
-        ? `Maxed, total ${fmt(totalOf())}. Tap to reset.`
-        : `Upgraded, total ${fmt(totalOf())}. Tap to spin again.`;
+        ? `Maxed, total ${fmt(totalOf())}.`
+        : `Upgraded, total ${fmt(totalOf())}.`;
       busy = false;
     },
   });

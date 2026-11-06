@@ -142,7 +142,7 @@ async function astroMeta(slug, raw) {
     for (const line of nav.split('\n')) {
       const s = line.match(/slug: '([^']+)'/);
       const t = line.match(/title: '((?:[^'\\]|\\.)*)'/);
-      const d = line.match(/subtitle: '((?:[^'\\]|\\.)*)'/);
+      const d = line.match(/subtitle: '((?:[^'\\]|\\.)*)'/) ?? line.match(/subtitle: "((?:[^"\\]|\\.)*)"/);
       if (s && t) archMeta.set(`architecture/${s[1]}`, { title: t[1].replace(/\\'/g, "'"), description: d ? d[1].replace(/\\'/g, "'") : '' });
     }
   }

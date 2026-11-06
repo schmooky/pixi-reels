@@ -12,39 +12,39 @@ Everything below, inlined with each recipe's source and every FAQ answer: https:
 
 ## Mechanics
 
-- [Anticipation & near-miss](https://pixi-reels.schmooky.dev/mechanics/anticipation/): Reel-stop tension. Anticipation teases, scatter-driven and staggered slows, turbo and skippable variants, Spine jaw near-wins, and fake near-misses.
-- [Big symbols & non-uniform grids](https://pixi-reels.schmooky.dev/mechanics/big-symbols/): Big symbols in every shape, MultiWays row variation, static pyramids, and pins that survive per-spin reshapes.
-- [Cascade & tumble](https://pixi-reels.schmooky.dev/mechanics/cascade/): The tumble toolkit end to end, covering the destroy-and-refill loop, drop orders, lead-in delays, anticipation refills, and spin-then-cascade hybrids.
-- [Cells, bounds, paylines & overlays](https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/): Cell geometry, self-drawn paylines and overlays, hit areas, and runtime feature-mode swaps.
-- [Feel: timings & landing FX](https://pixi-reels.schmooky.dev/mechanics/feel/): Seven edits to the built-in phases' step lists that change how a spin feels. Stagger curves, a wind-up launch, a landing kick with dust, beats and FX that…
-- [Hold & Win](https://pixi-reels.schmooky.dev/mechanics/hold-and-win/): Every Hold and Win building block on one page, from carrying a value on a coin to production Spine and sprite boards with collectors, multipliers, jackpots…
+- [Anticipation & near-miss](https://pixi-reels.schmooky.dev/mechanics/anticipation/): Slow the last reels before they land to build tension. Drive the tease from scatters, shape its curve, and keep it when the player skips.
+- [Big symbols & non-uniform grids](https://pixi-reels.schmooky.dev/mechanics/big-symbols/): Symbols that cover several cells, and reels with different cell counts: MultiWays, which reshapes every spin, and static pyramids.
+- [Cascade & tumble](https://pixi-reels.schmooky.dev/mechanics/cascade/): Winners are destroyed, survivors fall into the holes and new symbols drop in, until no win is left. runCascade() runs the loop.
+- [Cells, bounds, paylines & overlays](https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/): Get the pixel rect of any cell to draw paylines and overlays or to catch clicks, and swap feature modes at runtime.
+- [Feel: timings & landing FX](https://pixi-reels.schmooky.dev/mechanics/feel/): Change how a spin feels by editing the step lists of StartPhase, StopPhase and AnticipationPhase. Each demo is a few lines, and slam and quicken keep working.
+- [Hold & Win](https://pixi-reels.schmooky.dev/mechanics/hold-and-win/): Coins lock where they land and the free cells respin. These demos build the feature up from a single coin to full boards with collectors and jackpots.
 - [Infinity reels: growing the board](https://pixi-reels.schmooky.dev/mechanics/infinity-reels/): Add reels sideways after the base spin lands, one or two at a time, as many as the server's result says. MultiWays reaches millions of ways; a big symbol…
-- [Masks & board shapes](https://pixi-reels.schmooky.dev/mechanics/masks/): Clip the reels to something other than a rectangle. Rounded windows, rounded per-reel cards, the rounded outline of a jagged pyramid, arbitrary paths, and the…
-- [Nudge](https://pixi-reels.schmooky.dev/mechanics/nudge/): Shift a landed reel up or down by N positions to reveal new symbols, sequential, parallel, staggered, skippable or abortable.
-- [Orientation & direction](https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/): Reels that travel sideways, upward, or per reel. Horizontal banners, roll-up, mixed direction, reading reel.axis, and a banner that joins a ways win.
-- [Reel curvature](https://pixi-reels.schmooky.dev/mechanics/reel-curvature/): Bend the reels onto a drum with one number, per set or per reel, so cells keystone into trapezoids instead of flat rectangles.
-- [Skip & slam](https://pixi-reels.schmooky.dev/mechanics/skip/): Every skip lever end to end. Partial slams in both spellings, all three tease-protect modes, your own release plan, the quicken mode that lands instead of…
+- [Masks & board shapes](https://pixi-reels.schmooky.dev/mechanics/masks/): Clip the reels to something other than a rectangle: a rounded window, a card per reel, or any path you draw.
+- [Nudge](https://pixi-reels.schmooky.dev/mechanics/nudge/): Shift a landed reel up or down by N positions to bring in symbols you choose. A nudge can be staggered across reels, skipped or aborted.
+- [Orientation & direction](https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/): Reels that travel sideways or upward, or a different way per reel. Symbols stay upright whichever way the strip moves.
+- [Reel curvature](https://pixi-reels.schmooky.dev/mechanics/reel-curvature/): Bend the reels onto a drum with .curve(amount). Cells away from the middle narrow into trapezoids, as they do on a physical drum.
+- [Skip & slam](https://pixi-reels.schmooky.dev/mechanics/skip/): Decide which reels a skip press lands, and when a reel may stop at all. Protect a tease, or quicken the reels so they spin in and bounce.
 - [Splitting symbols](https://pixi-reels.schmooky.dev/mechanics/split-symbols/): A symbol splits into more cells when it wins. Its reel grows past the frame, or keeps its height while its cells shrink, on any board and on MultiWays.
-- [Starters](https://pixi-reels.schmooky.dev/mechanics/starters/): Starting templates to copy: classic lines, cascade tumble, MultiWays, Hold and Win, plus the horizontal and reverse variants.
-- [Symbols, layering & motion blur](https://pixi-reels.schmooky.dev/mechanics/symbols/): Symbol classes, a card that shows its reel's phase, three-tier layering (zIndex, unmask, promote), multi-skin Spine tiers, and static-spin motion blur.
-- [Wilds, multipliers & mystery (CellPin)](https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/): Sticky, expanding, walking and multiplier wilds plus mystery reveals, all built on the CellPin primitive.
+- [Starters](https://pixi-reels.schmooky.dev/mechanics/starters/): Templates to start a new slot from, such as classic 5x3 lines, a cascade or Hold & Win.
+- [Symbols, layering & motion blur](https://pixi-reels.schmooky.dev/mechanics/symbols/): Register and write symbol classes, layer art that overflows its cell, and spin on cached blur textures.
+- [Wilds, multipliers & mystery (CellPin)](https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/): Wilds and mystery reveals built on CellPin, which keeps one cell on one symbol across spins.
 
 ## Learn
 
-- [Cheats & testing](https://pixi-reels.schmooky.dev/learn/cheats-and-testing/): Force deterministic outcomes, run spin lifecycles in Node, write mechanic tests that never flake.
+- [Cheats & testing](https://pixi-reels.schmooky.dev/learn/cheats-and-testing/): Force outcomes with cheats and run full spins in Node, so mechanic tests give the same result every run.
 - [Debugging](https://pixi-reels.schmooky.dev/learn/debugging/): Snapshot the reel state as JSON, render an ASCII grid, trace every event.
-- [Getting started](https://pixi-reels.schmooky.dev/learn/getting-started/): Install pixi-reels and run your first reel set in under 2 minutes.
-- [Recipe previews](https://pixi-reels.schmooky.dev/learn/recipe-previews/): How to give a recipe a card thumbnail and inline body images. Convention-first. Drop a file in public/ and it appears. Missing assets fall back to a generated…
-- [Build your first cascade slot](https://pixi-reels.schmooky.dev/learn/your-first-cascade/): From `npm install` to a working cascade slot in ~80 lines of TypeScript. No prior pixi-reels knowledge required.
+- [Getting started](https://pixi-reels.schmooky.dev/learn/getting-started/): Install pixi-reels and get a 5x3 reel set spinning in a PixiJS v8 app.
+- [Recipe previews](https://pixi-reels.schmooky.dev/learn/recipe-previews/): How to give a recipe a card thumbnail and inline body images. Drop a file in public/; a missing one falls back to a generated placeholder.
+- [Build your first cascade slot](https://pixi-reels.schmooky.dev/learn/your-first-cascade/): A tutorial that builds a 6x5 cascade slot in about 80 lines of TypeScript, for readers new to pixi-reels.
 - [Your first reelset](https://pixi-reels.schmooky.dev/learn/your-first-reelset/): Build, spin, and react to a reel set from scratch.
 
 ## Reference
 
-- [ReelSetBuilder](https://pixi-reels.schmooky.dev/reference/api-builder/): Fluent builder for ReelSet. Reduces ~100 lines of manual wiring to ~10, validates everything at .build() time.
-- [Events](https://pixi-reels.schmooky.dev/reference/api-events/): The full typed event surface: spin, cascade, pin, MultiWays, win, speed, spotlight.
+- [ReelSetBuilder](https://pixi-reels.schmooky.dev/reference/api-builder/): The fluent builder for ReelSet. Each method sets one part of the configuration, and build() checks it and returns the set.
+- [Events](https://pixi-reels.schmooky.dev/reference/api-events/): The typed events on reelSet.events and reel.events, when each one fires, and what its payload holds.
 - [Phases](https://pixi-reels.schmooky.dev/reference/api-phases/): START, SPIN, ANTICIPATION, STOP: the four lifecycle phases and how to extend them.
-- [ReelSet](https://pixi-reels.schmooky.dev/reference/api-reelset/): The main orchestrator. Created via ReelSetBuilder, drives every spin, refill, pin, and win animation.
-- [Glossary](https://pixi-reels.schmooky.dev/reference/glossary/): Plain-English definitions for every term you will see in pixi-reels docs, code, and slot-game conversations.
+- [ReelSet](https://pixi-reels.schmooky.dev/reference/api-reelset/): The PIXI.Container that runs the reels. Build it with ReelSetBuilder, then call its methods to spin, set results and run cascades.
+- [Glossary](https://pixi-reels.schmooky.dev/reference/glossary/): Definitions of slot vocabulary and of the names pixi-reels gives its parts.
 - [Migrating to 1.0.0](https://pixi-reels.schmooky.dev/reference/migrating-to-1-0/): Mechanical changes to move from 0.x to 1.0.0. Every breaking change with a before and after.
 - [Migrating to 2.0.0](https://pixi-reels.schmooky.dev/reference/migrating-to-2-0/): Every breaking change in 2.0.0, with a before and after. Rows became cells, above/below became start/end, and one codemod does most of it.
 - [Migrating to 3.0.0](https://pixi-reels.schmooky.dev/reference/migrating-to-3-0/): Every breaking change in 3.0.0, with a before and after. Skip presses take a mode, phases take a skip context, the built-in beats are moves, and the…
@@ -53,24 +53,24 @@ Everything below, inlined with each recipe's source and every FAQ answer: https:
 
 ## Architecture deep-dives
 
-- [Anticipation](https://pixi-reels.schmooky.dev/architecture/anticipation/): The hesitation before a big reveal: how a reel slows, holds and creeps onto its symbols.
+- [Anticipation](https://pixi-reels.schmooky.dev/architecture/anticipation/): How a teasing reel slows, holds and creeps onto its symbols before it lands.
 - [The builder](https://pixi-reels.schmooky.dev/architecture/builder/): What build() validates and constructs, in order.
 - [Cascade physics](https://pixi-reels.schmooky.dev/architecture/cascade/): Why survivors without holes below them never move.
 - [Classes](https://pixi-reels.schmooky.dev/architecture/classes/): The ownership tree. Who owns what, who destroys what.
 - [Curvature](https://pixi-reels.schmooky.dev/architecture/curvature/): How a flat strip is projected onto a drum, in two modes.
-- [Debug tooling](https://pixi-reels.schmooky.dev/architecture/debug/): Snapshots for agents, the silk overlay, SpinMetrics, notices.
+- [Debug tooling](https://pixi-reels.schmooky.dev/architecture/debug/): JSON snapshots for agents, the canvas overlay drawn with pixi-silk, and SpinMetrics timings.
 - [Events](https://pixi-reels.schmooky.dev/architecture/events/): What fires when, in what order, on which bus.
 - [The frame pipeline](https://pixi-reels.schmooky.dev/architecture/frame-pipeline/): How a result grid becomes the symbols that land, wrap by wrap.
-- [Motion](https://pixi-reels.schmooky.dev/architecture/motion/): How a column of symbols scrolls, wraps and stops exactly on the grid, every time.
-- [Overview](https://pixi-reels.schmooky.dev/architecture/overview/): Every moving piece of pixi-reels on one page, and how they are wired.
+- [Motion](https://pixi-reels.schmooky.dev/architecture/motion/): How a column of symbols scrolls, wraps and stops exactly on the grid.
+- [Overview](https://pixi-reels.schmooky.dev/architecture/overview/): The main parts of pixi-reels and how they are wired together.
 - [Pins, boards, Hold & Win](https://pixi-reels.schmooky.dev/architecture/pins-and-boards/): Cell pins across spins, the BoardGrid, the Hold & Win state machine.
-- [Skipping](https://pixi-reels.schmooky.dev/architecture/skipping/): What a button press does to reels that are still spinning: slam, quicken, protection and groups.
-- [Speed profiles](https://pixi-reels.schmooky.dev/architecture/speed-profiles/): The one object that holds every number a spin feels: stagger, speed, hold, bounce, and how to tune them.
+- [Skipping](https://pixi-reels.schmooky.dev/architecture/skipping/): What a press does to reels that are still spinning, and how tease protection and reel groups limit it.
+- [Speed profiles](https://pixi-reels.schmooky.dev/architecture/speed-profiles/): The object that holds a spin's timing, such as stagger, speed and bounce, and how to tune it.
 - [Spin lifecycle](https://pixi-reels.schmooky.dev/architecture/spin-lifecycle/): What happens to one reel between spin() and its landing, phase by phase.
-- [Symbols and pooling](https://pixi-reels.schmooky.dev/architecture/symbols/): The ReelSymbol lifecycle, the registry, the factory, the pool.
+- [Symbols and pooling](https://pixi-reels.schmooky.dev/architecture/symbols/): The ReelSymbol lifecycle, and how the registry, factory and pool supply symbols to a reel.
 - [Testing model](https://pixi-reels.schmooky.dev/architecture/testing/): Why a full spin runs in Node with no renderer.
 - [A spin in milliseconds](https://pixi-reels.schmooky.dev/architecture/timeline/): One ordinary spin, replayed with a stopwatch, from the button press to spin:complete.
-- [Viewport and masks](https://pixi-reels.schmooky.dev/architecture/viewport-and-masks/): The five layers under and above the mask, and every mask strategy.
+- [Viewport and masks](https://pixi-reels.schmooky.dev/architecture/viewport-and-masks/): The five layers under and above the mask, and the strategies that draw the mask.
 
 ## FAQ
 

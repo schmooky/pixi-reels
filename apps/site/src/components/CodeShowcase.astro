@@ -22,7 +22,7 @@ console.log(result.symbols); // [[ 'cherry','seven','bar' ], ...]`;
 const bullets = [
   { bold: 'One import.', rest: ' ReelSetBuilder wires every subsystem.' },
   { bold: 'Runtime validation.', rest: " Forget a required call? You'll know at build()." },
-  { bold: 'Extension points everywhere.', rest: ' Custom symbols, phases, spinning modes.' },
+  { bold: 'Extension points.', rest: ' Custom symbols, phases and spinning modes.' },
   { bold: 'No PixiJS coupling in your logic.', rest: ' Tests run in Node.' },
 ];
 ---
@@ -32,7 +32,7 @@ const bullets = [
       <div class="reveal min-w-0">
         <p class="eyebrow">API</p>
         <h2 class="display mt-4 text-4xl sm:text-5xl lg:text-6xl">
-          One fluent builder wires the whole engine.
+          One builder sets up the engine.
         </h2>
         <ul class="mt-8 divide-y divide-border border-y border-border">
           {bullets.map((b) => (

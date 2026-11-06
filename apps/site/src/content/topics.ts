@@ -33,7 +33,7 @@ export const TOPIC_GROUPS: Array<{ id: TopicGroup; label: string; description: s
   {
     id: 'mechanics',
     label: 'Core mechanics',
-    description: 'Hold & Win, big symbols and non-uniform grids, cascades, wilds and pins, nudge.',
+    description: 'Features that change what lands and what stays on the board.',
   },
   {
     id: 'tension',
@@ -43,7 +43,7 @@ export const TOPIC_GROUPS: Array<{ id: TopicGroup; label: string; description: s
   {
     id: 'rendering',
     label: 'Symbols & presentation',
-    description: 'Symbol authoring, layering, motion blur, cell coordinates, paylines and banners.',
+    description: 'How symbols are drawn and layered, and how to find a cell on screen.',
   },
 ];
 

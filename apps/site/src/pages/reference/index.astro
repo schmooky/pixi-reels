@@ -3,10 +3,10 @@ import Docs from '../../layouts/Docs.astro';
 import { REFERENCE_NAV } from '../../content/nav.ts';
 import { ARCH_PAGES } from '../../content/architectureNav.ts';
 ---
-<Docs title="Reference" section="reference" eyebrow="Reference" description="The pixi-reels API in prose, the generated TypeDoc reference, the glossary, the migration guides, the changelog and the architecture tour.">
+<Docs title="Reference" section="reference" eyebrow="Reference" description="The pixi-reels API explained in prose and as generated TypeDoc, with a glossary and the migration guides.">
   <p>
-    The full API reference for <code>pixi-reels</code>, plus an architecture tour and a plain-English glossary.
-    Each page below explains one axis in common language first, then drops into signatures and examples.
+    The API reference for <code>pixi-reels</code>, with an architecture tour and a glossary.
+    Each page below explains one part in plain language first, then gives signatures and examples.
   </p>
 
   <p class="!mt-2 text-sm text-muted-foreground">
@@ -35,7 +35,7 @@ import { ARCH_PAGES } from '../../content/architectureNav.ts';
 
     <section>
       <h2 class="eyebrow mb-4 mt-0">Architecture</h2>
-      <p class="mb-4 mt-0 text-sm text-muted-foreground">A tour of the internals: construction, ownership, the viewport, symbols, motion, the spin lifecycle and its timeline, skipping, anticipation, events, cascades, pins and boards, debug and testing. Hand-laid SVG, no UML, no mermaid.</p>
+      <p class="mb-4 mt-0 text-sm text-muted-foreground">How pixi-reels works inside, drawn as SVG diagrams. Start with the overview.</p>
       <div class="divide-y divide-border border-y border-border">
         {ARCH_PAGES.map((p) => (
           <a
