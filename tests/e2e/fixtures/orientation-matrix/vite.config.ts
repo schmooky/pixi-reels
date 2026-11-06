@@ -22,6 +22,8 @@ export default defineConfig({
     // `pixi-reels` alias. Vite resolves aliases in the order listed.
     alias: [
       { find: /^pixi-reels\/spine$/, replacement: resolve(REPO, 'packages/pixi-reels/src/spine/index.ts') },
+      // The kit imports the debug subpath (its readouts draw with DebugPlaque).
+      { find: /^pixi-reels\/debug$/, replacement: resolve(REPO, 'packages/pixi-reels/src/debug/index.ts') },
       { find: /^pixi-reels$/, replacement: resolve(REPO, 'packages/pixi-reels/src/index.ts') },
       { find: 'pixi.js', replacement: nm('pixi.js') },
       { find: 'gsap', replacement: nm('gsap') },
