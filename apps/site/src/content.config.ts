@@ -16,7 +16,7 @@ const topics = defineCollection({
   loader: glob({ pattern: '*.mdx', base: './src/content/topics' }),
   schema: z.object({
     title: z.string(),
-    group: z.enum(['starters', 'mechanics', 'tension', 'rendering']),
+    group: z.enum(['starters', 'features', 'after-land', 'board', 'timing', 'drawing']),
     oneLiner: z.string(),
     order: z.number().default(0),
     tags: z.array(z.string()).default([]),

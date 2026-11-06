@@ -1,5 +1,5 @@
 ---
-title: "Infinity reels: growing the board"
+title: Infinity reels
 ---
 
 The base spin lands, then the board grows: `reelSet.expand({ columns })` adds the reels the server's result has beyond the base board, a step at a time, spinning only the new ones while everything before them holds. `addReels()` and `removeReels()` are the primitives under it; the next round shrinks back with `removeReels()`. The [infinity reels guide](/mechanics/infinity-reels/#concept) is the short version: what the server sends, the calls, and the events.
@@ -28,7 +28,7 @@ Rows change only between steps. Inside `onStepAdded` the step's reels are about 
 
 ## Stacked symbols that split
 
-Q lands one cell tall or stacked two to four cells. When Q wins on every reel, each stack splits into more single Qs than it had cells, and its reel grows past the frame both ways. `reelSet.splitSymbol(reel, cell, ids)` places the server's split: the stack covering `(reel, cell)` becomes `ids`, one per cell, the cells above and below keep their symbols, and the board re-centres around the taller reel. While the win reaches the last reel, `expand()` adds another and the multiplier goes up by one. The next round goes back with `removeReels()` and `resetColumns()`. A reel that keeps its height instead, splits on MultiWays and a tap-to-split playground are on [Splitting symbols](/mechanics/split-symbols/).
+Q lands one cell tall or stacked two to four cells. When Q wins on every reel, each stack splits into more single Qs than it had cells, and its reel grows past the frame both ways. `reelSet.splitSymbol(reel, cell, ids)` places the server's split: the stack covering `(reel, cell)` becomes `ids`, one per cell, the cells above and below keep their symbols, and the board re-centres around the taller reel. While the win reaches the last reel, `expand()` adds another and the multiplier goes up by one. The next round goes back with `removeReels()` and `resetColumns()`. A reel that keeps its height instead, splits on MultiWays and a tap-to-split playground are on [Split symbols](/mechanics/split-symbols/).
 
 A split changes one reel's height, so the board re-centres around it. Hold the other reels still on screen (this demo moves its camera by their shift) and let the camera ease out, or they jump.
 

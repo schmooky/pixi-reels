@@ -12,22 +12,22 @@ Everything below, inlined with each recipe's source and every FAQ answer: https:
 
 ## Mechanics
 
-- [Anticipation & near-miss](https://pixi-reels.schmooky.dev/mechanics/anticipation/): Slow the last reels before they land to build tension. Drive the tease from scatters, shape its curve, and keep it when the player skips.
-- [Big symbols & non-uniform grids](https://pixi-reels.schmooky.dev/mechanics/big-symbols/): Symbols that cover several cells, and reels with different cell counts: MultiWays, which reshapes every spin, and static pyramids.
-- [Cascade & tumble](https://pixi-reels.schmooky.dev/mechanics/cascade/): Winners are destroyed, survivors fall into the holes and new symbols drop in, until no win is left. runCascade() runs the loop.
-- [Cells, bounds, paylines & overlays](https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/): Get the pixel rect of any cell to draw paylines and overlays or to catch clicks, and swap feature modes at runtime.
-- [Feel: timings & landing FX](https://pixi-reels.schmooky.dev/mechanics/feel/): Change how a spin feels by editing the step lists of StartPhase, StopPhase and AnticipationPhase. Each demo is a few lines, and slam and quicken keep working.
-- [Hold & Win](https://pixi-reels.schmooky.dev/mechanics/hold-and-win/): Coins lock where they land and the free cells respin. These demos build the feature up from a single coin to full boards with collectors and jackpots.
-- [Infinity reels: growing the board](https://pixi-reels.schmooky.dev/mechanics/infinity-reels/): Add reels sideways after the base spin lands, one or two at a time, as many as the server's result says. MultiWays reaches millions of ways; a big symbol…
-- [Masks & board shapes](https://pixi-reels.schmooky.dev/mechanics/masks/): Clip the reels to something other than a rectangle: a rounded window, a card per reel, or any path you draw.
-- [Nudge](https://pixi-reels.schmooky.dev/mechanics/nudge/): Shift a landed reel up or down by N positions to bring in symbols you choose. A nudge can be staggered across reels, skipped or aborted.
-- [Orientation & direction](https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/): Reels that travel sideways or upward, or a different way per reel. Symbols stay upright whichever way the strip moves.
-- [Reel curvature](https://pixi-reels.schmooky.dev/mechanics/reel-curvature/): Bend the reels onto a drum with .curve(amount). Cells away from the middle narrow into trapezoids, as they do on a physical drum.
-- [Skip & slam](https://pixi-reels.schmooky.dev/mechanics/skip/): Decide which reels a skip press lands, and when a reel may stop at all. Protect a tease, or quicken the reels so they spin in and bounce.
-- [Splitting symbols](https://pixi-reels.schmooky.dev/mechanics/split-symbols/): A symbol splits into more cells when it wins. Its reel grows past the frame, or keeps its height while its cells shrink, on any board and on MultiWays.
-- [Starters](https://pixi-reels.schmooky.dev/mechanics/starters/): Templates to start a new slot from, such as classic 5x3 lines, a cascade or Hold & Win.
-- [Symbols, layering & motion blur](https://pixi-reels.schmooky.dev/mechanics/symbols/): Register and write symbol classes, layer art that overflows its cell, and spin on cached blur textures.
-- [Wilds, multipliers & mystery (CellPin)](https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/): Wilds and mystery reveals built on CellPin, which keeps one cell on one symbol across spins.
+- [Anticipation](https://pixi-reels.schmooky.dev/mechanics/anticipation/): Hold the last reels back when a bonus is one scatter away, so the player watches them land.
+- [Big symbols and MultiWays](https://pixi-reels.schmooky.dev/mechanics/big-symbols/): Symbols that span several cells, and boards whose reels show different numbers of rows.
+- [Cascades](https://pixi-reels.schmooky.dev/mechanics/cascade/): Winning symbols burst, the rest fall into the gaps and new ones drop in, until nothing else wins.
+- [Paylines and overlays](https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/): Find any cell on screen to draw paylines, badges and highlights over the board, or to make a cell tappable.
+- [Spin feel](https://pixi-reels.schmooky.dev/mechanics/feel/): Tune how a spin starts and stops: the stagger between reels, a wind-up, the kick on landing.
+- [Hold & Win](https://pixi-reels.schmooky.dev/mechanics/hold-and-win/): Coins stick where they land and the empty cells respin until the counter runs out or the board fills.
+- [Infinity reels](https://pixi-reels.schmooky.dev/mechanics/infinity-reels/): The board gains reels on the right after the spin lands, as many as the result asks for.
+- [Reel windows](https://pixi-reels.schmooky.dev/mechanics/masks/): Show the reels through a rounded window, a card per reel or any shape you draw.
+- [Nudge](https://pixi-reels.schmooky.dev/mechanics/nudge/): Push a reel that has already stopped up or down a few places to pull a symbol into view.
+- [Sideways and upward reels](https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/): Reels that run sideways or upward, for banners and portrait layouts. The art stays upright.
+- [Curved reels](https://pixi-reels.schmooky.dev/mechanics/reel-curvature/): Bend the strip onto a drum so the top and bottom cells lean away, like a physical machine.
+- [Skip and slam](https://pixi-reels.schmooky.dev/mechanics/skip/): Decide what a tap does mid-spin: stop every reel, land them one by one, or let a tease finish.
+- [Split symbols](https://pixi-reels.schmooky.dev/mechanics/split-symbols/): A winning symbol breaks into two or more copies, and its reel makes room for them.
+- [Starters](https://pixi-reels.schmooky.dev/mechanics/starters/): Small complete slots to copy as a starting point, one for each common layout.
+- [Symbol classes](https://pixi-reels.schmooky.dev/mechanics/symbols/): Pick or write the class that draws a symbol, let large art spill out of its cell, blur it while it spins.
+- [Wilds and mystery symbols](https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/): Wilds that stay, spread or walk between spins, and mystery symbols that all turn into the same one.
 
 ## Learn
 

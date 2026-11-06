@@ -39,7 +39,7 @@ Missing any of these throws at `.build()` with a readable list of problems.
 | `.skipMode('slam' \| 'quicken')` | `'slam'`. What a skip press does to the reels it frees when `requestSkip()` / `skipSpin()` do not say. See [ReelSet](/reference/api-reelset/). |
 | `.tumble({ fall, dropIn })` | *(unset)*. Required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`. See [the Tumble section](#tumble) below. |
 | `.multiways({ minCells, maxCells, reelExtent })` | *(unset)*. Required for `setShape(...)`. `reelExtent` is a main-axis extent. |
-| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. Which screen axis the strip travels along. See [Orientation & direction](/mechanics/orientation-and-direction/#concept). |
+| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. Which screen axis the strip travels along. See [Sideways and upward reels](/mechanics/orientation-and-direction/#concept). |
 | `.direction('forward' \| 'reverse')` | `'forward'`. Which way along that axis symbols move. `'reverse'` on a vertical set is a roll-up. |
 | `.directionPerReel([d,...])` | *(unset)*. A per-reel override. The array length must equal `reels()`. Cannot be combined with cross-reel big symbols. |
 | `.cellStacking('ascending' \| 'descending')` | `'ascending'`. Which cell draws in front. This is geometric, so `direction('reverse')` does not flip it. |

@@ -1,5 +1,5 @@
 ---
-title: "Feel: timings & landing FX"
+title: Spin feel
 ---
 
 The built-in phases run named step lists. `StartPhase` runs `delay, launch, pull, accelerate, announce`, `StopPhase` runs `delay, spinOut, land, bounce`, `AnticipationPhase` runs `tease`, and `f.register('stop', StopPhase, { steps })` hands you the list before it runs. These recipes are the feel work that used to mean a subclass: each is one `insertBefore`, `insertAfter` or `replaceStep`, or a list built by hand, and every one keeps slam and quicken working because the waits stay marked `cut`. The step API itself is on the [Phases page](/reference/api-phases/#steps).

@@ -1,4 +1,4 @@
-export type TopicGroup = 'starters' | 'mechanics' | 'tension' | 'rendering';
+export type TopicGroup = 'starters' | 'features' | 'after-land' | 'board' | 'timing' | 'drawing';
 
 /**
  * One mechanic, one page: `/mechanics/<slug>/`. Read from the frontmatter of
@@ -25,26 +25,12 @@ export interface TopicMeta {
 
 /** Display order + label for each group on the /mechanics/ index page. */
 export const TOPIC_GROUPS: Array<{ id: TopicGroup; label: string; description: string }> = [
-  {
-    id: 'starters',
-    label: 'Start here',
-    description: 'Copy-paste templates to clone for a new slot.',
-  },
-  {
-    id: 'mechanics',
-    label: 'Core mechanics',
-    description: 'Features that change what lands and what stays on the board.',
-  },
-  {
-    id: 'tension',
-    label: 'Feel & tension',
-    description: 'Anticipation, near-miss, and the slow build before a land.',
-  },
-  {
-    id: 'rendering',
-    label: 'Symbols & presentation',
-    description: 'How symbols are drawn and layered, and how to find a cell on screen.',
-  },
+  { id: 'starters', label: 'Start here', description: 'Whole slots to copy.' },
+  { id: 'features', label: 'Features', description: 'The bonus rounds and wins players know by name.' },
+  { id: 'after-land', label: 'After the land', description: 'Moves that change the board once the reels have stopped.' },
+  { id: 'board', label: 'Board shape', description: 'How big the board is, which way it runs and what frames it.' },
+  { id: 'timing', label: 'Timing and control', description: 'How a spin builds up, slows down and answers a tap.' },
+  { id: 'drawing', label: 'Drawing', description: 'How symbols are drawn, and how to draw over the board.' },
 ];
 
 import { parse } from 'yaml';

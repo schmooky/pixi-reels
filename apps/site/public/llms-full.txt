@@ -36,9 +36,9 @@ await result;
 
 ## Mechanics
 
-### Anticipation & near-miss
+### Anticipation
 URL: https://pixi-reels.schmooky.dev/mechanics/anticipation/
-Slow the last reels before they land to build tension. Drive the tease from scatters, shape its curve, and keep it when the player skips.
+Hold the last reels back when a bonus is one scatter away, so the player watches them land.
 Tags: anticipation, tension, scatter, near-miss, spine, horizontal, reverse, curve, acceleration
 
 An anticipation tease slows the reels that could still complete a win, so the
@@ -166,7 +166,7 @@ Call `setAnticipation` before `setResult`. A press in the pre-result window is q
 
 Live demo (protected-anticipation): https://pixi-reels.schmooky.dev/mechanics/anticipation/#protected-anticipation
 
-`protect: 'stepwise'` walks it forward one reel per press instead of ending it in one go. That, partial slams, per-reel spin floors, and why a protected tease beats a slower skip are all on [Skip & slam](/mechanics/skip/).
+`protect: 'stepwise'` walks it forward one reel per press instead of ending it in one go. That, partial slams, per-reel spin floors, and why a protected tease beats a slower skip are all on [Skip and slam](/mechanics/skip/).
 
 #### Scatter jaw anticipation
 
@@ -182,9 +182,9 @@ The grid always resolves to a loss. Engineered near-misses are restricted in som
 
 Live demo (near-miss): https://pixi-reels.schmooky.dev/mechanics/anticipation/#near-miss
 
-### Big symbols & non-uniform grids
+### Big symbols and MultiWays
 URL: https://pixi-reels.schmooky.dev/mechanics/big-symbols/
-Symbols that cover several cells, and reels with different cell counts: MultiWays, which reshapes every spin, and static pyramids.
+Symbols that span several cells, and boards whose reels show different numbers of rows.
 Tags: big-symbols, multiways, pyramid, spine, geometry, sticky-wild, horizontal, reverse, orientation
 
 Most slots are uniform: every reel has the same number of cells. You do not
@@ -817,9 +817,9 @@ A pin survives every reshape via its remembered `originCell` (the default `migra
 
 Live demo (sticky-wild-multiways): https://pixi-reels.schmooky.dev/mechanics/big-symbols/#sticky-wild-multiways
 
-### Cascade & tumble
+### Cascades
 URL: https://pixi-reels.schmooky.dev/mechanics/cascade/
-Winners are destroyed, survivors fall into the holes and new symbols drop in, until no win is left. runCascade() runs the loop.
+Winning symbols burst, the rest fall into the gaps and new ones drop in, until nothing else wins.
 Tags: cascade, tumble, refill, anticipation, spine, thunderkick, horizontal, reverse, orientation, gravity
 
 A cascade looks like one mechanic. It is two, and once you keep them apart
@@ -1176,9 +1176,9 @@ Pre-fill the `bufferStart` slot so a teaser symbol sits just out of frame, visib
 
 Live demo (peek-from-above): https://pixi-reels.schmooky.dev/mechanics/cascade/#peek-from-above
 
-### Cells, bounds, paylines & overlays
+### Paylines and overlays
 URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/
-Get the pixel rect of any cell to draw paylines and overlays or to catch clicks, and swap feature modes at runtime.
+Find any cell on screen to draw paylines, badges and highlights over the board, or to make a cell tappable.
 Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
 
 `SymbolSpotlight` dims the losing symbols, lifts the winners above the mask,
@@ -1302,9 +1302,9 @@ Run custom middleware after target-placement (priority > 10; target-placement is
 
 Live demo (feature-mode-swap): https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
 
-### Feel: timings & landing FX
+### Spin feel
 URL: https://pixi-reels.schmooky.dev/mechanics/feel/
-Change how a spin feels by editing the step lists of StartPhase, StopPhase and AnticipationPhase. Each demo is a few lines, and slam and quicken keep working.
+Tune how a spin starts and stops: the stagger between reels, a wind-up, the kick on landing.
 Tags: phases, steps, timing, fx, anticipation, speed, skip
 
 A speed profile is every number that decides how a spin feels: acceleration,
@@ -1522,7 +1522,7 @@ Live demo (steps-last-reel-suspense): https://pixi-reels.schmooky.dev/mechanics/
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/mechanics/hold-and-win/
-Coins lock where they land and the free cells respin. These demos build the feature up from a single coin to full boards with collectors and jackpots.
+Coins stick where they land and the empty cells respin until the counter runs out or the board fills.
 Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation, rectangular, clovers
 
 Hold & Win, also sold as Lock & Respin or Hold & Spin, is a feature where
@@ -2093,9 +2093,9 @@ On the Hold & Win board, the collector orb absorbs its neighbours: walk board.lo
 
 Live demo (collector-symbol-pin): https://pixi-reels.schmooky.dev/mechanics/hold-and-win/#collector-symbol-pin
 
-### Infinity reels: growing the board
+### Infinity reels
 URL: https://pixi-reels.schmooky.dev/mechanics/infinity-reels/
-Add reels sideways after the base spin lands, one or two at a time, as many as the server's result says. MultiWays reaches millions of ways; a big symbol widens its step.
+The board gains reels on the right after the spin lands, as many as the result asks for.
 Tags: expand, addReels, removeReels, addRows, multiways, ways, big-symbols, skip, win-lines
 
 In an infinity reels slot the base spin lands, and while the win keeps going
@@ -2273,7 +2273,7 @@ Live demo (infinity-reels-rows): https://pixi-reels.schmooky.dev/mechanics/infin
 
 #### Stacked symbols that split
 
-Q lands one cell tall or stacked two to four cells. When Q wins on every reel, each stack splits into more single Qs than it had cells, and its reel grows past the frame both ways. `reelSet.splitSymbol(reel, cell, ids)` places the server's split: the stack covering `(reel, cell)` becomes `ids`, one per cell, the cells above and below keep their symbols, and the board re-centres around the taller reel. While the win reaches the last reel, `expand()` adds another and the multiplier goes up by one. The next round goes back with `removeReels()` and `resetColumns()`. A reel that keeps its height instead, splits on MultiWays and a tap-to-split playground are on [Splitting symbols](/mechanics/split-symbols/).
+Q lands one cell tall or stacked two to four cells. When Q wins on every reel, each stack splits into more single Qs than it had cells, and its reel grows past the frame both ways. `reelSet.splitSymbol(reel, cell, ids)` places the server's split: the stack covering `(reel, cell)` becomes `ids`, one per cell, the cells above and below keep their symbols, and the board re-centres around the taller reel. While the win reaches the last reel, `expand()` adds another and the multiplier goes up by one. The next round goes back with `removeReels()` and `resetColumns()`. A reel that keeps its height instead, splits on MultiWays and a tap-to-split playground are on [Split symbols](/mechanics/split-symbols/).
 
 A split changes one reel's height, so the board re-centres around it. Hold the other reels still on screen (this demo moves its camera by their shift) and let the camera ease out, or they jump.
 
@@ -2317,9 +2317,9 @@ Live demo (infinity-reels-skip): https://pixi-reels.schmooky.dev/mechanics/infin
 - Pins: a sticky pin's turns and an `'eval'` pin belong to the round, so they are not spent per step.
 - Memory: reels are real reels while they are on the board; `removeReels()` destroys them and shrinks the viewport, mask and symbol pool back.
 
-### Masks & board shapes
+### Reel windows
 URL: https://pixi-reels.schmooky.dev/mechanics/masks/
-Clip the reels to something other than a rectangle: a rounded window, a card per reel, or any path you draw.
+Show the reels through a rounded window, a card per reel or any shape you draw.
 Tags: mask, rounded, silhouette, pyramid, jagged, frame
 
 The viewport clips the reels through a `MaskStrategy`, so buffer cells never
@@ -2407,7 +2407,7 @@ Respect two things: `ctx.axis`, because `rects` are screen-space in every orient
 
 ### Nudge
 URL: https://pixi-reels.schmooky.dev/mechanics/nudge/
-Shift a landed reel up or down by N positions to bring in symbols you choose. A nudge can be staggered across reels, skipped or aborted.
+Push a reel that has already stopped up or down a few places to pull a symbol into view.
 Tags: nudge, stagger, spotlight, big-symbols, abort, skip, horizontal, reverse, orientation
 
 A nudge moves one reel a few cells after it has landed, and brings in symbols
@@ -2712,9 +2712,9 @@ Live demo (nudge-abort): https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-
 
 Live demo (nudge-skip): https://pixi-reels.schmooky.dev/mechanics/nudge/#nudge-skip
 
-### Orientation & direction
+### Sideways and upward reels
 URL: https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/
-Reels that travel sideways or upward, or a different way per reel. Symbols stay upright whichever way the strip moves.
+Reels that run sideways or upward, for banners and portrait layouts. The art stays upright.
 Tags: horizontal, orientation, direction, reverse, roll-up, banner, ways, axis
 
 A reel can travel down, up, or sideways. Two builder settings control that,
@@ -2952,9 +2952,9 @@ Every reel exposes `reel.axis`: `orientation`, `direction`, `polarity`, `mainPro
 
 Live demo (orientation-axis-readout): https://pixi-reels.schmooky.dev/mechanics/orientation-and-direction/#orientation-axis-readout
 
-### Reel curvature
+### Curved reels
 URL: https://pixi-reels.schmooky.dev/mechanics/reel-curvature/
-Bend the reels onto a drum with .curve(amount). Cells away from the middle narrow into trapezoids, as they do on a physical drum.
+Bend the strip onto a drum so the top and bottom cells lean away, like a physical machine.
 Tags: curve, curvature, perspective, projection, cylinder, drum, 3d
 
 ##### Demos
@@ -3073,9 +3073,9 @@ Only if you skip the warp. The engine hands each symbol a projected quad via `Re
 
 If you write your own with a single texture, `PerspectiveCell` is exported and does the mesh plumbing. Art that does not fill its cell reports its real rect via `ReelSymbol.cellInset`, which the sprite symbols derive from the texture's trim.
 
-### Skip & slam
+### Skip and slam
 URL: https://pixi-reels.schmooky.dev/mechanics/skip/
-Decide which reels a skip press lands, and when a reel may stop at all. Protect a tease, or quicken the reels so they spin in and bounce.
+Decide what a tap does mid-spin: stop every reel, land them one by one, or let a tease finish.
 Tags: skip, slam, anticipation, tease, phases, timing, groups
 
 A spin has three phases, sometimes four.
@@ -3564,9 +3564,9 @@ Live demo (phase-subclass-cascade): https://pixi-reels.schmooky.dev/mechanics/sk
 
 See [Phases](/reference/api-phases/) for the full extension contract.
 
-### Splitting symbols
+### Split symbols
 URL: https://pixi-reels.schmooky.dev/mechanics/split-symbols/
-A symbol splits into more cells when it wins. Its reel grows past the frame, or keeps its height while its cells shrink, on any board and on MultiWays.
+A winning symbol breaks into two or more copies, and its reel makes room for them.
 Tags: split, splitSymbol, setColumn, resetColumns, ways, multiways, stacked-symbols
 
 When a symbol splits, the cell it stands on becomes two or more cells. The
@@ -3625,7 +3625,7 @@ A reel a block wider than one reel covers cannot change on its own, or the block
 
 ### Starters
 URL: https://pixi-reels.schmooky.dev/mechanics/starters/
-Templates to start a new slot from, such as classic 5x3 lines, a cascade or Hold & Win.
+Small complete slots to copy as a starting point, one for each common layout.
 Tags: starter, 5x3, cascade, multiways, hold-and-win, horizontal, reverse, orientation
 
 Starting templates. Copy one, swap in your art and your math, and build from
@@ -3676,9 +3676,9 @@ Buffers stay geometric. `bufferStart` is still the slot above the window, so on 
 
 Live demo (starter-reverse-5x3): https://pixi-reels.schmooky.dev/mechanics/starters/#starter-reverse-5x3
 
-### Symbols, layering & motion blur
+### Symbol classes
 URL: https://pixi-reels.schmooky.dev/mechanics/symbols/
-Register and write symbol classes, layer art that overflows its cell, and spin on cached blur textures.
+Pick or write the class that draws a symbol, let large art spill out of its cell, blur it while it spins.
 Tags: symbols, reveal, mystery, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
 
 A symbol is what fills one cell. Three classes ship with the library. The
@@ -3945,9 +3945,9 @@ Live Spine skeletons at rest; cached snapshot textures while the reels spin, so 
 
 Live demo (static-spin-spine): https://pixi-reels.schmooky.dev/mechanics/symbols/#static-spin-spine
 
-### Wilds, multipliers & mystery (CellPin)
+### Wilds and mystery symbols
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/
-Wilds and mystery reveals built on CellPin, which keeps one cell on one symbol across spins.
+Wilds that stay, spread or walk between spins, and mystery symbols that all turn into the same one.
 Tags: wild, sticky, multiplier, mystery, respin, cell-pin, horizontal, reverse, orientation
 
 A pin keeps one cell on one symbol id, and keeps it there across spins.
@@ -5225,7 +5225,7 @@ Missing any of these throws at `.build()` with a readable list of problems.
 | `.skipMode('slam' \| 'quicken')` | `'slam'`. What a skip press does to the reels it frees when `requestSkip()` / `skipSpin()` do not say. See [ReelSet](/reference/api-reelset/). |
 | `.tumble({ fall, dropIn })` | *(unset)*. Required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`. See [the Tumble section](#tumble) below. |
 | `.multiways({ minCells, maxCells, reelExtent })` | *(unset)*. Required for `setShape(...)`. `reelExtent` is a main-axis extent. |
-| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. Which screen axis the strip travels along. See [Orientation & direction](/mechanics/orientation-and-direction/#concept). |
+| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. Which screen axis the strip travels along. See [Sideways and upward reels](/mechanics/orientation-and-direction/#concept). |
 | `.direction('forward' \| 'reverse')` | `'forward'`. Which way along that axis symbols move. `'reverse'` on a vertical set is a roll-up. |
 | `.directionPerReel([d,...])` | *(unset)*. A per-reel override. The array length must equal `reels()`. Cannot be combined with cross-reel big symbols. |
 | `.cellStacking('ascending' \| 'descending')` | `'ascending'`. Which cell draws in front. This is geometric, so `direction('reverse')` does not flip it. |
@@ -5892,7 +5892,7 @@ Live demo (phase-steps-custom): https://pixi-reels.schmooky.dev/reference/api-ph
 The feel work these lists are for (stagger curves, a wind-up launch, a landing
 kick, beats and FX that follow the speed profile, a spotlight around the tease,
 one extra beat on the last reel) is six short recipes on
-[Feel: timings & landing FX](/mechanics/feel/).
+[Spin feel](/mechanics/feel/).
 
 #### Configure a phase from the speed profile
 
@@ -6159,7 +6159,7 @@ where to put it when the floor is derived rather than configured:
 
 Live demo (phase-subclass-spin): https://pixi-reels.schmooky.dev/reference/api-phases/#steps
 
-Every lever above has a worked demo on [Skip & slam](/mechanics/skip/).
+Every lever above has a worked demo on [Skip and slam](/mechanics/skip/).
 
 There is a fairness reason to use `protect` rather than raising the floor on
 teasing spins. If a skip with no scatters lands at once but a skip during a
@@ -9353,7 +9353,7 @@ A: Two symbols per cell is not a built-in; render a composite `ReelSymbol` whose
 URL: https://pixi-reels.schmooky.dev/faq/motion-012/
 A: Big-symbol blocks stay intact through spins and cascades automatically, you place the anchor and the engine paints OCCUPIED across the rest of the block.
 
-### Anticipation & near-miss
+### Anticipation
 URL: https://pixi-reels.schmooky.dev/faq/#antic
 Build tension before the last reels land.
 
@@ -29418,7 +29418,7 @@ export const meta = {
 // `symbol:created` events, so a custom phase registered under its own key
 // gets a colour too (`other`, or one you add through `colors`). Skip presses
 // show why the symbol exists: a slam goes amber-or-blue straight to green,
-// a quicken (see Skip & slam) shows the violet stop in between.
+// a quicken (see Skip and slam) shows the violet stop in between.
 export default async function recipe({ app }: RecipeContext): Promise<RecipeResult> {
   const IDS = ['9', '10', 'J', 'Q', 'K'];
   const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
