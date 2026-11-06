@@ -99,11 +99,17 @@ export async function loadGenericSymbols(basePath = '/generic-symbols/'): Promis
   // A 384 px sticker drawn into a 70 to 90 px cell is shrunk four or five
   // times on a 1x screen, and linear filtering at that ratio skips most of
   // the image: the edges speckle. Mipmaps fix the speckle but average the
-  // white border into the ink line and turn it grey. A 2x screen shrinks
-  // about twice, which looks right, so a 1x screen gets the same ratio from
-  // half-size copies in `1x/`, loaded at resolution 0.5 so every size and
-  // slice cut below stays in the full art's units.
-  const half = typeof window !== 'undefined' && window.devicePixelRatio < 1.5;
+  // white border into the ink line and turn it grey. About twice is the
+  // shrink that looks right, so a screen whose cells come out under ~150
+  // device pixels gets half-size copies from `1x/` instead, loaded at
+  // resolution 0.5 so every size and slice cut below stays in the full
+  // art's units. That is a 1x screen, and also a phone: its cells are small
+  // enough in CSS pixels that even 2x leaves a 384 px sticker shrunk three
+  // or four times. The estimate is a canvas as wide as the viewport (at
+  // most 900 px) with eight cells across, at the resolution the site's
+  // canvases use (device pixel ratio, capped at 2).
+  const half = typeof window !== 'undefined'
+    && (Math.min(window.devicePixelRatio, 2) * Math.min(window.innerWidth, 900)) / 8 < 150;
   const file = (name: string) => `${basePath}${half ? '1x/' : ''}${name}.webp`;
   const loaded = (await Assets.load(
     names.map((name) => ({ alias: url(name), src: file(name), data: half ? { resolution: 0.5 } : {} })),
