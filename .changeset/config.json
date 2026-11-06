@@ -14,5 +14,9 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "@pixi-reels/site"
-  ]
+  ],
+  "privatePackages": {
+    "version": true,
+    "tag": false
+  }
 }
