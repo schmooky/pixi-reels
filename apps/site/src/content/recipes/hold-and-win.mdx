@@ -401,3 +401,11 @@ Each coin carries a coefficient (x2 to x50) in coin.data; the board locks hits a
 On the Hold & Win board, the collector orb absorbs its neighbours: walk board.lockedCoins, fly their values in, and release() those cells.
 
 <RecipeDemo code="collector-symbol-pin" />
+
+## Feature mode swap
+
+Enter and exit a bonus mode at runtime by adding or removing a frame middleware, with no ReelSet rebuild.
+
+Run custom middleware after target-placement (priority > 10; target-placement is 10, and the recipe uses 20) so it reacts to the grid the server chose.
+
+<RecipeDemo code="feature-mode-swap" />

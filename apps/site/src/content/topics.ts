@@ -1,4 +1,4 @@
-export type TopicGroup = 'lines' | 'cascade' | 'hold-and-win' | 'ways' | 'any';
+export type TopicGroup = 'lines' | 'cascade' | 'hold-and-win' | 'ways' | 'symbols' | 'wins' | 'layout';
 
 /**
  * One mechanic, one page: `/mechanics/<slug>/`. Read from the frontmatter of
@@ -29,7 +29,9 @@ export const TOPIC_GROUPS: Array<{ id: TopicGroup; label: string; description: s
   { id: 'cascade', label: 'Cascade games', description: 'Winning symbols fall away and the board refills.' },
   { id: 'hold-and-win', label: 'Hold & Win games', description: 'Coins lock and the free cells respin.' },
   { id: 'ways', label: 'Ways and MultiWays', description: 'Boards that change size from spin to spin.' },
-  { id: 'any', label: 'Any game', description: 'Drawing and layout that work with every kind of slot.' },
+  { id: 'symbols', label: 'Symbols', description: 'The classes that draw a symbol, at rest and while it spins.' },
+  { id: 'wins', label: 'Wins and overlays', description: 'Paylines, highlights and art drawn over the board.' },
+  { id: 'layout', label: 'Reel layout', description: 'Which way the reels run, how they bend and what frames them.' },
 ];
 
 import { parse } from 'yaml';

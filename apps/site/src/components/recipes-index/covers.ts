@@ -423,6 +423,28 @@ const COVERS: Record<string, () => string> = {
     }
     return frame(out);
   },
+
+  // The middle reel mid-spin, its symbols smeared into lime streaks.
+  'spinning-art'() {
+    const g = grid();
+    const mid = (c: number) => c === 2;
+    return frame(cells(g) + symbols(g, mid) + streaks(g, 2, LIME));
+  },
+
+  // One symbol drawn larger than its cell, over the frame and its neighbours.
+  layers() {
+    const g = grid();
+    const big = (c: number, r: number) => c === 2 && r === 0;
+    const size = 34;
+    const x = cx(g, 2) + g.cell / 2 - size / 2;
+    const y = g.oy - 10;
+    return frame(
+      cells(g) +
+        symbols(g, big) +
+        `<rect x="${x}" y="${y}" width="${size}" height="${size}" fill="${LIME}"/>` +
+        shape('circle', INK, x, y, size),
+    );
+  },
 };
 
 /** The slugs that have a hand-drawn cover. */

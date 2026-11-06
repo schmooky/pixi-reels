@@ -6,4 +6,4 @@ answer: Count scatters in the result and enter free spins in your game logic;
   the engine reports the grid via `setResult` / events.
 links:
   - label: "Recipe: Feature mode swap"
-    href: /mechanics/cells-and-banners/#feature-mode-swap
+    href: /mechanics/hold-and-win/#feature-mode-swap

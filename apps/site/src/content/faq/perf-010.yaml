@@ -6,4 +6,4 @@ answer: Preload the feature atlas/skeletons (e.g. `Assets.load`) before the mode
   swap so it has no hitch.
 links:
   - label: "Recipe: Feature mode swap"
-    href: /mechanics/cells-and-banners/#feature-mode-swap
+    href: /mechanics/hold-and-win/#feature-mode-swap

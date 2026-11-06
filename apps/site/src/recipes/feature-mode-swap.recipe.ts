@@ -6,7 +6,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Feature mode swap',
-  topic: 'cells-and-banners',
+  topic: 'hold-and-win',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;

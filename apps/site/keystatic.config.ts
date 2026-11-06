@@ -8,7 +8,9 @@ const TOPIC_GROUP_OPTIONS = [
   { label: 'Cascade games', value: 'cascade' },
   { label: 'Hold & Win games', value: 'hold-and-win' },
   { label: 'Ways and MultiWays', value: 'ways' },
-  { label: 'Any game', value: 'any' },
+  { label: 'Symbols', value: 'symbols' },
+  { label: 'Wins and overlays', value: 'wins' },
+  { label: 'Reel layout', value: 'layout' },
 ] as const;
 
 // ── Rich-text body shared by topics, demos, guides and docs. The embeds below

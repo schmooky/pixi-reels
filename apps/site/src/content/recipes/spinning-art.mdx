@@ -1,0 +1,29 @@
+---
+title: Spinning art
+---
+
+Three ways to feed the spinning sprite: a blur the cache bakes, blur art you drew, and static frames for a Spine set.
+
+<a id="static-spin-blur"></a>
+
+## Auto-baked motion blur (static spin)
+
+Spin cached snapshot textures with a baked blur: no blur art, no runtime filters.
+
+<RecipeDemo code="static-spin-blur" />
+
+<a id="static-spin-provided-blur"></a>
+
+## Bring your own blur textures
+
+Hand-authored blur strips where you have them; auto-baked blur where you don't. Both spin through the same StaticSpinSymbol.
+
+<RecipeDemo code="static-spin-provided-blur" />
+
+<a id="static-spin-spine"></a>
+
+## Spin static, not Spine
+
+Live Spine skeletons at rest; cached snapshot textures while the reels spin, so no skeleton ticks mid-spin.
+
+<RecipeDemo code="static-spin-spine" height={340} />

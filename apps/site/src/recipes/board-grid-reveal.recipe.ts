@@ -6,7 +6,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 
 export const meta = {
   title: 'Board primitive: build your own board',
-  topic: 'cells-and-banners',
+  topic: 'layers',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   height: 400,
   needs: ['hw-sprites'],

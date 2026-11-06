@@ -1232,7 +1232,7 @@ disable the spin button while a win plays.
 
 ##### Demos
 
-Address individual cells, render your own paylines and overlays, and swap feature modes at runtime, each shown live below. For banner reels above the grid, see [orientation and direction](/mechanics/orientation-and-direction/#horizontal-banner).
+Find any cell on screen to draw paylines and overlays over it, or to make it tappable. For a banner reel above the grid, see [Sideways and upward reels](/mechanics/orientation-and-direction/#horizontal-banner).
 
 #### Cell bounds: overlays, paylines & hit areas
 
@@ -1262,12 +1262,6 @@ The same `for reel, for cell` loop, with no orientation branch: the bounds are a
 
 Live demo (cells-horizontal-hit-areas): https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#cells-horizontal-hit-areas
 
-#### Board primitive: build your own board
-
-A reveal-and-collect prize grid built straight on the generic BoardGrid primitive; the rule is yours, with no locking and no respins.
-
-Live demo (board-grid-reveal): https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#board-grid-reveal
-
 #### Draw paylines yourself from win:group
 
 Core never draws lines. Subscribe to win:group and plot your own overlay from getCellBounds.
@@ -1279,28 +1273,6 @@ Live demo (paylines-events-only): https://pixi-reels.schmooky.dev/mechanics/cell
 `WinLines` from `pixi-reels/debug` draws a payline as one stroke through one cell per reel, and a payway as every winning cell joined to every winning cell on the next reel. Spins alternate between ten paylines, drawn as the presenter reaches each, and ways, every winning lattice at once.
 
 Live demo (win-lines): https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#win-lines
-
-#### Custom per-symbol animation
-
-Replace playWin() with your own GSAP timeline, styled per win.id.
-
-Live demo (paylines-custom-animation): https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
-
-#### Slam-stop
-
-Let the player smash the button to land the reels now.
-
-Use requestSkip() for a player-facing slam. A call to skipSpin() throws if the result has not arrived yet; requestSkip() queues until it does.
-
-Live demo (slam-stop): https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
-
-#### Feature mode swap
-
-Enter and exit a bonus mode at runtime by adding or removing a frame middleware, with no ReelSet rebuild.
-
-Run custom middleware after target-placement (priority > 10; target-placement is 10, and the recipe uses 20) so it reacts to the grid the server chose.
-
-Live demo (feature-mode-swap): https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
 
 ### Spin feel
 URL: https://pixi-reels.schmooky.dev/mechanics/feel/
@@ -1519,6 +1491,16 @@ Every reel runs the same list, so a per-reel beat is a step that returns nothing
 A step that starts something must own it both ways out. `ctx.wait` resolves early when the step is cut, `ctx.signal` fires when it is cancelled; one `stop` handles the natural end, a quicken and a slam.
 
 Live demo (steps-last-reel-suspense): https://pixi-reels.schmooky.dev/mechanics/feel/#steps-last-reel-suspense
+
+#### Landing: the frame, and the beat
+
+`spin:reelLanding` fires the frame a reel is on its result: strip snapped, every symbol told it landed, the bounce about to start. `spin:reelLanded` fires once the bounce has settled, a whole `bounceDuration` later. Anything coupled to the landing itself belongs on the first one; the demo grows a takeover plate over the copy reels on it and prints the gap.
+
+Live demo (landing-signal): https://pixi-reels.schmooky.dev/mechanics/feel/#landing-signal
+
+Each symbol hears the same moment through `onReelLanded(ctx)`, with the reel and cell it landed in. A Spine symbol's `autoPlayLanding` can be a rule of that context: `true` for its landing, `false` for nothing, or an animation name for a different beat, so the copy reels land without a pose to fight the takeover, and the last two reels use a reveal as their landing.
+
+Live demo (spine-landing-rule): https://pixi-reels.schmooky.dev/mechanics/feel/#spine-landing-rule
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/mechanics/hold-and-win/
@@ -1766,7 +1748,7 @@ effort:
    all builder options. Most games never go past here.
 2. Build on the primitive. If your feature is not lock-and-respin at all
    (pick-and-reveal, cluster-collect, scratch card), skip `HoldAndWinBuilder`
-   and use `BoardGrid` directly. The [board grid reveal demo](/mechanics/cells-and-banners/#board-grid-reveal)
+   and use `BoardGrid` directly. The [board grid reveal demo](/mechanics/layers/#board-grid-reveal)
    is a non-Hold & Win board on the primitive.
 3. Fork the board. For lock-and-respin with different rules, copy
    `HoldAndWinBoard` and `HoldAndWinState` into your project and repoint their
@@ -2093,6 +2075,14 @@ On the Hold & Win board, the collector orb absorbs its neighbours: walk board.lo
 
 Live demo (collector-symbol-pin): https://pixi-reels.schmooky.dev/mechanics/hold-and-win/#collector-symbol-pin
 
+#### Feature mode swap
+
+Enter and exit a bonus mode at runtime by adding or removing a frame middleware, with no ReelSet rebuild.
+
+Run custom middleware after target-placement (priority > 10; target-placement is 10, and the recipe uses 20) so it reacts to the grid the server chose.
+
+Live demo (feature-mode-swap): https://pixi-reels.schmooky.dev/mechanics/hold-and-win/#collector-symbol-pin
+
 ### Infinity reels
 URL: https://pixi-reels.schmooky.dev/mechanics/infinity-reels/
 The board gains reels on the right after the spin lands, as many as the result asks for.
@@ -2316,6 +2306,63 @@ Live demo (infinity-reels-skip): https://pixi-reels.schmooky.dev/mechanics/infin
 - Stagger: start and stop delays count a reel's place in its step, not its index, so reel 40 does not wait forty delays.
 - Pins: a sticky pin's turns and an `'eval'` pin belong to the round, so they are not spent per step.
 - Memory: reels are real reels while they are on the board; `removeReels()` destroys them and shrinks the viewport, mask and symbol pool back.
+
+### Layers
+URL: https://pixi-reels.schmooky.dev/mechanics/layers/
+Draw a symbol over its neighbours or outside the reel frame, and build your own board out of the same cells.
+Tags: layering, zindex, unmask, spotlight, board
+
+Every symbol lives inside its reel, and every reel sits under the viewport
+mask. That keeps the board tidy until a symbol's art is bigger than its cell:
+a scatter with a glow, a wild with a crown, a winning symbol that should rise
+above the rest.
+
+There are three ways out, from smallest to largest. A `zIndex` in the
+symbol's data draws it above the other symbols in the same reel. Unmasking
+moves it to the layer above every reel and above the mask, so it can spill
+past the frame. Promoting it through the spotlight lifts one instance for as
+long as a win shows, then puts it back.
+
+The board primitive at the end of the page is the same cell layout without
+the reels: a grid you fill and animate yourself.
+
+##### Demos
+
+From the smallest change to the largest: a `zIndex` inside one reel, unmasking above every reel, and promoting one symbol while a win shows.
+
+#### Symbol layering: zIndex, unmask, promote
+
+Three tiers of "draw my symbol on top": within one reel, above every reel and the mask, and per-instance via the spotlight layer.
+
+Within a reel (symbolData zIndex):
+
+Live demo (layering-scatter-zindex): https://pixi-reels.schmooky.dev/mechanics/layers/#symbol-layering
+
+Cross-reel and out-of-mask (unmask, at rest):
+
+Live demo (layering-unmask): https://pixi-reels.schmooky.dev/mechanics/layers/#symbol-layering
+
+Your own order (symbolZIndex): the engine's formula is type-dominant; a grading spec is row-dominant. Hand the engine a resolver and it keeps applying it after every wrap, swap and landing. Here every mid and high is unmasked, so at rest the lower row fronts the one above whatever the symbol, and only a higher grade wins over that.
+
+Live demo (layering-graded-zindex): https://pixi-reels.schmooky.dev/mechanics/layers/#layering-graded-zindex
+
+Unmask lifts visible cells only. The same id in a buffer cell stays under the mask, so oversized art cannot hang outside the grid from a slot the player was never meant to see. The demo below lands both at once, and holds through a skip, which is the moment that used to leak.
+
+Live demo (unmask-stays-in-the-grid): https://pixi-reels.schmooky.dev/mechanics/layers/#layering-graded-zindex
+
+Per-instance (promote the landed view into spotlightContainer):
+
+Live demo (layering-promote-jagged): https://pixi-reels.schmooky.dev/mechanics/layers/#layering-graded-zindex
+
+The same job in one call (`reelSet.promote`): the demo above hand-rolls it, capturing each view's parent and position, reparenting into `spotlightContainer`, and putting every one back before the strip moves. `promote(positions)` is that, as a value: it attaches the views to a render layer instead of reparenting, so nothing moves, nothing has to be put back, and the returned release drops them. Unlike `spotlight.show()` there is no dim, no `playWin()` and nothing to await, so the game's own timeline stays in charge. Below, the same tween runs twice, once clipped, once promoted.
+
+Live demo (clover-promote-win-line): https://pixi-reels.schmooky.dev/mechanics/layers/#clover-promote-win-line
+
+#### Board primitive: build your own board
+
+A reveal-and-collect prize grid built straight on the generic BoardGrid primitive; the rule is yours, with no locking and no respins.
+
+Live demo (board-grid-reveal): https://pixi-reels.schmooky.dev/mechanics/layers/#board-grid-reveal
 
 ### Reel windows
 URL: https://pixi-reels.schmooky.dev/mechanics/masks/
@@ -3564,6 +3611,56 @@ Live demo (phase-subclass-cascade): https://pixi-reels.schmooky.dev/mechanics/sk
 
 See [Phases](/reference/api-phases/) for the full extension contract.
 
+#### Slam-stop
+
+Let the player smash the button to land the reels now.
+
+Use requestSkip() for a player-facing slam. A call to skipSpin() throws if the result has not arrived yet; requestSkip() queues until it does.
+
+Live demo (slam-stop): https://pixi-reels.schmooky.dev/mechanics/skip/#phase-subclass-cascade
+
+### Spinning art
+URL: https://pixi-reels.schmooky.dev/mechanics/spinning-art/
+While a reel spins it shows a blurred still of each symbol, so heavy art costs nothing and reads as motion.
+Tags: static-spin, motion-blur, spine
+
+A symbol at rest can be anything: a Spine skeleton, an animated sprite, a
+container of layers. Register it through `StaticSpinSymbol` and give it a
+`createInner` that builds the real symbol. At rest the inner symbol is live,
+so idle loops and win animations play as usual. When the reel starts, the
+wrapper deactivates it and spins a plain sprite of it instead, and on the
+landing it brings the inner symbol back on the final id.
+
+The sprite's texture comes from a `SpinTextureCache` shared by the set, which
+snapshots each id once. With `spinTexture: 'blurred'` it also bakes a motion
+blur along the reel's travel and crossfades to it over `blurRampMs`. No
+filter runs during the spin, and no skeleton ticks while the strip moves.
+`prewarmSpinTextures` bakes every id before the first spin; otherwise each
+one is baked the first time it is needed. Where you have hand-drawn blur
+strips, `cache.setBlurred(id, texture)` makes the cache use them instead.
+
+##### Demos
+
+Three ways to feed the spinning sprite: a blur the cache bakes, blur art you drew, and static frames for a Spine set.
+
+#### Auto-baked motion blur (static spin)
+
+Spin cached snapshot textures with a baked blur: no blur art, no runtime filters.
+
+Live demo (static-spin-blur): https://pixi-reels.schmooky.dev/mechanics/spinning-art/#static-spin-blur
+
+#### Bring your own blur textures
+
+Hand-authored blur strips where you have them; auto-baked blur where you don't. Both spin through the same StaticSpinSymbol.
+
+Live demo (static-spin-provided-blur): https://pixi-reels.schmooky.dev/mechanics/spinning-art/#static-spin-provided-blur
+
+#### Spin static, not Spine
+
+Live Spine skeletons at rest; cached snapshot textures while the reels spin, so no skeleton ticks mid-spin.
+
+Live demo (static-spin-spine): https://pixi-reels.schmooky.dev/mechanics/spinning-art/#static-spin-spine
+
 ### Split symbols
 URL: https://pixi-reels.schmooky.dev/mechanics/split-symbols/
 A winning symbol breaks into two or more copies, and its reel makes room for them.
@@ -3676,10 +3773,22 @@ Buffers stay geometric. `bufferStart` is still the slot above the window, so on 
 
 Live demo (starter-reverse-5x3): https://pixi-reels.schmooky.dev/mechanics/starters/#starter-reverse-5x3
 
+#### Which symbols may spawn where
+
+`weights()` is one table for the whole set. A pool layers on top of it for a scope: one reel, the buffer cells, or one reel's buffer cells. It governs the random draw only; an explicit `setResult` target always wins.
+
+Keep a symbol out of the hidden cells, globally or on one reel. Each spin steps the pool through off, `{ reel: 1, slots: 'buffer' }`, and `{ slots: 'buffer' }`. The labels above and below the grid read the hidden cells live, so you can see COIN stop parking there, on the middle reel first, then everywhere.
+
+Live demo (buffer-pool-exclude): https://pixi-reels.schmooky.dev/mechanics/starters/#symbol-pools
+
+Give one reel its own draw table. Watch the spin rather than the landing: reel 0 draws low cards only, reel 2 is a wild reel while it scrolls, reel 4 never teases a wild. Same `weights()` underneath all five.
+
+Live demo (per-reel-symbol-pool): https://pixi-reels.schmooky.dev/mechanics/starters/#symbol-pools
+
 ### Symbol classes
 URL: https://pixi-reels.schmooky.dev/mechanics/symbols/
-Pick or write the class that draws a symbol, let large art spill out of its cell, blur it while it spins.
-Tags: symbols, reveal, mystery, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
+Pick or write the class that draws a symbol, from sprites to Spine, and animate it when it wins.
+Tags: symbols, pools, buffers, weights, spine, horizontal, orientation
 
 A symbol is what fills one cell. Three classes ship with the library. The
 fourth is the base class for everything else.
@@ -3798,7 +3907,7 @@ has the layering rules.
 
 ##### Demos
 
-The symbol classes you register, the three ways to layer art that overflows its cell, and spinning on cached blur textures.
+The symbol classes in the package, how to write your own, and how to animate one on a win. Art that overflows its cell is on [Layers](/mechanics/layers/), the blurred copies a reel spins on are on [Spinning art](/mechanics/spinning-art/).
 
 #### CardSymbol: debug / prototyping helper
 
@@ -3854,96 +3963,17 @@ Transform only after landing (spin:complete / spin:reelLanded); setSymbolAt thro
 
 Live demo (symbol-transform): https://pixi-reels.schmooky.dev/mechanics/symbols/#symbols-transposed-pair
 
-#### Reveal a mystery symbol: out, swap, in
-
-`setSymbolAt` swaps an identity instantly, so a reveal meant hand-rolling the ordering, the per-cell stagger, a zIndex bump so an overshooting entrance is not clipped, a re-hide after the swap (re-activation resets `alpha` to 1, so the new art pops for a frame), and abort handling.
-
-```ts
-await reelSet.swapSymbols(
-  [0, 1, 2].map((cell) => ({ reel: 1, cell, id: 'WILD' })),
-  { outDelay: (_, i) => i * 0.06, holdMs: 200, inDelay: (_, i) => i * 0.09 },
-);
-```
-
-The three beats are separately skippable: `skipOut` for art that plays its own Spine `out` track, `skipIn` to leave the cells hidden and reveal them yourself, `onSwapped` for a midpoint beat that has to await a real animation. `playIn()` / `playOut()` are the per-symbol hooks underneath, on the same contract as `playDestroy`; override them for art-appropriate entrances and exits.
-
-Cells are validated up front, and an abort still performs the swap so the board never disagrees with the result. Only valid at rest, and single-cell symbols only; a big symbol spans cells the frame layer reserves, so revealing one is a `setResult` / `setShape` job.
-
-Live demo (symbol-swap-reveal): https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-swap-reveal
-
-#### Which symbols may spawn where
-
-`weights()` is one table for the whole set. A pool layers on top of it for a scope: one reel, the buffer cells, or one reel's buffer cells. It governs the random draw only; an explicit `setResult` target always wins.
-
-Keep a symbol out of the hidden cells, globally or on one reel. Each spin steps the pool through off, `{ reel: 1, slots: 'buffer' }`, and `{ slots: 'buffer' }`. The labels above and below the grid read the hidden cells live, so you can see COIN stop parking there, on the middle reel first, then everywhere.
-
-Live demo (buffer-pool-exclude): https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-pools
-
-Give one reel its own draw table. Watch the spin rather than the landing: reel 0 draws low cards only, reel 2 is a wild reel while it scrolls, reel 4 never teases a wild. Same `weights()` underneath all five.
-
-Live demo (per-reel-symbol-pool): https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-pools
-
-#### Symbol layering: zIndex, unmask, promote
-
-Three tiers of "draw my symbol on top": within one reel, above every reel and the mask, and per-instance via the spotlight layer.
-
-Within a reel (symbolData zIndex):
-
-Live demo (layering-scatter-zindex): https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-layering
-
-Cross-reel and out-of-mask (unmask, at rest):
-
-Live demo (layering-unmask): https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-layering
-
-Your own order (symbolZIndex): the engine's formula is type-dominant; a grading spec is row-dominant. Hand the engine a resolver and it keeps applying it after every wrap, swap and landing. Here every mid and high is unmasked, so at rest the lower row fronts the one above whatever the symbol, and only a higher grade wins over that.
-
-Live demo (layering-graded-zindex): https://pixi-reels.schmooky.dev/mechanics/symbols/#layering-graded-zindex
-
-Unmask lifts visible cells only. The same id in a buffer cell stays under the mask, so oversized art cannot hang outside the grid from a slot the player was never meant to see. The demo below lands both at once, and holds through a skip, which is the moment that used to leak.
-
-Live demo (unmask-stays-in-the-grid): https://pixi-reels.schmooky.dev/mechanics/symbols/#layering-graded-zindex
-
-Per-instance (promote the landed view into spotlightContainer):
-
-Live demo (layering-promote-jagged): https://pixi-reels.schmooky.dev/mechanics/symbols/#layering-graded-zindex
-
-The same job in one call (`reelSet.promote`): the demo above hand-rolls it, capturing each view's parent and position, reparenting into `spotlightContainer`, and putting every one back before the strip moves. `promote(positions)` is that, as a value: it attaches the views to a render layer instead of reparenting, so nothing moves, nothing has to be put back, and the returned release drops them. Unlike `spotlight.show()` there is no dim, no `playWin()` and nothing to await, so the game's own timeline stays in charge. Below, the same tween runs twice, once clipped, once promoted.
-
-Live demo (clover-promote-win-line): https://pixi-reels.schmooky.dev/mechanics/symbols/#clover-promote-win-line
-
-#### Landing: the frame, and the beat
-
-`spin:reelLanding` fires the frame a reel is on its result: strip snapped, every symbol told it landed, the bounce about to start. `spin:reelLanded` fires once the bounce has settled, a whole `bounceDuration` later. Anything coupled to the landing itself belongs on the first one; the demo grows a takeover plate over the copy reels on it and prints the gap.
-
-Live demo (landing-signal): https://pixi-reels.schmooky.dev/mechanics/symbols/#landing-signal
-
-Each symbol hears the same moment through `onReelLanded(ctx)`, with the reel and cell it landed in. A Spine symbol's `autoPlayLanding` can be a rule of that context: `true` for its landing, `false` for nothing, or an animation name for a different beat, so the copy reels land without a pose to fight the takeover, and the last two reels use a reveal as their landing.
-
-Live demo (spine-landing-rule): https://pixi-reels.schmooky.dev/mechanics/symbols/#spine-landing-rule
-
 #### Multi-skin Spine tiers on a compact grid
 
 One skeleton per symbol tier (a skin per id) with static-spin blur, on a gapless 3-4-4-4-4-3 grid.
 
 Live demo (spine-skins-3-4-4-4-4-3): https://pixi-reels.schmooky.dev/mechanics/symbols/#spine-skins-3-4-4-4-4-3
 
-#### Auto-baked motion blur (static spin)
+#### Custom per-symbol animation
 
-Spin cached snapshot textures with a baked blur: no blur art, no runtime filters.
+Replace playWin() with your own GSAP timeline, styled per win.id.
 
-Live demo (static-spin-blur): https://pixi-reels.schmooky.dev/mechanics/symbols/#static-spin-blur
-
-#### Bring your own blur textures
-
-Hand-authored blur strips where you have them; auto-baked blur where you don't. Both spin through the same StaticSpinSymbol.
-
-Live demo (static-spin-provided-blur): https://pixi-reels.schmooky.dev/mechanics/symbols/#static-spin-provided-blur
-
-#### Spin static, not Spine
-
-Live Spine skeletons at rest; cached snapshot textures while the reels spin, so no skeleton ticks mid-spin.
-
-Live demo (static-spin-spine): https://pixi-reels.schmooky.dev/mechanics/symbols/#static-spin-spine
+Live demo (paylines-custom-animation): https://pixi-reels.schmooky.dev/mechanics/symbols/#paylines-custom-animation
 
 ### Wilds and mystery symbols
 URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/
@@ -4212,6 +4242,23 @@ Live demo (wilds-reverse-sticky-respin): https://pixi-reels.schmooky.dev/mechani
 Winners lock for N respins while the rest of the grid spins; re-pinning a winning cell refreshes its counter, so a new win resets the window.
 
 Live demo (sticky-win-respin-pin): https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#sticky-win-respin-pin
+
+#### Reveal a mystery symbol: out, swap, in
+
+`setSymbolAt` swaps an identity instantly, so a reveal meant hand-rolling the ordering, the per-cell stagger, a zIndex bump so an overshooting entrance is not clipped, a re-hide after the swap (re-activation resets `alpha` to 1, so the new art pops for a frame), and abort handling.
+
+```ts
+await reelSet.swapSymbols(
+  [0, 1, 2].map((cell) => ({ reel: 1, cell, id: 'WILD' })),
+  { outDelay: (_, i) => i * 0.06, holdMs: 200, inDelay: (_, i) => i * 0.09 },
+);
+```
+
+The three beats are separately skippable: `skipOut` for art that plays its own Spine `out` track, `skipIn` to leave the cells hidden and reveal them yourself, `onSwapped` for a midpoint beat that has to await a real animation. `playIn()` / `playOut()` are the per-symbol hooks underneath, on the same contract as `playDestroy`; override them for art-appropriate entrances and exits.
+
+Cells are validated up front, and an abort still performs the swap so the board never disagrees with the result. Only valid at rest, and single-cell symbols only; a big symbol spans cells the frame layer reserves, so revealing one is a `setResult` / `setShape` job.
+
+Live demo (symbol-swap-reveal): https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#symbol-swap-reveal
 
 ## Learn
 
@@ -12621,7 +12668,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### board-grid-reveal
-URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#board-grid-reveal
+URL: https://pixi-reels.schmooky.dev/mechanics/layers/#board-grid-reveal
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
@@ -12631,7 +12678,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 
 export const meta = {
   title: 'Board primitive: build your own board',
-  topic: 'cells-and-banners',
+  topic: 'layers',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   height: 400,
   needs: ['hw-sprites'],
@@ -12730,7 +12777,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### buffer-pool-exclude
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-pools
+URL: https://pixi-reels.schmooky.dev/mechanics/starters/#symbol-pools
 ```ts
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, ReelSetBuilder, SpeedPresets, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
@@ -12741,7 +12788,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Which symbols may spawn where',
-  topic: 'symbols',
+  topic: 'starters',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 440,
 } as const satisfies RecipeMeta;
@@ -14319,7 +14366,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### clover-promote-win-line
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#clover-promote-win-line
+URL: https://pixi-reels.schmooky.dev/mechanics/layers/#clover-promote-win-line
 ```ts
 import { gsap } from 'gsap';
 import { ReelSetBuilder, RoundedRectMaskStrategy } from 'pixi-reels';
@@ -14328,7 +14375,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
-  topic: 'symbols',
+  topic: 'layers',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 400,
   needs: ['hw-clover'],
@@ -17064,7 +17111,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### feature-mode-swap
-URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
+URL: https://pixi-reels.schmooky.dev/mechanics/hold-and-win/#collector-symbol-pin
 ```ts
 import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import type { FrameMiddleware } from 'pixi-reels';
@@ -17074,7 +17121,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Feature mode swap',
-  topic: 'cells-and-banners',
+  topic: 'hold-and-win',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
@@ -25684,7 +25731,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### landing-signal
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#landing-signal
+URL: https://pixi-reels.schmooky.dev/mechanics/feel/#landing-signal
 ```ts
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
@@ -25696,7 +25743,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Landing: the frame, and the beat',
-  topic: 'symbols',
+  topic: 'feel',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
 } as const satisfies RecipeMeta;
 
@@ -25805,7 +25852,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### layering-graded-zindex
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#layering-graded-zindex
+URL: https://pixi-reels.schmooky.dev/mechanics/layers/#layering-graded-zindex
 ```ts
 import {
   prewarmSpinTextures,
@@ -25821,7 +25868,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
-  topic: 'symbols',
+  topic: 'layers',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 420,
   needs: ['spine:thunderkick'],
@@ -25920,7 +25967,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### layering-promote-jagged
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#layering-graded-zindex
+URL: https://pixi-reels.schmooky.dev/mechanics/layers/#layering-graded-zindex
 ```ts
 import {
   prewarmSpinTextures,
@@ -25937,7 +25984,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
-  topic: 'symbols',
+  topic: 'layers',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 420,
   needs: ['spine:thunderkick'],
@@ -26070,7 +26117,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### layering-scatter-zindex
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-layering
+URL: https://pixi-reels.schmooky.dev/mechanics/layers/#symbol-layering
 ```ts
 import {
   prewarmSpinTextures,
@@ -26086,7 +26133,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
-  topic: 'symbols',
+  topic: 'layers',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 420,
   needs: ['spine:thunderkick'],
@@ -26177,7 +26224,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### layering-unmask
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-layering
+URL: https://pixi-reels.schmooky.dev/mechanics/layers/#symbol-layering
 ```ts
 import {
   prewarmSpinTextures,
@@ -26193,7 +26240,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
-  topic: 'symbols',
+  topic: 'layers',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 420,
   needs: ['spine:thunderkick'],
@@ -28954,7 +29001,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### paylines-custom-animation
-URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
+URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#paylines-custom-animation
 ```ts
 import { gsap } from 'gsap';
 import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, WinPresenter, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
@@ -28965,7 +29012,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Custom per-symbol animation',
-  topic: 'cells-and-banners',
+  topic: 'symbols',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
@@ -29258,7 +29305,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### per-reel-symbol-pool
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-pools
+URL: https://pixi-reels.schmooky.dev/mechanics/starters/#symbol-pools
 ```ts
 import * as PIXI from 'pixi.js';
 import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
@@ -29268,7 +29315,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Which symbols may spawn where',
-  topic: 'symbols',
+  topic: 'starters',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 400,
 } as const satisfies RecipeMeta;
@@ -33856,7 +33903,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### slam-stop
-URL: https://pixi-reels.schmooky.dev/mechanics/cells-and-banners/#paylines-custom-animation
+URL: https://pixi-reels.schmooky.dev/mechanics/skip/#phase-subclass-cascade
 ```ts
 import { CARD_DECK, ReelSetBuilder, SpeedPresets, WILD_CARD, SpinTextureCache, StaticSpinSymbol } from 'pixi-reels';
 import { tapToSpin, StickerSymbol, createAssets } from '@pixi-reels/kit';
@@ -33865,7 +33912,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Slam-stop',
-  topic: 'cells-and-banners',
+  topic: 'skip',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;
@@ -34481,7 +34528,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### spine-landing-rule
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#spine-landing-rule
+URL: https://pixi-reels.schmooky.dev/mechanics/feel/#spine-landing-rule
 ```ts
 import {
   prewarmSpinTextures,
@@ -34498,7 +34545,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Landing: the frame, and the beat',
-  topic: 'symbols',
+  topic: 'feel',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 460,
   needs: ['spine:thunderkick'],
@@ -36201,7 +36248,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### static-spin-blur
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#static-spin-blur
+URL: https://pixi-reels.schmooky.dev/mechanics/spinning-art/#static-spin-blur
 ```ts
 import {
   CARD_DECK,
@@ -36219,7 +36266,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Auto-baked motion blur (static spin)',
-  topic: 'symbols',
+  topic: 'spinning-art',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
 } as const satisfies RecipeMeta;
 
@@ -36291,7 +36338,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### static-spin-provided-blur
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#static-spin-provided-blur
+URL: https://pixi-reels.schmooky.dev/mechanics/spinning-art/#static-spin-provided-blur
 ```ts
 import {
   prewarmSpinTextures,
@@ -36307,7 +36354,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Bring your own blur textures',
-  topic: 'symbols',
+  topic: 'spinning-art',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   needs: ['prototype-atlas'],
 } as const satisfies RecipeMeta;
@@ -36379,7 +36426,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### static-spin-spine
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#static-spin-spine
+URL: https://pixi-reels.schmooky.dev/mechanics/spinning-art/#static-spin-spine
 ```ts
 import {
   prewarmSpinTextures,
@@ -36395,7 +36442,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spin static, not Spine',
-  topic: 'symbols',
+  topic: 'spinning-art',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 340,
   needs: ['spine:generated'],
@@ -37805,7 +37852,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### symbol-swap-reveal
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#symbol-swap-reveal
+URL: https://pixi-reels.schmooky.dev/mechanics/wilds-and-pins/#symbol-swap-reveal
 ```ts
 import { CARD_DECK, CardSymbol, ReelSetBuilder } from 'pixi-reels';
 import { readout, tapToSpin } from '@pixi-reels/kit';
@@ -37814,7 +37861,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Reveal a mystery symbol: out, swap, in',
-  topic: 'symbols',
+  topic: 'wilds-and-pins',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
 } as const satisfies RecipeMeta;
 
@@ -39721,7 +39768,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 ```
 
 ### unmask-stays-in-the-grid
-URL: https://pixi-reels.schmooky.dev/mechanics/symbols/#layering-graded-zindex
+URL: https://pixi-reels.schmooky.dev/mechanics/layers/#layering-graded-zindex
 ```ts
 import * as PIXI from 'pixi.js';
 import { SilkGraphics } from 'pixi-silk';
@@ -39732,7 +39779,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
-  topic: 'symbols',
+  topic: 'layers',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 400,
 } as const satisfies RecipeMeta;

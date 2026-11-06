@@ -14,7 +14,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Auto-baked motion blur (static spin)',
-  topic: 'symbols',
+  topic: 'spinning-art',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
 } as const satisfies RecipeMeta;
 

@@ -53,7 +53,8 @@ const PREVIEW_ENV = { ...process.env, ASTRO_PREVIEW_BACKGROUND: '1' };
  */
 const PAGES = [
   ...['anticipation', 'big-symbols', 'cascade', 'cells-and-banners', 'hold-and-win',
-      'masks', 'nudge', 'orientation-and-direction', 'starters', 'symbols', 'wilds-and-pins',
+      'layers', 'masks', 'nudge', 'orientation-and-direction', 'spinning-art', 'starters', 'symbols',
+      'wilds-and-pins',
      ].map((s) => `/mechanics/${s}/`),
   // The landing page mounts four live sets (hero + three mechanic panels)
   // through LandingReels, not RecipeRunner. A mount failure there renders no
@@ -192,7 +193,7 @@ const DRIVEN: { path: string; anchor: string; ms: number }[] = [
   // One cell, chrome background vs symbol art, four dims in a row.
   { path: '/mechanics/hold-and-win/', anchor: 'hold-and-win-clover-dim-one-cell', ms: 12_000 },
   // `reelSet.promote()` around a GSAP tween, run twice.
-  { path: '/mechanics/symbols/', anchor: 'clover-promote-win-line', ms: 12_000 },
+  { path: '/mechanics/layers/', anchor: 'clover-promote-win-line', ms: 12_000 },
 ];
 
 for (const { path, anchor, ms } of DRIVEN) {

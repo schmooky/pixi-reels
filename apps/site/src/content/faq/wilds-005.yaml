@@ -6,4 +6,4 @@ answer: Inject them with a `FrameMiddleware` (or place them in the `setResult`
   grid) before the reels stop.
 links:
   - label: "Recipe: Feature mode swap"
-    href: /mechanics/cells-and-banners/#feature-mode-swap
+    href: /mechanics/hold-and-win/#feature-mode-swap

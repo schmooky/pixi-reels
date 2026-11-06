@@ -6,4 +6,4 @@ answer: "`playDestroy(opts)` honours `opts.signal`; on a slam, abort it and snap
   the view to the destroyed pose."
 links:
   - label: "Recipe: Slam-stop"
-    href: /mechanics/cells-and-banners/#slam-stop
+    href: /mechanics/skip/#slam-stop

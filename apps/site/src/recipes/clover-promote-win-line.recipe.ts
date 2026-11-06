@@ -5,7 +5,7 @@ import type { RecipeContext, RecipeMeta, RecipeResult } from '@pixi-reels/kit';
 
 export const meta = {
   title: 'Symbol layering - zIndex, unmask, promote',
-  topic: 'symbols',
+  topic: 'layers',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 400,
   needs: ['hw-clover'],

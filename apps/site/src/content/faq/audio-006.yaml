@@ -6,4 +6,4 @@ answer: Crossfade tracks in your audio engine on the feature swap; the engine
   just signals the mode change.
 links:
   - label: "Recipe: Feature mode swap"
-    href: /mechanics/cells-and-banners/#feature-mode-swap
+    href: /mechanics/hold-and-win/#feature-mode-swap

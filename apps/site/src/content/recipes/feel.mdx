@@ -82,3 +82,19 @@ Every reel runs the same list, so a per-reel beat is a step that returns nothing
 A step that starts something must own it both ways out. `ctx.wait` resolves early when the step is cut, `ctx.signal` fires when it is cancelled; one `stop` handles the natural end, a quicken and a slam.
 
 <RecipeDemo code="steps-last-reel-suspense" />
+
+<a id="landing-signal"></a>
+
+## Landing: the frame, and the beat
+
+`spin:reelLanding` fires the frame a reel is on its result: strip snapped, every symbol told it landed, the bounce about to start. `spin:reelLanded` fires once the bounce has settled, a whole `bounceDuration` later. Anything coupled to the landing itself belongs on the first one; the demo grows a takeover plate over the copy reels on it and prints the gap.
+
+<RecipeDemo code="landing-signal" />
+
+Each symbol hears the same moment through `onReelLanded(ctx)`, with the reel and cell it landed in. A Spine symbol's `autoPlayLanding` can be a rule of that context: `true` for its landing, `false` for nothing, or an animation name for a different beat, so the copy reels land without a pose to fight the takeover, and the last two reels use a reveal as their landing.
+
+<a id="spine-landing-rule"></a>
+
+<RecipeDemo code="spine-landing-rule" height={460} />
+
+<AssetCredit studio="Thunderkick" />

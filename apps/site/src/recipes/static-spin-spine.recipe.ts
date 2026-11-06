@@ -12,7 +12,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Spin static, not Spine',
-  topic: 'symbols',
+  topic: 'spinning-art',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 340,
   needs: ['spine:generated'],

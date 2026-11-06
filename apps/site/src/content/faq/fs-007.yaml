@@ -6,4 +6,4 @@ answer: Spin a feature ReelSet built with different `.weights(...)`, or swap
   weights by toggling a `FrameMiddleware`.
 links:
   - label: "Recipe: Feature mode swap"
-    href: /mechanics/cells-and-banners/#feature-mode-swap
+    href: /mechanics/hold-and-win/#feature-mode-swap

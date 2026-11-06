@@ -263,3 +263,11 @@ The cascade phases and `AdjustPhase` take build-time config as extra constructor
 <RecipeDemo code="phase-subclass-cascade" />
 
 See [Phases](/reference/api-phases/) for the full extension contract.
+
+## Slam-stop
+
+Let the player smash the button to land the reels now.
+
+Use requestSkip() for a player-facing slam. A call to skipSpin() throws if the result has not arrived yet; requestSkip() queues until it does.
+
+<RecipeDemo code="slam-stop" />

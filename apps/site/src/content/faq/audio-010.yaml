@@ -6,4 +6,4 @@ answer: On `skipSpin()`, re-cue or shorten the landing sound. `skip:completed`
   marks the slammed stop.
 links:
   - label: "Recipe: Slam-stop"
-    href: /mechanics/cells-and-banners/#slam-stop
+    href: /mechanics/skip/#slam-stop

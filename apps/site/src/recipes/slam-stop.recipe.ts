@@ -5,7 +5,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Slam-stop',
-  topic: 'cells-and-banners',
+  topic: 'skip',
   tags: ['paylines', 'hit-areas', 'overlays', 'wins', 'horizontal', 'orientation'],
   needs: ['generic-symbols'],
 } as const satisfies RecipeMeta;

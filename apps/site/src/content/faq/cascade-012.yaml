@@ -6,4 +6,4 @@ answer: "`reelSet.skipSpin()` during a cascade fast-forwards the remaining
   tumble steps."
 links:
   - label: "Recipe: Slam-stop"
-    href: /mechanics/cells-and-banners/#slam-stop
+    href: /mechanics/skip/#slam-stop

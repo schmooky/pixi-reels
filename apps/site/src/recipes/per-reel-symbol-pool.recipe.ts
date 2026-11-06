@@ -6,7 +6,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Which symbols may spawn where',
-  topic: 'symbols',
+  topic: 'starters',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
   height: 400,
 } as const satisfies RecipeMeta;

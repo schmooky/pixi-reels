@@ -52,7 +52,7 @@ export const LEGACY_RECIPE_MEMBERS = {
     'hold-and-win-sprites', 'hold-and-win-spine', 'hold-and-win-meter', 'hold-and-win-row-jackpot',
     'hold-and-win-bonus-cell', 'hold-and-win-cell-control', 'hold-and-win-anticipation',
     'hold-and-win-skip', 'hold-and-win-sticky-overlay', 'hold-and-win-trace',
-    'coin-value-symbol', 'coin-value-data', 'coin-value-overlay', 'value-coin-pin', 'collector-symbol-pin',
+    'coin-value-symbol', 'coin-value-data', 'coin-value-overlay', 'value-coin-pin', 'collector-symbol-pin', 'feature-mode-swap',
   ],
   'big-symbols': [
     'big-symbols-mxn', 'big-symbol-cascade-fall', 'big-symbol-partial-land', 'big-symbol-held-respin',
@@ -74,13 +74,13 @@ export const LEGACY_RECIPE_MEMBERS = {
     'near-miss',
   ],
   'symbols': [
-    'card-symbol-debug', 'empty-symbol', 'texture-atlas-symbols', 'symbol-transform', 'symbol-layering',
-    'spine-skins-3-4-4-4-4-3', 'static-spin-blur', 'static-spin-provided-blur', 'static-spin-spine',
+    'card-symbol-debug', 'empty-symbol', 'texture-atlas-symbols', 'symbol-transform',
+    'spine-skins-3-4-4-4-4-3', 'paylines-custom-animation',
   ],
-  'cells-and-banners': [
-    'cell-bounds', 'cell-hit-areas', 'board-grid-reveal', 'paylines-events-only',
-    'paylines-custom-animation', 'slam-stop', 'feature-mode-swap',
-  ],
+  'spinning-art': ['static-spin-blur', 'static-spin-provided-blur', 'static-spin-spine'],
+  'layers': ['symbol-layering', 'board-grid-reveal'],
+  'cells-and-banners': ['cell-bounds', 'cell-hit-areas', 'paylines-events-only'],
+  'skip': ['slam-stop'],
   // The old standalone horizontal-reel recipes were replaced by the v2
   // orientation-axis banner; point their URLs at the new umbrella.
   'orientation-and-direction': ['horizontal-reel', 'static-spin-horizontal'],

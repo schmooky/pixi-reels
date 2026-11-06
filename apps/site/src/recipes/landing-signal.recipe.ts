@@ -8,7 +8,7 @@ import { reelSounds } from '@pixi-reels/kit/sound';
 
 export const meta = {
   title: 'Landing: the frame, and the beat',
-  topic: 'symbols',
+  topic: 'feel',
   tags: ['symbols', 'reveal', 'mystery', 'pools', 'buffers', 'weights', 'layering', 'static-spin', 'motion-blur', 'spine', 'horizontal', 'orientation'],
 } as const satisfies RecipeMeta;
 
