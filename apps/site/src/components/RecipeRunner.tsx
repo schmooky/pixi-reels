@@ -177,6 +177,9 @@ export function RecipeRunner({ code, height = 300, onContextLost }: RecipeRunner
         // in lib/recipeModule.ts, the same for Studio and the share viewer.
         result = await runRecipeModule(code, { app });
       } catch (e) {
+        // Unmounted while the recipe was still loading: the cleanup already
+        // destroyed the app it was building on, renderer included.
+        if (cancelled) return;
         // A recipe that dies because the context went away did nothing wrong.
         const gl = (app.renderer as { gl?: WebGLRenderingContext }).gl;
         if (gl?.isContextLost() && onContextLostRef.current) {

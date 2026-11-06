@@ -112,6 +112,10 @@ export function tapToSpin(app: Application, options: TapToSpinOptions): TapToSpi
     // with it; the control goes too, so no listener outlives its recipe.
     plaque.once('removed', () => handle.destroy());
   }
+  // Without a cue there is no plaque to be taken off the stage; the stage
+  // going, or the set, ends the control too.
+  app.stage.once('destroyed', () => handle.destroy());
+  reelSet?.events.on('destroyed', () => handle.destroy());
 
   const tap = async (): Promise<void> => {
     if (destroyed) return;
@@ -123,6 +127,12 @@ export function tapToSpin(app: Application, options: TapToSpinOptions): TapToSpi
     if (plaque) { plaque.text = 'tap to skip'; plaque.alpha = 0.6; }
     try {
       await spin();
+    } catch (err) {
+      // Torn down mid-round: the host destroyed the set and the stage while
+      // this round was still awaiting them, so it fails on the first thing it
+      // touches next. That failure is the teardown's, not the recipe's. Any
+      // error while the demo is still up is raised as before.
+      if (!destroyed) throw err;
     } finally {
       spinning = false;
       if (plaque && !plaque.isDestroyed) { plaque.text = 'tap to spin'; plaque.alpha = 1; }
