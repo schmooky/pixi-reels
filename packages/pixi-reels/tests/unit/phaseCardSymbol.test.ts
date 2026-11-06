@@ -29,7 +29,11 @@ const FAST: SpeedProfile = {
   minimumSpinTime: 120,
 };
 
-const RESULT = [{ visible: ['a', 'b', 'a'] }, { visible: ['b', 'b', 'b'] }];
+// Reel 1 lands cards around a plain symbol. It used to land three plain
+// symbols, and with an even random fill a short phase could pass with no card
+// on the reel to sample, so the first test failed now and then.
+const RESULT = [{ visible: ['a', 'b', 'a'] }, { visible: ['a', 'b', 'a'] }];
+const START = [{ visible: ['a', 'b', 'a'] }, { visible: ['a', 'a', 'b'] }];
 
 function build(landedMs = 0): { reelSet: ReelSet; ticker: FakeTicker } {
   const ticker = new FakeTicker();
@@ -42,6 +46,9 @@ function build(landedMs = 0): { reelSet: ReelSet; ticker: FakeTicker } {
       // A plain symbol on the same reels, to prove the watcher leaves it alone.
       r.register('b', HeadlessSymbol, {});
     })
+    // Mostly cards on the strip too, so every phase has one on screen.
+    .weights({ a: 9, b: 1 })
+    .initialFrame(START)
     .speed(FAST.name, FAST)
     .initialSpeed(FAST.name)
     .ticker(ticker as unknown as Ticker)
