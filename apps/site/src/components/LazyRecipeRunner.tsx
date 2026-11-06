@@ -79,8 +79,8 @@ function Placeholder({ height, label, spinner = true }: { height: number; label:
   // Same shape as the runner: the well at `height`, then its toolbar strip.
   return (
     <div aria-hidden="true">
-      <div className="flex w-full items-center justify-center bg-[#111114]" style={{ height }}>
-        <div className="flex flex-col items-center gap-3 text-white/40">
+      <div className="flex w-full items-center justify-center bg-stage" style={{ height }}>
+        <div className="flex flex-col items-center gap-3 text-foreground/40">
           {spinner && <div className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />}
           <p className="font-mono text-[11px] uppercase tracking-[0.14em]">{label}</p>
         </div>

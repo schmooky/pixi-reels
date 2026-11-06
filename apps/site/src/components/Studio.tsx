@@ -681,8 +681,8 @@ export default function Studio() {
         data-state={isBooting ? 'loading' : status.kind === 'err' ? 'error' : mounted ? 'ready' : 'idle'}
         className="flex min-h-[480px] flex-col overflow-hidden rounded-sm border border-border bg-card lg:order-2 lg:min-h-0"
       >
-        <div className="theme-ink relative flex-1">
-          <div ref={canvasHostRef} className="h-full w-full bg-[#111114]" />
+        <div className="relative flex-1">
+          <div ref={canvasHostRef} className="h-full w-full bg-stage" />
           {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
           {speeds.length > 1 && (
             <div

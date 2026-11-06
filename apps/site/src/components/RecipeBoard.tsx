@@ -70,7 +70,7 @@ export default function RecipeBoard(props: RecipeBoardProps) {
 
   return (
     <div className="my-5 overflow-hidden rounded-lg border border-border">
-      <div className="relative flex w-full items-center justify-center bg-[#111114]" style={{ height: props.height ?? 260 }}>
+      <div className="relative flex w-full items-center justify-center bg-stage" style={{ height: props.height ?? 260 }}>
         <div
           ref={hostRef}
           className="flex h-full w-full items-center justify-center [&_canvas]:block [&_canvas]:max-w-full [&_canvas]:h-auto"

@@ -13,6 +13,7 @@ const config: Config = {
     extend: {
       colors: {
         border: 'hsl(var(--border))',
+        stage: 'hsl(var(--stage))',
         brand: {
           DEFAULT: 'hsl(var(--brand))',
           foreground: 'hsl(var(--brand-foreground))',

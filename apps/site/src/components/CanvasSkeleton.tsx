@@ -29,7 +29,7 @@ export function CanvasSkeleton({
     <div
       className={cn(
         'absolute inset-0 flex flex-col items-center justify-center gap-4',
-        'bg-[#111114]',
+        'bg-stage',
         'animate-fade-in',
         className,
       )}
@@ -47,7 +47,7 @@ export function CanvasSkeleton({
             {Array.from({ length: cells }, (_, r) => (
               <div
                 key={r}
-                className="animate-pulse bg-white/10"
+                className="animate-pulse bg-foreground/10"
                 style={{
                   width: 'var(--cell)',
                   height: 'var(--cell)',
@@ -58,7 +58,7 @@ export function CanvasSkeleton({
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white/40">
+      <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground/40">
         <Loader2 size={14} className="animate-spin" strokeWidth={2.25} />
         <span>{label}</span>
       </div>
