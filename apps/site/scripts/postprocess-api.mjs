@@ -193,7 +193,7 @@ function processFile(file) {
   fm.push(`title: '${name.replace(/'/g, "''")}'`);
   // The browser and search title says what the page is, so `ReelSet class`
   // here never reads the same as the hand-written ReelSet guide.
-  if (kind) fm.push(`seoTitle: '${`${name} ${kind} · API`.replace(/'/g, "''")}'`);
+  if (kind) fm.push(`seoTitle: '${`${name} ${kind}`.replace(/'/g, "''")}'`);
   if (description) fm.push(`description: '${description.replace(/'/g, "''")}'`);
   fm.push(`section: 'api'`);
   fm.push('---');

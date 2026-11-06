@@ -16,7 +16,7 @@ import { ARCH_PAGES } from '../../content/architectureNav.ts';
   <div class="mt-12 space-y-12">
     {REFERENCE_NAV.filter((s) => s.title !== 'Architecture').map((section, i) => (
       <section>
-        <h2 class="eyebrow mb-4 mt-0">{String(i + 1).padStart(2, '0')} / {section.title}</h2>
+        <h2 class="eyebrow mb-4 mt-0">{section.title}</h2>
         <div class="divide-y divide-border border-y border-border">
           {section.items.map((item) => (
             <a
@@ -34,7 +34,7 @@ import { ARCH_PAGES } from '../../content/architectureNav.ts';
     ))}
 
     <section>
-      <h2 class="eyebrow mb-4 mt-0">{String(REFERENCE_NAV.length).padStart(2, '0')} / Architecture</h2>
+      <h2 class="eyebrow mb-4 mt-0">Architecture</h2>
       <p class="mb-4 mt-0 text-sm text-muted-foreground">A tour of the internals: construction, ownership, the viewport, symbols, motion, the spin lifecycle and its timeline, skipping, anticipation, events, cascades, pins and boards, debug and testing. Hand-laid SVG, no UML, no mermaid.</p>
       <div class="divide-y divide-border border-y border-border">
         {ARCH_PAGES.map((p) => (

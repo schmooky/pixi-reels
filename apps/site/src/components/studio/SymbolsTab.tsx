@@ -370,7 +370,7 @@ function FilePicker({
       </button>
       {file && (
         <span className="truncate text-xs text-muted-foreground" title={file.name}>
-          {file.name} · {Math.ceil(file.size / 1024)} KB
+          {file.name}, {Math.ceil(file.size / 1024)} KB
         </span>
       )}
       <input
@@ -410,11 +410,11 @@ function SymbolRow({
     symbol.type === 'sprite'
       ? 'Sprite'
       : symbol.type === 'animatedSprite'
-        ? `Animated · ${symbol.frameCount}f · ${symbol.frameWidth}×${symbol.frameHeight} · ${symbol.fps}fps`
+        ? `Animated, ${symbol.frameCount} frames of ${symbol.frameWidth}×${symbol.frameHeight} at ${symbol.fps} fps`
         : (() => {
             const pageCount = Object.keys(symbol.textureHashes).length;
             const eventCount = Object.values(symbol.events).filter(Boolean).length;
-            return `Spine · ${pageCount} page${pageCount === 1 ? '' : 's'} · ${eventCount}/5 events`;
+            return `Spine, ${pageCount} page${pageCount === 1 ? '' : 's'}, ${eventCount} of 5 events`;
           })();
 
   return (
@@ -549,7 +549,7 @@ function BuiltInSymbols(): JSX.Element {
           <Lock size={11} className="text-muted-foreground" />
           <span className="font-semibold">Built-in</span>
           <span className="text-muted-foreground">
-            cards · use <code className="rounded-sm bg-muted/60 px-1 py-0.5 font-mono text-[10px]">CARD_DECK</code> /{' '}
+            cards, from <code className="rounded-sm bg-muted/60 px-1 py-0.5 font-mono text-[10px]">CARD_DECK</code> and{' '}
             <code className="rounded-sm bg-muted/60 px-1 py-0.5 font-mono text-[10px]">WILD_CARD</code>
           </span>
         </div>

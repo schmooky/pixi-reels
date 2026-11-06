@@ -44,7 +44,7 @@ const blurbs: Record<(typeof ARCH_SECTIONS)[number], string> = {
       {ARCH_SECTIONS.map((section, si) => (
         <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
           <div>
-            <p class="eyebrow">0{si + 1} / {section}</p>
+            <p class="eyebrow">{section}</p>
             <p class="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">{blurbs[section]}</p>
           </div>
           <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -53,10 +53,7 @@ const blurbs: Record<(typeof ARCH_SECTIONS)[number], string> = {
                 href={`/architecture/${p.slug}/`}
                 class="group flex flex-col border border-border bg-card p-5 transition-colors duration-[217ms] hover:border-brand"
               >
-                <div class="flex items-baseline justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em]">
-                  <span class="text-brand-text">{p.eyebrow}</span>
-                  <span class="text-muted-foreground/70">{String(ARCH_PAGES.indexOf(p) + 1).padStart(2, '0')}</span>
-                </div>
+                <div class="font-mono text-[11px] uppercase tracking-[0.18em] text-brand-text">{p.eyebrow}</div>
                 <h3 class="mt-3 font-display text-xl font-bold tracking-tight">{p.title}</h3>
                 <p class="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{p.subtitle}</p>
                 <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">

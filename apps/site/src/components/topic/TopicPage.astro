@@ -15,7 +15,7 @@ import Grid from '../docs/Grid.astro';
 import Strip from '../docs/Strip.astro';
 import Timeline from '../docs/Timeline.astro';
 import Tree from '../docs/Tree.astro';
-import { TOPICS, TOPIC_BY_SLUG } from '../../content/topics.ts';
+import { TOPIC_BY_SLUG } from '../../content/topics.ts';
 import { FAQ_BY_TOPIC } from '../../content/faq.ts';
 import { getTopicDemos } from '../../lib/topicDemos.ts';
 import { apiForTopic } from '../../lib/topicApi.ts';
@@ -52,7 +52,6 @@ const components = { RecipeDemo, Image: RecipeImage, AssetCredit, ConceptPart, G
 ---
 <Topic
   topic={topic}
-  index={TOPICS.indexOf(topic)}
   demos={demos}
   api={api}
   questions={questions}

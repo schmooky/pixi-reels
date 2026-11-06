@@ -10,7 +10,7 @@ import { LEARN_NAV } from '../../content/nav.ts';
   <div class="mt-12 space-y-12">
     {LEARN_NAV.map((section, i) => (
       <section>
-        <h2 class="eyebrow mb-4 mt-0">{String(i + 1).padStart(2, '0')} / {section.title}</h2>
+        <h2 class="eyebrow mb-4 mt-0">{section.title}</h2>
         <div class="divide-y divide-border border-y border-border">
           {section.items.map((item) => (
             <a

@@ -248,13 +248,9 @@
     color: hsl(var(--foreground));
   }
 
-  /* Section eyebrow: a mono index in the brand hue. */
+  /* Section eyebrow: a mono label in the brand hue. */
   .eyebrow {
     @apply inline-flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-brand-text;
-  }
-  .eyebrow::before {
-    content: '';
-    @apply inline-block h-1.5 w-1.5 rounded-full bg-brand;
   }
 
   /* Display headline: the landing's one loud voice. */

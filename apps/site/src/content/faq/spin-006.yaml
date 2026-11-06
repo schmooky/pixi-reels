@@ -1,7 +1,7 @@
 id: spin-006
 group: spin
 topic: feel
-question: How do I add a turbo / fast-spin mode?
+question: How do I add a turbo (fast-spin) mode?
 answer: Register a faster profile (`.speed('turbo', SpeedPresets.TURBO)`) and
   switch with `reelSet.setSpeed('turbo')`.
 links:

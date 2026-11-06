@@ -60,12 +60,8 @@ const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
         <ChevronLeft size={14} strokeWidth={2} />
         All questions
       </a>
-      <p class="eyebrow">
-        FAQ
-        <span class="text-muted-foreground/60">/</span>
+      <p class="eyebrow flex">
         <a href={`/faq/#${topic?.slug ?? 'general'}`} class="hover:underline">{topic?.title ?? 'General'}</a>
-        <span class="text-muted-foreground/60">/</span>
-        {groupTitle.en}
       </p>
       <h1 class="display mt-4 text-4xl sm:text-5xl">{q.en}</h1>
     </header>

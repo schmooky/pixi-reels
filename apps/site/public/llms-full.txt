@@ -9113,7 +9113,7 @@ A: Set `reelSet.scale` from the ratio of available space to `reelSet.width`/`hei
 URL: https://pixi-reels.schmooky.dev/faq/basics-012/
 A: Use `reelSet.setResult(grid)` (animated, through a spin) or `reelSet.setSymbolAt(col, row, id)` for an instant in-place swap while the reels are idle.
 
-#### Q: How do I drive the reels from my own game loop / ticker?
+#### Q: How do I drive the reels from my own game loop or ticker?
 URL: https://pixi-reels.schmooky.dev/faq/basics-013/
 A: Pass your ticker with `.ticker(myTicker)`. The engine drives all motion from it, and call `driveGsapWithTicker(ticker)` so GSAP advances off the same clock.
 
@@ -9209,7 +9209,7 @@ A: The active `SpeedProfile`'s `spinDelay` staggers reel starts; tune it per pro
 URL: https://pixi-reels.schmooky.dev/faq/spin-005/
 A: `reelSet.setDropOrder('ltr')`, also `'rtl'`, `'all'`, a per-reel delay array, or `null` to clear, sets the stop order. The gap defaults to `max(profile.stopDelay, 150)` ms, so on Turbo it is 150 rather than the profile's own value; pass a second argument, `setDropOrder('ltr', 90)`, to override. The setting is sticky across `spin()` and `refill()` until you change it.
 
-#### Q: How do I add a turbo / fast-spin mode?
+#### Q: How do I add a turbo (fast-spin) mode?
 URL: https://pixi-reels.schmooky.dev/faq/spin-006/
 A: Register a faster profile (`.speed('turbo', SpeedPresets.TURBO)`) and switch with `reelSet.setSpeed('turbo')`.
 
@@ -9289,9 +9289,9 @@ A: Place it explicitly in the `ColumnTarget` you pass to `setResult`, or use the
 URL: https://pixi-reels.schmooky.dev/faq/result-009/
 A: Build with `.multiways({ minCells, maxCells, reelExtent })` and pass a per-reel `ColumnTarget[]` whose `visible` arrays differ in length.
 
-#### Q: How do I send a structured result that survives JSON / postMessage?
+#### Q: How do I send a structured result that survives JSON or postMessage?
 URL: https://pixi-reels.schmooky.dev/faq/result-010/
-A: Use the explicit `ColumnTarget` object form (`{ visible, bufferStart, bufferEnd }`). It survives JSON / postMessage, unlike the negative-index array form.
+A: Use the explicit `ColumnTarget` object form (`{ visible, bufferStart, bufferEnd }`). It survives JSON or postMessage, unlike the negative-index array form.
 
 #### Q: How do I keep the visual result separate from the payout math?
 URL: https://pixi-reels.schmooky.dev/faq/result-011/
@@ -9605,7 +9605,7 @@ A: Pinned cells are overlaid onto the result before the stop sequencer, so they 
 URL: https://pixi-reels.schmooky.dev/faq/pins-010/
 A: Give the pinned symbol class its own `playWin` / landing animation, or react to the `pin:placed` event.
 
-### Big / colossal symbols
+### Big and colossal symbols
 URL: https://pixi-reels.schmooky.dev/faq/#big
 One symbol that occupies an N×M block.
 
@@ -10049,7 +10049,7 @@ Trigger, count, retrigger, swap modes, persist state.
 URL: https://pixi-reels.schmooky.dev/faq/fs-001/
 A: Count scatters in the result and enter free spins in your game logic; the engine reports the grid via `setResult` / events.
 
-#### Q: How do I swap to a different reel set / background for the feature?
+#### Q: How do I swap to a different reel set or background for the feature?
 URL: https://pixi-reels.schmooky.dev/faq/fs-002/
 A: Toggle a `FrameMiddleware` (or show a second ReelSet) to switch strips/art at runtime with no rebuild.
 
@@ -10113,7 +10113,7 @@ A: A wheel is a standalone PixiJS widget, not a reel feature. Build it in your g
 URL: https://pixi-reels.schmooky.dev/faq/bonusgames-004/
 A: Tween the wheel rotation with a GSAP `back.out` ease to settle the pointer, game-layer.
 
-#### Q: How do I offer a gamble / double-up on a win?
+#### Q: How do I offer a gamble or double-up on a win?
 URL: https://pixi-reels.schmooky.dev/faq/bonusgames-005/
 A: A gamble / double-up is a standalone screen in your UI; the reel engine is not involved.
 
@@ -10129,7 +10129,7 @@ A: Cell hit-areas plus your own pick logic tallying matches until three of a kin
 URL: https://pixi-reels.schmooky.dev/faq/bonusgames-008/
 A: Reveal it with your own widget/animation and feed the result into your win math.
 
-#### Q: How do I run a trail / board-game bonus that hops across cells?
+#### Q: How do I run a trail or board-game bonus that hops across cells?
 URL: https://pixi-reels.schmooky.dev/faq/bonusgames-009/
 A: Tween a token between cells using `getCellBounds` positions; the board-game logic is yours.
 
@@ -10631,7 +10631,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide and two rows tall from the start: the per-reel readout wraps to
   // two, and the canvas is fitted to what is here at setup.
   const hud = readout.plaque({
-    text: `press spin\neach tease runs exactly ${CELLS} symbols`,
+    text: `Each tease runs exactly ${CELLS} symbols`,
     minWidth: W,
     maxWidth: W,
   });
@@ -10747,7 +10747,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const W = REELS * SIZE + (REELS - 1) * GAP;
   // One row per tease reel, three reserved from the start: the canvas is
   // fitted to what is here at setup.
-  const hud = readout.plaque({ text: 'press spin', reserveRows: 3, minWidth: W, maxWidth: W });
+  const hud = readout.plaque({ text: 'Each reel eases its tease with its own curve.', reserveRows: 3, minWidth: W, maxWidth: W });
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);
 
@@ -10883,7 +10883,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const H = ROWS * SIZE + (ROWS - 1) * GAP;
   const W = REELS * SIZE + (REELS - 1) * GAP;
 
-  const hud = readout.plaque({ text: 'press spin - trace is reel 4 speed, no ease anywhere', minWidth: W, maxWidth: W });
+  const hud = readout.plaque({ text: 'Trace is reel 4 speed, no ease anywhere', minWidth: W, maxWidth: W });
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);
 
@@ -11248,7 +11248,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const H = ROWS * SIZE + (ROWS - 1) * GAP;
   const W = REELS * SIZE + (REELS - 1) * GAP;
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, minWidth: W, maxWidth: W });
+  const hud = readout.plaque({ text: 'The tease surges first, then crawls.', fontSize: 12, minWidth: W, maxWidth: W });
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);
 
@@ -11340,7 +11340,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       });
       await p;
       sampling = false;
-      hud.text = 'landed. press spin again';
+      hud.text = 'landed. tap again';
     },
   });
   return {
@@ -12688,7 +12688,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   grid.container.addChild(ring);
   ring.visible = false;
 
-  const hud = readout.plaque({ text: 'press spin to reveal', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to reveal', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, grid.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -12719,7 +12719,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       ring.visible = true;
       gsap.fromTo(ring, { alpha: 0 }, { alpha: 1, duration: 0.25 });
 
-      hud.text = `revealed · total ${total} · top ${PRIZE[top.id]} (${top.id})`;
+      hud.text = `Revealed, total ${total}, top ${PRIZE[top.id]} (${top.id})`;
       busy = false;
     },
   });
@@ -14371,7 +14371,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reels.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
   app.stage.addChild(reels);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Winning clovers rise above the mask.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, reels.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -14414,7 +14414,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await sleep(700);
       await showLine(true);
 
-      hud.text = 'released - press spin to compare again';
+      hud.text = 'released - tap to compare again';
       busy = false;
     },
   });
@@ -14517,7 +14517,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   board.events.on('coin:locked', ({ coin }) => paintValue(coin));
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 13, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The coin value lives in data, not in the art.', fontSize: 13, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -14541,7 +14541,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await new Promise<void>((r) => setTimeout(r, 650));
       }
       const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-      hud.text = `held ${board.lockedCoins.length} · total ${fmt(total)}`;
+      hud.text = `held ${board.lockedCoins.length}, total ${fmt(total)}`;
     },
   });
   return {
@@ -14747,7 +14747,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.x = (app.screen.width - (REELS * CELL + (REELS - 1) * GAP)) / 2;
   reelSet.y = (app.screen.height - CELL) / 2 - 14;
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 13, color: 0xfef08a, align: 'center', anchor: { x: 0.5, y: 0 } });
+  const hud = readout.plaque({ text: 'Each coin carries its own value.', fontSize: 13, color: 0xfef08a, align: 'center', anchor: { x: 0.5, y: 0 } });
   hud.position.set(app.screen.width / 2, reelSet.y + CELL + 16);
   app.stage.addChild(hud);
 
@@ -14756,7 +14756,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('spin:allLanded', () => {
     const values = reelSet.reels.map((_, c) => (reelSet.reels[c].getSymbolAt(0) as ValueCoin).value);
     const total = values.reduce((a, b) => a + b, 0);
-    hud.text = `landed ${values.join(' · ')}  =  ${total}`;
+    hud.text = `landed ${values.join(' + ')}  =  ${total}`;
   });
 
   reelSounds(reelSet);
@@ -14844,7 +14844,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     return t;
   };
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The collector stays pinned and gathers coin values.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -14855,7 +14855,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     { cell: { reel: 2, cell: 2 }, id: COIN, data: { value: 50 } },
   ];
   const COLLECTOR_CELL = { reel: 2, cell: 1 }; // orthogonally adjacent to all four seeds
-  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintValue(c.cell, c.data.value); hud.text = 'press spin · the collector sweeps its neighbours'; };
+  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintValue(c.cell, c.data.value); hud.text = 'The collector sweeps its neighbours.'; };
   seedBoard();
 
   const flyers = new Set<PIXI.BitmapText>();
@@ -14895,7 +14895,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await new Promise((r) => setTimeout(r, 300));
       hud.text = 'absorbing neighbours…';
       const sum = await absorb(COLLECTOR_CELL);
-      hud.text = `collector absorbed ${sum} · press spin to reset`;
+      hud.text = `Collector absorbed ${sum}. Tap to reset.`;
       phase = 'done';
     },
   });
@@ -17413,7 +17413,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · fill the board for the jackpot', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Fill the board for the jackpot.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -17462,10 +17462,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   board.events.on('respin:start', ({ spinning }) => {
     if (board.capacity - board.lockedCoins.length === 1 && spinning.length === 1) {
-      hud.text = '1 TO FILL — anticipation!';
+      hud.text = '1 to fill, anticipation!';
       startPulse(spinning[0]);
     } else {
-      hud.text = `respin · held ${board.lockedCoins.length}/${board.capacity}`;
+      hud.text = `respin, held ${board.lockedCoins.length} of ${board.capacity}`;
     }
   });
   board.events.on('coin:locked', ({ coin }) => { paintLabel(coin.cell, coin.data?.value ?? 0); });
@@ -17506,8 +17506,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       stopPulse();
       hud.text = board.isFull
-        ? 'BOARD FULL — jackpot! · press spin to replay'
-        : 'feature over · press spin to replay';
+        ? 'Board full, jackpot! Tap to replay.'
+        : 'Feature over. Tap to replay.';
       busy = false;
     },
   });
@@ -17590,7 +17590,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.visible = false;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · land 3 BONUS to trigger', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Land 3 BONUS to trigger.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, oy + boardH + 12);
   app.stage.addChild(hud);
 
@@ -17634,7 +17634,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     const seed = triggerCells.map((cell) => ({ cell, id: COIN, data: { value: val() } }));
     board.enter(seed);
     for (const c of seed) paintLabel(c.cell, c.data.value);
-    hud.text = 'HOLD & WIN · each cell spins on its own';
+    hud.text = 'Hold & Win, each cell spins on its own';
     await sleep(500);
     for (const cells of [[{ reel: 2, cell: 0 }], [{ reel: 0, cell: 2 }, { reel: 4, cell: 2 }], [], []]) {
       const res = await board.respin(cells.map((cell) => ({ cell, id: COIN, data: { value: val() } })));
@@ -17642,7 +17642,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       if (res.done) break;
     }
     const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-    hud.text = `feature over · won ${fmt(total)} · back to base game`;
+    hud.text = `Feature over, won ${fmt(total)}. Back to base game.`;
     await sleep(700);
     // feature:end already fired inside respin - swap the display back. The
     // value labels sit on the stage, not in the board, so they fade and hide
@@ -17653,7 +17653,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     labels.visible = false;
     labels.alpha = 1;
     base.visible = true;
-    hud.text = 'press spin · land 3 BONUS to trigger';
+    hud.text = 'Land 3 BONUS to trigger.';
   }
 
   let busy = false;
@@ -17669,11 +17669,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       base.setResult(baseGrid(bonusCells).map((visible) => ({ visible })));
       await p;
       if (bonusCells.length >= 3) {
-        hud.text = '3 BONUS — entering Hold & Win!';
+        hud.text = '3 BONUS, entering Hold & Win!';
         await sleep(500);
         await runFeature(bonusCells);
       } else {
-        hud.text = `${bonusCells.length} BONUS · need 3 · press spin`;
+        hud.text = `${bonusCells.length} BONUS, need 3.`;
       }
       busy = false;
     },
@@ -17744,7 +17744,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 4;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · coins on a bonus cell double', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Coins on a bonus cell double.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -17832,7 +17832,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -17889,7 +17889,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - CELL) / 2 - 8;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Each cell is driven on its own.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + CELL + 16);
   app.stage.addChild(hud);
 
@@ -17920,7 +17920,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'starting cell 1…';
       const s1 = spinCell(CELLS[1], LAND[1]);
       await sleep(260);
-      hud.text = 'starting cell 2 — and slam-stopping it';
+      hud.text = 'starting cell 2, then slam-stopping it';
       const s2 = spinCell(CELLS[2], LAND[2]);
 
       // 2) STOP a single cell on command (the others keep spinning)
@@ -17929,12 +17929,12 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await Promise.all([s0, s1, s2]);
 
       // 3) ACCESS the symbol inside each cell and flash the coins
-      hud.text = 'landed — flashing the coins via symbolAt(cell)';
+      hud.text = 'landed, flashing the coins via symbolAt(cell)';
       for (const cell of CELLS) {
         const sym = board.symbolAt(cell);       // <-- the live symbol instance
         await sym.playWin?.().catch?.(() => {});
       }
-      hud.text = 'each cell: started, stopped and read on its own · press spin';
+      hud.text = 'Each cell is started, stopped and read on its own.';
       busy = false;
     },
   });
@@ -18042,7 +18042,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.visible = false;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · 3+ clovers trigger the feature', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: '3+ clovers trigger the feature.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, oy + boardH + 24);
   app.stage.addChild(hud);
 
@@ -18085,7 +18085,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     const seed = clovers.map((c) => ({ cell: { reel: c.reel, cell: c.cell }, id: c.id, data: { value: c.id === 'gold' ? served![c.reel][c.cell] : 0 } }));
     board.enter(seed);
     for (const c of seed) { const sym = board.symbolAt(c.cell) as Clover; if (c.id === 'gold') sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
-    hud.text = 'HOLD & WIN · gold carries money, feature clovers carry none';
+    hud.text = 'Hold & Win, gold carries money, feature clovers carry none';
     await sleep(500);
     for (const cells of [[{ reel: 1, cell: 0 }], [{ reel: 3, cell: 2 }, { reel: 0, cell: 0 }], [], [], []]) {
       const res = await board.respin(cells.map((cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } })));
@@ -18094,7 +18094,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     }
     await board.playWin();
     const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-    hud.text = `feature over · won ${fmt(total)} · back to the base game`;
+    hud.text = `Feature over, won ${fmt(total)}. Back to the base game.`;
     await sleep(700);
     board.container.visible = false;
     base.visible = true;
@@ -18118,7 +18118,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(600);
         await runFeature(clovers);
       } else {
-        hud.text = `${clovers.length} clovers · need 3 · press spin`;
+        hud.text = `${clovers.length} clovers, need 3.`;
       }
       busy = false;
     },
@@ -18324,7 +18324,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   lightLamps(0);
   board.events.on('respins:changed', ({ value }) => lightLamps(value));
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'A bigger board, the same lock and respin rule.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, counter.y + 22);
   app.stage.addChild(hud);
 
@@ -18334,7 +18334,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   });
   board.events.on('coin:locked', ({ coin, locked, capacity }) => {
     total += coin.data!.value;
-    hud.text = `${locked}/${capacity} held · total ${fmt(total)}`;
+    hud.text = `${locked} of ${capacity} held, total ${fmt(total)}`;
   });
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } });
@@ -18351,7 +18351,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); total += c.data.value; }
-      hud.text = `${SEED.length}/${board.capacity} held · total ${fmt(total)}`;
+      hud.text = `${SEED.length} of ${board.capacity} held, total ${fmt(total)}`;
       await sleep(400);
       for (const cells of ROUNDS) {
         const res = await board.respin(cells.map(gold));
@@ -18359,7 +18359,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       await board.playWin();
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -18464,7 +18464,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   lightLamps(0);
   board.events.on('respins:changed', ({ value }) => lightLamps(value));
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Clovers lock where they land; the rest respin.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, counter.y + 22);
   app.stage.addChild(hud);
 
@@ -18474,7 +18474,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   });
   board.events.on('coin:locked', ({ coin, locked, capacity }) => {
     total += coin.data!.value;
-    hud.text = `${locked}/${capacity} held · total ${fmt(total)}`;
+    hud.text = `${locked} of ${capacity} held, total ${fmt(total)}`;
   });
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } });
@@ -18491,7 +18491,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); total += c.data.value; }
-      hud.text = `${SEED.length}/${board.capacity} held · total ${fmt(total)}`;
+      hud.text = `${SEED.length} of ${board.capacity} held, total ${fmt(total)}`;
       await sleep(400);
       for (const cells of ROUNDS) {
         const res = await board.respin(cells.map(gold));
@@ -18499,7 +18499,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       await board.playWin();
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -18576,7 +18576,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Cells draw in a set order, so overlaps are predictable.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -18584,7 +18584,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     if (coin?.id === 'gold') (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value));
   });
   board.events.on('coin:locked', ({ locked, capacity }) => {
-    hud.text = `${locked}/${capacity} held · lower rows in front, capsule on top`;
+    hud.text = `${locked} of ${capacity} held, lower rows in front, capsule on top`;
   });
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
@@ -18607,14 +18607,14 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
-      hud.text = `${SEED.length}/${board.capacity} held · lower rows in front, capsule on top`;
+      hud.text = `${SEED.length} of ${board.capacity} held, lower rows in front, capsule on top`;
       await sleep(400);
       for (const hits of ROUNDS) {
         const res = await board.respin(hits);
         await sleep(400);
         if (res.done) break;
       }
-      hud.text = 'feature over · press spin to replay';
+      hud.text = 'Feature over. Tap to replay.';
       busy = false;
     },
   });
@@ -18696,7 +18696,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const boltLayer = new PIXI.Container();
   app.stage.addChild(boltLayer);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Lightning takes the values and the collector dims.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -18761,7 +18761,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     coin.data!.value = sum; // the collector now carries what it gathered
     await collector.playWin();
     collector.setDimmed(true); // spent: still held, no longer idling, sum kept
-    hud.text = `collected ${fmt(sum)} · collector spent and dimmed, golds untouched`;
+    hud.text = `Collected ${fmt(sum)}, collector spent and dimmed, golds untouched`;
     await sleep(500);
   }
 
@@ -18793,7 +18793,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · board total ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, board total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -18876,7 +18876,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   );
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: CELL.width });
+  const hud = readout.plaque({ text: 'Dimming the art leaves the cell itself untouched.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: CELL.width });
   hud.position.set(app.screen.width / 2, board.container.y + CELL.height + 22);
   app.stage.addChild(hud);
 
@@ -18921,7 +18921,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await hold('symbols', 0.9, 'dimSymbols({ amount: 0.9 }) on an empty cell - nothing changes, not even the plate');
 
       board.setSymbolAt(C, 'cherry');
-      hud.text = 'released - press spin to compare again';
+      hud.text = 'released - tap to compare again';
       busy = false;
     },
   });
@@ -18996,7 +18996,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Dim the whole cell, or only the art in it.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -19053,7 +19053,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await sleep(700);
       await spotlight('symbols');
 
-      hud.text = 'both released - press spin to compare again';
+      hud.text = 'both released - tap to compare again';
       busy = false;
     },
   });
@@ -19134,7 +19134,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Collect, multiplier and mystery clovers each act on land.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -19200,7 +19200,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin(golds().map((g) => g.cell));
       const total = golds().reduce((a, g) => a + g.data!.value, 0);
-      hud.text = `feature over · gold total ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, gold total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -19312,7 +19312,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.position.set(ox, oy);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The background shows through the gaps between cells.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, oy + boardH + MARGIN + 8);
   app.stage.addChild(hud);
 
@@ -19320,7 +19320,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.events.on('cell:landed', ({ cell, coin }) => { if (coin) (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value)); });
   board.events.on('coin:locked', ({ coin, locked, capacity }) => {
     total += coin.data!.value;
-    hud.text = `${locked}/${capacity} held · total ${fmt(total)}`;
+    hud.text = `${locked} of ${capacity} held, total ${fmt(total)}`;
   });
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } });
@@ -19337,7 +19337,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); total += c.data.value; }
-      hud.text = `${SEED.length}/${board.capacity} held · total ${fmt(total)}`;
+      hud.text = `${SEED.length} of ${board.capacity} held, total ${fmt(total)}`;
       await sleep(400);
       for (const cells of ROUNDS) {
         const res = await board.respin(cells.map(gold));
@@ -19345,7 +19345,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (res.done) break;
       }
       await board.playWin();
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -19435,7 +19435,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: `press spin · rows open at ${OPEN_TOP_AT} and ${OPEN_BOTTOM_AT} clovers`, fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: `Rows open at ${OPEN_TOP_AT} and ${OPEN_BOTTOM_AT} clovers.`, fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -19443,7 +19443,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     if (coin) (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value));
   });
   board.events.on('cells:activated', ({ cells, capacity }) => {
-    hud.text = `row opened · board is now ${capacity} cells`;
+    hud.text = `Row opened, board is now ${capacity} cells`;
     // the woken cells show the empty tile now; fade them in from the sealed look
     for (const cell of cells) {
       const s = board.symbolAt(cell).view;
@@ -19491,7 +19491,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · ${board.lockedCoins.length}/${board.capacity} · TOTAL ${fmt(total)}`;
+      hud.text = `Feature over, ${board.lockedCoins.length} of ${board.capacity} held, total ${fmt(total)}`;
       busy = false;
     },
   });
@@ -19567,7 +19567,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'One cell lifts while the rest dim.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -19715,7 +19715,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'One cell comes to the front for a beat.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -19779,7 +19779,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await lifted;
 
-      hud.text = `back in the pack after ${refreshes} whole-board refreshes - press spin to replay`;
+      hud.text = `back in the pack after ${refreshes} whole-board refreshes - tap to replay`;
       busy = false;
     },
   });
@@ -19858,7 +19858,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(grid);
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'A coin locks as it lands, or after the landing.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -19874,9 +19874,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     hud.text = 'COLLECT locked while its landing still plays - win waits';
     await symbol.landing;
     const landed = Math.round(performance.now() - t0);
-    hud.text = `landing done +${landed}ms after the lock · win playing`;
+    hud.text = `landing done +${landed}ms after the lock, win playing`;
     await symbol.playWin(); // resolves with the board's own win: same track, same entry
-    hud.text = `landing done +${landed}ms · win done +${Math.round(performance.now() - t0)}ms`;
+    hud.text = `landing done +${landed}ms, win done +${Math.round(performance.now() - t0)}ms`;
   });
 
   const gold = (cell: HwCell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
@@ -19897,7 +19897,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) { const sym = board.symbolAt(c.cell) as Clover; sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
-      hud.text = 'gold: landing only · COLLECT: landing, then win';
+      hud.text = 'gold: landing only. COLLECT: landing, then win.';
       await sleep(400);
       for (const hits of ROUNDS) {
         const res = await board.respin(hits);
@@ -20009,7 +20009,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     gsap.fromTo(plaques[tier].scale, { x: 1.35, y: 1.35 }, { x: 1, y: 1, duration: 0.45, ease: 'back.out(2)' });
   };
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'A capsule opens on one of the jackpots.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
 
@@ -20067,7 +20067,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -20166,7 +20166,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(counter);
   paint(0);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Lamps count down the respins left.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, counter.y + 24);
   app.stage.addChild(hud);
 
@@ -20204,7 +20204,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(600);
         if (res.done) break;
       }
-      hud.text = `counter ran out · ${board.lockedCoins.length} held · press spin to replay`;
+      hud.text = `Counter ran out, ${board.lockedCoins.length} held. Tap to replay.`;
       busy = false;
     },
   });
@@ -20279,7 +20279,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
   app.stage.addChild(grid, board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'One speed switch changes every cell at once.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
   app.stage.addChild(hud);
   // Placed by its own height, so the pill sits clear of the frame's 8px margin.
@@ -20335,7 +20335,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       if (!res.done) for (let i = 0; i < 3; i++) { const r = await board.respin([]); if (r.done) break; }
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over on ${board.speed} · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over on ${board.speed}, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -20409,7 +20409,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 4;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The collector pulls values in on particle streams.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -20436,7 +20436,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 15 } },
   ];
   const COLLECTOR_CELL = { reel: 2, cell: 1 };
-  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = 'press spin · the collector lands and sweeps'; };
+  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = 'The collector lands and sweeps.'; };
   seedBoard();
 
   // a stream of neon particles along the same arc as the flying value
@@ -20506,7 +20506,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'collecting…';
       await collect();
       phase = 'done';
-      hud.text = `collected ${fmt(total)} · press spin to reset`;
+      hud.text = `Collected ${fmt(total)}. Tap to reset.`;
     },
   });
   return {
@@ -20630,7 +20630,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = 64;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'The collector gathers values as the coins fly in.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 14);
   app.stage.addChild(hud);
 
@@ -20774,11 +20774,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       if (phase === 'done') {
         await slickReset();
         phase = 'ready';
-        hud.text = 'press spin';
+        hud.text = 'The collector gathers values as the coins fly in.';
         return;
       }
       phase = 'running';
-      hud.text = 'respin · held cells stay';
+      hud.text = 'Respin, held cells stay';
       await board.respin(HIT_TEN);            // free cells spin, a 10.00 lands
       await Promise.all(pendingFx.splice(0)); // no new spin while coins animate
       await sleep(350);
@@ -20791,7 +20791,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'collecting';
       await collectIntoOrb();
       phase = 'done';
-      hud.text = 'collected 25.00 · press spin to reset';
+      hud.text = 'Collected 25.00. Tap to reset.';
     },
   });
   return {
@@ -20894,7 +20894,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Coin values count up as they lock.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -20965,7 +20965,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await Promise.all(wave.map((coin) => countUp(coin.cell, coin.data.value)));
       }
       const total = coins.reduce((a, c) => a + c.data.value, 0);
-      hud.text = `counted up · total ${fmt(total)} · press spin to re-roll`;
+      hud.text = `Counted up, total ${fmt(total)}. Tap to re-roll.`;
       busy = false;
     },
   });
@@ -21051,7 +21051,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 14;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 13, color: 0xf5d066, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Free cells spin sideways; coins lock in place.', fontSize: 13, color: 0xf5d066, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 14);
   app.stage.addChild(hud);
 
@@ -21189,7 +21189,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(board.container);
 
   const hud = readout.plaque({
-    text: 'press spin',
+    text: 'Coins celebrate once, on the landing.',
     fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW,
   });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
@@ -21200,7 +21200,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     if (!coin) return;
     landed += 1;
     (board.symbolAt(cell) as Clover).setLabel(fmt(coin.data!.value));
-    hud.text = `coin ${landed} landed · settle only, no win`;
+    hud.text = `Coin ${landed} landed, settle only, no win`;
   });
 
   const SEED = [
@@ -21226,10 +21226,10 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       // The one explicit celebration: every locked coin pulses together.
-      hud.text = 'feature over · board.playWin() on every locked coin';
+      hud.text = 'Feature over, board.playWin() on every locked coin';
       await board.playWin();
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -21360,7 +21360,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   totalText.position.set(meterPos.x, meterPos.y);
   app.stage.addChild(totalText);
 
-  const hud = readout.plaque({ text: 'press spin to collect into the meter', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to collect into the meter', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -21399,7 +21399,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const seedBoard = () => {
     board.enter(SEED);
     for (const coin of SEED) paintLabel(coin.cell, coin.data.value);
-    hud.text = 'press spin to collect into the meter';
+    hud.text = 'tap to collect into the meter';
   };
   seedBoard();
 
@@ -21452,7 +21452,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       playCounter('appear');
       await collectToMeter();
       phase = 'done';
-      hud.text = `collected ${fmt(total)} / ${fmt(TARGET)} · press spin to reset`;
+      hud.text = `Collected ${fmt(total)} of ${fmt(TARGET)}. Tap to reset.`;
     },
   });
   return {
@@ -21542,7 +21542,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 4;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'A multiplier coin strikes the coins around it.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -21598,7 +21598,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   ];
   const MULT_CELL = { reel: 3, cell: 0 };
   const MULT = 3;
-  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = `held 4 · total ${fmt(totalOf())} · press spin for the multiplier`; };
+  const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = `Held 4, total ${fmt(totalOf())}. Tap to spin for the multiplier.`; };
   const reset = () => { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); SEED.forEach((c, i) => (c.data.value = [5, 10, 5, 20][i])); board.reset(); seedBoard(); };
   seedBoard();
 
@@ -21624,7 +21624,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(70);
       }
       phase = 'done';
-      hud.text = `×${MULT} applied · total ${fmt(totalOf())} · press spin to reset`;
+      hud.text = `×${MULT} applied, total ${fmt(totalOf())}. Tap to reset.`;
     },
   });
   return {
@@ -21725,7 +21725,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'A mystery coin reveals its value after landing.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -21810,7 +21810,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // pendingFx gates the next respin until every reveal has settled
   const pendingFx: Promise<void>[] = [];
   board.events.on('coin:locked', ({ coin }) => {
-    hud.text = `revealing… · held ${board.lockedCoins.length}/${board.capacity}`;
+    hud.text = `revealing, held ${board.lockedCoins.length} of ${board.capacity}`;
     pendingFx.push(revealValue(coin.cell, coin.data!.value));
   });
   board.events.on('coin:released', ({ coin }) => {
@@ -21848,11 +21848,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         const result = await board.respin(hits);
         await Promise.all(pendingFx.splice(0)); // reveals finish before the next spin
         total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-        hud.text = `held ${board.lockedCoins.length}/${board.capacity} · total ${fmt(total)} · respins ${board.respinsLeft}`;
+        hud.text = `held ${board.lockedCoins.length} of ${board.capacity}, total ${fmt(total)}, respins ${board.respinsLeft}`;
         await sleep(300);
         if (result.done) break;
       }
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
     },
   });
   return {
@@ -21974,7 +21974,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The opening line is longer than the board: it wraps at the board's width
   // instead of widening the stage the runner fits.
   const hud = readout.plaque({
-    text: `gap 0 · radius ${RADIUS} · cellMask(({ reel, cell }, { cols, rows }) => strategy for that cell) · press spin`,
+    text: `gap 0, radius ${RADIUS}, cellMask(({ reel, cell }, { cols, rows }) => strategy for that cell).`,
     fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW, maxWidth: boardW,
   });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
@@ -22006,7 +22006,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -22124,7 +22124,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin · payer incoming', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Payer incoming.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   // Clear of the payer orb: its art hangs about 20px under its cell and the
   // glow further, so a plate at +12 dimmed it through the whole payout.
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 40);
@@ -22155,7 +22155,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     return t;
   };
   const totalOf = () => board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-  const refreshHud = (prefix: string) => { hud.text = `${prefix} · total ${fmt(totalOf())}`; };
+  const refreshHud = (prefix: string) => { hud.text = `${prefix}, total ${fmt(totalOf())}`; };
 
   // -- the payout: the orb pays its value into every coin, one arc at a time --
   const flyers = new Set<PIXI.BitmapText>();
@@ -22224,7 +22224,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         return;
       }
       phase = 'running';
-      hud.text = 'spinning · payer landing';
+      hud.text = 'Spinning, payer landing';
       await board.respin([{ cell: PAYER_CELL, id: PAYER, data: { payer: true, value: PAY_VALUE } }]);
       await Promise.all(pendingFx.splice(0));
       await sleep(250);
@@ -22232,7 +22232,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       hud.text = 'the orb pays every coin…';
       await payout(PAYER_CELL, PAY_VALUE);
       phase = 'done';
-      hud.text = `paid · total ${fmt(totalOf())} · press spin to reset`;
+      hud.text = `Paid, total ${fmt(totalOf())}. Tap to reset.`;
     },
   });
   return {
@@ -22308,7 +22308,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(board.container);
 
   const hud = readout.plaque({
-    text: 'press spin, then tap again mid-wave to QUICKEN it',
+    text: 'Tap again mid-wave to quicken it',
     fontSize: 12,
     align: 'center',
     anchor: { x: 0.5, y: 0 },
@@ -22350,7 +22350,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(500);
         if (res.done) break;
       }
-      hud.text = 'feature over: press spin';
+      hud.text = 'Feature over.';
       running = false;
     },
     skip: () => {
@@ -22441,7 +22441,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   app.stage.addChild(board.container);
 
   const hud = readout.plaque({
-    text: `cell ${CELL.width}x${CELL.height} · column gap ${COLUMN_GAP} · row gap ${ROW_GAP} · press spin`,
+    text: `cell ${CELL.width}x${CELL.height}, column gap ${COLUMN_GAP}, row gap ${ROW_GAP}.`,
     fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW,
   });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
@@ -22476,7 +22476,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       const total = board.lockedCoins.reduce((a, c) => a + c.data!.value, 0);
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
       busy = false;
     },
   });
@@ -22577,7 +22577,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.events.on('feature:reset', redrawLocks);
 
   const hud = readout.plaque({
-    text: 'press spin',
+    text: 'Free cells roll upward while coins stay locked.',
     fontSize: 13,
     color: 0xf5d066,
     align: 'center',
@@ -22750,7 +22750,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   awardText.position.set(plaquePos.x, plaquePos.y + pb.height * pScale * 0.18);
   app.stage.addChild(awardText);
 
-  const hud = readout.plaque({ text: 'press spin · complete a cell for MINI', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Complete a cell for MINI.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -22787,7 +22787,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   async function rowJackpot(cell: number) {
     awardedRows.add(cell);
-    hud.text = `ROW ${cell + 1} COMPLETE — MINI!`;
+    hud.text = `Row ${cell + 1} complete, MINI!`;
     const rowCoins = lockedInRow(cell).sort((a, b) => a.cell.reel - b.cell.reel);
     if (plaque.skeleton.data.findAnimation('win')) {
       plaque.state.setAnimation(0, 'win', false);
@@ -22839,7 +22839,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const seedBoard = () => {
     board.enter(SEED);
     for (const coin of SEED) paintLabel(coin.cell, coin.data.value);
-    hud.text = 'press spin · one coin completes cell 2';
+    hud.text = 'One coin completes cell 2.';
   };
   seedBoard();
 
@@ -22863,7 +22863,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       await Promise.all(pendingFx.splice(0));
       await sleep(300);
       phase = 'done';
-      hud.text = `MINI awarded ${fmt(award)} · press spin to reset`;
+      hud.text = `MINI awarded ${fmt(award)}. Tap to reset.`;
     },
   });
   return {
@@ -22938,7 +22938,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   meterText.position.set(meter.x, meter.y);
   app.stage.addChild(meterText);
 
-  const hud = readout.plaque({ text: 'press spin · then tap again to SKIP', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Tap again mid-round to skip.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -22951,7 +22951,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.events.on('coin:locked', ({ coin }) => paintLabel(coin.cell, coin.data?.value ?? 0));
 
   let skipping = false;
-  board.events.on('feature:skip', () => { hud.text = 'SKIP — fast-forwarding'; });   // board slammed the spins
+  board.events.on('feature:skip', () => { hud.text = 'Skip, fast-forwarding'; });   // board slammed the spins
   board.events.on('feature:end', () => { /* the single "feature over" signal */ });
 
   const gate = (ms: number) => (skipping ? Promise.resolve() : sleep(ms));
@@ -22997,7 +22997,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       }
       hud.text = skipping ? 'collecting (skipped)…' : 'collecting…';
       await collect();
-      hud.text = `feature:end fired · TOTAL ${fmt(total)}${skipping ? ' (skipped)' : ''} · press spin`;
+      hud.text = `feature:end fired, total ${fmt(total)}${skipping ? ' (skipped)' : ''}.`;
       running = false;
     },
     // RecipeRunner calls onSkip when the button is tapped mid-feature
@@ -23249,11 +23249,11 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // The HUD plate hugs its text rather than spanning the board: the MAJOR
   // coin lands in the bottom-right cell and its animation reaches below the
   // board, where a board-wide plate would cover it.
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 } });
+  const hud = readout.plaque({ text: 'Spine coins lock in place, then the collector takes them.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 } });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
   const refreshHud = () => {
-    hud.text = `respins ${board.respinsLeft} · held ${board.lockedCoins.length}/${board.capacity}`;
+    hud.text = `respins ${board.respinsLeft}, held ${board.lockedCoins.length} of ${board.capacity}`;
   };
   board.events.on('respins:changed', refreshHud);
 
@@ -23391,7 +23391,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         if (result.done) break;
       }
       await collectAll();
-      hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(total)}. Tap to replay.`;
     },
   });
   return {
@@ -23483,7 +23483,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 4;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Coins lock where they land, drawn from plain sprites.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -23512,7 +23512,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const totalOf = () => board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
   board.events.on('coin:locked', ({ coin }) => {
     paintLabel(coin.cell, coin.data?.value ?? 0);
-    hud.text = `held ${board.lockedCoins.length}/${board.capacity} · total ${fmt(totalOf())} · respins ${board.respinsLeft}`;
+    hud.text = `held ${board.lockedCoins.length} of ${board.capacity}, total ${fmt(totalOf())}, respins ${board.respinsLeft}`;
   });
   board.events.on('coin:released', ({ coin }) => {
     const k = `${coin.cell.reel},${coin.cell.cell}`;
@@ -23542,7 +23542,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       board.reset();
       board.enter(SEED);
       for (const c of SEED) paintLabel(c.cell, c.data.value);
-      hud.text = `held ${board.lockedCoins.length}/${board.capacity} · respins ${board.respinsLeft}`;
+      hud.text = `held ${board.lockedCoins.length} of ${board.capacity}, respins ${board.respinsLeft}`;
       await sleep(400);
 
       for (const cells of ROUNDS) {
@@ -23551,7 +23551,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         await sleep(450);
         if (result.done) break;
       }
-      hud.text = `feature over · TOTAL ${fmt(totalOf())} · press spin to replay`;
+      hud.text = `Feature over, total ${fmt(totalOf())}. Tap to replay.`;
       busy = false;
     },
   });
@@ -23624,7 +23624,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   meterText.position.set(meter.x, meter.y);
   app.stage.addChild(meterText);
 
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'An overlay stays put through swaps and rides the flights.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + CELL + 14);
   app.stage.addChild(hud);
 
@@ -23649,7 +23649,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     board.reset();
     board.enter([...SEED, TARGET]);
     attachBadge(TARGET.cell, TARGET.data); // overlay born with the coin
-    hud.text = 'press spin: swap the coin art — the ×100 badge survives';
+    hud.text = 'The coin art swaps; the ×100 badge survives';
   };
   seedBoard();
 
@@ -23668,14 +23668,14 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         const sym = board.setSymbolAt(TARGET.cell, COIN_B, TARGET.data);
         attachBadge(TARGET.cell, TARGET.data);
         void sym.playWin?.().catch?.(() => {});
-        hud.text = 'art swapped · badge survived · press spin to collect';
+        hud.text = 'Art swapped, badge survived. Tap to collect.';
         phase = 'swapped';
         return;
       }
 
       // collect: fly a clone built from coin.data - coin + badge together
       phase = 'flying';
-      hud.text = 'flying to the meter — the badge rides along';
+      hud.text = 'flying to the meter, the badge rides along';
       const from = abs(TARGET.cell);
       const clone = new PIXI.Container();
       const c = new PIXI.Sprite(coin[0]); c.anchor.set(0.5); c.scale.set((CELL - 8) / c.texture.width);
@@ -23689,7 +23689,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       total += TARGET.data.value;
       meterText.text = String(total);
       gsap.fromTo(meterText.scale, { x: 1.4, y: 1.4 }, { x: 1, y: 1, duration: 0.25, ease: 'power2.out' });
-      hud.text = 'collected with its badge · press spin to reset';
+      hud.text = 'Collected with its badge. Tap to reset.';
       phase = 'collected';
     },
   });
@@ -23774,7 +23774,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin to upgrade the marked coin in place', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to upgrade the marked coin in place', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -23823,12 +23823,12 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       busy = true;
       tier = (tier + 1) % TIERS.length;
       const t = TIERS[tier];
-      if (tier === 0) { seedBoard(); hud.text = 'reset · press spin to upgrade the marked coin'; busy = false; return; }
+      if (tier === 0) { seedBoard(); hud.text = 'Reset. Tap to upgrade the marked coin.'; busy = false; return; }
       // swap the symbol id in place - neighbours untouched, ledger updated
       const sym = board.setSymbolAt(TARGET.cell, t.id, { value: t.value, kind: t.kind });
       void sym.playWin?.().catch?.(() => {});
       paintLabel(TARGET.cell, t.value, t.kind);
-      hud.text = `swapped to ${t.label} · neighbours unchanged · press spin`;
+      hud.text = `Swapped to ${t.label}, neighbours unchanged.`;
       busy = false;
     },
   });
@@ -23923,19 +23923,19 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   }
   const cc = (c: HwCell) => `(${c.reel},${c.cell})`;
 
-  board.events.on('feature:enter', ({ seed, respins }) => push('feature:enter', `${seed.length} seed · respins ${respins}`));
-  board.events.on('respin:start', ({ round, spinning }) => push('respin:start', `round ${round} · ${spinning.length} spinning`));
-  board.events.on('cell:landed', ({ cell, coin }) => push('cell:landed', `${cc(cell)} ${coin ? 'COIN' : '—'}`));
+  board.events.on('feature:enter', ({ seed, respins }) => push('feature:enter', `${seed.length} seed, respins ${respins}`));
+  board.events.on('respin:start', ({ round, spinning }) => push('respin:start', `round ${round}, ${spinning.length} spinning`));
+  board.events.on('cell:landed', ({ cell, coin }) => push('cell:landed', `${cc(cell)} ${coin ? 'COIN' : 'none'}`));
   board.events.on('coin:locked', ({ locked, capacity }) => push('coin:locked', `${locked}/${capacity}`));
   board.events.on('respins:changed', ({ value, reason }) => push('respins:changed', `${value} (${reason})`));
-  board.events.on('respin:end', ({ round, hits, respinsLeft }) => push('respin:end', `round ${round} · +${hits.length} · ${respinsLeft} left`));
+  board.events.on('respin:end', ({ round, hits, respinsLeft }) => push('respin:end', `round ${round}, +${hits.length}, ${respinsLeft} left`));
   board.events.on('board:full', () => push('board:full', 'every cell locked'));
-  board.events.on('feature:end', ({ rounds, full }) => push('feature:end', `${rounds} rounds · ${full ? 'BOARD FULL' : 'no respins left'}`));
+  board.events.on('feature:end', ({ rounds, full }) => push('feature:end', `${rounds} rounds, ${full ? 'BOARD FULL' : 'no respins left'}`));
   board.events.on('coin:released', ({ remaining }) => push('coin:released', `${remaining} left`));
   board.events.on('feature:reset', ({ clearedCoins }) => push('feature:reset', `cleared ${clearedCoins}`));
   board.events.on('feature:skip', ({ inFlight }) => push('feature:skip', `${inFlight} slammed`));
 
-  const hud = readout.plaque({ text: 'press spin to run a feature', fontSize: 12, anchor: { x: 0, y: 1 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to run a feature', fontSize: 12, anchor: { x: 0, y: 1 }, minWidth: boardW });
   hud.position.set(board.container.x, app.screen.height - 6);
   app.stage.addChild(hud);
 
@@ -23964,7 +23964,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
         const res = await board.respin(pickHits()); // the board animates the wave
         if (res.done) break; // full, or out of respins
       }
-      hud.text = 'feature:end reached — press spin to run again';
+      hud.text = 'feature:end reached. Tap to run again.';
       running = false;
     },
   });
@@ -24058,7 +24058,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   board.container.y = (app.screen.height - boardH) / 2 - 6;
   app.stage.addChild(board.container);
 
-  const hud = readout.plaque({ text: 'press spin to upgrade every coin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'tap to upgrade every coin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
   app.stage.addChild(hud);
 
@@ -24101,7 +24101,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     SEED.forEach((c) => { c.data.value = 5; });
     board.enter(SEED);
     for (const coin of SEED) paintLabel(coin.cell, coin.data.value);
-    hud.text = `held 3 · total ${fmt(totalOf())} · press spin to upgrade`;
+    hud.text = `Held 3, total ${fmt(totalOf())}. Tap to upgrade.`;
   };
   seedBoard();
 
@@ -24143,8 +24143,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
       for (const coin of ordered) { await upgradeCoin(coin); await sleep(90); }
       const top = board.lockedCoins.every((c) => c.data!.value === LADDER[LADDER.length - 1]);
       hud.text = top
-        ? `maxed · total ${fmt(totalOf())} · press spin to reset`
-        : `upgraded · total ${fmt(totalOf())} · press spin again`;
+        ? `Maxed, total ${fmt(totalOf())}. Tap to reset.`
+        : `Upgraded, total ${fmt(totalOf())}. Tap to spin again.`;
       busy = false;
     },
   });
@@ -24244,16 +24244,16 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   };
 
   // The HUD never tracks state itself. board events are the single source.
-  const hud = readout.plaque({ text: 'press spin', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
+  const hud = readout.plaque({ text: 'Coins lock where they land; the rest respin.', fontSize: 12, align: 'center', anchor: { x: 0.5, y: 0 }, minWidth: boardW });
   hud.x =app.screen.width / 2;
   hud.y = board.container.y + boardH + 12;
   app.stage.addChild(hud);
 
-  const refreshHud = () => { hud.text = `respins ${board.respinsLeft} · held ${board.lockedCoins.length}/${board.capacity}`; };
+  const refreshHud = () => { hud.text = `respins ${board.respinsLeft}, held ${board.lockedCoins.length} of ${board.capacity}`; };
   board.events.on('respins:changed', refreshHud);
   board.events.on('coin:locked', ({ coin }) => { paintLabel(coin.cell, coin.data?.value ?? 0); refreshHud(); });
-  board.events.on('board:full', () => { hud.text = 'GRAND · board full'; });
-  board.events.on('feature:end', ({ full }) => { if (!full) hud.text = `over · ${board.lockedCoins.length} coins held`; });
+  board.events.on('board:full', () => { hud.text = 'Grand, board full'; });
+  board.events.on('feature:end', ({ full }) => { if (!full) hud.text = `Over, ${board.lockedCoins.length} coins held`; });
 
   // Scripted arrivals: 3 coins in round 1, 1 in round 2, 1 in round 3. In a
   // real game the server decides each round's hits and the loop runs until
@@ -24429,7 +24429,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
     new Promise<void>((resolve) => gsap.to(camera, { x: cameraX(width), duration: 0.35, ease: 'power2.out', onComplete: resolve }));
 
   const lines = new WinLines(reelSet, { width: 4 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['A big symbol widens its step on the reel.', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
   hud.position.set(0, BOARD_H + 12);
   stage.addChild(hud);
 
@@ -24577,7 +24577,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // Thin and see-through: a 7 x 7 pair of reels is 49 segments.
   const lines = new WinLines(reelSet, { width: 1.5, dot: 3, glow: 0, alpha: 0.75 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['The reels widen into millions of ways.', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
   hud.position.set(0, EXTENT + 12);
   stage.addChild(hud);
 
@@ -24750,7 +24750,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // --- Readout -----------------------------------------------------------
   const lines = new WinLines(reelSet, { width: 4 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['Reels keep growing, and rows grow too.', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
   hud.position.set(0, VIEW_H + 12);
   stage.addChild(hud);
 
@@ -24975,7 +24975,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // --- Press log ---------------------------------------------------------------
   const log: (string | DebugPlaqueRow)[] = [];
-  const plaque = readout.plaque({ rows: ['press spin, then press it again during the round'], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: LOG_ROWS + 1 });
+  const plaque = readout.plaque({ rows: ['Tap again during the round'], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: LOG_ROWS + 1 });
   plaque.position.set(0, BOARD_H + 12);
   stage.addChild(plaque);
   let presses = 0;
@@ -25180,7 +25180,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // --- Readout -----------------------------------------------------------
   const lines = new WinLines(reelSet, { width: 4 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['Stacked symbols split into singles on the next spin.', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
   hud.position.set(0, VIEW_H + 12);
   stage.addChild(hud);
 
@@ -25578,7 +25578,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // --- Readout -----------------------------------------------------------
   const lines = new WinLines(reelSet, { width: 4 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['The board adds one reel at a time.', ''], minWidth: VIEW_W, maxWidth: VIEW_W, reserveRows: 2 });
   hud.position.set(0, BOARD_H + 12);
   stage.addChild(hud);
 
@@ -26472,7 +26472,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
   // Slim vertical padding, so the plaque sits inside the lip clear of the outline.
   const lipText = readout.plaque({
-    text: `bottom lip ${LIP.bottom}px  ·  top ${LIP.top}px`,
+    text: `bottom lip ${LIP.bottom}px, top ${LIP.top}px`,
     color: 0xf0d98a,
     padding: [8, 3],
     align: 'center',
@@ -27734,7 +27734,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // the runner fits is the size it keeps.
   const W = reelSet.viewport.maskWidth;
   const H = reelSet.viewport.maskHeight;
-  const steps = ['press spin', '', ''];
+  const steps = ['A nudge can be aborted partway.', '', ''];
   const hud = readout.plaque({ text: steps.join('\n'), minWidth: W, maxWidth: W });
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);
@@ -28850,8 +28850,8 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
 
     const text = readout.plaque({
       text:
-        `r${i} ${axis.orientation} / ${axis.direction}\n` +
-        `main=${axis.mainProp} cross=${axis.crossProp} feed=${axis.feedEdge}`,
+        `Reel ${i} runs ${axis.orientation}, ${axis.direction}\n` +
+        `main axis ${axis.mainProp}, feeds from the ${axis.feedEdge}`,
       accent: 0xff6b35,
       anchor: { x: 0, y: 0.5 },
     });
@@ -30311,7 +30311,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide from the start. The prompt and the result both wrap to two rows
   // at this width, so the plate is already the size the count needs.
   const hud = readout.plaque({
-    text: 'press spin: the drop-in phase is the subclass, one per reel',
+    text: 'The drop-in phase is the subclass, one per reel',
     minWidth: TOTAL_W,
     maxWidth: TOTAL_W,
   });
@@ -30832,7 +30832,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // reels the slam lands and whether reels are still running after it.
   // Grid-wide and two rows tall from the start, so the canvas is fitted to its
   // final size.
-  const idle = 'press spin, then keep pressing\npress 1 lands the scatters, press 2 ends the tease';
+  const idle = 'Tap 1 lands the scatters, tap 2 ends the tease';
   const label = readout.plaque({ text: idle, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
   label.position.set(0, TOTAL_H + 10);
   reelSet.addChild(label);
@@ -31174,7 +31174,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide and two rows tall from the start: the press on top, the landing
   // order under it. The canvas is fitted to this size once, at setup.
   const hud = readout.plaque({
-    text: 'press spin, then keep pressing:\neach press quickens the next group',
+    text: 'Each tap quickens the next group',
     minWidth: W,
     maxWidth: W,
   });
@@ -31186,7 +31186,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('spin:start', () => {
     press = 0;
     order = [];
-    hud.text = 'press spin, then keep pressing:\neach press quickens the next group';
+    hud.text = 'Each tap quickens the next group';
   });
   reelSet.events.on('skip:requested', ({ reels, mode }) => {
     press += 1;
@@ -31440,7 +31440,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
 
   // Under the bars, grid-wide from the start.
-  const hud = readout.plaque({ text: 'press spin, then keep pressing', minWidth: TOTAL_W, maxWidth: TOTAL_W });
+  const hud = readout.plaque({ text: 'Keep tapping during the round', minWidth: TOTAL_W, maxWidth: TOTAL_W });
   hud.position.set(0, H + 19);
   reelSet.addChild(hud);
 
@@ -32880,7 +32880,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide and two rows tall from the start: the result lines take two, and
   // the canvas is fitted to what is here at setup.
   const hud = readout.plaque({
-    text: 'press spin.\nalternate spins clear the override',
+    text: 'Alternate spins clear the override',
     minWidth: TOTAL_W,
     maxWidth: TOTAL_W,
   });
@@ -32989,7 +32989,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   // Grid-wide. `render()` below fills in the three-row table before the recipe
   // returns, so the canvas is fitted to it; monospace keeps the columns aligned.
   const hud = readout.plaque({
-    text: 'press spin. every spin auto-skips once the board is at speed',
+    text: 'Every spin auto-skips once the board is at speed',
     minWidth: TOTAL_W,
     maxWidth: TOTAL_W,
   });
@@ -33706,7 +33706,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
 
   let press = 0;
-  const idle = 'press spin, then keep pressing to walk the tease forward';
+  const idle = 'Keep tapping to walk the tease forward';
   // Grid-wide from the start, so the canvas is fitted to its final size.
   const hud = readout.plaque({ text: idle, color: 0xffcc44, minWidth: TOTAL_W, maxWidth: TOTAL_W });
   hud.position.set(0, TOTAL_H + 10);
@@ -35268,7 +35268,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const stage = new PIXI.Container();
   stage.addChild(reelSet);
   const lines = new WinLines(reelSet, { width: 4 });
-  const hud = readout.plaque({ rows: ['press spin', ''], minWidth: WIDTH, maxWidth: WIDTH, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['Stacked symbols split in place on MultiWays.', ''], minWidth: WIDTH, maxWidth: WIDTH, reserveRows: 2 });
   hud.position.set(0, REEL_H + 12);
   stage.addChild(hud);
 
@@ -37016,7 +37016,7 @@ export const meta = {
 //     whenAnticipated: { bounceDistance, steps: { impact: { ... } } },
 //   }
 //
-// A step reads its own entry as `ctx.step`, in segment order — one object in
+// A step reads its own entry as `ctx.step`, in segment order, one object in
 // the profile arrives as one entry. Nothing here branches on the speed name.
 //
 // `whenAnticipated` is the half no flat field can express: the engine merges
@@ -37869,7 +37869,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const H = ROWS * SIZE + (ROWS - 1) * GAP;
   const W = REELS * SIZE + (REELS - 1) * GAP;
 
-  const hud = readout.plaque({ text: 'press spin - the ? tiles land, then reveal', minWidth: W, maxWidth: W });
+  const hud = readout.plaque({ text: 'The ? tiles land, then reveal', minWidth: W, maxWidth: W });
   hud.position.set(0, H + 10);
   reelSet.addChild(hud);
 
@@ -40415,7 +40415,7 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
   const BOARD_H = ROWS * (SIZE + GAP) - GAP;
   const stage = new PIXI.Container();
   stage.addChild(reelSet);
-  const hud = readout.plaque({ rows: ['press spin'], minWidth: BOARD_W, maxWidth: BOARD_W, reserveRows: 2 });
+  const hud = readout.plaque({ rows: ['Paylines and payways are drawn by WinLines.'], minWidth: BOARD_W, maxWidth: BOARD_W, reserveRows: 2 });
   hud.position.set(0, BOARD_H + 12);
   stage.addChild(hud);
 

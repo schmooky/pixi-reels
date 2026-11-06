@@ -1,7 +1,7 @@
 id: fs-002
 group: fs
 topic: cells-and-banners
-question: How do I swap to a different reel set / background for the feature?
+question: How do I swap to a different reel set or background for the feature?
 answer: Toggle a `FrameMiddleware` (or show a second ReelSet) to switch
   strips/art at runtime with no rebuild.
 links:

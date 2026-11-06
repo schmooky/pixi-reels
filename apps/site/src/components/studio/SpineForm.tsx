@@ -319,7 +319,7 @@ function FilePickField({
         </span>
         {file && (
           <span className="truncate text-xs text-muted-foreground" title={file.name}>
-            {file.name} · {Math.ceil(file.size / 1024)} KB
+            {file.name}, {Math.ceil(file.size / 1024)} KB
           </span>
         )}
       </div>

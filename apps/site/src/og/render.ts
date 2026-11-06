@@ -16,8 +16,6 @@ import { OG } from './theme.ts';
 export interface OgTarget {
   /** Path under `/og/`, no leading slash or `.png`. e.g. `recipes/classic-5x3`. */
   id: string;
-  /** Small uppercase category line, e.g. `RECIPE · WILDS`. */
-  eyebrow: string;
   title: string;
   subtitle?: string;
 }
@@ -113,6 +111,21 @@ function clampWords(s: string, max: number): string {
   return `${(at > max * 0.6 ? cut.slice(0, at) : cut).replace(/[\s,.;:]+$/, '')}…`;
 }
 
+/**
+ * A subtitle cut to whole clauses: the first sentence, or its first clauses
+ * up to a comma, ended with a period. A card reads as finished prose rather
+ * than a sentence trailing off into an ellipsis.
+ */
+function clampClause(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const sentence = s.match(/^.+?[.!?](?=\s|$)/)?.[0];
+  if (sentence && sentence.length <= max) return sentence;
+  const cut = s.slice(0, max);
+  const comma = cut.lastIndexOf(',');
+  if (comma > max * 0.4) return `${cut.slice(0, comma)}.`;
+  return clampWords(s, max);
+}
+
 /** The art panel: one sticker, large, on a dark tile with a lime edge. */
 function artPanel(src: string): Node {
   return h(
@@ -190,20 +203,6 @@ function card(t: OgTarget, art: Map<string, string>): Node {
         'div',
         {
           display: 'flex',
-          fontFamily: 'JetBrains Mono',
-          fontWeight: 700,
-          fontSize: 20,
-          letterSpacing: 3,
-          textTransform: 'uppercase',
-          color: BRAND,
-          marginBottom: 22,
-        },
-        clampWords(t.eyebrow, 46),
-      ),
-      h(
-        'div',
-        {
-          display: 'flex',
           fontFamily: 'Inter',
           fontWeight: 700,
           fontSize: size,
@@ -221,13 +220,13 @@ function card(t: OgTarget, art: Map<string, string>): Node {
                 display: 'flex',
                 fontFamily: 'Inter',
                 fontWeight: 400,
-                fontSize: 28,
-                lineHeight: 1.4,
+                fontSize: 32,
+                lineHeight: 1.35,
                 color: OG.soft,
-                marginTop: 22,
+                marginTop: 26,
               },
               // Fewer words under a long title, so the column never runs past the card.
-              clampWords(t.subtitle, t.title.length > 56 ? 90 : 140),
+              clampClause(t.subtitle, t.title.length > 56 ? 70 : 110),
             ),
           ]
         : []),

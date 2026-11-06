@@ -35,15 +35,15 @@ const RESHAPE: [string, string, string][] = [
 const GRID_OPTS: [string, string, string][] = [
   ['cols, rows', 'required', 'board size'],
   ['cellSize', 'required', 'a number or { width, height }'],
-  ['gap · columnGap · rowGap', '4', 'columnGap and rowGap fall back to gap'],
+  ['gap, columnGap, rowGap', '4', 'columnGap and rowGap fall back to gap'],
   ['emptyId', "'empty'", 'an EmptySymbol is auto-registered'],
-  ['symbols · weights · symbolData · rng', '', 'forwarded to every cell builder'],
+  ['symbols, weights, symbolData, rng', '', 'forwarded to every cell builder'],
   ['ticker', 'required', 'the constructor throws without it'],
   ['chrome(g, w, h)', 'none', 'per-cell background drawn below the cell'],
   ['mask(cell, { cols, rows, corners })', 'SharedRectMaskStrategy', 'corners lets RoundedRectMaskStrategy round only the outer corners'],
-  ['orientation · direction', 'vertical · forward', 'the axis each cell strip travels on; the board layout does not change'],
+  ['orientation, direction', 'vertical, forward', 'the axis each cell strip travels on; the board layout does not change'],
   ['profiles', '{ default: NORMAL + minimumSpinTime 320 }', 'name to profile, or a per-cell function'],
-  ['symbolZIndex · cellZIndex(ctx)', 'none', 'order symbols inside a cell; order the cells lifted art'],
+  ['symbolZIndex, cellZIndex(ctx)', 'none', 'order symbols inside a cell; order the cells lifted art'],
 ];
 
 const GRID_API: [string, string][] = [
@@ -51,8 +51,8 @@ const GRID_API: [string, string][] = [
   ['dim({ except?, amount = 0.5, fade = 180 }) → release', 'One black rect per non-excepted cell, faded over fade × |delta| ms on the ticker. A second dim while one is up throws. Also dimmedCells and clearDim().'],
   ['dimSymbols({ except?, amount, fade }) → release', 'Darkens view.tint toward black (0.5 gives 0x808080). Watches symbol:created so a swapped-in symbol arrives dark and a departing one is cleaned before pooling. Owns view.tint while active. Also dimmedSymbolCells and clearSymbolDim().'],
   ['refreshCellZIndex()', 'Re-asks cellZIndex({ symbolId, cell, cols, rows, atRest, attachOrder }) for every cell. Runs on every place and every landing.'],
-  ['cells() · cellBounds(cell) · cellCenter(cell)', 'Reel-major order; board-local bounds (use container.toGlobal for stage space).'],
-  ['symbolAt(cell) · reelAt(cell) · setProfile(cell, name)', 'The live ReelSymbol, the underlying 1x1 ReelSet, the profile selection.'],
+  ['cells(), cellBounds(cell), cellCenter(cell)', 'Reel-major order; board-local bounds (use container.toGlobal for stage space).'],
+  ['symbolAt(cell), reelAt(cell), setProfile(cell, name)', 'The live ReelSymbol, the underlying 1x1 ReelSet, the profile selection.'],
   ['place(cell, id)', 'Instant, empty buffers, then refreshCellZIndex.'],
   ['spinCells(targets: { cell, id }[], onLanded?)', 'Per target: spin(), setResult with empty buffers, await, refreshCellZIndex, await onLanded. All cells run concurrently; resolves after every cell landed and its after-land work finished.'],
   ['skipSpinning(options?)', 'Returns the in-flight count; swallows "no result yet" errors.'],
@@ -62,7 +62,7 @@ const GRID_API: [string, string][] = [
 const HW_DEFAULTS: [string, string][] = [
   ['grid', '5 x 3'],
   ['cellSize', '72 x 72'],
-  ['columnGap · rowGap', '4'],
+  ['columnGap, rowGap', '4'],
   ['emptyId', "'empty'"],
   ['inactive', '[] (inactive id defaults to the empty id)'],
   ['respins', '3'],
@@ -71,7 +71,7 @@ const HW_DEFAULTS: [string, string][] = [
   ['initialSpeed', "'normal'"],
   ['stagger', '(reel + cell) × profile.stopDelay, a diagonal wave'],
   ['skipMode', "'slam'"],
-  ['axis', 'vertical · forward'],
+  ['axis', 'vertical, forward'],
   ['TENSION_EXTRA_MS', '1100, added to minimumSpinTime for the name:tension profile'],
 ];
 
@@ -79,11 +79,11 @@ const HW_METHODS: [string, string][] = [
   ['enter(seed)', 'The reducer validates first, then the board places the coins and replays the effects.'],
   ['respin(hits)', 'One wave; see the diagram. On a throw: abortWave() plus grid.skipSpinning(), then rethrow.'],
   ['setSymbolAt(cell, id, data?)', 'Locked cells only. Throws inside a coin:locked listener, because the wave is still in flight.'],
-  ['setSpeed(name) · addSpeed(name, profile)', 'Updates every cell; keeps the tension variant if a tense wave is in flight.'],
-  ['playWin(cells?) · activate(cells) · release(cells)', 'Pass-throughs to the lock animation and the reducer; release and activate throw mid-wave.'],
+  ['setSpeed(name), addSpeed(name, profile)', 'Updates every cell; keeps the tension variant if a tense wave is in flight.'],
+  ['playWin(cells?), activate(cells), release(cells)', 'Pass-throughs to the lock animation and the reducer; release and activate throw mid-wave.'],
   ['skip({ mode?, speed?, payload? })', 'Emits feature:skip and returns the in-flight count.'],
   ['reset()', 'Releases lifts, clears dims, places empty on every cell, re-dresses inactive cells. The reducer emits only feature:reset, never coin:released.'],
-  ['lift · dim · dimSymbols · cellBounds · cellCenter · symbolAt · reelAt · refreshCellZIndex', 'BoardGrid pass-throughs. Lifts and dims survive a respin() and are released by reset() and destroy().'],
+  ['lift, dim, dimSymbols, cellBounds, cellCenter, symbolAt, reelAt, refreshCellZIndex', 'BoardGrid pass-throughs. Lifts and dims survive a respin() and are released by reset() and destroy().'],
 ];
 ---
 <Architecture
@@ -418,7 +418,7 @@ const HW_METHODS: [string, string][] = [
     <Box x={265} y={270} w={230} h={60} title="spinning" kind="primary" mono={false} sub="one wave in flight" />
     <Edge from={[380, 90]} to={[380, 150]} kind="primary" label="enter(seed)" />
     <Edge from={[380, 210]} to={[380, 270]} kind="primary" label="beginWave(hits)" />
-    <Edge from={[495, 300]} via={[[575, 300], [575, 180]]} to={[495, 180]} label="endWave() · abortWave()" />
+    <Edge from={[495, 300]} via={[[575, 300], [575, 180]]} to={[495, 180]} label="endWave(), abortWave()" />
     <Edge from={[265, 180]} via={[[160, 180], [160, 60]]} to={[265, 60]} label="full or respins <= 0" />
   </Diagram>
 
@@ -602,9 +602,9 @@ const HW_METHODS: [string, string][] = [
     <div class="rounded-lg border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">board/, wins/, spotlight/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>board/BoardGrid.ts</code> the grid · <code>board/HwTypes.ts</code> events and coin types</li>
-        <li><code>board/HoldAndWinState.ts</code> the reducer · <code>board/HoldAndWinBoard.ts</code> the driver · <code>board/HoldAndWinBuilder.ts</code></li>
-        <li><code>wins/WinPresenter.ts</code> · <code>spotlight/SymbolSpotlight.ts</code> · <code>config/types.ts</code> Z_INDEX_BUDGET, Win</li>
+        <li><code>board/BoardGrid.ts</code> the grid, <code>board/HwTypes.ts</code> events and coin types</li>
+        <li><code>board/HoldAndWinState.ts</code> the reducer, <code>board/HoldAndWinBoard.ts</code> the driver, <code>board/HoldAndWinBuilder.ts</code></li>
+        <li><code>wins/WinPresenter.ts</code>, <code>spotlight/SymbolSpotlight.ts</code>, <code>config/types.ts</code> Z_INDEX_BUDGET, Win</li>
       </ul>
     </div>
   </div>

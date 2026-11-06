@@ -26,8 +26,8 @@ const LAYERS: [string, string, string, string][] = [
 ];
 
 const SNAPSHOT: [string, string][] = [
-  ['timestamp · isSpinning · currentSpeed · availableSpeeds · spotlightActive', 'When it was taken and the set-level flags: is anything moving, which speed profile is active, which are registered, is a spotlight up.'],
-  ['reelCount · visibleCells: number[]', 'How many reels, and how many cells each one shows. One entry per reel (a breaking change since v0.3), because jagged and MultiWays boards differ per reel.'],
+  ['timestamp, isSpinning, currentSpeed, availableSpeeds, spotlightActive', 'When it was taken and the set-level flags: is anything moving, which speed profile is active, which are registered, is a spotlight up.'],
+  ['reelCount, visibleCells: number[]', 'How many reels, and how many cells each one shows. One entry per reel (a breaking change since v0.3), because jagged and MultiWays boards differ per reel.'],
   ['reels: DebugReelSnapshot[]', 'Per reel: index, speed, isStopping, orientation, direction, allSymbols as { cell, symbolId, main }[] and visibleSymbols. main is the rounded position along the travel axis; it used to be a hard-coded y, which read 0 on horizontal sets.'],
   ['grid: string[][]', 'The visible board, reel-major, from reelSet.getVisibleGrid(). Cells covered by a big symbol show the anchor\'s id.'],
 ];
@@ -38,22 +38,22 @@ const GLOBAL: [string, string][] = [
   ['log()', 'Prints the spinning flag, the speed and the grid to the console and returns the snapshot.'],
   ['trace()', 'Logs every set-bus event through onAny and returns a function that stops the trace.'],
   ['metrics()', 'SpinMetrics.snapshot(): the rounds recorded since enableDebug() was called.'],
-  ['startRecording() · stopRecording()', 'The frame recorder, below.'],
+  ['startRecording(), stopRecording()', 'The frame recorder, below.'],
 ];
 
 const ROUND_REEL: [string, string][] = [
   ['phases[] { phase, start, end | null }', 'Every phase the reel entered, with its span; end is null while the phase is open.'],
-  ['stoppingAt · landingAt · landedAt', 'When the controller asked it to stop, when it reached its result frame, when it came to rest.'],
+  ['stoppingAt, landingAt, landedAt', 'When the controller asked it to stop, when it reached its result frame, when it came to rest.'],
   ['tease { start, end, order, total }', 'The anticipation span and where this reel sat in the tease sequence.'],
   ['symbolSwaps', 'How many times a cell took a new symbol during the round.'],
   ['speed', 'A flat [t0, v0, t1, v1, ...] array of samples, only when a ticker was given.'],
 ];
 
 const ROUND_SET: [string, string][] = [
-  ['index · spin · startedAt · profile', 'The round number, whether a spin() opened it (false for a nudge before any spin), when, and the speed profile in force.'],
-  ['allStartedAt · allLandedAt · completeAt · duration', 'The set-level marks and the total.'],
-  ['wasSkipped · skips[] { at, mode, reels, partial, completedAt } · queuedSkipAt · boosted', 'Every skip press and what it freed. wasSkipped is set at skip:requested, because an aborted spin never reaches spin:complete; skip:completed closes the oldest open mark with the same reels.'],
-  ['landOrder · events · cascadeChains · wins · lastActivityAt', 'The order the reels landed, an event count, cascade and win bookkeeping, and the last time anything happened (round events extend it after a round settles).'],
+  ['index, spin, startedAt, profile', 'The round number, whether a spin() opened it (false for a nudge before any spin), when, and the speed profile in force.'],
+  ['allStartedAt, allLandedAt, completeAt, duration', 'The set-level marks and the total.'],
+  ['wasSkipped, skips[] { at, mode, reels, partial, completedAt }, queuedSkipAt, boosted', 'Every skip press and what it freed. wasSkipped is set at skip:requested, because an aborted spin never reaches spin:complete; skip:completed closes the oldest open mark with the same reels.'],
+  ['landOrder, events, cascadeChains, wins, lastActivityAt', 'The order the reels landed, an event count, cascade and win bookkeeping, and the last time anything happened (round events extend it after a round settles).'],
 ];
 
 const NOTICES: [string, string, string][] = [
@@ -77,11 +77,11 @@ const NOTICES: [string, string, string][] = [
 ];
 
 const PLAQUE_OPTS: [string, string][] = [
-  ['title · rows · text', "rows are strings or { text, color, swatch, meter 0-1, meterColor }; text is a drop-in for a Text"],
-  ['fontSize · color · fill · fillAlpha', '11 · 0xe7e5e4 · 0x0b0e14 · 0.84'],
+  ['title, rows, text', "rows are strings or { text, color, swatch, meter 0-1, meterColor }; text is a drop-in for a Text"],
+  ['fontSize, color, fill, fillAlpha', '11, 0xe7e5e4, 0x0b0e14, 0.84'],
   ['radius', "fontSize × 0.7, or 'pill'"],
-  ['padding · anchor · align · minWidth · maxWidth', 'maxWidth enables word wrap'],
-  ['reserveRows · shadow · accent', 'shadow defaults to true; hitArea and boundsArea exclude it'],
+  ['padding, anchor, align, minWidth, maxWidth', 'maxWidth enables word wrap'],
+  ['reserveRows, shadow, accent', 'shadow defaults to true; hitArea and boundsArea exclude it'],
 ];
 ---
 <Architecture
@@ -163,13 +163,13 @@ const PLAQUE_OPTS: [string, string][] = [
 
   <Diagram height={430} caption="The main entry, data only. enableDebug() installs a global whose methods return plain JSON and ASCII; it is a no-op without window and keeps one SpinMetrics per set.">
     <Box x={20} y={20} w={300} h={60} title="enableDebug(reelSet, key?)" sub="installs the global, data only" />
-    <Box x={20} y={116} w={300} h={78} title="window.__PIXI_REELS_DEBUG" kind="code" sub={['snapshot() · grid() · log() · trace()', 'metrics() · start/stopRecording()']} />
+    <Box x={20} y={116} w={300} h={78} title="window.__PIXI_REELS_DEBUG" kind="code" sub={['snapshot(), grid(), log(), trace()', 'metrics(), start/stopRecording()']} />
     <Box x={20} y={242} w={300} h={60} title="debugSnapshot(reelSet)" sub="plain JSON, no PixiJS types, no cycles" />
     <Box x={20} y={350} w={300} h={60} title="debugGrid(reelSet)" sub="an ASCII box table" />
     <Edge from={[170, 80]} to={[170, 116]} />
     <Edge from={[170, 194]} to={[170, 242]} label="snapshot()" />
     <Edge from={[170, 302]} to={[170, 350]} label="grid()" />
-    <Box x={440} y={116} w={220} h={78} title="ReelSet" kind="primary" sub={['events, via onAny', 'reels · pins · viewport']} />
+    <Box x={440} y={116} w={220} h={78} title="ReelSet" kind="primary" sub={['events, via onAny', 'reels, pins, viewport']} />
     <Edge from={[320, 155]} to={[440, 155]} style="dashed" label="reads" />
   </Diagram>
 
@@ -187,7 +187,7 @@ const PLAQUE_OPTS: [string, string][] = [
     <Edge from={[260, 59]} to={[150, 59]} style="dashed" label="reads" />
     <Box x={20} y={170} w={200} h={78} title="SpinMetrics" sub={['rounds, spans, skips, speed', 'onAny on every bus']} />
     <Box x={240} y={170} w={200} h={78} title="DebugPlaque" sub={['mono rows on a silk plate', 'behind hud and metrics']} />
-    <Box x={460} y={170} w={240} h={78} title="roundRectPath · WinLines" sub={['dashable rounded rects', 'paylines and payways']} />
+    <Box x={460} y={170} w={240} h={78} title="roundRectPath, WinLines" sub={['dashable rounded rects', 'paylines and payways']} />
     <Edge from={[300, 98]} via={[[300, 134], [120, 134]]} to={[120, 170]} label="owns or borrows" />
     <Edge from={[340, 98]} to={[340, 170]} />
     <Edge from={[500, 98]} via={[[500, 134], [580, 134]]} to={[580, 170]} />
@@ -352,7 +352,7 @@ const PLAQUE_OPTS: [string, string][] = [
   </p>
 
   <Diagram height={304} caption="Two redraw schedules. The static layers are cleared and redrawn together on redraw(), setLayers() and the geometry events (shape:changed, adjust:complete, rows:*, column:set, reels:*). The live layers redraw every tick when live; when not live, the three panels follow every set event and bounds, blocks and pins wait for redraw().">
-    <Box x={20} y={20} w={324} h={60} title="redraw() · setLayers()" kind="ghost" sub="and the geometry events" />
+    <Box x={20} y={20} w={324} h={60} title="redraw(), setLayers()" kind="ghost" sub="and the geometry events" />
     <Box x={376} y={20} w={324} h={60} title="ticker tick" kind="ghost" mono={false} sub="when live, else any set event" />
     <Edge from={[182, 80]} to={[182, 116]} kind="primary" />
     <Edge from={[538, 80]} to={[538, 116]} kind="primary" />
@@ -634,15 +634,15 @@ const PLAQUE_OPTS: [string, string][] = [
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>debug.ts</code> debugSnapshot, debugGrid, the frame recorder, enableDebug (main entry)</li>
         <li><code>index.ts</code> the pixi-reels/debug barrel: debugOverlay, OVERLAY_LABEL, DebugPlaque, DEBUG_FONT, WinLines, roundRectPath, SpinMetrics</li>
-        <li><code>debugOverlay.ts</code> · <code>SpinMetrics.ts</code> · <code>DebugPlaque.ts</code> · <code>roundRectPath.ts</code> · <code>WinLines.ts</code></li>
+        <li><code>debugOverlay.ts</code>, <code>SpinMetrics.ts</code>, <code>DebugPlaque.ts</code>, <code>roundRectPath.ts</code>, <code>WinLines.ts</code></li>
       </ul>
     </div>
     <div class="rounded-lg border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/utils/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>notify.ts</code> log levels, onNotice, noticeError/Warn/WarnOnce/Info</li>
-        <li><code>Disposable.ts</code> · <code>TickerRef.ts</code> · <code>gsap.ts</code> · <code>gsapTicker.ts</code></li>
-        <li><code>docs/adr/004-disposable-tickerref.md</code> · <code>006-debug-mode.md</code> · <code>022-debug-subpath-on-pixi-silk.md</code></li>
+        <li><code>Disposable.ts</code>, <code>TickerRef.ts</code>, <code>gsap.ts</code>, <code>gsapTicker.ts</code></li>
+        <li><code>docs/adr/004-disposable-tickerref.md</code>, <code>006-debug-mode.md</code>, <code>022-debug-subpath-on-pixi-silk.md</code></li>
       </ul>
     </div>
   </div>

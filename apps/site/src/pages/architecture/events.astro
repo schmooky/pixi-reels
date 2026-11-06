@@ -304,7 +304,7 @@ await p;`}</code></pre>
     <Box x={bx(1)} y={row(1)} w={BW} h={BH} title="spin:start" kind="primary" />
     <Box x={bx(2)} y={row(2)} w={BW} h={BH} title="phase:enter 'start'" kind="accent" />
     <Box x={bx(2)} y={row(3)} w={BW} h={BH} title="phase:exit 'start'" kind="accent" />
-    <Box x={bx(0)} y={row(3)} w={BW} h={BH} title="skip() · slamStop()" kind="ghost" />
+    <Box x={bx(0)} y={row(3)} w={BW} h={BH} title="skip(), slamStop()" kind="ghost" />
     <Label x={bx(0) + BW / 2} y={row(3) + BH + 20} text="any time after spin:start" anchor="middle" />
     <Box x={bx(1)} y={row(4)} w={BW} h={BH} title="spin:allStarted" kind="primary" />
     <Box x={bx(2)} y={row(5)} w={BW} h={BH} title="symbol:created" kind="accent" />
@@ -429,7 +429,7 @@ await p;`}</code></pre>
           {SET_EVENTS.map(([group, rows]) => (
             <>
               <tr class="border-t border-border/60 bg-muted/30">
-                <td colspan="4" class="px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{group} · {rows.length}</td>
+                <td colspan="4" class="px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{group} ({rows.length})</td>
               </tr>
               {rows.map(([name, payload, when, from]) => (
                 <tr class="border-t border-border/60 align-top">
@@ -632,7 +632,7 @@ await p;`}</code></pre>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>core/ReelSet.ts</code> owns <code>_events</code>; pin, nudge, expand, column, cascade chain events</li>
         <li><code>spin/SpinController.ts</code> spin, skip, anticipation, adjust events and the landing relay</li>
-        <li><code>board/HwTypes.ts</code> HoldAndWinBoardEvents · <code>docs/adr/002-typed-event-emitter.md</code></li>
+        <li><code>board/HwTypes.ts</code> HoldAndWinBoardEvents, <code>docs/adr/002-typed-event-emitter.md</code></li>
       </ul>
     </div>
   </div>

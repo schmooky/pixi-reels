@@ -10,10 +10,10 @@ import Callout from '../../components/arch/Callout.astro';
 const th = 'text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground';
 
 const TICKER: [string, string][] = [
-  ['deltaMS · deltaTime · elapsedMS · lastTime', 'The fields the engine reads. deltaMS starts at 16; tick() sets deltaMS, deltaTime = deltaMs / (1000 / 60), and adds to elapsedMS and lastTime.'],
-  ['speed · started · FPS (60) · minFPS (10) · maxFPS (0)', 'Present so the duck type matches; nothing in the engine reads them.'],
-  ['add(fn) · addOnce(fn) · remove(fn)', 'The surface TickerRef uses. addOnce wraps and removes itself before calling.'],
-  ['start() · stop() · destroy()', 'Flip started; destroy() also empties the callback list.'],
+  ['deltaMS, deltaTime, elapsedMS, lastTime', 'The fields the engine reads. deltaMS starts at 16; tick() sets deltaMS, deltaTime = deltaMs / (1000 / 60), and adds to elapsedMS and lastTime.'],
+  ['speed, started, FPS (60), minFPS (10), maxFPS (0)', 'Present so the duck type matches; nothing in the engine reads them.'],
+  ['add(fn), addOnce(fn), remove(fn)', 'The surface TickerRef uses. addOnce wraps and removes itself before calling.'],
+  ['start(), stop(), destroy()', 'Flip started; destroy() also empties the callback list.'],
   ['tick(deltaMs = 16)', 'Advance one frame: set the deltas, then call a snapshot of the callbacks, so a callback that removes itself does not skip its neighbour.'],
   ['tickFor(totalMs, stepMs = 16)', 'Loop tick(min(stepMs, remaining)) until totalMs is spent.'],
   ['listenerCount', 'How many callbacks are registered. Handy for leak tests: it must be 0 after destroy().'],
@@ -24,11 +24,11 @@ const OPTS: [string, string, string][] = [
   ['visibleCells', '3', 'a number, or a per-reel array for a static pyramid; exclusive with multiways'],
   ['multiways', 'none', '{ minCells, maxCells, reelExtent }; the set starts at maxCells'],
   ['symbolIds', "['a', 'b', 'c']", 'every id is registered as a HeadlessSymbol'],
-  ['weights · symbolData', 'none', 'forwarded to the builder; symbolData is how tests declare big symbols'],
+  ['weights, symbolData', 'none', 'forwarded to the builder; symbolData is how tests declare big symbols'],
   ['symbolSize', '{ width: 120, height: 100 }', 'non-square on purpose, see below'],
   ['symbolGap', 'builder default (0, 0)', '{ x, y }'],
-  ['orientation · direction · directionPerReel', 'vertical · forward', 'the axis options, same as the builder'],
-  ['curve · curvePerReel · curveFocus', 'flat', 'drum curvature, same as the builder'],
+  ['orientation, direction, directionPerReel', 'vertical, forward', 'the axis options, same as the builder'],
+  ['curve, curvePerReel, curveFocus', 'flat', 'drum curvature, same as the builder'],
   ['tumble', 'none', 'pass {} for the cascade defaults; without it the set spins strips'],
   ['bufferSymbols', 'builder default (1)', 'a number or { start, end }'],
   ['phases', 'none', 'the same hook as ReelSetBuilder.phases(factory)'],
@@ -42,7 +42,7 @@ const HELPERS: [string, string][] = [
   ['captureEvents(reelSet, names)', 'Returns an array of { event, args } that fills up in order as the named events fire. Read it after the act.'],
   ['expectGrid(reelSet, string[][])', 'Compares debugSnapshot(reelSet).grid with what you expect and throws a readable diff that lists every mismatched reel and cell and ends with the ASCII debugGrid().'],
   ['countSymbol(reelSet, id)', 'Counts visible occurrences of one id, for scatter-style assertions.'],
-  ['startRecording · stopRecording · getFrames · clearFrames', 'From the main barrel (debug/debug.ts), not the testing subpath. startRecording(reelSet, tag, { maxFrames }) captures a debugSnapshot on spin:start, spin:reelLanded, spin:allLanded and spin:complete; getFrames(tag?) returns a copy. The buffer is process-wide and capped at 1000 frames. See the debug page.'],
+  ['startRecording, stopRecording, getFrames, clearFrames', 'From the main barrel (debug/debug.ts), not the testing subpath. startRecording(reelSet, tag, { maxFrames }) captures a debugSnapshot on spin:start, spin:reelLanded, spin:allLanded and spin:complete; getFrames(tag?) returns a copy. The buffer is process-wide and capped at 1000 frames. See the debug page.'],
 ];
 ---
 <Architecture
@@ -199,7 +199,7 @@ it('lands the grid it was given and fires the round events', async () => {
 
     <Box x={120} y={490} w={480} h={60} title="spinAndLand(grid)" kind="primary" sub="spin() + setResult(grid) + slamStop()" />
     <Edge from={[360, 550]} to={[360, 598]} />
-    <Box x={120} y={598} w={480} h={78} title="assertions" mono={false} sub={['expectGrid · captureEvents · countSymbol', 'debugSnapshot · debugGrid · getFrames']} />
+    <Box x={120} y={598} w={480} h={78} title="assertions" mono={false} sub={['expectGrid, captureEvents, countSymbol', 'debugSnapshot, debugGrid, getFrames']} />
   </Diagram>
 
   <div class="not-prose my-8">
@@ -350,9 +350,9 @@ it('lands the grid it was given and fires the round events', async () => {
 
   <Diagram height={228} caption="Four knobs that make a run repeatable. The non-square default cell is the cheapest of them (ADR 018, section 10.2): with a square cell, swapping width for height passes every assertion.">
     <Box x={20} y={20} w={320} h={78} title="builder.rng(fn)" sub={['seeded PRNG for the random fill', 'same seed, same strips and wraps']} />
-    <Box x={380} y={20} w={320} h={78} title="FakeTicker.tick(16)" sub={['tickFor(ms, 16) · advance(ms)', 'no requestAnimationFrame']} />
+    <Box x={380} y={20} w={320} h={78} title="FakeTicker.tick(16)" sub={['tickFor(ms, 16), advance(ms)', 'no requestAnimationFrame']} />
     <Box x={20} y={130} w={320} h={78} title="120 x 100 cell" sub={['non-square on purpose', 'axis mix-ups fail loudly']} />
-    <Box x={380} y={130} w={320} h={78} title="@pixi-reels/cheats" kind="code" sub={['CheatEngine · SeededRng', 'evaluateWays · countWays']} />
+    <Box x={380} y={130} w={320} h={78} title="@pixi-reels/cheats" kind="code" sub={['CheatEngine, SeededRng', 'evaluateWays, countWays']} />
   </Diagram>
 
   <p>
@@ -431,17 +431,17 @@ it('lands the grid it was given and fires the round events', async () => {
     <div class="rounded-lg border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">packages/pixi-reels/src/testing/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>FakeTicker.ts</code> · <code>HeadlessSymbol.ts</code></li>
+        <li><code>FakeTicker.ts</code>, <code>HeadlessSymbol.ts</code></li>
         <li><code>testHarness.ts</code> createTestReelSet, spinAndLand, captureEvents, expectGrid, countSymbol</li>
-        <li><code>index.ts</code> the pixi-reels/testing barrel · <code>debug/debug.ts</code> the recorder</li>
+        <li><code>index.ts</code> the pixi-reels/testing barrel, <code>debug/debug.ts</code> the recorder</li>
       </ul>
     </div>
     <div class="rounded-lg border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-brand-text mb-1">suites and decisions</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>packages/pixi-reels/tests/</code> unit, integration, contract · <code>tests/e2e/</code> Playwright</li>
+        <li><code>packages/pixi-reels/tests/</code> unit, integration, contract, <code>tests/e2e/</code> Playwright</li>
         <li><code>packages/cheats/src/</code> cheats.ts, seededRng.ts, ways.ts</li>
-        <li><code>docs/adr/008-deterministic-testing.md</code> · <code>009-cheats-live-outside-lib.md</code> · <code>018-motion-contract.md</code></li>
+        <li><code>docs/adr/008-deterministic-testing.md</code>, <code>009-cheats-live-outside-lib.md</code>, <code>018-motion-contract.md</code></li>
       </ul>
     </div>
   </div>

@@ -15,17 +15,14 @@ import { renderAnswer } from '../lib/faqRender.ts';
 
 interface Props {
   topic: TopicMeta;
-  /** Zero-based position on the /mechanics/ index, for the eyebrow. */
-  index: number;
   demos: TopicDemo[];
   api: ApiEntry[];
   questions: FaqQuestionResolved[];
   /** False when the topic has no Concept prose yet; the section then shows the one-liner. */
   hasConcept: boolean;
 }
-const { topic, index, demos, api, questions, hasConcept } = Astro.props as Props;
+const { topic, demos, api, questions, hasConcept } = Astro.props as Props;
 const pathname = Astro.url.pathname;
-const number = String(index + 1).padStart(2, '0');
 
 const jsonLd = [
   articleLd({ title: topic.title, description: topic.oneLiner, path: pathname }),
@@ -39,10 +36,10 @@ const jsonLd = [
 // Demos first: a mechanic page opens on a reel you can tap, and the
 // concept is the "how it works" under it.
 const sections = [
-  { id: 'demos', label: 'Demos', count: demos.length },
-  { id: 'concept', label: 'Concept', count: null },
-  { id: 'api', label: 'API', count: api.length },
-  { id: 'questions', label: 'Questions', count: questions.length },
+  { id: 'demos', label: 'Demos' },
+  { id: 'concept', label: 'Concept' },
+  { id: 'api', label: 'API' },
+  { id: 'questions', label: 'Questions' },
 ];
 
 const KIND_LABEL: Record<ApiEntry['kind'], string> = {
@@ -71,40 +68,33 @@ const open = questions.filter((q) => !q.answer);
         </svg>
         All mechanics
       </a>
-      <p class="eyebrow mt-8 flex">
-        Mechanics
-        <span class="text-muted-foreground/60">/</span>
-        {number}
-      </p>
+      <p class="eyebrow mt-8 flex">Mechanics</p>
       <h1 class="display mt-4 text-4xl sm:text-5xl lg:text-6xl">{topic.title}</h1>
       <p class="mt-5 max-w-[620px] text-lg leading-relaxed text-muted-foreground">{topic.oneLiner}</p>
     </header>
 
     <nav aria-label="On this page" class="flex flex-wrap gap-x-7 gap-y-2 border-b border-border py-3 font-mono text-[11px] font-medium uppercase tracking-[0.18em]">
       {sections.map((s) => (
-        <a href={`#${s.id}`} class="inline-flex items-baseline gap-2 text-muted-foreground transition-colors hover:text-foreground">
-          {s.label}
-          {s.count !== null && <span class="text-muted-foreground/60">{s.count}</span>}
-        </a>
+        <a href={`#${s.id}`} class="text-muted-foreground transition-colors hover:text-foreground">{s.label}</a>
       ))}
     </nav>
 
     <section id="demos" class="scroll-mt-20 pb-10 pt-8">
-      <p class="eyebrow">01 / Demos</p>
+      <p class="eyebrow">Demos</p>
       <article class="prose-docs mt-4">
         <slot name="demos" />
       </article>
     </section>
 
     <section id="concept" class="scroll-mt-20 border-t border-border py-10">
-      <p class="eyebrow">02 / Concept</p>
+      <p class="eyebrow">Concept</p>
       <article class="prose-docs mt-6">
         {hasConcept ? <slot name="concept" /> : <p>{topic.oneLiner}</p>}
       </article>
     </section>
 
     <section id="api" class="scroll-mt-20 border-t border-border py-10">
-      <p class="eyebrow">03 / API</p>
+      <p class="eyebrow">API</p>
       <p class="mt-4 max-w-[620px] text-sm leading-relaxed text-muted-foreground">
         Every exported name the concept, the demos and their sources use, with the one-line summary from the generated reference.
       </p>
@@ -130,7 +120,7 @@ const open = questions.filter((q) => !q.answer);
     </section>
 
     <section id="questions" class="scroll-mt-20 border-t border-border py-10">
-      <p class="eyebrow">04 / Questions</p>
+      <p class="eyebrow">Questions</p>
       <p class="mt-4 max-w-[620px] text-sm leading-relaxed text-muted-foreground">
         From the <a href="/faq/" class="text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground">FAQ</a>, the questions tagged with this mechanic. Open one here, or follow it to its own page.
       </p>

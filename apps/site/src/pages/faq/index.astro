@@ -51,8 +51,6 @@ const sections = [
     <div class="container max-w-3xl">
       <p class="eyebrow">
         FAQ
-        <span class="text-muted-foreground/60">/</span>
-        Knowledge base
       </p>
       <h1 class="display mt-4 text-4xl sm:text-5xl">How do I…?</h1>
       <p class="mt-5 max-w-xl text-lg text-muted-foreground">
@@ -83,7 +81,7 @@ const sections = [
     <div class="container max-w-3xl space-y-14">
       {sections.map((group, i) => (
         <div class="faq-group" id={group.id} data-group={group.id}>
-          <h2 class="eyebrow">{String(i + 1).padStart(2, '0')} / {group.title}</h2>
+          <h2 class="eyebrow">{group.title}</h2>
           {group.blurb && <p class="mt-2 max-w-xl text-sm text-muted-foreground">{group.blurb}</p>}
           {group.href && (
             <a href={group.href} class="mt-2 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground">

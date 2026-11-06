@@ -24,7 +24,7 @@ const ly = labelBottom ? y + h - 12 : y + 24;
 <g class:list={['group', `group-${kind}`, className]}>
   <rect x={x} y={y} width={w} height={h} rx={r} class="group-bg" />
   {label && (
-    <text x={x + 16} y={ly} font-size="12" font-weight="700" class="group-label mono">{label}{note && <tspan class="t-faint" font-weight="400" style="text-transform:none;letter-spacing:0"> · {note}</tspan>}</text>
+    <text x={x + 16} y={ly} font-size="12" font-weight="700" class="group-label mono">{label}{note && <tspan class="t-faint" dx="10" font-weight="400" style="text-transform:none;letter-spacing:0">{note}</tspan>}</text>
   )}
   <slot />
 </g>

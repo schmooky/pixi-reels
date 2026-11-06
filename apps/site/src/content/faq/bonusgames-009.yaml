@@ -1,7 +1,7 @@
 id: bonusgames-009
 group: bonusgames
 topic: cells-and-banners
-question: How do I run a trail / board-game bonus that hops across cells?
+question: How do I run a trail or board-game bonus that hops across cells?
 answer: Tween a token between cells using `getCellBounds` positions; the
   board-game logic is yours.
 links:

@@ -33,8 +33,6 @@ const groups = TOPIC_GROUPS.filter((g) => (topicsByGroup.get(g.id) ?? []).length
       <div class="max-w-3xl">
         <p class="motion-appear eyebrow">
           Mechanics
-          <span class="text-muted-foreground/60">/</span>
-          {TOPICS.length} pages
         </p>
         <h1 class="display mt-5 text-4xl sm:text-5xl lg:text-6xl">
           <span class="motion-slam block">Slot mechanics, grouped and live.</span>
@@ -52,7 +50,7 @@ const groups = TOPIC_GROUPS.filter((g) => (topicsByGroup.get(g.id) ?? []).length
       {groups.map((g, gi) => (
         <div id={g.id} class="scroll-mt-20">
           <div class="reveal max-w-3xl">
-            <p class="eyebrow">0{gi + 1} / {g.label}</p>
+            <p class="eyebrow">{g.label}</p>
             <h2 class="display mt-4 text-3xl sm:text-4xl">{g.description}</h2>
           </div>
           <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
