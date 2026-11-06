@@ -129,12 +129,26 @@ export const DEFAULT_CUES: ReelCues = {
   },
 };
 
-/** The cues a Hold & Win board gets: a kick per respin, a thud per cell, a pop per lock. */
+/**
+ * The cues a Hold & Win board gets: a soft kick per respin, a thud and then a
+ * ring for each coin, one win at the end.
+ *
+ * An empty cell stops without a sound. A thud for every free cell on a 110 ms
+ * wave was a dozen hits a respin, a rattle that buried the coins, and the
+ * coins are the news. `cell:landed` and `coin:locked` fire in the same batch,
+ * so the ring waits a beat instead of landing on the thud; `board:full` and
+ * `feature:end` do too, so the win plays once, on the end.
+ */
 export const DEFAULT_BOARD_CUES: BoardCues = {
-  respinStart: { play: 'spin', volume: 0.5 },
-  cellLanded: { play: 'reel-stop', volume: ({ hit }) => ({ base: hit ? 0.7 : 0.4, jitter: 0.08 }), pitch: { jitter: 0.05 } },
-  coinLocked: { play: 'pop', volume: 0.7, pitch: { base: 1.1, jitter: 0.06 } },
-  boardFull: { play: 'win' },
+  respinStart: { play: 'spin', volume: 0.35 },
+  cellLanded: {
+    play: 'reel-stop',
+    when: ({ hit }) => hit === true,
+    volume: { base: 0.75, jitter: 0.06 },
+    pitch: { jitter: 0.04 },
+    delay: 0.05,
+  },
+  coinLocked: { play: 'pop', volume: 0.5, pitch: { base: 1.15, jitter: 0.05 }, delay: 0.12 },
   featureEnd: { play: 'win', volume: 0.8 },
 };
 
