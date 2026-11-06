@@ -1,5 +1,27 @@
 # pixi-reels
 
+## 4.3.0
+
+### Minor Changes
+
+- [#278](https://github.com/schmooky/pixi-reels/pull/278) [`4f53570`](https://github.com/schmooky/pixi-reels/commit/4f5357030124c0866c0176d5661f8dfcb5513b6c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `attachReelSounds(reelSet, port, cues)` snaps a table of sound cues onto a reel set's events: a `spin` loop from `spin:start` to `spin:allLanded`, a `reelStop` one-shot per landing reel, an `anticipation` loop per teasing reel with a pitch that can climb by `order`, `skip`, `win`, `cascadeDestroy`, and `on` for any other event. `attachBoardSounds(board, port, cues)` is the same table over a Hold & Win board (`featureEnter`, `respinStart`, `cellLanded` with the cell and whether it hit, `coinLocked`, `boardFull`, `featureEnd`, `on`). A cue can wait `delay` seconds after its beat (a thud timed to the bottom of the landing bounce). Every cue sees the active `speed`, its `profile`, and the spin's `mode` (`reelSet.spinMode`, new: `'standard'` or `'cascade'`) and can stay quiet with `when(ctx)`. Loops fade in and out; `destroy()` detaches and stops everything. `zvukPort(engine)` adapts a `@schmooky/zvuk` engine (sounds or variants by name, a missing name warns once) with no dependency on zvuk.
+
+### Patch Changes
+
+- [#278](https://github.com/schmooky/pixi-reels/pull/278) [`4f53570`](https://github.com/schmooky/pixi-reels/commit/4f5357030124c0866c0176d5661f8dfcb5513b6c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Change: the default Hold & Win landing wave steps 110 ms per cell instead of 70, so a board lands as a readable wave rather than a near-simultaneous drop. Boards that set their own `stagger` or `speeds` are unaffected.
+
+- [#278](https://github.com/schmooky/pixi-reels/pull/278) [`4f53570`](https://github.com/schmooky/pixi-reels/commit/4f5357030124c0866c0176d5661f8dfcb5513b6c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `CARD_DECK` entries carry an optional `textColor`, so a deck spread together with `WILD_CARD` reads `card.textColor` without a type error.
+
+- [#278](https://github.com/schmooky/pixi-reels/pull/278) [`4f53570`](https://github.com/schmooky/pixi-reels/commit/4f5357030124c0866c0176d5661f8dfcb5513b6c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the `hud` layer of `debugOverlay` no longer covers the reels. Its per-reel plaque now sits above the mask (and above the buffer cells and feed markers drawn there) instead of inside its top-left corner, so it grows the reel set's bounds the way the `metrics` and `timeline` panels below it do: fit your camera after turning it on.
+
+- [#278](https://github.com/schmooky/pixi-reels/pull/278) [`4f53570`](https://github.com/schmooky/pixi-reels/commit/4f5357030124c0866c0176d5661f8dfcb5513b6c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Change: the built-in speed presets land with a short, firm bounce instead of a long spring. NORMAL overshoots 22 px over 220 ms (was 56 px over 600 ms), TURBO 14 px over 140 ms (was 42 over 200), SUPER_TURBO 8 px over 90 ms (was 14 over 120). A custom profile keeps whatever it sets.
+
+- [#278](https://github.com/schmooky/pixi-reels/pull/278) [`4f53570`](https://github.com/schmooky/pixi-reels/commit/4f5357030124c0866c0176d5661f8dfcb5513b6c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `zvukPort` loops crossfade 30 ms at their seam, so an encoded loop that does not end on a zero crossing, or an AAC loop with a padded tail, no longer clicks or gaps each time it wraps. `ZvukPlayOptions` gains `loopCrossfade`.
+
+- [#278](https://github.com/schmooky/pixi-reels/pull/278) [`4f53570`](https://github.com/schmooky/pixi-reels/commit/4f5357030124c0866c0176d5661f8dfcb5513b6c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: a `runCascade()`, `refill()` or `expand()` that settled after its reel set was destroyed threw `this._events.off is not a function` instead of resolving. `ReelSet` kept its typed bus in a field that shadowed the PixiJS Container's own listener store; it now lives under its own name, so `destroy()` no longer breaks that cleanup.
+
+- [#278](https://github.com/schmooky/pixi-reels/pull/278) [`4f53570`](https://github.com/schmooky/pixi-reels/commit/4f5357030124c0866c0176d5661f8dfcb5513b6c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Change: `DebugPlaque` plates, the metrics panel and the overlay's cell and block outlines draw square corners by default. `radius` on `DebugPlaque` still rounds a plate on request, and `'pill'` still makes a pill.
+
 ## 4.2.0
 
 ### Minor Changes
