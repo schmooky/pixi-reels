@@ -16,8 +16,8 @@ const TEARDOWN: [string, string][] = [
   ['_symbolFactory.destroy()', 'the ObjectPool disposes every idle symbol'],
   ['_viewport.destroy()', 'promotedLayer.detachAll() first, then super.destroy({ children: true })'],
   ['_pins.clear()', 'the pin map is emptied; no events'],
-  ["_events.emit('destroyed')", 'expand() listens for this to drop its abort listener'],
-  ['_events.removeAllListeners()', 'the bus is gone after this line'],
+  ["_bus.emit('destroyed')", 'expand() listens for this to drop its abort listener'],
+  ['_bus.removeAllListeners()', 'the bus is gone after this line'],
   ['super.destroy({ children: true })', 'the PixiJS Container teardown'],
 ];
 const TB_X = 60;
