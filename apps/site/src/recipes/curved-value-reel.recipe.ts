@@ -56,6 +56,9 @@ export default async function recipe({ app }: RecipeContext): Promise<RecipeResu
           fontWeight: '700',
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           fill: 0xfff6d5,
+          // A dark outline keeps the pale values legible on the light stage
+          // as well as the dark one.
+          stroke: { color: 0x1c1610, width: 8, join: 'round' },
           letterSpacing: 1,
         },
       });

@@ -345,8 +345,8 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]">
       <div className="flex flex-col overflow-hidden rounded-sm border border-border bg-card">
-        <div className="theme-ink relative flex-1 min-h-[480px]">
-          <div ref={canvasHostRef} className="h-full w-full bg-[#111114]" />
+        <div className="relative flex-1 min-h-[480px]">
+          <div ref={canvasHostRef} className="h-full w-full bg-stage" />
         </div>
         <div className="flex items-start gap-2 border-t border-border/60 bg-background/40 px-3 py-2 text-xs">
           {error ? (

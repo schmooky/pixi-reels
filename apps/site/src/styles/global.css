@@ -58,6 +58,10 @@
     --code-border: 240 6% 16%;
     --code-fg: 0 0% 93%;
     --code-muted: 0 0% 62%;
+
+    /* The surface a live canvas draws on: reel wells, recipe demos, Studio.
+       It follows the theme like the page around it. */
+    --stage: 240 5% 93%;
   }
 
   .dark {
@@ -100,6 +104,8 @@
     --code-border: 240 4% 20%;
     --code-fg: 0 0% 93%;
     --code-muted: 0 0% 62%;
+
+    --stage: 240 8% 7%;
   }
 
   * { @apply border-border; }
@@ -217,35 +223,6 @@
     background:
       radial-gradient(900px 300px at 50% 40%, hsl(0 0% 100% / 0.05), transparent 60%),
       hsl(var(--code-bg));
-  }
-
-  /* A block that is ink in BOTH themes (the landing hero). It re-declares the
-     dark token set, so every token-driven class inside (bg-card, text-muted-
-     foreground, border-border, the CopyCommand pill) renders dark without a
-     `dark:` variant. */
-  .theme-ink {
-    color-scheme: dark;
-    --background: 240 10% 4.5%;
-    --foreground: 0 0% 98%;
-    --card: 240 8% 7%;
-    --card-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 68%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --border: 240 4% 18%;
-    --input: 240 4% 18%;
-    --ring: 76 100% 58%;
-    --brand: 76 100% 58%;
-    --brand-text: 76 100% 62%;
-    --code-bg: 240 8% 7%;
-    --code-border: 240 4% 20%;
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
   }
 
   /* Section eyebrow: a mono label in the brand hue. */

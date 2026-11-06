@@ -87,7 +87,7 @@ export function tapToSpin(app: Application, options: TapToSpinOptions): TapToSpi
 
   let spinning = false;
   let destroyed = false;
-  const plaque: DebugPlaque | null = cue ? readout.plaque({ text: 'tap to spin', fillAlpha: 0.55 }) : null;
+  const plaque: DebugPlaque | null = cue ? readout.plaque({ text: 'tap to spin', fillAlpha: 0.85 }) : null;
   // The cue lives in the strip in screen space. A board host fits the whole
   // stage (scale and offset) to the canvas, and the cue, a stage child, used
   // to move and shrink with it onto the HUD it was meant to sit under; undo
@@ -124,7 +124,7 @@ export function tapToSpin(app: Application, options: TapToSpinOptions): TapToSpi
       return;
     }
     spinning = true;
-    if (plaque) { plaque.text = 'tap to skip'; plaque.alpha = 0.6; }
+    if (plaque) { plaque.text = 'tap to skip'; plaque.alpha = 0.8; }
     try {
       await spin();
     } catch (err) {

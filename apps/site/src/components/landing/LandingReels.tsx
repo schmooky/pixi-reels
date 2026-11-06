@@ -191,7 +191,9 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
   const root = new Container();
   const well = new Graphics();
   // Dividers run along the travel axis between reels, fading out at both
-  // ends, so the eye keeps the column without ever seeing a cell.
+  // ends, so the eye keeps the column without ever seeing a cell. A mid grey
+  // reads on the light stage and the dark one, so a theme switch needs no
+  // redraw.
   const vertical = cfg.orientation === 'vertical';
   const reelPitch = cfg.cell + cfg.gap;
   const dividerLen = (vertical ? gridH : gridW) * 0.88;
@@ -201,9 +203,9 @@ async function mount(host: HTMLDivElement, cfg: VariantConfig): Promise<Mounted>
     start: { x: 0, y: 0 },
     end: vertical ? { x: 0, y: 1 } : { x: 1, y: 0 },
     colorStops: [
-      { offset: 0, color: 'rgba(255,255,255,0)' },
-      { offset: 0.5, color: 'rgba(255,255,255,0.3)' },
-      { offset: 1, color: 'rgba(255,255,255,0)' },
+      { offset: 0, color: 'rgba(128,128,136,0)' },
+      { offset: 0.5, color: 'rgba(128,128,136,0.5)' },
+      { offset: 1, color: 'rgba(128,128,136,0)' },
     ],
     textureSpace: 'local',
   });

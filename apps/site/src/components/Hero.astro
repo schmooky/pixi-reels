@@ -5,12 +5,7 @@ import { LandingReels, landingAspect } from './landing/LandingReels.tsx';
 
 const aspect = landingAspect('hero');
 ---
-{/*
-  The hero is ink in both themes (`.theme-ink` re-declares the dark tokens),
-  so the reel well reads as part of the page instead of a dark box on white,
-  and the one brand hue has something to hit against.
-*/}
-<section class="theme-ink relative overflow-hidden border-b border-border">
+<section class="relative overflow-hidden border-b border-border">
   <div class="container relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14 lg:py-24">
     <div class="flex min-w-0 flex-col items-start">
       <p class="motion-appear eyebrow" style="--motion-delay: 500ms">
@@ -19,7 +14,7 @@ const aspect = landingAspect('hero');
 
       <h1 class="display mt-5 text-[clamp(3.25rem,7.4vw,6rem)] leading-[0.92]">
         <span class="motion-slam block">Slot reels,</span>
-        <span class="motion-slam block text-brand" style="--motion-delay: 133ms">ready to spin.</span>
+        <span class="motion-slam block text-brand-text" style="--motion-delay: 133ms">ready to spin.</span>
       </h1>
 
       <p class="motion-appear mt-7 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl" style="--motion-delay: 420ms">
@@ -74,9 +69,12 @@ const aspect = landingAspect('hero');
 </section>
 
 <style>
-  /* Same surface as every code-ish element (global.css --code-bg). */
+  /* The canvas surface (global.css --stage), light or dark with the page. */
   .hero-well {
-    background: #111114;
+    background: hsl(var(--stage));
+    box-shadow: 0 0 0 1px hsl(var(--border)), 0 30px 80px -30px hsl(0 0% 0% / 0.25);
+  }
+  :global(.dark) .hero-well {
     box-shadow: 0 0 0 1px hsl(var(--code-border)), 0 30px 80px -30px hsl(0 0% 0% / 0.8);
   }
   /* Hide the skeleton once the React island has rendered its host. */

@@ -312,7 +312,7 @@ export function RecipeRunner({ code, height = 300, onContextLost }: RecipeRunner
     */}
     <div
       data-state={error ? 'error' : ready ? 'ready' : 'loading'}
-      className="relative flex min-w-0 flex-1 cursor-pointer select-none items-center justify-center bg-[#111114]"
+      className="relative flex min-w-0 flex-1 cursor-pointer select-none items-center justify-center bg-stage"
       style={{ height }}
     >
         <div
