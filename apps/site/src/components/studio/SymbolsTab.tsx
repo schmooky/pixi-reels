@@ -8,7 +8,7 @@ import type {
   SymbolConfig,
   SymbolType,
 } from '@/lib/studio/types.js';
-import { CARD_DECK, WILD_CARD } from 'pixi-reels';
+import { GENERIC_SYMBOL_IDS, GENERIC_SYMBOL_NAMES } from '@pixi-reels/kit';
 import { SpineForm } from './SpineForm.tsx';
 
 interface Props {
@@ -526,20 +526,11 @@ function useAssetPreview(hash: string | null): string | null {
 }
 
 // ── Built-in symbols section ────────────────────────────────────────
-// Pure-Graphics card symbols pre-registered by every Studio environment
-// (and every recipe, RecipeRunner, and ShareViewer too). The user
-// doesn't upload these. they're imported in code via `CARD_DECK` and
-// `WILD_CARD`. Surfacing them here so the Symbols tab doesn't feel
-// empty on first visit and the user knows what's already available.
-
-const BUILT_IN_CARDS: ReadonlyArray<{ id: string; color: number; label: string; textColor?: number }> = [
-  ...CARD_DECK,
-  WILD_CARD,
-];
-
-function hex(n: number): string {
-  return `#${n.toString(16).padStart(6, '0')}`;
-}
+// The generic sticker set the default Studio code spins: eleven stickers,
+// registered by id with `StickerSymbol` and loaded with
+// `createAssets().genericSymbols()`. The user doesn't upload these.
+// Surfacing them here so the Symbols tab shows the art that is already
+// there on first visit.
 
 function BuiltInSymbols(): JSX.Element {
   return (
@@ -549,30 +540,26 @@ function BuiltInSymbols(): JSX.Element {
           <Lock size={11} className="text-muted-foreground" />
           <span className="font-semibold">Built-in</span>
           <span className="text-muted-foreground">
-            cards, from <code className="rounded-sm bg-muted/60 px-1 py-0.5 font-mono text-[10px]">CARD_DECK</code> and{' '}
-            <code className="rounded-sm bg-muted/60 px-1 py-0.5 font-mono text-[10px]">WILD_CARD</code>
+            stickers, from <code className="rounded-sm bg-muted/60 px-1 py-0.5 font-mono text-[10px]">GENERIC_SYMBOL_IDS</code>
           </span>
         </div>
-        <span className="text-[10px] text-muted-foreground/60">{BUILT_IN_CARDS.length}</span>
+        <span className="text-[10px] text-muted-foreground/60">{GENERIC_SYMBOL_IDS.length}</span>
       </summary>
       <div className="border-t border-border/60 p-3">
-        <div className="grid grid-cols-9 gap-1.5">
-          {BUILT_IN_CARDS.map((card) => (
-            <div
-              key={card.id}
-              className="flex aspect-square items-center justify-center rounded-sm border border-black/20 text-[11px] font-bold"
-              style={{
-                backgroundColor: hex(card.color),
-                color: hex(card.textColor ?? 0xffffff),
-              }}
-              title={`id: "${card.id}". register with CardSymbol`}
+        <div className="grid grid-cols-6 gap-1.5">
+          {GENERIC_SYMBOL_IDS.map((id) => (
+            <figure
+              key={id}
+              className="flex flex-col items-center gap-1 rounded-sm border border-border/60 bg-black/20 p-1"
+              title={`id "${id}", ${GENERIC_SYMBOL_NAMES[id]}. Register with StickerSymbol`}
             >
-              {card.label}
-            </div>
+              <img src={`/generic-symbols/${id}.webp`} alt={GENERIC_SYMBOL_NAMES[id]} className="aspect-square w-full object-contain" loading="lazy" />
+              <figcaption className="font-mono text-[10px] text-muted-foreground">{id}</figcaption>
+            </figure>
           ))}
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          Graphics-only debug symbols. always available in the Code tab. Add custom sprites / Spine below to override or extend.
+          The set the default code spins, loaded with createAssets().genericSymbols(). Sprites and Spine you upload below reach your code as userSymbols.
         </p>
       </div>
     </details>
