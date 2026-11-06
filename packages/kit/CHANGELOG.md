@@ -1,5 +1,15 @@
 # @pixi-reels/kit
 
+## 0.1.2
+
+### Patch Changes
+
+- [#296](https://github.com/schmooky/pixi-reels/pull/296) [`230fb61`](https://github.com/schmooky/pixi-reels/commit/230fb61b951c93570bce6a6434695aaab5ee3788) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the generic sticker symbols no longer speckle on phones. `loadGenericSymbols` picks the half-size copies whenever the cells come out under about 150 device pixels, which covers small 2x and 3x screens as well as 1x ones. Before, only screens under 1.5x got them.
+
+- [#291](https://github.com/schmooky/pixi-reels/pull/291) [`4da6723`](https://github.com/schmooky/pixi-reels/commit/4da6723e8702ace67cdfa0fd8ef614e2ff8376f3) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the `tapToSpin` cue reads on a light canvas background. Its plate is now nearly opaque, and the "tap to skip" state fades to 80% instead of 60%.
+- Updated dependencies [[`4af027f`](https://github.com/schmooky/pixi-reels/commit/4af027f79b4aadf1b27567ab810641aa1e63493e), [`9f0b508`](https://github.com/schmooky/pixi-reels/commit/9f0b508fd8ec9534a1aaa98860065cd7b19b9c24)]:
+  - pixi-reels@4.4.0
+
 ## 0.1.1
 
 ### Patch Changes
