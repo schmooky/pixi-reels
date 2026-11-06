@@ -41,6 +41,39 @@ const ogImage = image ?? ogUrlForPath(path ?? Astro.url.pathname);
         document.documentElement.classList.add('js');
       })();
     </script>
+    {/*
+      A page the browser kept from before a deploy names island scripts
+      (`/_astro/<name>.<hash>.js`) that the deploy removed. The host answers a
+      missing file with the HTML page and status 200, so the island's import
+      fails and it never renders: the landing reels stayed on "Warming up the
+      reels". When an island script fails to load, reload once to fetch the
+      current page.
+    */}
+    <script is:inline>
+      (() => {
+        const KEY = 'stale-island-reload';
+        // Astro (7.3+) dispatches this from the island after its own retry
+        // of the import failed; a failure inside the component is left alone.
+        document.addEventListener('astro:hydration-error', (event) => {
+          const error = event.detail && event.detail.error;
+          const message = String((error && error.message) || error || '');
+          // Chrome / Edge, Safari, Firefox wordings for a failed dynamic import.
+          if (!/dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(message)) return;
+          // At most one reload a minute, so a script that is broken for good
+          // shows its error instead of looping. Without sessionStorage there is
+          // no way to tell, so no reload.
+          try {
+            const last = Number(sessionStorage.getItem(KEY) || 0);
+            if (Date.now() - last < 60000) return;
+            sessionStorage.setItem(KEY, String(Date.now()));
+          } catch {
+            return;
+          }
+          console.warn('pixi-reels: an island script failed to load; reloading once for the current page.', event.detail.componentUrl);
+          location.reload();
+        });
+      })();
+    </script>
     <SEO
       title={title}
       description={description}
