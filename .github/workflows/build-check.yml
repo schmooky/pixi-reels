@@ -47,12 +47,13 @@ jobs:
         # rebuilt it into its own output and threw it away, so the file sat at
         # v2.8.0 through a 3.0.0 release. Fix a failure by regenerating and
         # committing:
-        #   pnpm site:build && git add apps/site/public/llms.txt apps/site/public/llms-full.txt
-        run: git diff --exit-code -- apps/site/public/llms.txt apps/site/public/llms-full.txt
+        #   pnpm site:build && git add apps/site/public/llms*.txt
+        # llms-faq.txt and llms-api.txt are the two lists the index links to.
+        run: git diff --exit-code -- apps/site/public/llms.txt apps/site/public/llms-full.txt apps/site/public/llms-faq.txt apps/site/public/llms-api.txt
 
-      - name: llms-full.txt is tracked
+      - name: llms-full.txt and the two lists are tracked
         # git diff ignores an untracked file, so a missing commit would pass.
-        run: git ls-files --error-unmatch apps/site/public/llms-full.txt
+        run: git ls-files --error-unmatch apps/site/public/llms-full.txt apps/site/public/llms-faq.txt apps/site/public/llms-api.txt
 
       - name: Bundle size check
         # Fails the PR when the library's gzipped dist grows more than

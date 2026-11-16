@@ -1,0 +1,415 @@
+# pixi-reels FAQ
+
+> Every answered question on https://pixi-reels.schmooky.dev/faq/. Each link is the answer's page; replace the trailing slash with `.md` for the answer as markdown.
+
+## Getting started
+
+- [How do I create a reel set and show it on screen?](https://pixi-reels.schmooky.dev/faq/basics-001/)
+- [How do I set how many reels (columns) the game has?](https://pixi-reels.schmooky.dev/faq/basics-002/)
+- [How do I set how many cells are visible?](https://pixi-reels.schmooky.dev/faq/basics-003/)
+- [How do I set the pixel size of a single symbol cell?](https://pixi-reels.schmooky.dev/faq/basics-004/)
+- [How do I add a gap between reels and between rows?](https://pixi-reels.schmooky.dev/faq/basics-005/)
+- [How do I put specific symbols on the board at startup?](https://pixi-reels.schmooky.dev/faq/basics-006/)
+- [How do I register the list of symbol ids my game uses?](https://pixi-reels.schmooky.dev/faq/basics-007/)
+- [How do I show a static board with no spinning at all?](https://pixi-reels.schmooky.dev/faq/basics-008/)
+- [How do I attach the reel set to my existing PixiJS app?](https://pixi-reels.schmooky.dev/faq/basics-009/)
+- [How do I center the reels inside the game canvas?](https://pixi-reels.schmooky.dev/faq/basics-010/)
+- [How do I scale the whole board to fit different screen sizes?](https://pixi-reels.schmooky.dev/faq/basics-011/)
+- [How do I change the symbols after the board is already built?](https://pixi-reels.schmooky.dev/faq/basics-012/)
+- [How do I drive the reels from my own game loop or ticker?](https://pixi-reels.schmooky.dev/faq/basics-013/)
+- [How do I clean up and destroy the reel set when leaving the screen?](https://pixi-reels.schmooky.dev/faq/basics-014/)
+
+## Symbols
+
+- [How do I add a brand-new symbol type to the game?](https://pixi-reels.schmooky.dev/faq/symbols-001/)
+- [How do I make a symbol from a single texture/sprite?](https://pixi-reels.schmooky.dev/faq/symbols-002/)
+- [How do I make a symbol from a sprite-sheet animation?](https://pixi-reels.schmooky.dev/faq/symbols-003/)
+- [How do I make a symbol from a Spine skeleton?](https://pixi-reels.schmooky.dev/faq/symbols-004/)
+- [How do I render nothing for an empty cell?](https://pixi-reels.schmooky.dev/faq/symbols-005/)
+- [How do I set how often each symbol appears (weights)?](https://pixi-reels.schmooky.dev/faq/symbols-006/)
+- [How do I make one symbol much rarer than the rest?](https://pixi-reels.schmooky.dev/faq/symbols-007/)
+- [How do I anchor a symbol at the cell center vs the top-left?](https://pixi-reels.schmooky.dev/faq/symbols-008/)
+- [How do I resize a symbol whenever the cell size changes?](https://pixi-reels.schmooky.dev/faq/symbols-009/)
+- [How do I swap a symbol to a blurred texture while spinning?](https://pixi-reels.schmooky.dev/faq/symbols-010/)
+- [How do I attach custom data (a value, a tier) to a symbol instance?](https://pixi-reels.schmooky.dev/faq/symbols-011/)
+- [How do I read which symbol is currently shown in a given cell?](https://pixi-reels.schmooky.dev/faq/symbols-012/)
+- [How do I let a symbol's art overflow its cell without clipping?](https://pixi-reels.schmooky.dev/faq/symbols-013/)
+- [How do I give two different ids the same artwork?](https://pixi-reels.schmooky.dev/faq/symbols-014/)
+- [How do I tint or recolor a symbol per spin (e.g. a charged state)?](https://pixi-reels.schmooky.dev/faq/symbols-015/)
+
+## Spinning, speed & stopping
+
+- [How do I start a spin?](https://pixi-reels.schmooky.dev/faq/spin-001/)
+- [How do I stop the reels on a result?](https://pixi-reels.schmooky.dev/faq/spin-002/)
+- [How do I know when a spin has completely finished?](https://pixi-reels.schmooky.dev/faq/spin-003/)
+- [How do I stagger reel starts so they begin one after another?](https://pixi-reels.schmooky.dev/faq/spin-004/)
+- [How do I make the reels stop left to right?](https://pixi-reels.schmooky.dev/faq/spin-005/)
+- [How do I add a turbo (fast-spin) mode?](https://pixi-reels.schmooky.dev/faq/spin-006/)
+- [How do I slam-stop the reels on a second button press?](https://pixi-reels.schmooky.dev/faq/spin-007/)
+- [How do I boost only the current spin without changing the speed profile?](https://pixi-reels.schmooky.dev/faq/spin-008/)
+- [How do I control the bounce/overshoot when a reel lands?](https://pixi-reels.schmooky.dev/faq/spin-009/)
+- [How do I hold some reels still while the others spin?](https://pixi-reels.schmooky.dev/faq/spin-010/)
+- [How do I respin just one reel?](https://pixi-reels.schmooky.dev/faq/spin-011/)
+- [How do I abort a spin that is already in flight?](https://pixi-reels.schmooky.dev/faq/spin-012/)
+- [How do I block a new spin until all animations finish?](https://pixi-reels.schmooky.dev/faq/spin-013/)
+- [How do I add a timeout/watchdog if the server never sends a result?](https://pixi-reels.schmooky.dev/faq/spin-014/)
+- [How do I keep the reels animating correctly on a hidden/background tab?](https://pixi-reels.schmooky.dev/faq/spin-015/)
+
+## Results & forcing outcomes
+
+- [How do I tell the reels exactly what grid to land on?](https://pixi-reels.schmooky.dev/faq/result-001/)
+- [How do I force a specific outcome for a demo or trailer?](https://pixi-reels.schmooky.dev/faq/result-002/)
+- [How do I read the final visible grid after a spin?](https://pixi-reels.schmooky.dev/faq/result-003/)
+- [How do I apply a result that came from my server?](https://pixi-reels.schmooky.dev/faq/result-004/)
+- [How do I land a symbol just above the visible window (in the buffer)?](https://pixi-reels.schmooky.dev/faq/result-005/)
+- [How do I land a tall symbol partially off-screen so only its edge shows?](https://pixi-reels.schmooky.dev/faq/result-006/)
+- [How do I use a seeded RNG so a spin is exactly reproducible?](https://pixi-reels.schmooky.dev/faq/result-007/)
+- [How do I guarantee at least one specific symbol lands this spin?](https://pixi-reels.schmooky.dev/faq/result-008/)
+- [How do I land a different row count on each reel in one result?](https://pixi-reels.schmooky.dev/faq/result-009/)
+- [How do I send a structured result that survives JSON or postMessage?](https://pixi-reels.schmooky.dev/faq/result-010/)
+- [How do I keep the visual result separate from the payout math?](https://pixi-reels.schmooky.dev/faq/result-011/)
+- [How do I replay the exact same spin again for a bug report?](https://pixi-reels.schmooky.dev/faq/result-012/)
+
+## Reel motion & board shape
+
+- [How do I make symbols drop in from above instead of scrolling?](https://pixi-reels.schmooky.dev/faq/motion-001/)
+- [How do I make a reel land with a bounce?](https://pixi-reels.schmooky.dev/faq/motion-002/)
+- [How do I stagger the fall of individual symbols into place?](https://pixi-reels.schmooky.dev/faq/motion-003/)
+- [How do I make symbols rise up from below (roll-up)?](https://pixi-reels.schmooky.dev/faq/motion-004/)
+- [How do I spin one reel up and another down (mixed directions)?](https://pixi-reels.schmooky.dev/faq/motion-005/)
+- [How do I peek the next symbol from above before it lands?](https://pixi-reels.schmooky.dev/faq/motion-006/)
+- [How do I nudge a reel by one position after it stopped?](https://pixi-reels.schmooky.dev/faq/motion-007/)
+- [How do I add rows to a reel at runtime (the board grows)?](https://pixi-reels.schmooky.dev/faq/motion-008/)
+- [How do I add a whole new reel mid-feature (Infinity-Reels style)?](https://pixi-reels.schmooky.dev/faq/motion-009/)
+- [How do I make reels horizontal instead of vertical?](https://pixi-reels.schmooky.dev/faq/motion-010/)
+- [How do I fit two half-symbols in one cell (split symbols)?](https://pixi-reels.schmooky.dev/faq/motion-011/)
+- [How do I keep a tall block intact while everything else scrolls?](https://pixi-reels.schmooky.dev/faq/motion-012/)
+
+## Anticipation
+
+- [How do I slow the last reel down when a big win is possible?](https://pixi-reels.schmooky.dev/faq/antic-001/)
+- [How do I trigger anticipation only when 2 scatters are already in?](https://pixi-reels.schmooky.dev/faq/antic-002/)
+- [How do I fake a near-miss with a scatter just above the line?](https://pixi-reels.schmooky.dev/faq/antic-003/)
+- [How do I play a teaser sound/glow on the anticipating reel?](https://pixi-reels.schmooky.dev/faq/antic-004/)
+- [How do I extend the spin time on specific reels for tension?](https://pixi-reels.schmooky.dev/faq/antic-005/)
+- [How do I show an "almost" frame where the symbol overshoots then settles?](https://pixi-reels.schmooky.dev/faq/antic-006/)
+- [How do I anticipate the final cell when one more coin means the grand?](https://pixi-reels.schmooky.dev/faq/antic-007/)
+- [How do I chain anticipation across multiple reels (rolling tension)?](https://pixi-reels.schmooky.dev/faq/antic-008/)
+- [How do I cancel anticipation cleanly if the tease misses?](https://pixi-reels.schmooky.dev/faq/antic-009/)
+- [How do I make the anticipation reel speed up briefly before slowing?](https://pixi-reels.schmooky.dev/faq/antic-010/)
+- [How do I run built-in anticipation on a single cell, the way the engine does it for a whole reel?](https://pixi-reels.schmooky.dev/faq/antic-011/)
+
+## Win presentation
+
+- [How do I highlight the winning symbols and dim the rest?](https://pixi-reels.schmooky.dev/faq/wins-001/)
+- [How do I draw a payline across the winning cells?](https://pixi-reels.schmooky.dev/faq/wins-002/)
+- [How do I play each symbol's own win animation?](https://pixi-reels.schmooky.dev/faq/wins-003/)
+- [How do I show winning cells for a ways-to-win game (no lines)?](https://pixi-reels.schmooky.dev/faq/wins-004/)
+- [How do I cycle through multiple winning lines one at a time?](https://pixi-reels.schmooky.dev/faq/wins-005/)
+- [How do I draw connection lines between a connected cluster?](https://pixi-reels.schmooky.dev/faq/wins-006/)
+- [How do I evaluate pays both ways (left-to-right and right-to-left)?](https://pixi-reels.schmooky.dev/faq/wins-007/)
+- [How do I show a small/medium/big/mega win celebration by tier?](https://pixi-reels.schmooky.dev/faq/wins-008/)
+- [How do I count the win amount up with a rolling number?](https://pixi-reels.schmooky.dev/faq/wins-009/)
+- [How do I zoom and scale the board into a big-win banner?](https://pixi-reels.schmooky.dev/faq/wins-010/)
+- [How do I skip the win presentation when the player taps?](https://pixi-reels.schmooky.dev/faq/wins-011/)
+- [How do I keep the win highlight in sync with the win sound?](https://pixi-reels.schmooky.dev/faq/wins-012/)
+
+## Cascades & tumbling
+
+- [How do I remove the winning symbols and drop new ones in?](https://pixi-reels.schmooky.dev/faq/cascade-001/)
+- [How do I run a tumble sequence until there are no more wins?](https://pixi-reels.schmooky.dev/faq/cascade-002/)
+- [How do I play a destroy/pop animation on cleared symbols?](https://pixi-reels.schmooky.dev/faq/cascade-003/)
+- [How do I make survivors fall down into the gaps?](https://pixi-reels.schmooky.dev/faq/cascade-004/)
+- [How do I control the fall delay between columns?](https://pixi-reels.schmooky.dev/faq/cascade-005/)
+- [How do I increment a multiplier on each cascade step?](https://pixi-reels.schmooky.dev/faq/cascade-006/)
+- [How do I keep a cluster-pays board (8+ connected) tumbling?](https://pixi-reels.schmooky.dev/faq/cascade-007/)
+- [How do I drop multiplier orbs that sum up at the end of the tumble?](https://pixi-reels.schmooky.dev/faq/cascade-008/)
+- [How do I spin once and then cascade (spin-then-tumble)?](https://pixi-reels.schmooky.dev/faq/cascade-009/)
+- [How do I let a special symbol survive the cascade and stick?](https://pixi-reels.schmooky.dev/faq/cascade-010/)
+- [How do I show the win presenter between cascade steps?](https://pixi-reels.schmooky.dev/faq/cascade-011/)
+- [How do I slam through all remaining cascades on a tap?](https://pixi-reels.schmooky.dev/faq/cascade-012/)
+- [How do I order the refills (which column fills first)?](https://pixi-reels.schmooky.dev/faq/cascade-013/)
+
+## Wilds
+
+- [How do I make a wild stay stuck across the next spins?](https://pixi-reels.schmooky.dev/faq/wilds-001/)
+- [How do I make a wild expand to fill its whole reel?](https://pixi-reels.schmooky.dev/faq/wilds-002/)
+- [How do I make a wild walk one reel left each respin?](https://pixi-reels.schmooky.dev/faq/wilds-003/)
+- [How do I put a multiplier number on a wild?](https://pixi-reels.schmooky.dev/faq/wilds-004/)
+- [How do I randomly drop wilds onto the board before the spin?](https://pixi-reels.schmooky.dev/faq/wilds-005/)
+- [How do I expand a single special symbol to a full reel in free spins (Book style)?](https://pixi-reels.schmooky.dev/faq/wilds-006/)
+- [How do I keep a sticky wild for a fixed number of spins then drop it?](https://pixi-reels.schmooky.dev/faq/wilds-007/)
+- [How do I stack multiplier wilds so their values multiply together?](https://pixi-reels.schmooky.dev/faq/wilds-008/)
+- [How do I spawn a wild from a winning combo (chain-reaction wild)?](https://pixi-reels.schmooky.dev/faq/wilds-009/)
+- [How do I make a walking wild leave a multiplier trail behind it?](https://pixi-reels.schmooky.dev/faq/wilds-010/)
+- [How do I animate a wild crawling across reels along a path?](https://pixi-reels.schmooky.dev/faq/wilds-011/)
+- [How do I turn a whole reel wild for the duration of a feature?](https://pixi-reels.schmooky.dev/faq/wilds-012/)
+
+## Sticky cells & pins
+
+- [How do I lock a single cell to a symbol so it survives spins?](https://pixi-reels.schmooky.dev/faq/pins-001/)
+- [How do I unlock a pinned cell again?](https://pixi-reels.schmooky.dev/faq/pins-002/)
+- [How do I pin a cell for only N spins (a TTL)?](https://pixi-reels.schmooky.dev/faq/pins-003/)
+- [How do I store a value/payload on a pinned cell?](https://pixi-reels.schmooky.dev/faq/pins-004/)
+- [How do I read all currently pinned cells?](https://pixi-reels.schmooky.dev/faq/pins-005/)
+- [How do I move a pin from one cell to another with animation?](https://pixi-reels.schmooky.dev/faq/pins-006/)
+- [How do I keep a pin in place when the board reshapes (MultiWays)?](https://pixi-reels.schmooky.dev/faq/pins-007/)
+- [How do I make a pin migrate back to its origin row when there is room?](https://pixi-reels.schmooky.dev/faq/pins-008/)
+- [How do I override the spin result so pinned cells always win out?](https://pixi-reels.schmooky.dev/faq/pins-009/)
+- [How do I animate a pin landing differently from a normal symbol?](https://pixi-reels.schmooky.dev/faq/pins-010/)
+
+## Big and colossal symbols
+
+- [How do I place a 2x2 symbol on the board?](https://pixi-reels.schmooky.dev/faq/big-001/)
+- [How do I make a 3x3 colossal symbol overlay the grid?](https://pixi-reels.schmooky.dev/faq/big-002/)
+- [How do I make a 1x3 tall bar symbol?](https://pixi-reels.schmooky.dev/faq/big-003/)
+- [How do I stop a big symbol from being placed by random fill?](https://pixi-reels.schmooky.dev/faq/big-004/)
+- [How do I land a tall block with only its bottom cell visible?](https://pixi-reels.schmooky.dev/faq/big-005/)
+- [How do I scale the big symbol's art to fill its whole block?](https://pixi-reels.schmooky.dev/faq/big-006/)
+- [How do I hold a big symbol while the rest of the board respins?](https://pixi-reels.schmooky.dev/faq/big-007/)
+- [How do I tumble a big symbol down through the cascade intact?](https://pixi-reels.schmooky.dev/faq/big-008/)
+- [How do I split a big symbol into single symbols on a win?](https://pixi-reels.schmooky.dev/faq/big-009/)
+- [How do I read the bounds of a big symbol block for an overlay?](https://pixi-reels.schmooky.dev/faq/big-010/)
+- [How do I clip a big symbol that lands past the top or bottom edge?](https://pixi-reels.schmooky.dev/faq/big-011/)
+
+## MultiWays & Megaways
+
+- [How do I let each reel land a different number of rows?](https://pixi-reels.schmooky.dev/faq/mways-001/)
+- [How do I set a min and max row count per reel?](https://pixi-reels.schmooky.dev/faq/mways-002/)
+- [How do I compute and show the current ways count?](https://pixi-reels.schmooky.dev/faq/mways-003/)
+- [How do I animate a reel growing from 2 to 7 rows mid-spin?](https://pixi-reels.schmooky.dev/faq/mways-004/)
+- [How do I keep symbol size consistent as the row count changes?](https://pixi-reels.schmooky.dev/faq/mways-005/)
+- [How do I run a cascade on a MultiWays board?](https://pixi-reels.schmooky.dev/faq/mways-006/)
+- [How do I add a top horizontal reel (extra strip above the board)?](https://pixi-reels.schmooky.dev/faq/mways-007/)
+- [How do I keep a pyramid (fixed jagged shape) instead of random cell counts?](https://pixi-reels.schmooky.dev/faq/mways-008/)
+- [How do I anticipate on a tall reel that is about to grow?](https://pixi-reels.schmooky.dev/faq/mways-009/)
+- [How do I combine MultiWays with big symbols safely?](https://pixi-reels.schmooky.dev/faq/mways-010/)
+
+## Hold & Win
+
+- [How do I build a Hold & Win board where each cell spins on its own?](https://pixi-reels.schmooky.dev/faq/hw-001/)
+- [How do I lock a coin in place when it lands?](https://pixi-reels.schmooky.dev/faq/hw-002/)
+- [How do I respin only the empty cells?](https://pixi-reels.schmooky.dev/faq/hw-003/)
+- [How do I reset the respin counter to 3 on every new coin?](https://pixi-reels.schmooky.dev/faq/hw-004/)
+- [How do I decrement the respin counter on a dry spin?](https://pixi-reels.schmooky.dev/faq/hw-005/)
+- [How do I end the feature when the board is full (grand jackpot)?](https://pixi-reels.schmooky.dev/faq/hw-006/)
+- [How do I carry the triggering coins into the feature already locked?](https://pixi-reels.schmooky.dev/faq/hw-007/)
+- [How do I show the held count and respins left in a HUD?](https://pixi-reels.schmooky.dev/faq/hw-008/)
+- [How do I make most spins land blank so coins flash by rarely?](https://pixi-reels.schmooky.dev/faq/hw-009/)
+- [How do I drive the whole feature from server-decided hits per round?](https://pixi-reels.schmooky.dev/faq/hw-010/)
+- [How do I do a column-respin variant (hold whole columns)?](https://pixi-reels.schmooky.dev/faq/hw-011/)
+- [How do I switch from base game into the Hold & Win board cleanly?](https://pixi-reels.schmooky.dev/faq/hw-012/)
+- [How do I play a slick reset back to the opening state after the feature?](https://pixi-reels.schmooky.dev/faq/hw-013/)
+- [How do I gate the next respin until all land animations have settled?](https://pixi-reels.schmooky.dev/faq/hw-014/)
+- [How do I award a mini jackpot when a whole row of coins fills?](https://pixi-reels.schmooky.dev/faq/hw-015/)
+- [How do I grow the board by a row when a trigger condition is met mid-feature?](https://pixi-reels.schmooky.dev/faq/hw-016/)
+- [How do I make a special coin upgrade all adjacent coins when it lands?](https://pixi-reels.schmooky.dev/faq/hw-017/)
+- [How do I persist the locked board if the player reloads mid-feature?](https://pixi-reels.schmooky.dev/faq/hw-018/)
+- [How do I run several Hold & Win boards at different bet tiers from one builder?](https://pixi-reels.schmooky.dev/faq/hw-019/)
+- [How do I drive each Hold & Win cell as its own reel, start it, stop it, and read the symbol inside it independently?](https://pixi-reels.schmooky.dev/faq/hw-020/)
+- [How do I make a single skip fast-forward every spin, flight and collect at once, then fire one "feature done" event?](https://pixi-reels.schmooky.dev/faq/hw-021/)
+
+## Coins, values, collectors & jackpots
+
+- [How do I print a money value on a coin?](https://pixi-reels.schmooky.dev/faq/coins-001/)
+- [How do I format the value as 0.00 with a bitmap gold font?](https://pixi-reels.schmooky.dev/faq/coins-002/)
+- [How do I scale the number to fit the coin face?](https://pixi-reels.schmooky.dev/faq/coins-003/)
+- [How do I attach the value as data without baking it into the id?](https://pixi-reels.schmooky.dev/faq/coins-004/)
+- [My coin is a mystery. How do I spin values inside it to reveal the number it held?](https://pixi-reels.schmooky.dev/faq/coins-005/)
+- [How do I land a coin wearing a MINI/MAJOR word and reveal it into a money face?](https://pixi-reels.schmooky.dev/faq/coins-006/)
+- [How do I show MINI/MINOR/MAJOR/GRAND jackpot plaques above the reels?](https://pixi-reels.schmooky.dev/faq/coins-007/)
+- [How do I flash the matching jackpot plaque when its coin locks?](https://pixi-reels.schmooky.dev/faq/coins-008/)
+- [How do I sum every coin value at the end and count it up?](https://pixi-reels.schmooky.dev/faq/coins-009/)
+- [How do I make a collector coin pull every other coin's value into itself?](https://pixi-reels.schmooky.dev/faq/coins-010/)
+- [How do I fly a value clone from each coin into the collector over an arc?](https://pixi-reels.schmooky.dev/faq/coins-011/)
+- [How do I tick the collector total up as each value lands on it?](https://pixi-reels.schmooky.dev/faq/coins-012/)
+- [How do I make a payer coin add its value to every other coin?](https://pixi-reels.schmooky.dev/faq/coins-013/)
+- [How do I make a coin double or boost every value already on the board?](https://pixi-reels.schmooky.dev/faq/coins-014/)
+- [How do I make a row/column of cells all act as collectors that sweep the board?](https://pixi-reels.schmooky.dev/faq/coins-015/)
+- [How do I upgrade a coin's value tier in place (5, 10, 25)?](https://pixi-reels.schmooky.dev/faq/coins-016/)
+- [How do I send collected coins flying to a feature meter above the reels?](https://pixi-reels.schmooky.dev/faq/coins-017/)
+- [How do I send a golden trail to the meter instead of a flying coin?](https://pixi-reels.schmooky.dev/faq/coins-018/)
+- [How do I show a coin counting up its own value before locking?](https://pixi-reels.schmooky.dev/faq/coins-019/)
+- [How do I make a blank coin reveal a random value with a spinning reel inside it?](https://pixi-reels.schmooky.dev/faq/coins-020/)
+- [How do I order the collect flights by row, by column, or all at once?](https://pixi-reels.schmooky.dev/faq/coins-021/)
+- [How do I curve the collect flight toward the screen edge or center?](https://pixi-reels.schmooky.dev/faq/coins-022/)
+- [How do I aim collect flights at a specific feature meter with a custom path?](https://pixi-reels.schmooky.dev/faq/coins-023/)
+- [How do I attach a value overlay (100x, a jackpot label) that survives an in-place symbol swap and rides along when the symbol flies?](https://pixi-reels.schmooky.dev/faq/coins-024/)
+
+## Symbol animations
+
+- [How do I play a win animation on a single symbol?](https://pixi-reels.schmooky.dev/faq/anim-001/)
+- [How do I play an idle/breathing loop while a symbol sits?](https://pixi-reels.schmooky.dev/faq/anim-002/)
+- [How do I play a landing animation when a symbol settles?](https://pixi-reels.schmooky.dev/faq/anim-003/)
+- [A symbol gets destroyed by an object. How do I play its destroy animation?](https://pixi-reels.schmooky.dev/faq/anim-004/)
+- [How do I morph one symbol into a different (higher) one mid-round?](https://pixi-reels.schmooky.dev/faq/anim-005/)
+- [How do I reveal a mystery symbol into a matching symbol across the board?](https://pixi-reels.schmooky.dev/faq/anim-006/)
+- [How do I freeze a Spine animation on its final frame and hold it?](https://pixi-reels.schmooky.dev/faq/anim-007/)
+- [How do I play an arbitrary named Spine animation on a symbol?](https://pixi-reels.schmooky.dev/faq/anim-008/)
+- [How do I await a one-shot animation and continue when it finishes?](https://pixi-reels.schmooky.dev/faq/anim-009/)
+- [How do I play a different destroy animation per symbol art (shatter vs disintegrate)?](https://pixi-reels.schmooky.dev/faq/anim-010/)
+- [How do I abort a destroy animation mid-tween when the player slams?](https://pixi-reels.schmooky.dev/faq/anim-011/)
+- [How do I make a symbol react to a neighbour (e.g. shake when hit)?](https://pixi-reels.schmooky.dev/faq/anim-012/)
+- [How do I charge a symbol up over several wins before it activates?](https://pixi-reels.schmooky.dev/faq/anim-013/)
+- [How do I keep GSAP tweens in sync with the Pixi ticker?](https://pixi-reels.schmooky.dev/faq/anim-014/)
+
+## Characters & objects over the reels
+
+- [How do I place a character above the reels that stays put?](https://pixi-reels.schmooky.dev/faq/chars-001/)
+- [How do I throw a coin symbol at a character (a pig) above the reels?](https://pixi-reels.schmooky.dev/faq/chars-002/)
+- [How do I make the character react (chomp, bounce) when a coin hits it?](https://pixi-reels.schmooky.dev/faq/chars-003/)
+- [How do I make a fisherman collect every money-fish on the board?](https://pixi-reels.schmooky.dev/faq/chars-004/)
+- [How do I fly each collected symbol's value into the character's pouch and total it?](https://pixi-reels.schmooky.dev/faq/chars-005/)
+- [How do I walk a character across the reels stopping on each cell?](https://pixi-reels.schmooky.dev/faq/chars-006/)
+- [How do I make a hammer/object smash specific cells and clear them?](https://pixi-reels.schmooky.dev/faq/chars-007/)
+- [How do I have a special symbol shoot/affect another cell (sniper style)?](https://pixi-reels.schmooky.dev/faq/chars-008/)
+- [How do I make persistent feature symbols interact across the board (Money-Train style)?](https://pixi-reels.schmooky.dev/faq/chars-009/)
+- [How do I aim a flight at a moving target (the character animates while a coin flies)?](https://pixi-reels.schmooky.dev/faq/chars-010/)
+- [How do I sequence many throws so they arrive one after another?](https://pixi-reels.schmooky.dev/faq/chars-011/)
+- [How do I have the character grow/level up as it eats more coins?](https://pixi-reels.schmooky.dev/faq/chars-012/)
+
+## Scatters & bonus triggers
+
+- [How do I make a scatter pay regardless of its position?](https://pixi-reels.schmooky.dev/faq/triggers-001/)
+- [How do I count how many scatters are anywhere on the board?](https://pixi-reels.schmooky.dev/faq/triggers-002/)
+- [How do I require 6+ coins to trigger Hold & Win?](https://pixi-reels.schmooky.dev/faq/triggers-003/)
+- [How do I make a symbol that is both a coin and a bonus trigger?](https://pixi-reels.schmooky.dev/faq/triggers-004/)
+- [How do I show a partial-trigger teaser (5 in, need 6)?](https://pixi-reels.schmooky.dev/faq/triggers-005/)
+- [How do I show the scatters collecting into a trigger counter?](https://pixi-reels.schmooky.dev/faq/triggers-006/)
+- [How do I play a "bonus triggered" celebration before the mode swap?](https://pixi-reels.schmooky.dev/faq/triggers-007/)
+- [How do I award scatter pays and trigger free spins from the same scatters?](https://pixi-reels.schmooky.dev/faq/triggers-008/)
+- [How do I trigger different bonuses from different scatter sets?](https://pixi-reels.schmooky.dev/faq/triggers-009/)
+- [How do I scale the number of free spins by the scatter count?](https://pixi-reels.schmooky.dev/faq/triggers-010/)
+
+## Free spins & feature modes
+
+- [How do I trigger free spins from 3 scatters?](https://pixi-reels.schmooky.dev/faq/fs-001/)
+- [How do I swap to a different reel set or background for the feature?](https://pixi-reels.schmooky.dev/faq/fs-002/)
+- [How do I count down the remaining free spins?](https://pixi-reels.schmooky.dev/faq/fs-003/)
+- [How do I retrigger and add more free spins mid-feature?](https://pixi-reels.schmooky.dev/faq/fs-004/)
+- [How do I keep sticky wilds/multipliers persistent across all free spins?](https://pixi-reels.schmooky.dev/faq/fs-005/)
+- [How do I pick a single expanding symbol at the start of the feature?](https://pixi-reels.schmooky.dev/faq/fs-006/)
+- [How do I run a different weight table during the feature?](https://pixi-reels.schmooky.dev/faq/fs-007/)
+- [How do I show a "feature complete, you won X" summary screen?](https://pixi-reels.schmooky.dev/faq/fs-008/)
+- [How do I carry a running multiplier meter through the whole feature?](https://pixi-reels.schmooky.dev/faq/fs-009/)
+- [How do I return to base game and restore the pre-feature state?](https://pixi-reels.schmooky.dev/faq/fs-010/)
+- [How do I offer a buy-feature entry straight into the bonus?](https://pixi-reels.schmooky.dev/faq/fs-011/)
+- [How do I gamble/upgrade the number of free spins before they start?](https://pixi-reels.schmooky.dev/faq/fs-012/)
+
+## Bonus mini-games
+
+- [How do I run a pick-a-prize bonus on clickable cells?](https://pixi-reels.schmooky.dev/faq/bonusgames-001/)
+- [How do I reveal hidden prizes one tap at a time?](https://pixi-reels.schmooky.dev/faq/bonusgames-002/)
+- [How do I spin a bonus wheel and land it on a segment?](https://pixi-reels.schmooky.dev/faq/bonusgames-003/)
+- [How do I settle the wheel pointer with a believable bounce?](https://pixi-reels.schmooky.dev/faq/bonusgames-004/)
+- [How do I offer a gamble or double-up on a win?](https://pixi-reels.schmooky.dev/faq/bonusgames-005/)
+- [How do I climb a prize ladder with collect-or-gamble choices?](https://pixi-reels.schmooky.dev/faq/bonusgames-006/)
+- [How do I run a "pick until you hit 3 of a kind" collection bonus?](https://pixi-reels.schmooky.dev/faq/bonusgames-007/)
+- [How do I award a random multiplier from a chest or orb?](https://pixi-reels.schmooky.dev/faq/bonusgames-008/)
+- [How do I run a trail or board-game bonus that hops across cells?](https://pixi-reels.schmooky.dev/faq/bonusgames-009/)
+- [How do I tally "you collected X" at the end of the pick?](https://pixi-reels.schmooky.dev/faq/bonusgames-010/)
+
+## Meters, multipliers & progression
+
+- [How do I show a multiplier meter above the reels?](https://pixi-reels.schmooky.dev/faq/meters-001/)
+- [How do I increment the meter on each win and reset on a miss?](https://pixi-reels.schmooky.dev/faq/meters-002/)
+- [How do I level up a jar/symbol multiplier each time it wins?](https://pixi-reels.schmooky.dev/faq/meters-003/)
+- [How do I fill a progress bar that unlocks a feature at 100%?](https://pixi-reels.schmooky.dev/faq/meters-004/)
+- [How do I animate a value flying into the meter and bumping it up?](https://pixi-reels.schmooky.dev/faq/meters-005/)
+- [How do I drive a progressive jackpot value that ticks up live?](https://pixi-reels.schmooky.dev/faq/meters-006/)
+- [How do I show a coin-collect counter that aggregates bonus coins?](https://pixi-reels.schmooky.dev/faq/meters-007/)
+- [How do I apply the meter's multiplier to the final win?](https://pixi-reels.schmooky.dev/faq/meters-008/)
+- [How do I keep the meter and its server value from drifting apart?](https://pixi-reels.schmooky.dev/faq/meters-009/)
+- [How do I sticky-stack position-locked multipliers that persist?](https://pixi-reels.schmooky.dev/faq/meters-010/)
+
+## Sound & juice
+
+- [How do I play a sound when a reel stops?](https://pixi-reels.schmooky.dev/faq/audio-001/)
+- [How do I play a per-coin sound as each one lands in stagger order?](https://pixi-reels.schmooky.dev/faq/audio-002/)
+- [How do I rise the anticipation music as tension builds?](https://pixi-reels.schmooky.dev/faq/audio-003/)
+- [How do I duck the music during a big-win count-up?](https://pixi-reels.schmooky.dev/faq/audio-004/)
+- [How do I pitch the count-up sound higher the longer it runs?](https://pixi-reels.schmooky.dev/faq/audio-005/)
+- [How do I layer base vs feature music and crossfade between them?](https://pixi-reels.schmooky.dev/faq/audio-006/)
+- [How do I fire haptics/vibration on a jackpot hit?](https://pixi-reels.schmooky.dev/faq/audio-007/)
+- [How do I sync a sound exactly to a Spine animation event?](https://pixi-reels.schmooky.dev/faq/audio-008/)
+- [How do I cut all feature sounds cleanly when the player exits?](https://pixi-reels.schmooky.dev/faq/audio-009/)
+- [How do I keep audio aligned when the player slams the reels?](https://pixi-reels.schmooky.dev/faq/audio-010/)
+
+## HUD, buttons & overlays
+
+- [How do I wire a single spin button that also slam-stops?](https://pixi-reels.schmooky.dev/faq/ui-001/)
+- [How do I disable the spin button while a spin is running?](https://pixi-reels.schmooky.dev/faq/ui-002/)
+- [How do I show the current bet and balance?](https://pixi-reels.schmooky.dev/faq/ui-003/)
+- [How do I run autoplay for N spins with a stop condition?](https://pixi-reels.schmooky.dev/faq/ui-004/)
+- [How do I overlay a HUD that reads purely from board events?](https://pixi-reels.schmooky.dev/faq/ui-005/)
+- [How do I draw a value label centered on a specific cell?](https://pixi-reels.schmooky.dev/faq/ui-006/)
+- [How do I position an overlay using a cell's exact pixel bounds?](https://pixi-reels.schmooky.dev/faq/ui-007/)
+- [How do I add clickable hit-areas per cell (pick-a-cell bonus)?](https://pixi-reels.schmooky.dev/faq/ui-008/)
+- [How do I keep HUD text crisp at any board scale?](https://pixi-reels.schmooky.dev/faq/ui-009/)
+- [How do I show a "respins left" badge that updates live?](https://pixi-reels.schmooky.dev/faq/ui-010/)
+- [How do I render the board on a dark feature background vs a light base?](https://pixi-reels.schmooky.dev/faq/ui-011/)
+
+## Bet, lines & paytable
+
+- [How do I switch a game between paylines and ways-to-win?](https://pixi-reels.schmooky.dev/faq/bet-001/)
+- [How do I let the player change the bet level?](https://pixi-reels.schmooky.dev/faq/bet-002/)
+- [How do I scale coin values by the current bet?](https://pixi-reels.schmooky.dev/faq/bet-003/)
+- [How do I show a paytable screen for the registered symbols?](https://pixi-reels.schmooky.dev/faq/bet-004/)
+- [How do I draw and highlight which lines are active?](https://pixi-reels.schmooky.dev/faq/bet-005/)
+- [How do I recompute the ways count when the board shape changes?](https://pixi-reels.schmooky.dev/faq/bet-006/)
+- [How do I price the buy-feature off the current bet?](https://pixi-reels.schmooky.dev/faq/bet-007/)
+- [How do I lock the bet during a feature?](https://pixi-reels.schmooky.dev/faq/bet-008/)
+
+## Layout, orientation & transitions
+
+- [How do I lay the board out for portrait vs landscape?](https://pixi-reels.schmooky.dev/faq/layout-001/)
+- [How do I scale the board to fit a fixed safe-area?](https://pixi-reels.schmooky.dev/faq/layout-002/)
+- [How do I reflow the HUD when the orientation changes?](https://pixi-reels.schmooky.dev/faq/layout-003/)
+- [How do I keep the board centered with jackpot panels flanking it?](https://pixi-reels.schmooky.dev/faq/layout-004/)
+- [How do I anchor a top feature meter relative to the reels?](https://pixi-reels.schmooky.dev/faq/layout-005/)
+- [How do I play an intro that assembles the reels on load?](https://pixi-reels.schmooky.dev/faq/layout-006/)
+- [How do I transition between base and feature with a wipe?](https://pixi-reels.schmooky.dev/faq/layout-007/)
+- [How do I play an outro that breaks the board apart on exit?](https://pixi-reels.schmooky.dev/faq/layout-008/)
+- [How do I support an ultrawide background behind a fixed board?](https://pixi-reels.schmooky.dev/faq/layout-009/)
+- [How do I mirror the layout for RTL locales?](https://pixi-reels.schmooky.dev/faq/layout-010/)
+- [How do I build the horizontal reel above the reels that shows which symbols pay this round?](https://pixi-reels.schmooky.dev/faq/layout-011/)
+- [Can the horizontal banner reel cascade like the main reels when a symbol was part of a win?](https://pixi-reels.schmooky.dev/faq/layout-012/)
+
+## Performance & lifecycle
+
+- [How do I recycle symbols instead of recreating them every spin?](https://pixi-reels.schmooky.dev/faq/perf-001/)
+- [How do I cap how many instances of a symbol are pooled?](https://pixi-reels.schmooky.dev/faq/perf-002/)
+- [How do I dispose everything without leaking textures or tickers?](https://pixi-reels.schmooky.dev/faq/perf-003/)
+- [How do I keep a 7x7 board with many masks from dropping frames?](https://pixi-reels.schmooky.dev/faq/perf-004/)
+- [How do I share one mask across many cells?](https://pixi-reels.schmooky.dev/faq/perf-005/)
+- [How do I avoid stutter on a long session of continuous spins?](https://pixi-reels.schmooky.dev/faq/perf-006/)
+- [How do I tear down a feature's 20+ sub-reelsets safely?](https://pixi-reels.schmooky.dev/faq/perf-007/)
+- [How do I keep tweens from leaking when a symbol is recycled mid-animation?](https://pixi-reels.schmooky.dev/faq/perf-008/)
+- [How do I batch Spine instances so the GPU does not choke?](https://pixi-reels.schmooky.dev/faq/perf-009/)
+- [How do I preload feature assets so the mode swap has no hitch?](https://pixi-reels.schmooky.dev/faq/perf-010/)
+
+## Debugging & testing
+
+- [How do I dump the current board state as readable JSON?](https://pixi-reels.schmooky.dev/faq/debug-001/)
+- [How do I print an ASCII grid of the visible symbols?](https://pixi-reels.schmooky.dev/faq/debug-002/)
+- [How do I log every domain event as it fires?](https://pixi-reels.schmooky.dev/faq/debug-003/)
+- [How do I diagnose a stuck spin that never lands?](https://pixi-reels.schmooky.dev/faq/debug-004/)
+- [How do I force a guaranteed jackpot for a screenshot?](https://pixi-reels.schmooky.dev/faq/debug-005/)
+- [How do I make a deterministic spin in a unit test?](https://pixi-reels.schmooky.dev/faq/debug-006/)
+- [How do I run the engine headless with no canvas for tests?](https://pixi-reels.schmooky.dev/faq/debug-007/)
+- [How do I add a cheat panel (force a symbol, force a hit)?](https://pixi-reels.schmooky.dev/faq/debug-008/)
+- [How do I record and replay a spin frame by frame?](https://pixi-reels.schmooky.dev/faq/debug-009/)
+- [How do I assert the visible grid matches the expected result?](https://pixi-reels.schmooky.dev/faq/debug-010/)
+
+## Server, math & integration
+
+- [How do I drive every spin from a server (RGS) response?](https://pixi-reels.schmooky.dev/faq/integ-001/)
+- [How do I keep all payout math on the server and only present results?](https://pixi-reels.schmooky.dev/faq/integ-002/)
+- [How do I show a spin while waiting for the server, then snap to its result?](https://pixi-reels.schmooky.dev/faq/integ-003/)
+- [How do I recover an interrupted feature on reload (resume state)?](https://pixi-reels.schmooky.dev/faq/integ-004/)
+- [How do I format currency values for different locales?](https://pixi-reels.schmooky.dev/faq/integ-005/)
+- [How do I map a server symbol-id scheme onto my registered ids?](https://pixi-reels.schmooky.dev/faq/integ-006/)
+- [How do I sequence multi-step server features (round, round, collect)?](https://pixi-reels.schmooky.dev/faq/integ-007/)
+- [How do I keep visuals honest when the server is the only source of truth?](https://pixi-reels.schmooky.dev/faq/integ-008/)
+- [How do I handle a desync between the animation and the server state?](https://pixi-reels.schmooky.dev/faq/integ-009/)
+- [How do I satisfy regulatory replay (exact reproduction of any past spin)?](https://pixi-reels.schmooky.dev/faq/integ-010/)

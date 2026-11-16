@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { SITE } from '../lib/seo.ts';
 import { TOPICS } from '../content/topics.ts';
@@ -42,13 +43,44 @@ function apiRoutes(): string[] {
   return out;
 }
 
+/**
+ * The date of the last commit that touched each file under src/content and
+ * src/pages, keyed by path relative to the site root. A build timestamp on
+ * every URL is a signal crawlers discount, so a page gets a <lastmod> only
+ * when git knows its real date. A shallow clone dates every file by the one
+ * commit it has, and a build without git has no dates: both return an empty
+ * map and the sitemap carries no <lastmod> at all.
+ */
+function gitDates(): Map<string, string> {
+  const dates = new Map<string, string>();
+  const git = (args: string[]): string =>
+    execFileSync('git', args, { cwd: process.cwd(), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+  try {
+    if (git(['rev-parse', '--is-shallow-repository']).trim() !== 'false') return dates;
+    // Newest commit first, so the first date seen for a file is its latest.
+    let date = '';
+    for (const line of git(['log', '--format=@%cs', '--name-only', '--relative', '--', 'src/content', 'src/pages']).split('\n')) {
+      if (line.startsWith('@')) date = line.slice(1);
+      else if (line && !dates.has(line)) dates.set(line, date);
+    }
+  } catch {
+    dates.clear();
+  }
+  return dates;
+}
+
 export const GET: APIRoute = async () => {
-  // lastmod intentionally omitted. Emitting the build timestamp for every
-  // URL is a misleading signal that crawlers (Google in particular) discount.
-  // If per-page mtime becomes worth threading through, plumb it from each
-  // content source and add <lastmod> back per-entry.
-  type Entry = { loc: string; priority: string; changefreq: string };
+  type Entry = { loc: string; priority: string; changefreq: string; lastmod?: string };
   const entries: Entry[] = [];
+  const dates = gitDates();
+  /** The latest date among the source files a page renders. */
+  const lastmod = (...files: string[]): string | undefined =>
+    files.map((f) => dates.get(f)).filter((d): d is string => !!d).sort().pop();
+  // /learn/x/ renders the guides collection, /reference/x/ the docs one.
+  const contentFile = (href: string): string => {
+    const m = href.match(/^\/(learn|reference)\/([^/]+)\/$/);
+    return m ? `src/content/${m[1] === 'learn' ? 'guides' : 'docs'}/${m[2]}.mdx` : '';
+  };
 
   entries.push({ loc: url('/'), priority: '1.0', changefreq: 'weekly' });
   entries.push({ loc: url('/learn/'), priority: '0.9', changefreq: 'weekly' });
@@ -65,20 +97,30 @@ export const GET: APIRoute = async () => {
   }
 
   for (const t of TOPICS) {
-    entries.push({ loc: url(`/mechanics/${t.slug}/`), priority: '0.85', changefreq: 'monthly' });
+    entries.push({
+      loc: url(`/mechanics/${t.slug}/`),
+      priority: '0.85',
+      changefreq: 'monthly',
+      lastmod: lastmod(`src/content/topics/${t.slug}.mdx`, `src/content/recipes/${t.slug}.mdx`),
+    });
   }
   for (const p of ARCH_PAGES) {
-    entries.push({ loc: url(`/architecture/${p.slug}/`), priority: '0.85', changefreq: 'monthly' });
+    entries.push({
+      loc: url(`/architecture/${p.slug}/`),
+      priority: '0.85',
+      changefreq: 'monthly',
+      lastmod: lastmod(`src/pages/architecture/${p.slug}.astro`),
+    });
   }
 
   for (const section of [...LEARN_NAV, ...REFERENCE_NAV]) {
     for (const item of section.items) {
-      entries.push({ loc: url(item.href), priority: '0.8', changefreq: 'monthly' });
+      entries.push({ loc: url(item.href), priority: '0.8', changefreq: 'monthly', lastmod: lastmod(contentFile(item.href)) });
     }
   }
   // Only ANSWERED questions have their own page; open ones live on /faq/.
   for (const q of FAQ_ANSWERED) {
-    entries.push({ loc: url(`/faq/${q.id}/`), priority: '0.8', changefreq: 'monthly' });
+    entries.push({ loc: url(`/faq/${q.id}/`), priority: '0.8', changefreq: 'monthly', lastmod: lastmod(`src/content/faq/${q.id}.yaml`) });
   }
 
   // De-dup by loc
@@ -91,7 +133,7 @@ export const GET: APIRoute = async () => {
     unique
       .map(
         (e) =>
-          `  <url>\n    <loc>${e.loc}</loc>\n    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>\n  </url>`,
+          `  <url>\n    <loc>${e.loc}</loc>\n${e.lastmod ? `    <lastmod>${e.lastmod}</lastmod>\n` : ''}    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>\n  </url>`,
       )
       .join('\n') +
     '\n</urlset>\n';
