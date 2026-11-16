@@ -1,4 +1,6 @@
 ---
+import fs from 'node:fs';
+import nodePath from 'node:path';
 import { SITE, canonical, imageUrl, type PageSeo } from '../lib/seo.ts';
 
 interface Props extends PageSeo {}
@@ -20,6 +22,10 @@ const metaDescription =
   description.length <= 160
     ? description
     : `${description.slice(0, 158).replace(/\s+\S*$/, '').replace(/[,;:.]$/, '')}…`;
+// The page's markdown twin, when `llms:gen` wrote one into public/ (it runs
+// before every dev and build): `/mechanics/cascade/` -> `/mechanics/cascade.md`.
+const twin = `${new URL(url).pathname.replace(/\/$/, '')}.md`;
+const hasTwin = !noIndex && twin !== '.md' && fs.existsSync(nodePath.join(process.cwd(), 'public', twin));
 const imgAbs = imageUrl(image);
 const imgType = imgAbs.endsWith('.png')
   ? 'image/png'
@@ -81,6 +87,7 @@ const imgType = imgAbs.endsWith('.png')
 <link rel="sitemap" href="/sitemap.xml" />
 <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site index" />
 <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM-readable full docs" />
+{hasTwin && <link rel="alternate" type="text/markdown" href={twin} title="This page as markdown" />}
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
 <meta name="color-scheme" content="light dark" />

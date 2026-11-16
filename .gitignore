@@ -44,3 +44,10 @@ apps/site/src/pages/api/
 .claude/scheduled_tasks.lock
 .claude/scheduled_tasks/
 __pycache__/
+
+# Markdown twins of the content pages (/mechanics/cascade.md and so on),
+# written by apps/site/scripts/build-llms.mjs on every dev/build.
+apps/site/public/mechanics/
+apps/site/public/learn/
+apps/site/public/reference/
+apps/site/public/faq/

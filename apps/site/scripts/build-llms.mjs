@@ -29,7 +29,7 @@
  * committed, so stamping every regeneration made a diff out of a rebuild that
  * changed nothing. The version line below is the freshness signal instead.
  */
-import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { parse as parseYaml } from 'yaml';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -49,6 +49,19 @@ const PKG = resolve(ROOT, '../../packages/pixi-reels/package.json');
 // source and FAQ answer for a model that wants all of it in one request.
 const OUT = resolve(ROOT, 'public/llms.txt');
 const OUT_FULL = resolve(ROOT, 'public/llms-full.txt');
+// The two long lists the index used to carry, one line per answered question
+// and one per exported symbol. With them inline the index was 76KB, about
+// 19,000 tokens before an agent had read a single page; on their own it is
+// small enough to read whole and names these files for the reader who wants
+// the lists.
+const OUT_FAQ = resolve(ROOT, 'public/llms-faq.txt');
+const OUT_API = resolve(ROOT, 'public/llms-api.txt');
+// Markdown twins: `/mechanics/cascade/` is also served as
+// `/mechanics/cascade.md`, the page as plain markdown, so an agent reads one
+// page without the HTML shell around it. Written into public/ under these
+// folders (gitignored: they are build output, unlike the llms files).
+const PUBLIC = resolve(ROOT, 'public');
+const TWIN_DIRS = ['mechanics', 'learn', 'reference', 'faq'];
 
 const SITE_URL = 'https://pixi-reels.schmooky.dev';
 
@@ -119,12 +132,16 @@ async function main() {
 
   await writeFile(OUT_FULL, render(grouped, recipes, faq, version, demoUrls), 'utf-8');
   await writeFile(OUT, renderIndex(grouped, faq, version), 'utf-8');
+  await writeFile(OUT_FAQ, renderFaqIndex(faq), 'utf-8');
+  await writeFile(OUT_API, renderApiIndex(grouped), 'utf-8');
+  const twins = await writeTwins(pages, faq, demoUrls);
 
   const total = grouped.reduce((n, g) => n + g.items.length, 0);
   const answered = faq.reduce((n, g) => n + g.questions.length, 0);
   console.log(
     `[build-llms] Wrote ${total} pages + ${recipes.length} recipe sources + ` +
-    `${answered} answered FAQ entries (v${version}) to ${OUT_FULL}, and the index to ${OUT}`,
+    `${answered} answered FAQ entries (v${version}) to ${OUT_FULL}, the index to ${OUT}, ` +
+    `and ${twins} markdown twins under public/{${TWIN_DIRS.join(',')}}/`,
   );
 }
 
@@ -183,6 +200,9 @@ async function collectPages(baseDir) {
       realGameVideo: extractRealGameVideo(raw),
       // TypeDoc pages stay title + signature + URL (see SECTIONS above).
       body: /\.mdx?$/.test(file) && !slug.startsWith('api/') ? cleanBody(raw, href) : '',
+      // The same prose with its headings left where the page has them, for
+      // the page's markdown twin.
+      md: /\.mdx?$/.test(file) && !slug.startsWith('api/') ? cleanBody(raw, href, 0) : '',
     });
   }
   return out;
@@ -216,13 +236,14 @@ function extractRealGameVideo(raw) {
 /**
  * Markdown body of an MDX page as plain prose: frontmatter, top-level
  * `import`/`export` lines and JSX components dropped, fenced code kept
- * verbatim, headings demoted by two so they nest under the `###` page line.
+ * verbatim, headings demoted by `demote` levels: two by default, so they nest
+ * under the `###` page line of llms-full.txt, none for a markdown twin.
  *
  * `<RecipeDemo code="x" />` becomes a `Live demo:` line pointing at the demo's
  * anchor on this page (the nearest preceding `<a id>`), so a reader of the
  * text file, human or model, can find the runnable version.
  */
-function cleanBody(raw, href) {
+function cleanBody(raw, href, demote = 2) {
   const body = raw.replace(/^---\n[\s\S]*?\n---\n?/, '');
   const out = [];
   let inFence = false;
@@ -256,7 +277,7 @@ function cleanBody(raw, href) {
     }
     const h = line.match(/^(#{1,4})\s+(.*)$/);
     if (h) {
-      out.push(`${'#'.repeat(Math.min(6, h[1].length + 2))} ${h[2]}`);
+      out.push(`${'#'.repeat(Math.min(6, h[1].length + demote))} ${h[2]}`);
       continue;
     }
     out.push(line);
@@ -296,6 +317,7 @@ function foldDemos(pages) {
     const topic = topics.get(p.slug.slice('recipes/'.length));
     if (!topic) throw new Error(`build-llms: src/content/${p.slug}.mdx has no src/content/topics/ page to render under.`);
     topic.body = [topic.body, '##### Demos', p.body].filter(Boolean).join('\n\n');
+    topic.md = [topic.md, '## Demos', p.md].filter(Boolean).join('\n\n');
   }
   return out;
 }
@@ -558,8 +580,9 @@ function oneLine(text, max = 160) {
 
 /**
  * The index: what the library is, where to start, and one link per page with
- * its description. The generated API goes under `## Optional`, the llmstxt.org
- * section a reader may skip, since a model can fetch the one symbol it needs.
+ * its description. The FAQ questions, the generated API and the inlined file
+ * go under `## Optional`, the llmstxt.org section a reader may skip, as one
+ * link each: a model fetches the list it needs.
  */
 function renderIndex(sections, faq, version) {
   const lines = [];
@@ -568,7 +591,7 @@ function renderIndex(sections, faq, version) {
   lines.push(`> pixi-reels ${version} is a slot machine reel engine for PixiJS v8: a fluent builder, typed events, spin phases, speed modes, cascades, Hold & Win, big symbols and win spotlights. It ships reel-only primitives; win math, paytables, RNG and audio stay in the game.`);
   lines.push('');
   lines.push('Install with `npm install pixi-reels pixi.js gsap`. Every mechanic page opens on live demos whose source is the recipe module shown beside them, runnable as-is in the Studio.');
-  lines.push(`Everything below, inlined with each recipe's source and every FAQ answer: ${SITE_URL}/llms-full.txt`);
+  lines.push('Every page under /mechanics/, /learn/, /reference/ and /faq/ is also served as markdown: replace the trailing slash with `.md`.');
   lines.push('');
   lines.push(`- Site: ${SITE_URL}`);
   lines.push('- Repo: https://github.com/schmooky/pixi-reels');
@@ -586,21 +609,72 @@ function renderIndex(sections, faq, version) {
     }
     lines.push('');
   }
-  if (faq.length) {
-    lines.push('## FAQ');
+  const answered = faq.reduce((n, g) => n + g.questions.length, 0);
+  lines.push('## Optional');
+  lines.push('');
+  if (faq.length) lines.push(`- [FAQ index](${SITE_URL}/llms-faq.txt): ${answered} answered questions, one link each, grouped by subject.`);
+  if (api) lines.push(`- [Generated API index](${SITE_URL}/llms-api.txt): ${api.items.length} exported symbols, one link each.`);
+  lines.push(`- [Full docs](${SITE_URL}/llms-full.txt): every page above, each recipe's source and every FAQ answer inlined in one file.`);
+  lines.push('');
+  return lines.join('\n');
+}
+
+/** One link per answered question, under its group. */
+function renderFaqIndex(faq) {
+  const lines = ['# pixi-reels FAQ', ''];
+  lines.push(`> Every answered question on ${SITE_URL}/faq/. Each link is the answer's page; replace the trailing slash with \`.md\` for the answer as markdown.`);
+  lines.push('');
+  for (const group of faq) {
+    lines.push(`## ${group.title}`);
     lines.push('');
-    for (const group of faq) {
-      for (const q of group.questions) lines.push(`- [${oneLine(q.question, 200)}](${SITE_URL}/faq/${q.id}/)`);
-    }
-    lines.push('');
-  }
-  if (api) {
-    lines.push('## Optional');
-    lines.push('');
-    for (const item of api.items) lines.push(`- [${item.title}](${item.href})`);
+    for (const q of group.questions) lines.push(`- [${oneLine(q.question, 200)}](${SITE_URL}/faq/${q.id}/)`);
     lines.push('');
   }
   return lines.join('\n');
+}
+
+/** One link per exported symbol of the generated (TypeDoc) API reference. */
+function renderApiIndex(sections) {
+  const api = sections.find((s) => s.id === 'api');
+  const lines = ['# pixi-reels generated API', ''];
+  lines.push(`> Every exported symbol of pixi-reels and its subpaths, one page each, generated by TypeDoc. The hand-written API guides are under ${SITE_URL}/reference/.`);
+  lines.push('');
+  for (const item of api?.items ?? []) lines.push(`- [${item.title}](${item.href})`);
+  lines.push('');
+  return lines.join('\n');
+}
+
+/**
+ * Write the markdown twin of every content page and answered question. The
+ * folders hold nothing else, so they are emptied first: a page that was
+ * renamed or removed must not leave its old twin behind.
+ */
+async function writeTwins(pages, faq, demoUrls) {
+  for (const dir of TWIN_DIRS) await rm(resolve(PUBLIC, dir), { recursive: true, force: true });
+  let count = 0;
+  const write = async (href, text) => {
+    const file = resolve(PUBLIC, `${href.slice(SITE_URL.length + 1).replace(/\/$/, '')}.md`);
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(file, `${text.trim()}\n`, 'utf-8');
+    count += 1;
+  };
+  for (const p of pages) {
+    if (!p.md) continue;
+    const head = [`# ${p.title}`, ''];
+    if (p.description) head.push(`> ${p.description}`, '');
+    head.push(`Source: ${p.href}`, '');
+    await write(p.href, [...head, p.md].join('\n'));
+  }
+  for (const group of faq) {
+    for (const q of group.questions) {
+      const href = `${SITE_URL}/faq/${q.id}/`;
+      const lines = [`# ${q.question}`, '', `Source: ${href}`, '', String(q.answer).trim()];
+      const recipe = q.recipe ? demoUrls.get(q.recipe) : null;
+      if (recipe) lines.push('', `Recipe: ${recipe}`);
+      await write(href, lines.join('\n'));
+    }
+  }
+  return count;
 }
 
 main().catch((err) => {
