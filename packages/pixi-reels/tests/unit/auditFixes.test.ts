@@ -210,6 +210,46 @@ describe('ReelSet.refill. input validation', () => {
     expect(reelSet.isSpinning).toBe(false);
     destroy();
   });
+
+  it('a pre-aborted signal lands the refill at once, with no frame of its animation', async () => {
+    // Real durations and a ticker that never moves: only a slam can land it.
+    const ticker = new FakeTicker();
+    const reelSet = new ReelSetBuilder()
+      .reels(3)
+      .visibleCells(3)
+      .symbolSize(50, 50)
+      .symbols((r) => {
+        for (const id of ['a', 'b', 'c', 'd']) r.register(id, HeadlessSymbol, {});
+      })
+      .weights({ a: 1, b: 1, c: 1, d: 1 })
+      .tumble({
+        fall: { duration: 300, ease: 'none', cellStagger: 50 },
+        dropIn: { duration: 400, ease: 'none', cellStagger: 50, distance: 'perHole' },
+      })
+      .initialFrame([['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c']].map((visible) => ({ visible })))
+      .ticker(ticker as unknown as Ticker)
+      .build();
+
+    const controller = new AbortController();
+    controller.abort();
+    const refill = reelSet.refill({
+      winners: [{ reel: 0, cell: 0 }],
+      grid: [{ visible: ['d', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }],
+      signal: controller.signal,
+    });
+    const settled = await Promise.race([
+      refill.then(() => 'landed'),
+      new Promise((resolve) => setTimeout(() => resolve('still animating'), 50)),
+    ]);
+
+    expect(settled).toBe('landed');
+    const result = await refill;
+    expect(result.wasSkipped).toBe(true);
+    expect(reelSet.isSpinning).toBe(false);
+    expect(reelSet.getVisibleGrid()).toEqual([['d', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c']]);
+    reelSet.destroy();
+    ticker.destroy();
+  });
 });
 
 // -- skip() pre-setResult guard -------------------------------------------
