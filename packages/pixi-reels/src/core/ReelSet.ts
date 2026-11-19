@@ -847,13 +847,18 @@ export class ReelSet extends Container implements Disposable {
         this._spinController.abortSlam();
       }
     };
+    // Start the refill first: `abortSlam()` only acts on a refill in flight, so
+    // an already-aborted signal checked before this point slammed nothing and
+    // the whole animation played. `refill()` marks the round as spinning
+    // synchronously, before its first await.
+    const refilling = this._spinController.refill(opts);
     if (opts.signal) {
       if (opts.signal.aborted) onAbort();
       else opts.signal.addEventListener('abort', onAbort, { once: true });
     }
 
     try {
-      const spinResult = await this._spinController.refill(opts);
+      const spinResult = await refilling;
       return {
         winnersRefilled: opts.winners.length,
         finalGrid: spinResult.symbols,
