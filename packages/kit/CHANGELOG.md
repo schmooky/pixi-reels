@@ -1,5 +1,12 @@
 # @pixi-reels/kit
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`33dbe0d`](https://github.com/schmooky/pixi-reels/commit/33dbe0df4eb938e22e864b242e3fb7d95a05cd6a), [`152c001`](https://github.com/schmooky/pixi-reels/commit/152c001e215fa0b60d99ef903007a78fa0beea3a)]:
+  - pixi-reels@4.4.1
+
 ## 0.1.2
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # pixi-reels
 
+## 4.4.1
+
+### Patch Changes
+
+- [#297](https://github.com/schmooky/pixi-reels/pull/297) [`33dbe0d`](https://github.com/schmooky/pixi-reels/commit/33dbe0df4eb938e22e864b242e3fb7d95a05cd6a) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the package description on npm now matches the one on the site, and the keywords name what people search for (`slot-engine`, `reel-engine`, `slot-game`, `pixi-slot`, `cascade`, `hold-and-win`). No code changed.
+
+- [#299](https://github.com/schmooky/pixi-reels/pull/299) [`152c001`](https://github.com/schmooky/pixi-reels/commit/152c001e215fa0b60d99ef903007a78fa0beea3a) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `refill()` with an already-aborted `signal` now lands the board at once instead of playing the whole cascade animation.
+
 ## 4.4.0
 
 ### Minor Changes

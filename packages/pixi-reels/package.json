@@ -1,6 +1,6 @@
 {
   "name": "pixi-reels",
-  "version": "4.4.0",
+  "version": "4.4.1",
   "description": "An open-source slot machine reel engine for PixiJS v8, with a fluent builder, typed events and spins you can test in Node.",
   "type": "module",
   "main": "./dist/index.cjs",
