@@ -6,7 +6,9 @@
  * a replaced step replaces; a removed step is gone; a `cut` step is skipped
  * by a quicken and the rest still play; a slam cancels the step in flight;
  * a stale name fails loud; an instant step chains without a microtask, so a
- * reel with no start delay begins to move inside `spin()` as it always did.
+ * reel with no start delay begins to move inside `spin()` as it always did;
+ * a step that returns `ctx.until()` ends in the tick its predicate holds, so a
+ * stop lands before that frame is drawn.
  */
 import type { Ticker } from 'pixi.js';
 import { describe, it, expect } from 'vitest';
@@ -143,6 +145,26 @@ describe("f.register('stop', StopPhase, { steps })", () => {
     expect(launched).toBe(true);
     reelSet.setResult(RESULT);
     reelSet.slamStop();
+    reelSet.destroy();
+    ticker.destroy();
+  });
+
+  it('lands in the tick its last target symbol arrives, before that frame is drawn', async () => {
+    const { reelSet, ticker } = build(() => {});
+    const landed: number[] = [];
+    reelSet.events.on('spin:reelLanding', (reel) => landed.push(reel));
+    const fedButNotLanded: number[] = [];
+    const spin = reelSet.spin();
+    reelSet.setResult(RESULT);
+    // `onTick` runs where an Application renders: after the set's tick, before
+    // the promise callbacks that run between two frames.
+    await pump(ticker, spin, () => {
+      reelSet.reels.forEach((reel, i) => {
+        if (reel.isStopping && !reel.stopSequencer.hasRemaining) fedButNotLanded.push(i);
+      });
+    });
+    expect(landed).toEqual([0, 1]);
+    expect(fedButNotLanded).toEqual([]);
     reelSet.destroy();
     ticker.destroy();
   });

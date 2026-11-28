@@ -11,7 +11,7 @@ import {
 } from '../../config/phaseProfile.js';
 import { noticeWarnOnce } from '../../utils/notify.js';
 import { runStep } from './steps.js';
-import type { Cancellable, PhaseStep, RunningStep, StepContext } from './steps.js';
+import type { Cancellable, PhaseStep, RunningStep, StepContext, StepResult } from './steps.js';
 
 /** What a custom bounce animation receives. See {@link BounceOptions.animation}. */
 export interface BounceContext {
@@ -121,7 +121,16 @@ interface StepRun {
   cancelled: boolean;
   quickened: boolean;
   /** `ctx.until()` predicates waiting on a frame. */
-  pending: Array<{ predicate: () => boolean; resolve: () => void }>;
+  pending: Waiter[];
+}
+
+/** One `ctx.until()`: its predicate, and how to resolve the promise it returned. */
+interface Waiter {
+  predicate: () => boolean;
+  resolve: () => void;
+  promise?: Promise<void>;
+  /** The step in flight, when this wait is what it returned: it ends when the wait does. */
+  step?: RunningStep;
 }
 
 /**
@@ -397,11 +406,22 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
   protected tickSteps(): void {
     const run = this._stepRun;
     if (!run || run.pending.length === 0) return;
+    let ended: RunningStep | undefined;
     for (let i = run.pending.length - 1; i >= 0; i--) {
       const waiter = run.pending[i];
       if (!waiter.predicate()) continue;
       run.pending.splice(i, 1);
       waiter.resolve();
+      ended = waiter.step ?? ended;
+    }
+    // A step that returned its wait ends in this tick, not in a promise
+    // callback: those run after the ticker's update, and so after the frame
+    // PixiJS renders in it. A stop's spin-out would otherwise show its target
+    // frame a frame of travel past rest before `land` snaps it back.
+    if (ended && run.current === ended) {
+      run.current = null;
+      this._stepEvent(run.steps[run.index]!.name, 'end');
+      this._nextStep(run);
     }
   }
 
@@ -421,8 +441,9 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     }
     const controller = new AbortController();
     this._stepEvent(current.name, 'start');
+    let returned: StepResult;
     const running = runStep(
-      current.run,
+      (ctx) => (returned = current.run(ctx)),
       this._stepContext(run, current.name, controller.signal),
       controller,
     );
@@ -436,8 +457,10 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
       return;
     }
     run.current = running;
+    const wait = run.pending.find((waiter) => waiter.promise === returned);
+    if (wait) wait.step = running;
     void running.done.then(() => {
-      // Cancelled, or skipped by a quicken that already moved on.
+      // Cancelled, skipped by a quicken, or ended by `tickSteps()`: already moved on.
       if (run.current !== running) return;
       run.current = null;
       this._stepEvent(current.name, 'end');
@@ -482,20 +505,23 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
             resolve();
           });
         }),
-      until: (predicate: () => boolean) =>
-        new Promise<void>((resolve) => {
+      until: (predicate: () => boolean) => {
+        const waiter: Waiter = { predicate, resolve: () => {} };
+        waiter.promise = new Promise<void>((resolve) => {
           if (signal.aborted || predicate()) {
             resolve();
             return;
           }
-          const waiter = { predicate, resolve };
+          waiter.resolve = resolve;
           run.pending.push(waiter);
           signal.addEventListener('abort', () => {
             const i = run.pending.indexOf(waiter);
             if (i !== -1) run.pending.splice(i, 1);
             resolve();
           });
-        }),
+        });
+        return waiter.promise;
+      },
     };
   }
 
